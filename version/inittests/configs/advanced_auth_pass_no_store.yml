@@ -1,9 +1,0 @@
-default:
-  auth:
-    securePassword: ChboJPfebWr2YaYtCVLrWGC67TBroPYXyTEkN3Ry/Q9VfKVMCRvQY5qUARXu2A==
-    type: password
-    username: [INIT_USERNAME]
-  domain: [INIT_DEV_DOMAIN]
-  store:
-    type: none
-  tenant: [INIT_TENANT]

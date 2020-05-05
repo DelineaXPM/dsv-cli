@@ -1,5 +1,0 @@
-export INIT_TENANT='ambarco'
-export INIT_DEV_DOMAIN='qabambe.com'
-export INIT_USERNAME='cli-unit-test'
-export INIT_PROD_PASSWORD='om2Xu7DUFF12j!15'
-export INIT_DEV_PASSWORD='cli-unit-test-PASS-12#'

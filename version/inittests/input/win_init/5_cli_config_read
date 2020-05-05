@@ -1,1 +1,0 @@
-./thy-win-x64.exe cli-config read --config configs/advanced_auth_win_cred_pass_test.yml
