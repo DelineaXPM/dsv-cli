@@ -1,0 +1,11 @@
+default:
+  auth:
+    type: password
+    username: [INIT_USERNAME]
+  cache:
+    age: 5
+    strategy: server.cache
+  domain: [INIT_DEV_DOMAIN]
+  store:
+    type: wincred
+  tenant: [INIT_TENANT]

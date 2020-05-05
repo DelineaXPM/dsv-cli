@@ -1,0 +1,8 @@
+./thy init --dev [INIT_DEV_DOMAIN] --config configs/config_edit_pass.yml
+[INIT_TENANT]
+1
+
+1
+1
+[INIT_USERNAME]
+[INIT_DEV_PASSWORD]

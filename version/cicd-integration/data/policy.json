@@ -1,0 +1,15 @@
+{
+  "permissionDocument": [
+    {
+      "actions": [
+        "<.*>"
+      ],
+      "conditions": {},
+      "description": "Test Policy",
+      "effect": "allow",
+      "subjects": [
+        "users:{{.USER1_NAME}}"
+      ]
+    }
+  ]
+}

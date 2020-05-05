@@ -1,0 +1,11 @@
+default:
+  auth:
+    securePassword: 3k2Q2gKNsWafEXavcSLTAzMT3k+NajrI43C0lWPGjk+iznjchLs+2Hv8VqS5itipo0M=
+    type: password
+    username: [INIT_USERNAME]
+  cache:
+    strategy: server
+  domain: [INIT_DEV_DOMAIN]
+  store:
+    type: file
+  tenant: [INIT_TENANT]

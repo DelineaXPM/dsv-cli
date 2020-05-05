@@ -1,0 +1,1 @@
+.\build.ps1; thy secret get --path "test"

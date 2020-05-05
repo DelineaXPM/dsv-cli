@@ -1,0 +1,556 @@
+package auth
+
+import (
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
+	"reflect"
+	"strings"
+	"time"
+
+	config "thy/cli-config"
+	cst "thy/constants"
+	"thy/errors"
+	"thy/requests"
+	"thy/store"
+	"thy/utils"
+
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/thycotic-rd/go-autorest/autorest"
+	azure "github.com/thycotic-rd/go-autorest/autorest/azure/auth"
+	"github.com/thycotic-rd/viper"
+)
+
+const (
+	leewaySecondsTokenExp   = 10
+	refreshTokenLifeSeconds = 60 * 60 * 48
+)
+
+// Note that this global error variable is of type *ApiError, not regular error.
+var KeyfileNotFoundError = errors.NewS("failed to find the encryption key")
+
+// AuthType is the type of authentication
+type AuthType string
+
+// Types of supported authentication
+const (
+	Implicit         = AuthType("")
+	Password         = AuthType("password")
+	Refresh          = AuthType("refresh")
+	ClientCredential = AuthType("clientcred")
+	FederatedThyOne  = AuthType(cst.DefaultThyOneName)
+	Certificate      = AuthType("cert")
+	FederatedAws     = AuthType("aws")
+	FederatedAzure   = AuthType("azure")
+	FederatedGcp     = AuthType("gcp")
+)
+
+// GetTokenKey gets the key for the auth type
+func (a AuthType) GetTokenKey(keySuffix string) string {
+	// Refresh and Password are stored the same
+
+	keySuffix = strings.Replace(keySuffix, "-", "%2D", -1)
+
+	if a == Implicit {
+		panic("implicit is invalid auth type")
+	}
+	key := cst.TokenRoot + "-"
+	if a == Refresh {
+		key = key + string(Password)
+	} else {
+		key = key + string(a)
+	}
+
+	key += "-" + viper.GetString(cst.Tenant)
+
+	if keySuffix != "" {
+		key = key + "-" + keySuffix
+	}
+	return key
+}
+
+// GetTokenFunc is an arbitrary function for testing
+type GetTokenFunc func() (*TokenResponse, *errors.ApiError)
+
+// GetToken invokes the func defined on GetTokenFunc
+func (f GetTokenFunc) GetToken() (*TokenResponse, *errors.ApiError) {
+	return f()
+}
+
+// GetTokenCacheOverride invokes the func defined on GetTokenFunc with a bypass for cache for tests.
+// Adding this to satisfy interface, but this function is a convenience feature for tests
+func (f GetTokenFunc) GetTokenCacheOverride(cache bool) (*TokenResponse, *errors.ApiError) {
+	return f()
+}
+
+// Authenticator is the interface used for authentication funcs
+type Authenticator interface {
+	GetToken() (*TokenResponse, *errors.ApiError)
+	GetTokenCacheOverride(useCache bool) (*TokenResponse, *errors.ApiError)
+}
+
+type authenticator struct {
+	store         store.Store
+	requestClient requests.Client
+}
+
+// NewAuthenticatorDefault gets a new default authenticator.
+func NewAuthenticatorDefault() Authenticator {
+	st := viper.GetString(cst.StoreType)
+	if s, err := store.GetStore(st); err != nil {
+		panic(err)
+	} else {
+		return &authenticator{s, requests.NewHttpClient()}
+	}
+}
+
+// NewAuthenticator returns a new authenticator
+func NewAuthenticator(store store.Store, client requests.Client) Authenticator {
+	return &authenticator{store, client}
+}
+
+func (a *authenticator) GetToken() (*TokenResponse, *errors.ApiError) {
+	return a.GetTokenCacheOverride(true)
+}
+
+func (a *authenticator) GetTokenCacheOverride(useCache bool) (*TokenResponse, *errors.ApiError) {
+	authType := viper.GetString(cst.AuthType)
+	var at AuthType
+	if authType == "" {
+		at = getDefaultAuthType()
+	} else {
+		at = AuthType(authType)
+	}
+	return a.getTokenForAuthType(at, useCache)
+}
+
+func getDefaultAuthType() AuthType {
+	return Password
+}
+
+func (a *authenticator) getTokenForAuthType(at AuthType, useCache bool) (*TokenResponse, *errors.ApiError) {
+	var data requestBody
+	var tr *TokenResponse
+
+	pSpecs := paramSpecDict[at]
+	var keyName string
+	for _, p := range pSpecs {
+		if p.IsKey {
+			keyName = p.ArgName
+			break
+		}
+	}
+	if keyName == "" {
+		return nil, errors.NewF("failure to auth. Token cache key not found for authentication type %s\n", string(at))
+	}
+
+	// Else, viper prepends env keys with cli prefix
+	var keySuffix string
+	if at == FederatedAzure {
+		keySuffix = os.Getenv(keyName)
+	} else if at == FederatedGcp {
+		keySuffix = viper.GetString(cst.GcpServiceAccount)
+		if keySuffix == "" {
+			keySuffix = cst.DefaultProfile
+		}
+	} else {
+		keySuffix = viper.GetString(keyName)
+	}
+
+	keyToken := at.GetTokenKey(keySuffix)
+
+	if useCache && strings.TrimSpace(viper.GetString(cst.Password)) == "" {
+		if err := a.store.Get(keyToken, &tr); err != nil {
+			return nil, err
+		} else if tr != nil && !tr.IsNil() {
+			// If init (cli-config) or config, invalidate existing token and later re-authenticate.
+			if cmd := viper.GetString(cst.MainCommand); cmd == cst.NounCliConfig || cmd == cst.NounConfig {
+				err := a.store.Wipe(keyToken)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				if tr.SecondsRemainingToken() > 0 {
+					return tr, nil
+				} else if tr.SecondsRemainingRefreshToken() > 0 {
+					log.Printf("Token expired but valid refresh token. Attempting to refresh. Token cache key: '%s'\n", keySuffix)
+					at = Refresh
+					data = requestBody{
+						GrantType:    authTypeToGrantType[at],
+						RefreshToken: tr.RefreshToken,
+					}
+
+				} else {
+					log.Printf("Refresh token expired. Attempting to reauthenticate. Token cache key: '%s'\n", keySuffix)
+				}
+			}
+		}
+	}
+	if at == FederatedAws {
+		if headers, body, err := buildAwsParams(); err != nil {
+			return nil, err
+		} else {
+			data = requestBody{
+				GrantType:  authTypeToGrantType[at],
+				AwsBody:    body,
+				AwsHeaders: headers,
+			}
+		}
+	}
+	if at == FederatedAzure {
+		// NOTE : NH - this is a little awkward but better than splitting out token
+		// provider factory (logic currently done by authorizer)
+		resource := "https://management.azure.com/"
+		authorizer, err := azure.NewAuthorizerFromEnvironmentWithResource(resource)
+		if err != nil {
+			return nil, errors.New(err).Grow("Failed to create azure authorizer")
+		}
+		r := http.Request{}
+		p := authorizer.WithAuthorization()
+		if r, err := autorest.CreatePreparer(p).Prepare(&r); err != nil {
+			return nil, errors.New(err).Grow("Failed to generate azure auth token")
+		} else {
+			qualifiedBearer := r.Header.Get("Authorization")
+			lenPrefix := len("Bearer ")
+			if len(qualifiedBearer) < lenPrefix {
+				return nil, errors.NewS("Received invalid bearer token")
+			}
+			bearer := qualifiedBearer[lenPrefix:]
+			data = requestBody{
+				GrantType: authTypeToGrantType[at],
+				Jwt:       bearer,
+			}
+		}
+	}
+
+	if at == FederatedGcp {
+		var token string
+		var err error
+		token = viper.GetString(cst.GcpToken)
+		if token == "" {
+			gcp := GcpClient{}
+			token, err = gcp.GetJwtToken()
+			if err != nil {
+				return nil, errors.New(err).GrowIf("Failed to fetch token for gcp")
+			}
+			log.Printf("Gcp Token:\n%s\n", token)
+		}
+		data = requestBody{
+			GrantType: authTypeToGrantType[at],
+			Jwt:       token,
+		}
+	}
+
+	if data.GrantType == "" {
+		data = requestBody{
+			GrantType: authTypeToGrantType[at],
+		}
+		if at == Password || at == FederatedThyOne {
+			err := setupDataForPasswordAuth(&data)
+			if err != nil {
+				return nil, errors.New(err)
+			}
+		} else if at == ClientCredential {
+			data.AuthClientID = viper.GetString(cst.AuthClientID)
+			if secret, err := config.GetSecureSetting(cst.AuthClientSecret); err != nil || secret == "" {
+				if err == nil {
+					err = errors.NewS("auth-client-secret setting is empty")
+				}
+				return nil, err.Grow("Failed to retrieve secure setting: " + strings.Replace(cst.AuthClientSecret, ".", "-", -1))
+			} else {
+				data.AuthClientSecret = secret
+			}
+		} else if at == Refresh {
+			refreshToken := viper.GetString(cst.RefreshToken)
+			if data.RefreshToken == "" {
+				if refreshToken == "" {
+					return nil, errors.NewS("Refresh authentication failed: refreshtoken flag must be set")
+				}
+				data.RefreshToken = refreshToken
+			}
+		}
+	}
+
+	if tr, err := a.fetchTokenVault(at, data); err != nil {
+		if at == Refresh {
+			log.Printf("Refresh authentication failed: %s\n", err.Error())
+			if pass, err := config.GetSecureSetting(cst.Password); err == nil && pass != "" && viper.GetString(cst.Username) != "" {
+				log.Println("Username and password set. Attempt password authentication")
+				return a.getTokenForAuthType(Password, false)
+			} else {
+				if err == nil {
+					if viper.GetString(cst.Username) == "" {
+						err = utils.NewMissingArgError(cst.Username)
+					} else if pass == "" {
+						return a.getTokenForAuthType(Password, false)
+					}
+				}
+				return nil, errors.New(err).GrowIf("Refresh authentication failed. Please re-authenticate with password or other supported authentication type")
+			}
+		}
+		return tr, err.Grow(fmt.Sprintf("Failed to authenticate with auth type '%s'. Please check parameters and try again", at))
+	} else {
+		log.Printf("%s authentication succeeded.\n", strings.Title(string(at)))
+		if err := a.store.Store(keyToken, tr); err != nil {
+			return nil, err.Grow("Failed caching token")
+		} else {
+			return tr, nil
+		}
+	}
+}
+
+func (a *authenticator) fetchTokenVault(at AuthType, data requestBody) (*TokenResponse, *errors.ApiError) {
+	var response TokenResponse
+	if err := data.ValidateForAuthType(at); err != nil {
+		return nil, errors.New(err)
+	}
+	uri := utils.CreateURI(cst.NounToken, nil)
+	if err := a.requestClient.DoRequestOut("POST", uri, data, &response); err != nil {
+		return nil, err
+	} else if response.IsNil() {
+		return nil, errors.NewS("Empty token")
+	}
+	response.Granted = time.Now().UTC()
+	return &response, nil
+}
+
+// setupDataForPasswordAuth prepares the requestBody object with data for password auth.
+// It should be used in the authentication workflow, not on its own.
+func setupDataForPasswordAuth(data *requestBody) error {
+	userName := viper.GetString(cst.Username)
+	data.Username = userName
+	data.Provider = viper.GetString(cst.AuthProvider)
+
+	// If plaintext Password exists, that means Viper retrieves it from memory. Use this Password to authenticate.
+	// If it is an empty string, look for SecurePassword, which Viper gets only from config. Get the corresponding
+	// key file and use it to decrypt SecurePassword.
+	if data.Password = viper.GetString(cst.Password); data.Password == "" {
+		passSetting := cst.SecurePassword
+		st := store.StoreType(viper.GetString(cst.StoreType))
+		if st == store.WinCred || st == store.PassLinux {
+			passSetting = cst.Password
+		}
+		if pass, err := config.GetSecureSetting(passSetting); err == nil && pass != "" {
+			if passSetting == cst.SecurePassword {
+				keyPath := GetEncryptionKeyFilename(viper.GetString(cst.Tenant), userName)
+				key, err := store.ReadFile(keyPath)
+				if err != nil || key == "" {
+					return KeyfileNotFoundError
+				}
+				decrypted, decryptionErr := Decrypt(pass, key)
+				if decryptionErr != nil {
+					return errors.NewS("Failed to decrypt the password with key.")
+				} else {
+					data.Password = decrypted
+				}
+			} else {
+				data.Password = pass
+			}
+		}
+	}
+	return nil
+}
+
+func buildAwsParams() (headers string, body string, err *errors.ApiError) {
+	opts := session.Options{
+		SharedConfigState:       session.SharedConfigEnable,
+		AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
+	}
+	awsProfile := viper.GetString(cst.AwsProfile)
+	if awsProfile != "" {
+		opts.Profile = awsProfile
+	}
+	if sess, err := session.NewSessionWithOptions(opts); err != nil {
+		return "", "", errors.New(err).Grow("Failed to create aws session")
+	} else {
+		stsClient := sts.New(sess)
+		r, _ := stsClient.GetCallerIdentityRequest(nil)
+		r.Sign()
+		headers, err1 := json.Marshal(r.HTTPRequest.Header)
+		body, err2 := ioutil.ReadAll(r.HTTPRequest.Body)
+		hString := base64.StdEncoding.EncodeToString(headers)
+		bString := base64.StdEncoding.EncodeToString(body)
+		return hString, bString, errors.New(err1).Or(errors.New(err2))
+	}
+}
+
+type requestBody struct {
+	GrantType         string `json:"grant_type"`
+	Username          string `json:"username"`
+	Provider          string `json:"provider"`
+	Password          string `json:"password"`
+	AuthClientID      string `json:"client_id"`
+	AuthClientSecret  string `json:"client_secret"`
+	RefreshToken      string `json:"refresh_token"`
+	AwsBody           string `json:"aws_body"`
+	AwsHeaders        string `json:"aws_headers"`
+	Jwt               string `json:"jwt"`
+	AzureAuthClientID string
+}
+
+type TokenResponse struct {
+	Token        string    `json:"accessToken"`
+	TokenType    string    `json:"tokenType"`
+	ExpiresIn    int64     `json:"expiresIn"`
+	RefreshToken string    `json:"refreshToken"`
+	Granted      time.Time `json:"granted"`
+}
+
+func (r *TokenResponse) SecondsRemainingToken() int64 {
+	remaining := int64(r.Granted.Sub(time.Now().UTC()).Seconds()) + r.ExpiresIn - leewaySecondsTokenExp
+	return remaining
+}
+
+func (r *TokenResponse) SecondsRemainingRefreshToken() int64 {
+	if r.RefreshToken != "" {
+		remaining := int64(r.Granted.Sub(time.Now().UTC()).Seconds()) + refreshTokenLifeSeconds - leewaySecondsTokenExp
+		return remaining
+	}
+	return 0
+}
+
+func (r *TokenResponse) IsNil() bool {
+	return r.Token == "" && r.RefreshToken == ""
+}
+
+func (r *requestBody) ValidateForAuthType(at AuthType) error {
+	ref := reflect.ValueOf(r)
+	for _, k := range paramSpecDict[at] {
+		if !k.RequestVar {
+			continue
+		}
+		f := reflect.Indirect(ref).FieldByName(k.PropName)
+		if f.String() == "" {
+			return utils.NewMissingArgError(k.ArgName)
+		}
+	}
+	return nil
+}
+
+var authTypeToGrantType = map[AuthType]string{
+	Password:         "password",
+	FederatedThyOne:  "password",
+	ClientCredential: "client_credentials",
+	Certificate:      "certificate",
+	Refresh:          "refresh_token",
+	FederatedAws:     "aws_iam",
+	FederatedAzure:   "azure",
+	FederatedGcp:     "gcp",
+}
+
+type paramSpec struct {
+	PropName   string
+	ArgName    string
+	IsKey      bool
+	RequestVar bool
+}
+
+var paramSpecDict = map[AuthType][]paramSpec{
+	Password: {
+		{PropName: "Password",
+			ArgName:    cst.Password,
+			IsKey:      false,
+			RequestVar: true,
+		},
+		{PropName: "Username",
+			ArgName:    cst.Username,
+			IsKey:      true,
+			RequestVar: true,
+		},
+		{PropName: "Provider",
+			ArgName:    cst.AuthProvider,
+			IsKey:      false,
+			RequestVar: false,
+		},
+	},
+	FederatedThyOne: {
+		{PropName: "Password",
+			ArgName:    cst.Password,
+			IsKey:      false,
+			RequestVar: true,
+		},
+		{PropName: "Username",
+			ArgName:    cst.Username,
+			IsKey:      true,
+			RequestVar: true,
+		},
+		{PropName: "Provider",
+			ArgName:    cst.AuthProvider,
+			IsKey:      false,
+			RequestVar: true,
+		},
+	},
+	ClientCredential: {
+		{PropName: "AuthClientID",
+			ArgName:    cst.AuthClientID,
+			IsKey:      true,
+			RequestVar: true,
+		},
+		{PropName: "AuthClientSecret",
+			ArgName:    cst.AuthClientSecret,
+			IsKey:      false,
+			RequestVar: true,
+		},
+	},
+	Certificate: {
+		{PropName: "CertificatePath",
+			ArgName:    cst.CertPath,
+			IsKey:      true,
+			RequestVar: false,
+		},
+	},
+	FederatedAws: {
+		{PropName: "Profile",
+			ArgName:    cst.AwsProfile,
+			IsKey:      true,
+			RequestVar: false,
+		},
+		{PropName: "AwsBody",
+			ArgName:    "",
+			IsKey:      false,
+			RequestVar: true,
+		},
+		{PropName: "AwsHeaders",
+			ArgName:    "",
+			IsKey:      false,
+			RequestVar: true,
+		},
+	},
+	Refresh: {
+		{PropName: "RefreshToken",
+			ArgName:    cst.RefreshToken,
+			IsKey:      true,
+			RequestVar: true,
+		},
+	},
+	FederatedAzure: {
+		{PropName: "JwtToken",
+			ArgName:    "jwt",
+			IsKey:      false,
+			RequestVar: true,
+		},
+		{PropName: "AzureAuthClientID",
+			ArgName:    cst.AzureAuthClientID,
+			IsKey:      true,
+			RequestVar: false,
+		},
+	},
+	FederatedGcp: {
+		{PropName: "JwtToken",
+			ArgName:    "jwt",
+			IsKey:      false,
+			RequestVar: true,
+		},
+		{PropName: "Service",
+			ArgName:    "Service",
+			IsKey:      true,
+			RequestVar: false,
+		},
+	},
+}

@@ -1,0 +1,5 @@
+pexpect==4.7.0
+ptyprocess==0.6.0
+six==1.12.0
+unittest-xml-reporting==2.5.1
+requests==2.22.0

@@ -1,0 +1,11 @@
+./thy init --dev [INIT_DEV_DOMAIN] --profile default --config ./configs
+[INIT_TENANT]
+1
+
+2
+abc
+-1
+1
+
+[INIT_USERNAME]
+wrongpassword

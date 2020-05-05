@@ -1,0 +1,41 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, build with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# build and test result outputs
+main
+main_authorizer
+main_authorizer.zip
+main.zip
+report.xml
+packaged.yaml
+/output
+.idea
+.vscode
+thy
+thyvault
+thyvault.exe
+bin/*
+/svc_acct_creds_1
+docs/mkdocsenv/
+docs/site/
+
+inittests/initenv/
+inittests/__pycache__/
+inittests/test-reports/
+inittests/cases/__pycache__/
+inittests/winenv/
+inittests/localvars/
+inittests/testdata/
+inittests/.defaultvars
+
+.env.sh
