@@ -1,3 +1,4 @@
+![Go](https://github.com/thycotic/dsv-cli/workflows/Go/badge.svg)
 # Thycotic DevOps Secrets Vault CLI
 
 Thycotic DevOps Secrets Vault CLI is an automation tool for the management and access of secret information.
