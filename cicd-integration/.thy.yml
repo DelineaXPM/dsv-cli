@@ -19,3 +19,6 @@ local:
   domain: {{.LOCAL_DOMAIN}}
   http: http
   tenant: {{.TEST_TENANT}}
+
+
+
