@@ -3,14 +3,16 @@ package cmd
 import (
 	"fmt"
 	"strings"
+	"thy/auth"
+
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
+	"thy/paths"
 	"thy/requests"
-	"thy/utils"
 
+	"github.com/spf13/viper"
 	"github.com/thycotic-rd/cli"
-	"github.com/thycotic-rd/viper"
 )
 
 type Misc struct {
@@ -38,27 +40,16 @@ func GetEvaluateFlagCmd() (cli.Command, error) {
 }
 
 func (m Misc) handleWhoAmICmd(args []string) int {
-	var user string
-	if viper.GetString(cst.AuthType) == "azure" {
-		outClient := m.outClient
-		if outClient == nil {
-			outClient = format.NewDefaultOutClient()
-		}
-		outClient.WriteResponse([]byte("whoami does not yet support displaying an ID for a user authenticated with Azure"), nil)
-		return 0
+	if m.outClient == nil {
+		m.outClient = format.NewDefaultOutClient()
 	}
-	if u := viper.GetString(cst.Username); u != "" {
-		user = u
-	} else if u := viper.GetString(cst.AwsProfile); u != "" {
-		user = u
-	} else if u := viper.GetString(cst.AuthClientID); u != "" {
-		user = u
+
+	subject, err := auth.GetCurrentIdentity()
+	if err == nil {
+		m.outClient.WriteResponse([]byte(subject), nil)
+	} else {
+		m.outClient.FailS("Failed to parse the subject from the auth token, try re-authenticating")
 	}
-	outClient := m.outClient
-	if outClient == nil {
-		outClient = format.NewDefaultOutClient()
-	}
-	outClient.WriteResponse([]byte(user), nil)
 	return 0
 }
 
@@ -95,6 +86,6 @@ func handleSearch(args []string, resourceType string, request requests.Client) (
 		cst.Limit:     limit,
 		cst.Cursor:    cursor,
 	}
-	uri := utils.CreateResourceURI(resourceType, "", "", false, queryParams, false)
+	uri := paths.CreateResourceURI(resourceType, "", "", false, queryParams, false)
 	return request.DoRequest("GET", uri, nil)
 }

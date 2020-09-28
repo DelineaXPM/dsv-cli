@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/jarcoal/httpmock"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
-	"github.com/thycotic-rd/viper"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -360,7 +360,6 @@ func TestGetToken_RefreshToken(t *testing.T) {
 func TestGetToken_Azure(t *testing.T) {
 	storeType := "none"
 	msiEndpoint := "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fmanagement.azure.com%2F"
-	msiSecret := "azure-msi-secret"
 
 	msiResponse := map[string]interface{}{
 		"status": 200,
@@ -380,36 +379,6 @@ func TestGetToken_Azure(t *testing.T) {
 		apiResponse   map[string]interface{}
 		expectedError *errors.ApiError
 	}{
-		{
-			"azure auth should succeed",
-			"azure",
-			"",
-			msiSecret,
-			msiEndpoint,
-			msiResponse,
-			vtr,
-			nil,
-		},
-		{
-			"azure auth should error on failure",
-			"azure",
-			"",
-			msiSecret,
-			msiEndpoint,
-			msiResponse,
-			btr,
-			errors.NewF("Failed to authenticate with auth type 'azure'"),
-		},
-		{
-			"azure auth should fail if msi url is wrong",
-			"azure",
-			"",
-			"",
-			"http://169.254.169.254/doesnotexist",
-			msiResponse,
-			vtr,
-			errors.NewF("Failed to generate azure auth token"),
-		},
 		{
 			"azure auth should fail if environment is invalid",
 			"azure",

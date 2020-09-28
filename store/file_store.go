@@ -11,7 +11,7 @@ import (
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/peterbourgon/diskv"
-	"github.com/thycotic-rd/viper"
+	"github.com/spf13/viper"
 )
 
 // FileStore is a file-backed store

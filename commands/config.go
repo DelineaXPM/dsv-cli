@@ -11,6 +11,7 @@ import (
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
+	"thy/paths"
 	preds "thy/predictors"
 	"thy/requests"
 	"thy/store"
@@ -18,8 +19,8 @@ import (
 
 	"github.com/posener/complete"
 
+	"github.com/spf13/viper"
 	"github.com/thycotic-rd/cli"
-	"github.com/thycotic-rd/viper"
 )
 
 type Config struct {
@@ -36,7 +37,7 @@ func GetConfigCmd() (cli.Command, error) {
 			id := viper.GetString(cst.ID)
 			path := viper.GetString(cst.Path)
 			if path == "" {
-				path = utils.GetPath(args)
+				path = paths.GetPath(args)
 			}
 			if path == "" && id == "" {
 				return cli.RunResultHelp
@@ -126,7 +127,7 @@ func (c Config) handleConfigReadCmd(args []string) int {
 	if strings.TrimSpace(version) != "" {
 		config = fmt.Sprint(config, "/", cst.Version, "/", version)
 	}
-	uri := utils.CreateURI(config, nil)
+	uri := paths.CreateURI(config, nil)
 	resp, err := c.request.DoRequest("GET", uri, nil)
 
 	outClient := c.outClient
@@ -141,7 +142,7 @@ func (c Config) handleConfigReadCmd(args []string) int {
 func (c Config) handleConfigUpdateCmd(args []string) int {
 	var err *errors.ApiError
 	var resp []byte
-	uri := utils.CreateURI("config", nil)
+	uri := paths.CreateURI("config", nil)
 	data := viper.GetString(cst.Data)
 	encoding := viper.GetString(cst.Encoding)
 	var fileName string
@@ -153,7 +154,7 @@ func (c Config) handleConfigUpdateCmd(args []string) int {
 		return 1
 	}
 
-	if f := utils.GetFilenameFromArgs(args); f != "" {
+	if f := paths.GetFilenameFromArgs(args); f != "" {
 		fileName = f
 	}
 
@@ -187,7 +188,7 @@ func (c Config) handleConfigEditCmd(args []string) int {
 
 	var err *errors.ApiError
 	var resp []byte
-	uri := utils.CreateURI("config", nil)
+	uri := paths.CreateURI("config", nil)
 	resp, err = c.request.DoRequest("GET", uri, nil)
 	if err != nil {
 		c.outClient.WriteResponse(resp, err)

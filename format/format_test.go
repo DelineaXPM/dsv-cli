@@ -9,8 +9,8 @@ import (
 	"thy/format"
 	"thy/utils"
 
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
-	"github.com/thycotic-rd/viper"
 )
 
 func TestIsJson_False(t *testing.T) {

@@ -5,14 +5,17 @@ const (
 	Sign         = "sign"
 	Leaf         = "leaf"
 	GenerateRoot = "generate-root"
+	SSHCert      = "ssh-cert"
 )
 
 const (
 	RootCAPath      = "rootcapath"
+	LeafCAPath      = "leafcapath"
 	CertPath        = "certpath"
 	PrivKeyPath     = "privkeypath"
 	CSRPath         = "csrpath"
 	Domains         = "domains"
+	Principals      = "principals"
 	SubjectAltNames = "subjectaltnames"
 	TTL             = "ttl"
 	MaxTTL          = "maxttl"
@@ -23,6 +26,10 @@ const (
 	State           = "state"
 	Locality        = "locality"
 	EmailAddress    = "email"
+	CRL             = "crl"
 )
 
-const Root = "root"
+const (
+	Root  = "root"
+	Chain = "chain"
+)

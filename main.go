@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	config "thy/cli-config"
 	cmd "thy/commands"
 	cst "thy/constants"
 	"thy/format"
@@ -58,6 +59,7 @@ func runCLI(args []string) (exitStatus int, err error) {
 		"user delete":                   cmd.GetUserDeleteCmd,
 		"user restore":                  cmd.GetUserRestoreCmd,
 		"user create":                   cmd.GetUserCreateCmd,
+		"user update":                   cmd.GetUserUpdateCmd,
 		"whoami":                        cmd.GetWhoAmICmd,
 		"eval":                          cmd.GetEvaluateFlagCmd,
 		"cli-config":                    cmd.GetCliConfigCmd,
@@ -109,11 +111,37 @@ func runCLI(args []string) (exitStatus int, err error) {
 		"pki sign":                      cmd.GetPkiSignCmd,
 		"pki leaf":                      cmd.GetPkiLeafCmd,
 		"pki generate-root":             cmd.GetPkiGenerateRootCmd,
+		"pki ssh-cert":                  cmd.GetPkiSSHCertCmd,
+		"siem":                          cmd.GetSiemCmd,
+		"siem create":                   cmd.GetSiemCreateCmd,
+		"siem update":                   cmd.GetSiemUpdateCmd,
+		"siem read":                     cmd.GetSiemReadCmd,
+		"siem delete":                   cmd.GetSiemDeleteCmd,
+		"home":                          cmd.GetHomeCmd,
+		"home read":                     cmd.GetHomeReadCmd,
+		"home create":                   cmd.GetHomeCreateCmd,
+		"home update":                   cmd.GetHomeUpdateCmd,
+		"home delete":                   cmd.GetHomeDeleteCmd,
+		"home search":                   cmd.GetHomeSearchCmd,
+		"home describe":                 cmd.GetHomeDescribeCmd,
+		"home edit":                     cmd.GetHomeEditCmd,
+		"home rollback":                 cmd.GetHomeRollbackCmd,
+		"home restore":                  cmd.GetHomeRestoreCmd,
 	}
 
 	c.Autocomplete = true
 	c.AutocompleteInstall = "install"
 	c.AutocompleteUninstall = "uninstall"
 	log.SetOutput(ioutil.Discard)
+
+	cfgFile := config.GetFlagBeforeParse(cst.Config, c.Args)
+	profile := config.GetFlagBeforeParse(cst.Profile, c.Args)
+
+	if !cmd.IsInit(c.Args) {
+		// TODO : We do this twice to support autocomplete. Investigate how to only do once instead
+		if err := config.InitCliConfig(cfgFile, profile, c.Args); err != nil {
+			return utils.GetExecStatus(err), err
+		}
+	}
 	return c.Run()
 }

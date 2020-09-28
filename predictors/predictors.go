@@ -6,15 +6,16 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
 	"thy/auth"
 	cst "thy/constants"
 	"thy/format"
+	"thy/paths"
 	"thy/requests"
-	"thy/utils"
 
 	"github.com/posener/complete"
+	"github.com/spf13/viper"
 	"github.com/thycotic-rd/cli"
-	"github.com/thycotic-rd/viper"
 )
 
 type PathAutocompleteResult struct {
@@ -80,6 +81,7 @@ func (p *secretPathPredictor) getRequestClient() requests.Client {
 
 func (p *secretPathPredictor) Predict(a complete.Args) (prediction []string) {
 	// NOTE : This is to prevent predict from predicting past first completed term
+
 	if len(a.All) > 0 && a.LastCompleted != "" {
 		index := -1
 		for i, arg := range a.All {
@@ -105,7 +107,7 @@ func (p *secretPathPredictor) Predict(a complete.Args) (prediction []string) {
 		}
 
 	}
-	uri := utils.CreateResourceURI(cst.NounSecret, a.Last, cst.SuffixListPaths, true, nil, true)
+	uri := paths.CreateResourceURI(cst.NounSecret, a.Last, cst.SuffixListPaths, true, nil, true)
 	res := PathAutocompleteResult{}
 	if err := p.getRequestClient().DoRequestOut("GET", uri, nil, &res); err == nil {
 		return preparePaths(res.Data)
@@ -116,7 +118,7 @@ func (p *secretPathPredictor) Predict(a complete.Args) (prediction []string) {
 func preparePaths(unprepared []string) []string {
 	prepared := []string{}
 	for _, p := range unprepared {
-		friendlyTail := utils.GetURIPathFromInternalPath(p)
+		friendlyTail := paths.GetURIPathFromInternalPath(p)
 		if len(friendlyTail) > 0 {
 			prepared = append(prepared, friendlyTail)
 		}
@@ -155,6 +157,8 @@ func (p AuthProviderTypePredictor) Predict(a complete.Args) (prediction []string
 	return []string{
 		"aws",
 		"azure",
+		"gcp",
+		"oidc",
 	}
 }
 

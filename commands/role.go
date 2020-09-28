@@ -2,19 +2,22 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
+	"thy/paths"
 	preds "thy/predictors"
 	"thy/requests"
 	"thy/utils"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/posener/complete"
+	"github.com/spf13/viper"
 	"github.com/thycotic-rd/cli"
-	"github.com/thycotic-rd/viper"
 )
 
 type Roles struct {
@@ -46,8 +49,8 @@ func GetRoleCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`Execute an action on a %[1]s in %[2]s
 
 Usage:
-   • %[1]s %[3]s 
-   • %[1]s --name %[3]s 
+   • %[1]s %[3]s
+   • %[1]s --name %[3]s
 		`, cst.NounRole, cst.ProductName, cst.ExampleRoleName),
 		FlagsPredictor: GetNoDataOpRoleWrappers(),
 		MinNumberArgs:  1,
@@ -62,9 +65,9 @@ func GetRoleReadCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`Execute an action on a %[1]s in %[2]s
 
 Usage:
-   • %[1]s %[4]s %[3]s 
-   • %[1]s %[4]s --name %[3]s 
-   • %[1]s %[4]s --name %[3]s  --version 
+   • %[1]s %[4]s %[3]s
+   • %[1]s %[4]s --name %[3]s
+   • %[1]s %[4]s --name %[3]s  --version
 		`, cst.NounRole, cst.ProductName, cst.ExampleRoleName, cst.Read),
 		FlagsPredictor: GetNoDataOpRoleWrappers(),
 		MinNumberArgs:  1,
@@ -99,7 +102,7 @@ func GetRoleDeleteCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`Execute an action on a %[1]s in %[2]s
 
 Usage:
-   • %[1]s %[4]s %[3]s 
+   • %[1]s %[4]s %[3]s
    • %[1]s %[4]s --name %[3]s --force
 		`, cst.NounRole, cst.ProductName, cst.ExampleRoleName, cst.Delete),
 		FlagsPredictor: cli.PredictorWrappers{
@@ -131,19 +134,17 @@ func GetRoleUpdateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounRole, cst.Update},
 		RunFunc:      Roles{requests.NewHttpClient(), nil}.handleRoleUpsertCmd,
-		SynopsisText: fmt.Sprintf("%s %s (<name> | --name|-n) --provider --external-id --desc", cst.NounRole, cst.Update),
+		SynopsisText: fmt.Sprintf("%s %s (<name> | --name|-n) --desc", cst.NounRole, cst.Update),
 		HelpText: fmt.Sprintf(`%[4]s a %[1]s in %[2]s
 
 Usage:
-   • %[1]s %[4]s %[5]s --external-id msa-1@happy-emu-172.iam.gsa.com --provider ProdGcp --description "msa for prod gcp"
-		`, cst.NounRole, cst.ProductName, cst.ExamplePath, cst.Update, cst.ExampleRoleName),
+   • %[1]s %[4]s --%[5]s %[6]s --desc "msa for prod gcp"
+		`, cst.NounRole, cst.ProductName, cst.ExamplePath, cst.Update, cst.DataName, cst.ExampleRoleName),
 		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.DataName):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s ", cst.NounRole)}), false},
+			preds.LongFlag(cst.DataName):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounRole)}), false},
 			preds.LongFlag(cst.DataDescription): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataDescription, Usage: fmt.Sprintf("Description of the %s ", cst.NounRole)}), false},
-			preds.LongFlag(cst.DataExternalID):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataExternalID, Usage: fmt.Sprintf("External Id for the %s", cst.NounRole)}), false},
-			preds.LongFlag(cst.DataProvider):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataProvider, Usage: fmt.Sprintf("Provider for the %s ", cst.NounRole)}), false},
 		},
-		MinNumberArgs: 2,
+		MinNumberArgs: 0,
 	})
 }
 
@@ -155,15 +156,15 @@ func GetRoleCreateCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`%[4]s a %[1]s in %[2]s
 
 Usage:
-   • %[1]s %[4]s %[5]s --external-id msa-1@happy-emu-172.iam.gsa.com --provider ProdGcp --description "msa for prod gcp"
-		`, cst.NounRole, cst.ProductName, cst.ExamplePath, cst.Create, cst.ExampleRoleName),
+   • %[1]s %[4]s --%[5]s %[6]s --external-id msa-1@happy-emu-172.iam.gsa.com --provider ProdGcp --desc "msa for prod gcp"
+		`, cst.NounRole, cst.ProductName, cst.ExamplePath, cst.Create, cst.DataName, cst.ExampleRoleName),
 		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.DataName):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s ", cst.NounRole)}), false},
+			preds.LongFlag(cst.DataName):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounRole)}), false},
 			preds.LongFlag(cst.DataDescription): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataDescription, Usage: fmt.Sprintf("Description of the %s ", cst.NounRole)}), false},
 			preds.LongFlag(cst.DataExternalID):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataExternalID, Usage: fmt.Sprintf("External Id for the %s", cst.NounRole)}), false},
 			preds.LongFlag(cst.DataProvider):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataProvider, Usage: fmt.Sprintf("Provider for the %s ", cst.NounRole)}), false},
 		},
-		MinNumberArgs: 1,
+		MinNumberArgs: 0,
 	})
 }
 
@@ -181,7 +182,7 @@ func (r Roles) handleRoleReadCmd(args []string) int {
 		if strings.TrimSpace(version) != "" {
 			name = fmt.Sprint(name, "/", cst.Version, "/", version)
 		}
-		uri := utils.CreateResourceURI(cst.NounRole, name, "", true, nil, true)
+		uri := paths.CreateResourceURI(cst.NounRole, paths.ProcessPath(name), "", true, nil, true)
 		data, err = r.request.DoRequest("GET", uri, nil)
 	}
 
@@ -211,7 +212,7 @@ func (r Roles) handleRoleSearchCmd(args []string) int {
 			cst.Limit:     limit,
 			cst.Cursor:    cursor,
 		}
-		uri := utils.CreateResourceURI(cst.NounRole, "", "", false, queryParams, true)
+		uri := paths.CreateResourceURI(cst.NounRole, "", "", false, queryParams, true)
 		data, err = r.request.DoRequest("GET", uri, nil)
 	}
 	outClient := r.outClient
@@ -234,7 +235,7 @@ func (r Roles) handleRoleDeleteCmd(args []string) int {
 		err = errors.NewS("error: must specify " + cst.DataName)
 	} else {
 		query := map[string]string{"force": strconv.FormatBool(force)}
-		uri := utils.CreateResourceURI(cst.NounRole, name, "", true, query, true)
+		uri := paths.CreateResourceURI(cst.NounRole, paths.ProcessPath(name), "", true, query, true)
 		data, err = r.request.DoRequest("DELETE", uri, nil)
 	}
 
@@ -259,11 +260,8 @@ func (r Roles) handleRoleRestoreCmd(args []string) int {
 	if name == "" {
 		err = errors.NewS("error: must specify " + cst.DataName)
 	} else {
-		uri, err := utils.GetResourceURIFromResourcePath(cst.NounRole, name, "", "", true, nil)
-		if err == nil {
-			uri += "/restore"
-			data, err = r.request.DoRequest("PUT", uri, nil)
-		}
+		uri := paths.CreateResourceURI(cst.NounRole, paths.ProcessPath(name), "/restore", true, nil, true)
+		data, err = r.request.DoRequest("PUT", uri, nil)
 	}
 
 	r.outClient.WriteResponse(data, err)
@@ -271,38 +269,92 @@ func (r Roles) handleRoleRestoreCmd(args []string) int {
 }
 
 func (r Roles) handleRoleUpsertCmd(args []string) int {
-	var err *errors.ApiError
-	var data []byte
+	if OnlyGlobalArgs(args) {
+		return r.handleRoleWorkflow(args)
+	}
+	if r.outClient == nil {
+		r.outClient = format.NewDefaultOutClient()
+	}
 	name := viper.GetString(cst.DataName)
-	if name == "" && len(args) > 0 {
-		name = args[0]
-	}
 	if name == "" {
-		return cli.RunResultHelp
+		err := errors.NewS("error: must specify " + cst.DataName)
+		r.outClient.WriteResponse(nil, err)
+		return utils.GetExecStatus(err)
 	}
+	isUpdate := viper.GetString(cst.LastCommandKey) == cst.Update
 	role := Role{
-		ExternalID:  viper.GetString(cst.DataExternalID),
-		Provider:    viper.GetString(cst.DataProvider),
 		Description: viper.GetString(cst.DataDescription),
 		Name:        name,
 	}
-	reqMethod := strings.ToLower(viper.GetString(cst.LastCommandKey))
-	var uri string
-	if reqMethod == cst.Create {
-		reqMethod = "POST"
-		uri = utils.CreateResourceURI(cst.NounRole, "", "", true, nil, true)
-	} else {
-		reqMethod = "PUT"
-		uri = utils.CreateResourceURI(cst.NounRole, name, "", true, nil, true)
+	if !isUpdate {
+		role.ExternalID = viper.GetString(cst.DataExternalID)
+		role.Provider = viper.GetString(cst.DataProvider)
 	}
-	data, err = r.request.DoRequest(reqMethod, uri, &role)
 
-	outClient := r.outClient
-	if outClient == nil {
-		outClient = format.NewDefaultOutClient()
-	}
-	outClient.WriteResponse(data, err)
+	data, err := r.submitRole(name, role, isUpdate)
+	r.outClient.WriteResponse(data, err)
 	return utils.GetExecStatus(err)
+}
+
+func (r Roles) handleRoleWorkflow(args []string) int {
+	ui := &PasswordUi{
+		cli.BasicUi{
+			Writer:      os.Stdout,
+			Reader:      os.Stdin,
+			ErrorWriter: os.Stderr,
+		},
+	}
+	if r.outClient == nil {
+		r.outClient = format.NewDefaultOutClient()
+	}
+	params := make(map[string]string)
+	isUpdate := viper.GetString(cst.LastCommandKey) == cst.Update
+	if resp, err := getStringAndValidate(ui, "Role name:", false, nil, false, false); err != nil {
+		ui.Error(err.Error())
+		return 1
+	} else {
+		params["name"] = resp
+	}
+
+	if resp, err := getStringAndValidate(ui, "Description of the role:", true, nil, false, true); err != nil {
+		ui.Error(err.Error())
+		return 1
+	} else {
+		params["description"] = resp
+	}
+
+	if !isUpdate {
+		if resp, err := getStringAndValidate(ui, "Provider:", true, nil, false, false); err != nil {
+			ui.Error(err.Error())
+			return 1
+		} else {
+			params["provider"] = resp
+		}
+
+		if resp, err := getStringAndValidate(ui, "External ID:", true, nil, false, false); err != nil {
+			ui.Error(err.Error())
+			return 1
+		} else {
+			params["externalId"] = resp
+		}
+	}
+
+	var role Role
+	mapstructure.Decode(params, &role)
+	resp, apiError := r.submitRole(params["name"], role, isUpdate)
+	r.outClient.WriteResponse(resp, apiError)
+	return utils.GetExecStatus(apiError)
+}
+
+func (r Roles) submitRole(path string, role Role, update bool) ([]byte, *errors.ApiError) {
+	if update {
+		uri := paths.CreateResourceURI(cst.NounRole, path, "", true, nil, true)
+		return r.request.DoRequest("PUT", uri, &role)
+
+	} else {
+		uri := paths.CreateResourceURI(cst.NounRole, "", "", true, nil, true)
+		return r.request.DoRequest("POST", uri, &role)
+	}
 }
 
 type Role struct {

@@ -7,8 +7,8 @@ import (
 	"thy/errors"
 	"thy/fake"
 
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
-	"github.com/thycotic-rd/viper"
 )
 
 func TestHandleConfigUpdateCmd(t *testing.T) {

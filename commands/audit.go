@@ -2,17 +2,19 @@ package cmd
 
 import (
 	"fmt"
+	"time"
+
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
+	"thy/paths"
 	preds "thy/predictors"
 	"thy/requests"
 	"thy/utils"
-	"time"
 
 	"github.com/posener/complete"
+	"github.com/spf13/viper"
 	"github.com/thycotic-rd/cli"
-	"github.com/thycotic-rd/viper"
 )
 
 type audit struct {
@@ -103,7 +105,7 @@ func (a audit) handleAuditSearch(args []string) int {
 		cst.Limit:         viper.GetString(cst.Limit),
 		cst.Cursor:        viper.GetString(cst.Cursor),
 	}
-	uri := utils.CreateURI("audit", queryParams)
+	uri := paths.CreateURI("audit", queryParams)
 	data, err = a.request.DoRequest("GET", uri, nil)
 
 	a.outClient.WriteResponse(data, err)

@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"thy/auth"
-	config "thy/cli-config"
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
@@ -20,8 +19,8 @@ import (
 
 	"github.com/posener/complete"
 	flag "github.com/spf13/pflag"
+	"github.com/spf13/viper"
 	"github.com/thycotic-rd/cli"
-	"github.com/thycotic-rd/viper"
 )
 
 func BasePredictorWrappers() cli.PredictorWrappers {
@@ -30,16 +29,12 @@ func BasePredictorWrappers() cli.PredictorWrappers {
 		homePath = "%USERPROFILE%"
 	}
 	return cli.PredictorWrappers{
-		preds.LongFlag(cst.AuthType):         cli.PredictorWrapper{preds.AuthTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.AuthType, Shorthand: "a", Usage: "Authentication type [default:password]", Global: true, Hidden: true}), false},
-		preds.LongFlag(cst.AwsProfile):       cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.AwsProfile, Usage: "AWS profile to be used for auth (if AuthType='aws')", Global: true, Hidden: true}), false},
-		preds.LongFlag(cst.Profile):          cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Profile, Usage: "Configuration Profile [default:default]", Global: true}), false},
-		preds.LongFlag(cst.Username):         cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Username, Shorthand: "u", Usage: "User used for auth", Global: true}), false},
-		preds.LongFlag(cst.Password):         cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Password, Shorthand: "p", Usage: "Password used for auth", Global: true}), false},
-		preds.LongFlag(cst.AuthClientID):     cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.AuthClientID, Usage: "Client ID used for auth  (if AuthType='clientcred')", Global: true}), false},
-		preds.LongFlag(cst.AuthClientSecret): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.AuthClientSecret, Usage: "Client Secret for auth (if AuthType='clientcred')", Global: true}), false},
-		preds.LongFlag(cst.Tenant):           cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Tenant, Shorthand: "t", Usage: "Tenant used for auth", Global: true}), false},
-		preds.LongFlag(cst.Encoding):         cli.PredictorWrapper{preds.EncodingTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.Encoding, Shorthand: "e", Usage: "Output encoding (json|yaml) [default:json]", Global: true}), false},
-		preds.LongFlag(cst.Beautify):         cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Beautify, Shorthand: "b", Usage: "Should beautify output", Global: true, ValueType: "bool"}), false},
+		preds.LongFlag(cst.Callback):     cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Callback, Usage: fmt.Sprintf("Callback URL for oidc authentication [default: %s", cst.DefaultCallback), Global: true, Hidden: true}), false},
+		preds.LongFlag(cst.AuthProvider): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.AuthProvider, Usage: "Authentication provider name for federated authentication", Global: true, Hidden: true}), false},
+		preds.LongFlag(cst.Profile):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Profile, Usage: "Configuration Profile [default:default]", Global: true}), false},
+		preds.LongFlag(cst.Tenant):       cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Tenant, Shorthand: "t", Usage: "Tenant used for auth", Global: true}), false},
+		preds.LongFlag(cst.Encoding):     cli.PredictorWrapper{preds.EncodingTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.Encoding, Shorthand: "e", Usage: "Output encoding (json|yaml) [default:json]", Global: true}), false},
+		preds.LongFlag(cst.Beautify):     cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Beautify, Shorthand: "b", Usage: "Should beautify output", Global: true, ValueType: "bool"}), false},
 		// we could get away with just one of beautify / plain but gets tricky because we want the default to be beautify,
 		// unless it's a read operation
 		preds.LongFlag(cst.Plain):   cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Plain, Usage: "Should not beautify output (overrides beautify)", Global: true, ValueType: "bool", Hidden: true}), false},
@@ -47,6 +42,18 @@ func BasePredictorWrappers() cli.PredictorWrappers {
 		preds.LongFlag(cst.Config):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Config, Shorthand: "c", Usage: fmt.Sprintf("Config file path [default:%s%s.thy.yaml]", homePath, string(os.PathSeparator)), Global: true}), false},
 		preds.LongFlag(cst.Filter):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Filter, Shorthand: "f", Usage: "Filter in jq (stedolan.github.io/jq)", Global: true}), false},
 		preds.LongFlag(cst.Output):  cli.PredictorWrapper{preds.OutputTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.Output, Shorthand: "o", Usage: "Output destination (stdout|clip|file:<fname>) [default:stdout]", Global: true}), false},
+
+		preds.LongFlag(cst.AuthType): cli.PredictorWrapper{preds.AuthTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.AuthType, Shorthand: "a", Usage: "Auth Type (" +
+			strings.Join([]string{string(auth.Password), string(auth.ClientCredential), string(auth.FederatedAws), string(auth.FederatedAzure), string(auth.FederatedGcp)}, "|") + ")", Global: true}), false},
+		preds.LongFlag(cst.AwsProfile):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.AwsProfile, Usage: "AWS profile", Global: true}), false},
+		preds.LongFlag(cst.Username):          cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Username, Shorthand: "u", Usage: "User", Global: true}), false},
+		preds.LongFlag(cst.Password):          cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Password, Shorthand: "p", Usage: "Password", Global: true}), false},
+		preds.LongFlag(cst.AuthClientID):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.AuthClientID, Usage: "Client ID", Global: true}), false},
+		preds.LongFlag(cst.AuthClientSecret):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.AuthClientSecret, Usage: "Client Secret", Global: true}), false},
+		preds.LongFlag(cst.GcpAuthType):       cli.PredictorWrapper{preds.GcpAuthTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.GcpAuthType, Usage: "GCP Auth Type (gce|iam)", Global: true}), false},
+		preds.LongFlag(cst.GcpServiceAccount): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.GcpServiceAccount, Usage: "GCP Service Account Name", Global: true}), false},
+		preds.LongFlag(cst.GcpProject):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.GcpProject, Usage: "GCP Project", Global: true}), false},
+		preds.LongFlag(cst.GcpToken):          cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.GcpToken, Usage: "GCP OIDC Token", Global: true}), false},
 	}
 }
 
@@ -118,22 +125,6 @@ func (c *baseCommand) GetFlagsPredictor() cli.PredictorWrappers {
 func (c *baseCommand) preRun(args []string) int {
 	if len(args) < c.minNumberArgs {
 		return cli.RunResultHelp
-	}
-
-	fullArgs := os.Args[1:]
-	cfgFile := config.GetFlagBeforeParse(cst.Config, fullArgs)
-	profile := config.GetFlagBeforeParse(cst.Profile, fullArgs)
-	var init bool
-
-	fullCommand := strings.Join(c.path, " ")
-	if fullCommand == "init" || fullCommand == "cli-config init" {
-		init = true
-	}
-	if !init {
-		if err := config.InitCliConfig(cfgFile, profile, fullArgs); err != nil {
-			format.NewDefaultOutClient().WriteResponse(nil, err)
-			os.Exit(1)
-		}
 	}
 
 	name := c.path[len(c.path)-1]
@@ -293,6 +284,61 @@ func ValidateParams(params map[string]string, requiredKeys []string) *errors.Api
 		}
 	}
 	return nil
+}
+
+// IsInit checks if passed in command line args contain an init command. IsInit supports both cli.Args and os.Args.
+func IsInit(args []string) bool {
+	if len(args) == 0 {
+		return false
+	}
+
+	var a []string
+	if args[0] == cst.CmdRoot {
+		a = args[1:]
+	} else {
+		a = args
+	}
+
+	if len(a) == 0 {
+		return false
+	}
+	if a[0] == cst.Init {
+		return true
+	}
+	if len(a) > 1 && strings.Contains(strings.Join(a, " "), cst.NounCliConfig+" "+cst.Init) {
+		return true
+	}
+	return false
+}
+
+func GetFlagName(arg string) string {
+	if strings.HasPrefix(arg, "--") {
+		return arg[2:]
+	}
+	if strings.HasPrefix(arg, "-") {
+		return arg[1:]
+	}
+	return ""
+}
+
+// OnlyGlobalArgs checks if passed in command line args to a subcommand are only global flags.
+// It assumes viper had already set values for relevant flags like profile and config.
+func OnlyGlobalArgs(args []string) bool {
+	globalFlags := BasePredictorWrappers()
+outer:
+	for _, arg := range args {
+		f := GetFlagName(arg)
+		if f == "" || f == "v" {
+			continue
+		}
+		for _, g := range globalFlags {
+			if f == g.Flag.Name && g.Flag.Global {
+				continue outer
+			}
+		}
+		return false
+	}
+	return true
 }
 
 type dataFunc func(data []byte) (resp []byte, err *errors.ApiError)

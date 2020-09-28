@@ -2,8 +2,8 @@ package cmd
 
 import (
 	e "errors"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
-	"github.com/thycotic-rd/viper"
 	"testing"
 	cst "thy/constants"
 	"thy/errors"

@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"thy/auth"
 	"time"
 
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
+	"thy/paths"
 	preds "thy/predictors"
 	"thy/requests"
 	"thy/store"
@@ -17,15 +19,16 @@ import (
 
 	"github.com/apex/log"
 	"github.com/posener/complete"
+	"github.com/spf13/viper"
 	"github.com/thycotic-rd/cli"
-	"github.com/thycotic-rd/viper"
 )
 
 type Secret struct {
-	request   requests.Client
-	outClient format.OutClient
-	getStore  func(stString string) (store.Store, *errors.ApiError)
-	edit      func([]byte, dataFunc, *errors.ApiError, bool) ([]byte, *errors.ApiError)
+	request    requests.Client
+	outClient  format.OutClient
+	getStore   func(stString string) (store.Store, *errors.ApiError)
+	edit       func([]byte, dataFunc, *errors.ApiError, bool) ([]byte, *errors.ApiError)
+	secretType paths.SecretType
 }
 
 func GetDataOpWrappers(targetEntity string) cli.PredictorWrappers {
@@ -44,6 +47,18 @@ func GetNoDataOpWrappers(targetEntity string) cli.PredictorWrappers {
 	}
 }
 
+func GetSearchOpWrappers() cli.PredictorWrappers {
+	return cli.PredictorWrappers{
+		preds.LongFlag(cst.Query):            cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("%s of %ss to fetch (required)", strings.Title(cst.Query), cst.NounSecret)}), false},
+		preds.LongFlag(cst.SearchLinks):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.SearchLinks, Shorthand: "", Usage: "Find secrets that link to the secret path in the query", Global: false, ValueType: "bool"}), false},
+		preds.LongFlag(cst.Limit):            cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Limit, Shorthand: "l", Usage: fmt.Sprint("Maximum number of results per cursor (optional)")}), false},
+		preds.LongFlag(cst.Cursor):           cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: fmt.Sprint("Next cursor for additional results (optional)")}), false},
+		preds.LongFlag(cst.SearchField):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.SearchField, Shorthand: "", Usage: "Advanced search on a secret field (optional)", Global: false}), false},
+		preds.LongFlag(cst.SearchType):       cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.SearchType, Shorthand: "", Usage: "Specify the value type for advanced field searching, can be 'number' or 'string' (optional)", Global: false}), false},
+		preds.LongFlag(cst.SearchComparison): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.SearchComparison, Shorthand: "", Usage: "Specify the operator for advanced field searching, can be 'contains' or 'equal' (optional)", Global: false}), false},
+	}
+}
+
 func GetSecretCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path: []string{cst.NounSecret},
@@ -51,7 +66,7 @@ func GetSecretCmd() (cli.Command, error) {
 			id := viper.GetString(cst.ID)
 			path := viper.GetString(cst.Path)
 			if path == "" {
-				path = utils.GetPath(args)
+				path = paths.GetPath(args)
 			}
 			if path == "" && id == "" {
 				return cli.RunResultHelp
@@ -59,7 +74,7 @@ func GetSecretCmd() (cli.Command, error) {
 			return Secret{
 				requests.NewHttpClient(),
 				nil,
-				store.GetStore, nil}.handleReadCmd(args)
+				store.GetStore, nil, cst.NounSecret}.handleReadCmd(args)
 		},
 		SynopsisText: "secret (<path> | --path|-r)",
 		HelpText: fmt.Sprintf(`Execute an action on a %s from %s
@@ -79,13 +94,13 @@ func GetReadCmd() (cli.Command, error) {
 		RunFunc: Secret{
 			requests.NewHttpClient(),
 			nil,
-			store.GetStore, nil}.handleReadCmd,
+			store.GetStore, nil, cst.NounSecret}.handleReadCmd,
 		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r)", cst.NounSecret, cst.Read),
 		HelpText: fmt.Sprintf(`Read a %[2]s from %[3]s
 Usage:
 	• secret %[1]s %[4]s -b
 	• secret %[1]s --path %[4]s -bf data.Data.Key
-	• secret %[1]s --version 
+	• secret %[1]s --version
 
 				`, cst.Read, cst.NounSecret, cst.ProductName, cst.ExamplePath),
 		FlagsPredictor:    GetNoDataOpWrappers(cst.NounSecret),
@@ -100,7 +115,7 @@ func GetDescribeCmd() (cli.Command, error) {
 		RunFunc: Secret{
 			requests.NewHttpClient(),
 			nil,
-			store.GetStore, nil}.handleDescribeCmd,
+			store.GetStore, nil, cst.NounSecret}.handleDescribeCmd,
 		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r)", cst.NounSecret, cst.Describe),
 		HelpText: fmt.Sprintf(`Describe a %[2]s from %[3]s
 Usage:
@@ -119,7 +134,7 @@ func GetDeleteCmd() (cli.Command, error) {
 		RunFunc: Secret{
 			requests.NewHttpClient(),
 			nil,
-			store.GetStore, nil}.handleDeleteCmd,
+			store.GetStore, nil, cst.NounSecret}.handleDeleteCmd,
 		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r)", cst.NounSecret, cst.Delete),
 		HelpText: fmt.Sprintf(`Delete a %[2]s from %[3]s
 Usage:
@@ -141,14 +156,16 @@ func GetSecretRestoreCmd() (cli.Command, error) {
 		RunFunc: Secret{
 			requests.NewHttpClient(),
 			nil,
-			store.GetStore, nil}.handleRestoreCmd,
+			store.GetStore, nil, cst.NounSecret}.handleRestoreCmd,
 		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r)", cst.NounSecret, cst.Restore),
 		HelpText: fmt.Sprintf(`Restore a deleted %[2]s from %[3]s
 Usage:
 	• secret %[1]s %[4]s
 
 				`, cst.Restore, cst.NounSecret, cst.ProductName, cst.ExamplePath),
-		FlagsPredictor:    GetNoDataOpWrappers(cst.NounSecret),
+		FlagsPredictor: cli.PredictorWrappers{
+			preds.LongFlag(cst.Path): cli.PredictorWrapper{preds.NewSecretPathPredictorDefault(), preds.NewFlagValue(preds.Params{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret)}), false},
+		},
 		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
 		MinNumberArgs:     1,
 	})
@@ -160,7 +177,7 @@ func GetUpdateCmd() (cli.Command, error) {
 		RunFunc: Secret{
 			requests.NewHttpClient(),
 			nil,
-			store.GetStore, nil}.handleUpsertCmd,
+			store.GetStore, nil, cst.NounSecret}.handleUpsertCmd,
 		SynopsisText: fmt.Sprintf("%s %s (<path> <data> | (--path|-r) (--data|-d))", cst.NounSecret, cst.Update),
 		HelpText: fmt.Sprintf(`Update a %[2]s in %[3]s
 Usage:
@@ -180,7 +197,7 @@ func GetRollbackCmd() (cli.Command, error) {
 		RunFunc: Secret{
 			requests.NewHttpClient(),
 			nil,
-			store.GetStore, nil}.handleRollbackCmd,
+			store.GetStore, nil, cst.NounSecret}.handleRollbackCmd,
 		SynopsisText: fmt.Sprintf("%s %s (<path> | (--path|-r))", cst.NounSecret, cst.Rollback),
 		HelpText: fmt.Sprintf(`Rollback a %[2]s in %[3]s
 Usage:
@@ -202,7 +219,7 @@ func GetEditCmd() (cli.Command, error) {
 		RunFunc: Secret{
 			requests.NewHttpClient(),
 			nil,
-			store.GetStore, EditData}.handleEditCmd,
+			store.GetStore, EditData, cst.NounSecret}.handleEditCmd,
 		SynopsisText: fmt.Sprintf("%s %s (<path> <data> | (--path|-r))", cst.NounSecret, cst.Edit),
 		HelpText: fmt.Sprintf(`Edit a %[2]s in %[3]s
 Usage:
@@ -221,11 +238,11 @@ func GetCreateCmd() (cli.Command, error) {
 		RunFunc: Secret{
 			requests.NewHttpClient(),
 			nil,
-			store.GetStore, nil}.handleUpsertCmd,
+			store.GetStore, nil, cst.NounSecret}.handleUpsertCmd,
 		SynopsisText: fmt.Sprintf("%s %s (<path> <data> | (--path|-r) (--data|-d))", cst.NounSecret, cst.Create),
 		HelpText: fmt.Sprintf(`Create a %[2]s in %[3]s
 Usage:
-	• secret %[1]s %[4]s %[5]s
+	• secret %[1]s %[4]s --data %[5]s
 	• secret %[1]s --path %[4]s --data %[5]s
 	• secret %[1]s --path %[4]s --data %[6]s
 				`, cst.Create, cst.NounSecret, cst.ProductName, cst.ExamplePath, cst.ExampleDataJSON, cst.ExampleDataPath),
@@ -240,7 +257,7 @@ func GetBustCacheCmd() (cli.Command, error) {
 		RunFunc: Secret{
 			requests.NewHttpClient(),
 			nil,
-			store.GetStore, nil}.handleBustCacheCmd,
+			store.GetStore, nil, cst.NounSecret}.handleBustCacheCmd,
 		SynopsisText: fmt.Sprintf("%s %s", cst.NounSecret, cst.BustCache),
 		HelpText: `Bust secret cache
 Usage:
@@ -255,22 +272,20 @@ func GetSecretSearchCmd() (cli.Command, error) {
 		RunFunc: Secret{
 			requests.NewHttpClient(),
 			nil,
-			store.GetStore, nil}.handleSecretSearchCmd,
-		SynopsisText: fmt.Sprintf("%s (<query> | --query)", cst.Search),
+			store.GetStore, nil, cst.NounSecret}.handleSecretSearchCmd,
+		SynopsisText: fmt.Sprintf("%s (<query> | --query) --limit[default:25] --cursor --search-type[default:string] --search-comparison[default:contains] --search-field[default:path] --search-links[default:false])", cst.Search),
 		HelpText: fmt.Sprintf(`Search for a %[2]s from %[3]s
 
 Usage:
     • %[2]s %[1]s %[4]s
     • %[2]s %[1]s --query %[4]s
     • %[2]s %[1]s --query aws:base:secret --search-links
+    • %[2]s %[1]s --query aws --search-field attributes.type
+    • %[2]s %[1]s --query 900 --search-field attributes.ttl --search-type number
+    • %[2]s %[1]s --query production --search-field attributes.stage --search-comparison equal
             `, cst.Search, cst.NounSecret, cst.ProductName, cst.ExampleUserSearch),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.Query):       cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("%s of %ss to fetch (required)", strings.Title(cst.Query), cst.NounSecret)}), false},
-			preds.LongFlag(cst.SearchLinks): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.SearchLinks, Shorthand: "", Usage: "Find secrets that link to the secret path in the query", Global: false, ValueType: "bool"}), false},
-			preds.LongFlag(cst.Limit):       cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Limit, Shorthand: "l", Usage: fmt.Sprint("Maximum number of results per cursor (optional)")}), false},
-			preds.LongFlag(cst.Cursor):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: fmt.Sprint("Next cursor for additional results (optional)")}), false},
-		},
-		MinNumberArgs: 1,
+		FlagsPredictor: GetSearchOpWrappers(),
+		MinNumberArgs:  1,
 	})
 }
 
@@ -298,7 +313,7 @@ func (se Secret) handleDescribeCmd(args []string) int {
 	id := viper.GetString(cst.ID)
 	path := viper.GetString(cst.Path)
 	if path == "" {
-		path = utils.GetPath(args)
+		path = paths.GetPath(args)
 	}
 	resp, err := se.getSecret(path, id, false, cst.SuffixDescription)
 	outClient := se.outClient
@@ -315,7 +330,7 @@ func (se Secret) handleReadCmd(args []string) int {
 	id := viper.GetString(cst.ID)
 	path := viper.GetString(cst.Path)
 	if path == "" {
-		path = utils.GetPath(args)
+		path = paths.GetPath(args)
 	}
 	version := viper.GetString(cst.Version)
 	if strings.TrimSpace(version) != "" {
@@ -336,28 +351,38 @@ func (se Secret) handleRestoreCmd(args []string) int {
 	if se.outClient == nil {
 		se.outClient = format.NewDefaultOutClient()
 	}
+
 	path := viper.GetString(cst.Path)
 	if path == "" {
-		path = utils.GetPath(args)
+		path = paths.GetPath(args)
 	}
 
-	uri, err := utils.GetResourceURIFromResourcePath(cst.NounSecret, path, "", "", true, nil)
-	if err == nil {
-		uri += "/restore"
-		data, err = se.request.DoRequest("PUT", uri, nil)
+	rc, rerr := getResourceConfig(path, string(se.secretType))
+	if rerr != nil {
+		se.outClient.Fail(rerr)
+		return utils.GetExecStatus(rerr)
 	}
+	path = rc.path
+	uri := paths.CreateResourceURI(rc.resourceType, path, "/restore", true, nil, rc.pluralize)
+	data, err = se.request.DoRequest("PUT", uri, nil)
 
 	se.outClient.WriteResponse(data, err)
 	return utils.GetExecStatus(err)
 }
 
 func (se Secret) handleSecretSearchCmd(args []string) int {
+	if se.outClient == nil {
+		se.outClient = format.NewDefaultOutClient()
+	}
 	var err *errors.ApiError
 	var data []byte
 	query := viper.GetString(cst.Query)
 	limit := viper.GetString(cst.Limit)
 	cursor := viper.GetString(cst.Cursor)
 	searchLinks := viper.GetBool(cst.SearchLinks)
+	searchType := viper.GetString(cst.SearchType)
+	searchComparison := viper.GetString(cst.SearchComparison)
+	searchField := viper.GetString(cst.SearchField)
 	if query == "" && len(args) > 0 {
 		query = args[0]
 	}
@@ -365,43 +390,54 @@ func (se Secret) handleSecretSearchCmd(args []string) int {
 		err = errors.NewS("error: must specify " + cst.Query)
 	} else {
 		queryParams := map[string]string{
-			cst.SearchKey: query,
-			cst.Limit:     limit,
-			cst.Cursor:    cursor,
+			cst.SearchKey:        query,
+			cst.Limit:            limit,
+			cst.Cursor:           cursor,
+			cst.SearchType:       searchType,
+			cst.SearchComparison: searchComparison,
+			cst.SearchField:      searchField,
 		}
 		if searchLinks {
 			//flag just needs to be present
 			queryParams[cst.SearchLinks] = strconv.FormatBool(searchLinks)
 		}
-		uri := utils.CreateResourceURI(cst.NounSecret, "", "", false, queryParams, true)
+		rc, rerr := getResourceConfig("", string(se.secretType))
+		if rerr != nil {
+			se.outClient.Fail(rerr)
+			return utils.GetExecStatus(err)
+		}
+		uri := paths.CreateResourceURI(rc.resourceType, "", "", false, queryParams, rc.pluralize)
 		data, err = se.request.DoRequest("GET", uri, nil)
 	}
-	outClient := se.outClient
-	if outClient == nil {
-		outClient = format.NewDefaultOutClient()
-	}
 
-	outClient.WriteResponse(data, err)
+	se.outClient.WriteResponse(data, err)
 	return utils.GetExecStatus(err)
 }
 
 func (se Secret) handleDeleteCmd(args []string) int {
+	outClient := se.outClient
+	if outClient == nil {
+		outClient = format.NewDefaultOutClient()
+	}
 	var err *errors.ApiError
 	var resp []byte
 	path := viper.GetString(cst.Path)
 	force := viper.GetBool(cst.Force)
 	if path == "" {
-		path = utils.GetPath(args)
+		path = paths.GetPath(args)
 	}
 
 	query := map[string]string{"force": strconv.FormatBool(force)}
-	uri := utils.CreateResourceURI(cst.NounSecret, path, "", true, query, true)
+	rc, rerr := getResourceConfig(path, string(se.secretType))
+	if rerr != nil {
+		outClient.Fail(err)
+		return utils.GetExecStatus(err)
+	}
+	path = rc.path
+	uri, err := paths.GetResourceURIFromResourcePath(rc.resourceType, path, "", "", true, query, rc.pluralize)
 
 	resp, err = se.request.DoRequest("DELETE", uri, nil)
-	outClient := se.outClient
-	if outClient == nil {
-		outClient = format.NewDefaultOutClient()
-	}
+
 	outClient.WriteResponse(resp, err)
 	return utils.GetExecStatus(err)
 }
@@ -412,11 +448,19 @@ func (se Secret) handleRollbackCmd(args []string) int {
 	if se.outClient == nil {
 		se.outClient = format.NewDefaultOutClient()
 	}
+
 	path := viper.GetString(cst.Path)
 	if path == "" {
-		path = utils.GetPath(args)
+		path = paths.GetPath(args)
 	}
 	version := viper.GetString(cst.Version)
+	rc, err := getResourceConfig(path, string(se.secretType))
+	if err != nil {
+		se.outClient.Fail(err)
+		return utils.GetExecStatus(err)
+	}
+
+	path = rc.path
 
 	// If version is not provided, get the secret's description and parse the version from it.
 	// Submit a request for a version that's previous relative to the one found.
@@ -438,7 +482,7 @@ func (se Secret) handleRollbackCmd(args []string) int {
 	if strings.TrimSpace(version) != "" {
 		path = fmt.Sprint(path, "/rollback/", version)
 	}
-	uri := utils.CreateResourceURI(cst.NounSecret, path, "", true, nil, true)
+	uri := paths.CreateResourceURI(rc.resourceType, path, "", true, nil, rc.pluralize)
 	resp, apiError = se.request.DoRequest("PUT", uri, nil)
 
 	se.outClient.WriteResponse(resp, apiError)
@@ -452,12 +496,18 @@ func (se Secret) handleUpsertCmd(args []string) int {
 	path := viper.GetString(cst.Path)
 	overwrite := viper.GetBool(cst.Overwrite)
 	if path == "" {
-		path = utils.GetPath(args)
+		path = paths.GetPath(args)
 	}
 	if se.outClient == nil {
 		se.outClient = format.NewDefaultOutClient()
 	}
-	uri, err := utils.GetResourceURIFromResourcePath(cst.NounSecret, path, id, "", true, nil)
+	rc, rerr := getResourceConfig(path, string(se.secretType))
+	if rerr != nil {
+		se.outClient.Fail(rerr)
+		return utils.GetExecStatus(rerr)
+	}
+	path = rc.path
+	uri, err := paths.GetResourceURIFromResourcePath(rc.resourceType, path, id, "", true, nil, rc.pluralize)
 	if err == nil {
 		data := viper.GetString(cst.Data)
 		desc := viper.GetString(cst.DataDescription)
@@ -504,9 +554,15 @@ func (se Secret) handleEditCmd(args []string) int {
 	id := viper.GetString(cst.ID)
 	path := viper.GetString(cst.Path)
 	if path == "" {
-		path = utils.GetPath(args)
+		path = paths.GetPath(args)
 	}
-	uri, err := utils.GetResourceURIFromResourcePath(cst.NounSecret, path, id, "", true, nil)
+	rc, rerr := getResourceConfig(path, string(se.secretType))
+	if rerr != nil {
+		se.outClient.Fail(rerr)
+		return utils.GetExecStatus(rerr)
+	}
+	path = rc.path
+	uri, err := paths.GetResourceURIFromResourcePath(rc.resourceType, path, id, "", true, nil, rc.pluralize)
 
 	// fetch
 	resp, err = se.getSecret(path, id, true, "")
@@ -558,7 +614,13 @@ func (se Secret) getSecret(path string, id string, edit bool, requestSuffix stri
 	}
 
 	queryTerms := map[string]string{"edit": strconv.FormatBool(edit)}
-	uri, err := utils.GetResourceURIFromResourcePath(cst.NounSecret, path, id, requestSuffix, true, queryTerms)
+
+	rc, rerr := getResourceConfig(path, string(se.secretType))
+	if rerr != nil {
+		return nil, errors.New(rerr)
+	}
+	path = rc.path
+	uri, err := paths.GetResourceURIFromResourcePath(rc.resourceType, path, id, requestSuffix, true, queryTerms, rc.pluralize)
 	if err != nil {
 		return nil, err
 	}
@@ -587,6 +649,7 @@ func (se Secret) getSecret(path string, id string, edit bool, requestSuffix stri
 		if !expired {
 			return cacheData, nil
 		}
+		//TODO: is this ever  execute???
 	} else if cacheStrategy == store.CacheThenServerThenExpired && len(cacheData) > 0 {
 		log.Info("Cache expired but failed to retrieve from server so returning cached data")
 		return cacheData, nil
@@ -629,4 +692,39 @@ type secretUpsertBody struct {
 	Description string
 	Attributes  map[string]interface{}
 	Overwrite   bool
+}
+
+type resourceConfig struct {
+	resourceType string
+	pluralize    bool
+	path         string
+}
+
+func getResourceConfig(path, resourceType string) (*resourceConfig, error) {
+	if resourceType == cst.NounHome {
+		current, err := auth.GetCurrentIdentity()
+		if err != nil {
+			return nil, errors.NewS("error: unable to get current identity from access token")
+		}
+		rc := &resourceConfig{
+			resourceType: fmt.Sprintf("%s/%s", cst.NounHome, current),
+			pluralize:    false,
+			path:         path,
+		}
+		if utils.CheckPrefix(path, "users:", "roles:") {
+			p := strings.SplitAfterN(path, "/", 2)
+			if len(p) == 2 {
+				rc.resourceType = fmt.Sprintf("%s/%s", "home", p[0])
+				rc.path = p[1]
+			}
+		}
+		return rc, nil
+	} else {
+		rc := &resourceConfig{
+			resourceType: resourceType,
+			pluralize:    true,
+			path:         path,
+		}
+		return rc, nil
+	}
 }

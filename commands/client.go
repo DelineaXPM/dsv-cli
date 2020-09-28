@@ -8,13 +8,14 @@ import (
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
+	"thy/paths"
 	preds "thy/predictors"
 	"thy/requests"
 	"thy/utils"
 
 	"github.com/posener/complete"
+	"github.com/spf13/viper"
 	"github.com/thycotic-rd/cli"
-	"github.com/thycotic-rd/viper"
 )
 
 type client struct {
@@ -45,8 +46,8 @@ func GetClientCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`Execute an action on a %[1]s in %[2]s
 
 Usage:
-   • %[1]s %[3]s 
-   • %[1]s --client-id %[3]s 
+   • %[1]s %[3]s
+   • %[1]s --client-id %[3]s
 		`, cst.NounClient, cst.ProductName, cst.ExampleClientID),
 		FlagsPredictor: GetNoDataOpClientWrappers(cst.NounClient),
 		MinNumberArgs:  1,
@@ -61,8 +62,8 @@ func GetClientReadCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`Execute an action on a %[1]s in %[2]s
 
 Usage:
-   • %[1]s %[4]s %[3]s 
-   • %[1]s %[4]s --client-id %[3]s 
+   • %[1]s %[4]s %[3]s
+   • %[1]s %[4]s --client-id %[3]s
 		`, cst.NounClient, cst.ProductName, cst.ExampleClientID, cst.Read),
 		FlagsPredictor: GetNoDataOpClientWrappers(cst.NounClient),
 		MinNumberArgs:  1,
@@ -77,7 +78,7 @@ func GetClientDeleteCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`Delete a %[1]s from %[2]s
 
 Usage:
-   • %[1]s %[4]s %[3]s 
+   • %[1]s %[4]s %[3]s
    • %[1]s %[4]s --client-id %[3]s --force
 		`, cst.NounClient, cst.ProductName, cst.ExampleClientID, cst.Delete),
 		FlagsPredictor: cli.PredictorWrappers{
@@ -96,7 +97,7 @@ func GetClientRestoreCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`Restore a deleted %[1]s in %[2]s
 
 Usage:
-   • %[1]s %[4]s %[3]s 
+   • %[1]s %[4]s %[3]s
 		`, cst.NounClient, cst.ProductName, cst.ExampleClientID, cst.Restore),
 		FlagsPredictor: GetNoDataOpClientWrappers(cst.NounClient),
 		MinNumberArgs:  1,
@@ -111,8 +112,8 @@ func GetClientCreateCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`%[4]s a %[1]s in %[2]s
 
 Usage:
-   • %[1]s %[4]s %[3]s 
-   • %[1]s %[4]s --role %[3]s 
+   • %[1]s %[4]s %[3]s
+   • %[1]s %[4]s --role %[3]s
 		`, cst.NounClient, cst.ProductName, cst.ExampleRoleName, cst.Create),
 		FlagsPredictor: cli.PredictorWrappers{
 			preds.LongFlag(cst.NounRole): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounRole, Usage: fmt.Sprintf("Name of the %s ", cst.NounRole)}), false},
@@ -129,8 +130,8 @@ func GetClientSearchCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`Search for %[1]ss attached to a given %[5]s in %[2]s
 
 Usage:
-   • %[1]s %[4]s %[3]s 
-   • %[1]s %[4]s --role %[3]s 
+   • %[1]s %[4]s %[3]s
+   • %[1]s %[4]s --role %[3]s
 		`, cst.NounClient, cst.ProductName, cst.ExampleRoleName, cst.Search, cst.NounRole),
 		FlagsPredictor: cli.PredictorWrappers{
 			preds.LongFlag(cst.Query):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("%s of %s that has attached clients (required)", strings.Title(cst.Query), cst.NounRole)}), false},
@@ -151,7 +152,7 @@ func (c client) handleClientReadCmd(args []string) int {
 	if clientID == "" {
 		err = errors.NewS("error: must specify " + cst.ClientID)
 	} else {
-		uri := utils.CreateResourceURI(cst.NounClient, clientID, "", true, nil, true)
+		uri := paths.CreateResourceURI(cst.NounClient, clientID, "", true, nil, true)
 		data, err = c.request.DoRequest("GET", uri, nil)
 	}
 
@@ -175,7 +176,7 @@ func (c client) handleClientDeleteCmd(args []string) int {
 		err = errors.NewS("error: must specify " + cst.ClientID)
 	} else {
 		query := map[string]string{"force": strconv.FormatBool(force)}
-		uri := utils.CreateResourceURI(cst.NounClient, clientID, "", true, query, true)
+		uri := paths.CreateResourceURI(cst.NounClient, clientID, "", true, query, true)
 		data, err = c.request.DoRequest("DELETE", uri, nil)
 	}
 	if c.outClient == nil {
@@ -199,11 +200,8 @@ func (c client) handleClientRestoreCmd(args []string) int {
 	if clientID == "" {
 		err = errors.NewS("error: must specify " + cst.ClientID)
 	} else {
-		uri, err := utils.GetResourceURIFromResourcePath(cst.NounClient, clientID, "", "", true, nil)
-		if err == nil {
-			uri += "/restore"
-			data, err = c.request.DoRequest("PUT", uri, nil)
-		}
+		uri := paths.CreateResourceURI(cst.NounClient, clientID, "/restore", true, nil, true)
+		data, err = c.request.DoRequest("PUT", uri, nil)
 	}
 	c.outClient.WriteResponse(data, err)
 	return utils.GetExecStatus(err)
@@ -226,10 +224,10 @@ func (c client) handleClientUpsertCmd(args []string) int {
 	var uri string
 	if reqMethod == cst.Create {
 		reqMethod = "POST"
-		uri = utils.CreateResourceURI(cst.NounClient, "", "", true, nil, true)
+		uri = paths.CreateResourceURI(cst.NounClient, "", "", true, nil, true)
 	} else {
 		reqMethod = "PUT"
-		uri = utils.CreateResourceURI(cst.NounClient, viper.GetString(cst.ClientID), "", true, nil, true)
+		uri = paths.CreateResourceURI(cst.NounClient, viper.GetString(cst.ClientID), "", true, nil, true)
 	}
 	data, err = c.request.DoRequest(reqMethod, uri, &client)
 	outClient := c.outClient
@@ -257,7 +255,7 @@ func (c client) handleClientSearchCmd(args []string) int {
 			cst.Limit:    limit,
 			cst.Cursor:   cursor,
 		}
-		uri := utils.CreateResourceURI(cst.NounClient, "", "", false, queryParams, true)
+		uri := paths.CreateResourceURI(cst.NounClient, "", "", false, queryParams, true)
 		data, err = c.request.DoRequest("GET", uri, nil)
 	}
 

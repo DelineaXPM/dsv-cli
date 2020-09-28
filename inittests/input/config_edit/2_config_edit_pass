@@ -1,1 +1,1 @@
-./thy config edit --config configs/config_edit_pass.yml
+./[INIT_CLINAME] config edit --config configs/config_edit_pass.yml

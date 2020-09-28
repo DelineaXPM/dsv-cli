@@ -9,10 +9,11 @@ import (
 
 	cst "thy/constants"
 	terrors "thy/errors"
+	"thy/format"
 	"thy/store"
 
 	"github.com/mitchellh/go-homedir"
-	"github.com/thycotic-rd/viper"
+	"github.com/spf13/viper"
 )
 
 // InitCliConfig reads in CLI config file and environment variables.
@@ -60,7 +61,9 @@ func InitCliConfig(cfgFile string, profile string, args []string) *terrors.ApiEr
 		if eString := err.Error(); strings.Contains(eString, "invalid subkey") {
 			return terrors.NewS(fmt.Sprintf("Invalid or non-existent profile in CLI config: %s.", profile))
 		} else {
-			return terrors.NewS(fmt.Sprintf("Create CLI config file manually or execute command '%s init' to initiate CLI configuration - cannot find config.", cst.CmdRoot))
+			// Do not return the error to allow users to view help text for commands.
+			out := format.NewDefaultOutClient()
+			out.FailS(fmt.Sprintf("Create CLI config file manually or execute command '%s init' to initiate CLI configuration - cannot find config.", cst.CmdRoot))
 		}
 	}
 	return nil

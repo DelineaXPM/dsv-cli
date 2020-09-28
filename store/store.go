@@ -13,7 +13,7 @@ import (
 	"thy/utils"
 
 	"github.com/mitchellh/go-homedir"
-	"github.com/thycotic-rd/viper"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -153,7 +153,7 @@ type Common interface {
 	GetName() string
 }
 
-func getFileContents(fileName string) (string, error) {
+func ReadFile(fileName string) (string, error) {
 	bytes, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		return "", err
@@ -170,16 +170,16 @@ func GetDefaultPath() (string, error) {
 	}
 }
 
-// ReadFile attempts to read a file in a store path. If the store path is not found,
+// ReadFileInDefaultPath attempts to read a file in a store path. If the store path is not found,
 // then the default thy directory is searched for a given file.
-func ReadFile(fileName string) (string, error) {
+func ReadFileInDefaultPath(fileName string) (string, error) {
 	storePath := viper.GetString(cst.StorePath)
 	if storePath == "" {
 		defaultPath, err := GetDefaultPath()
 		if err != nil {
 			return "", err
 		}
-		return getFileContents(path.Join(defaultPath, fileName))
+		return ReadFile(path.Join(defaultPath, fileName))
 	}
-	return getFileContents(path.Join(storePath, fileName))
+	return ReadFile(path.Join(storePath, fileName))
 }

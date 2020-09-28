@@ -14,7 +14,7 @@ import (
 
 	"github.com/posener/complete"
 	flag "github.com/spf13/pflag"
-	"github.com/thycotic-rd/viper"
+	"github.com/spf13/viper"
 
 	"github.com/stretchr/testify/assert"
 )

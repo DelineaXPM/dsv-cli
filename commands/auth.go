@@ -9,7 +9,8 @@ import (
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
-	preds "thy/predictors"
+	"thy/paths"
+
 	"thy/requests"
 	"thy/store"
 	"thy/utils"
@@ -17,9 +18,8 @@ import (
 	"github.com/howeyc/gopass"
 
 	"github.com/apex/log"
-	"github.com/posener/complete"
+	"github.com/spf13/viper"
 	"github.com/thycotic-rd/cli"
-	"github.com/thycotic-rd/viper"
 )
 
 type AuthCommand struct {
@@ -27,22 +27,6 @@ type AuthCommand struct {
 	token     func() auth.Authenticator
 	getStore  func(stString string) (store.Store, *errors.ApiError)
 	request   requests.Client
-}
-
-func GetAuthWrappers() cli.PredictorWrappers {
-	return cli.PredictorWrappers{
-		preds.LongFlag(cst.AuthType): cli.PredictorWrapper{preds.AuthTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.AuthType, Shorthand: "a", Usage: "Auth Type (" +
-			strings.Join([]string{string(auth.Password), string(auth.ClientCredential), string(auth.FederatedAws), string(auth.FederatedAzure), string(auth.FederatedGcp)}, "|") + ")"}), false},
-		preds.LongFlag(cst.AwsProfile):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.AwsProfile, Usage: "AWS profile"}), false},
-		preds.LongFlag(cst.Username):          cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Username, Shorthand: "u", Usage: "User"}), false},
-		preds.LongFlag(cst.Password):          cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Password, Shorthand: "p", Usage: "Password"}), false},
-		preds.LongFlag(cst.AuthClientID):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.AuthClientID, Usage: "Client ID"}), false},
-		preds.LongFlag(cst.AuthClientSecret):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.AuthClientSecret, Usage: "Client Secret"}), false},
-		preds.LongFlag(cst.GcpAuthType):       cli.PredictorWrapper{preds.GcpAuthTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.GcpAuthType, Usage: "GCP Auth Type (gce|iam)"}), false},
-		preds.LongFlag(cst.GcpServiceAccount): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.GcpServiceAccount, Usage: "GCP Service Account Name"}), false},
-		preds.LongFlag(cst.GcpProject):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.GcpProject, Usage: "GCP Project"}), false},
-		preds.LongFlag(cst.GcpToken):          cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.GcpToken, Usage: "GCP OIDC Token"}), false},
-	}
 }
 
 func GetAuthCmd() (cli.Command, error) {
@@ -61,7 +45,6 @@ Usage:
    • auth --auth.username %[3]s --auth.password %[4]s
    • auth --auth.type %[7]s --auth.client.id=%[5]s --auth.client.secret=%[6]s 
 		`, cst.NounAuth, cst.ProductName, cst.ExampleUser, cst.ExamplePassword, cst.ExampleAuthClientID, cst.ExampleAuthClientSecret, string(auth.FederatedAws)),
-		FlagsPredictor: GetAuthWrappers(),
 	})
 }
 
@@ -242,6 +225,6 @@ func (ac AuthCommand) handleAuthChangePassword(args []string) int {
 func (ac AuthCommand) doChangePassword(user, current, new string) ([]byte, *errors.ApiError) {
 	body := map[string]string{cst.CurrentPassword: current, cst.NewPassword: new}
 	template := fmt.Sprintf("%ss/%s/%s", cst.NounUser, user, cst.PasswordKey)
-	uri := utils.CreateURI(template, nil)
+	uri := paths.CreateURI(template, nil)
 	return ac.request.DoRequest("POST", uri, &body)
 }

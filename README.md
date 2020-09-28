@@ -1,4 +1,3 @@
-![Go](https://github.com/thycotic/dsv-cli/workflows/Go/badge.svg)
 # Thycotic DevOps Secrets Vault CLI
 
 Thycotic DevOps Secrets Vault CLI is an automation tool for the management and access of secret information.
@@ -28,11 +27,11 @@ To install:
 ```
 go get -u github.com/posener/complete/gocomplete
 gocomplete -install
-thy -install
+dsv -install
 ```
 To uninstall:
 ```
-thy -uninstall
+dsv -uninstall
 gocomplete -uninstall
 ```
 
@@ -67,7 +66,7 @@ Create a secret at the path resources/us-east-1/server1
 ```bash
 
 
-thy secret create --path resources/us-east-1/server1 --data "{
+dsv secret create --path resources/us-east-1/server1 --data "{
                                                                  "data": {"foo":"test"},
                                                                  "description": "foo secret",
                                                                  "attributes": {
@@ -78,7 +77,7 @@ thy secret create --path resources/us-east-1/server1 --data "{
 Or, as a shortcut for secret commands, the first two arguments are interpereted as --path and --data. Additional flags should follow
 ```bash
 
-thy secret update resources/us-east-1/server1  --data "{
+dsv secret update resources/us-east-1/server1  --data "{
     "data": {"foo":"test"},
     "description": "foo secret",
     "attributes": {
@@ -88,7 +87,7 @@ thy secret update resources/us-east-1/server1  --data "{
 ```
 Read a secret field
 ```bash
-thy secret read resources/us-east-1/server1 -bf .data.foo
+dsv secret read resources/us-east-1/server1 -bf .data.foo
 ```
 
 

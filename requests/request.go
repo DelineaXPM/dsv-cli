@@ -13,7 +13,7 @@ import (
 	"thy/format"
 	"thy/version"
 
-	"github.com/thycotic-rd/viper"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -71,7 +71,7 @@ func (c *httpClient) SetCreds(rh Header) {
 func (c *httpClient) DoRequest(method string, uri string, body interface{}) ([]byte, *errors.ApiError) {
 	resp, err := c.sendRequest(method, uri, body)
 	if err != nil {
-		return nil, errors.NewS("error on api request")
+		return nil, errors.NewS("failed to send API request")
 	}
 	defer resp.Body.Close()
 	b, err := ioutil.ReadAll(resp.Body)
@@ -85,7 +85,7 @@ func (c *httpClient) DoRequest(method string, uri string, body interface{}) ([]b
 func (c *httpClient) DoRequestOut(method string, uri string, body interface{}, dataOut interface{}) *errors.ApiError {
 	resp, err := c.sendRequest(method, uri, body)
 	if err != nil {
-		return errors.NewS("error on api request")
+		return errors.NewS("failed to send API request")
 	}
 	defer resp.Body.Close()
 	bodyBytes, err := ioutil.ReadAll(resp.Body)

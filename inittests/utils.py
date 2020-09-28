@@ -99,7 +99,7 @@ def create_secret_file() -> str:
 
 
 def clear_environment():
-    """Removes the $HOME/.thy.yml config, all tokens and secrets in the store directory and copies 
+    """Removes the $HOME/.thy.yml config, all tokens and secrets in the store directory and copies
     the encryption key into $HOME/.thy."""
     home = pathlib.Path.home()
     os.remove(home / ".thy.yml")
@@ -110,7 +110,13 @@ def clear_environment():
     config_path = "configs/base.yml"
     c = get_rendered_config(config_path)
     overwrite_config("configs/base_modified.yml", c)
-    subprocess.run(["./thy", "auth", "clear", "--config", config_path])
+
+    binary_name = (
+        os.environ.get('INIT_CLINAME') or os.environ.get('CONSTANTS_CLINAME') or 'dsv'
+    )
+    subprocess.run([f'./{binary_name}', "auth", "clear", "--config", config_path])
     key_file = "encryptionkey-ambarco-cli-unit-test"
     shutil.copyfile(pathlib.Path("configs") / key_file, home / ".thy" / key_file)
-    subprocess.run(["./thy", "auth", "--config", "configs/base_modified.yml"])
+    subprocess.run(
+        [f'./{binary_name}', "auth", "--config", "configs/base_modified.yml"]
+    )

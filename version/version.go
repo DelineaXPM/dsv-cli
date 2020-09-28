@@ -2,6 +2,6 @@
 package version
 
 var (
-	Version = "undefined"
-	Build   = "undefined"
+	Version string = "undefined"
+	Build   string = "undefined"
 )

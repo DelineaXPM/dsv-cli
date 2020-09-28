@@ -2,7 +2,7 @@ package constants
 
 // Configuration-related constants
 const (
-	CmdRoot                 = "thy"
+	CmdRoot                 = "dsv"
 	CliConfigName           = ".thy"
 	CliConfigType           = "yml"
 	EnvVarPrefix            = "thy"
@@ -11,6 +11,7 @@ const (
 	DontAutocompleteGlobals = false
 	DefaultProfile          = "default"
 	DefaultThyOneName       = "thy-one"
+	DefaultCallback         = "localhost:8072"
 )
 
 // Cmd metadata

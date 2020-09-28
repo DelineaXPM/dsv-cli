@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -119,7 +120,7 @@ func checkWithRequest(f *os.File, fileNew bool) (*update, error) {
 	if err != nil {
 		return nil, err
 	}
-	v, links, err := extractVersionAndLinks(info)
+	latest, links, err := extractVersionAndLinks(info)
 	if err != nil {
 		return nil, err
 	}
@@ -127,31 +128,42 @@ func checkWithRequest(f *os.File, fileNew bool) (*update, error) {
 	if err = updateCache(f, info, fileNew); err != nil {
 		return nil, err
 	}
-	return check(v, links)
+	return check(latest, links)
 }
 
-// versionsEqual takes the latest and current versions and compares them based on equality of major, minor, patch numbers.
-func versionsEqual(current, latest string) bool {
-	// Ignore undefined.
-	if current == "undefined" {
-		return true
-	}
+// isVersionOutdated semantically compares target and latest versions
+// to check if the target version is outdated.
+func isVersionOutdated(target, latest string) bool {
 	// Only interested in the leading part before the first dash.
-	cv := strings.Split(current, "-")[0]
-	lv := strings.Split(latest, "-")[0]
-	if cv != lv {
+	target = strings.Split(target, "-")[0]
+	latest = strings.Split(latest, "-")[0]
+	if target == "undefined" || target == latest {
 		return false
 	}
-	return true
+
+	t := strings.Split(target, ".")
+	l := strings.Split(latest, ".")
+	for i := range t {
+		n1, _ := strconv.Atoi(t[i])
+		n2, _ := strconv.Atoi(l[i])
+		if n1 == n2 {
+			continue
+		} else if n1 < n2 {
+			return true
+		} else {
+			return false
+		}
+	}
+	return false
 }
 
-func check(v string, links map[string]interface{}) (*update, error) {
-	if !versionsEqual(Version, v) {
+func check(latest string, links map[string]interface{}) (*update, error) {
+	if isVersionOutdated(Version, latest) {
 		link, err := getLinkForOS(links)
 		if err != nil {
 			return nil, err
 		}
-		return &update{v, link}, nil
+		return &update{latest, link}, nil
 	}
 	return nil, nil
 }

@@ -3,12 +3,13 @@ package cmd
 import (
 	e "errors"
 	"testing"
+
 	cst "thy/constants"
 	"thy/errors"
 	"thy/fake"
 
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
-	"github.com/thycotic-rd/viper"
 )
 
 func TestHandleRoleReadCmd(t *testing.T) {
@@ -65,9 +66,9 @@ func TestHandleRoleReadCmd(t *testing.T) {
 			r := Roles{req, acmd}
 			_ = r.handleRoleReadCmd([]string{tt.args})
 			if tt.expectedErr == nil {
-				assert.Equal(t, data, tt.out)
+				assert.Equal(t, tt.out, data)
 			} else {
-				assert.Equal(t, err, tt.expectedErr)
+				assert.Equal(t, tt.expectedErr, err)
 			}
 		})
 
@@ -128,9 +129,9 @@ func TestHandleRoleSearchCmd(t *testing.T) {
 			r := Roles{req, acmd}
 			_ = r.handleRoleSearchCmd([]string{tt.args})
 			if tt.expectedErr == nil {
-				assert.Equal(t, data, tt.out)
+				assert.Equal(t, tt.out, data)
 			} else {
-				assert.Equal(t, err, tt.expectedErr)
+				assert.Equal(t, tt.expectedErr, err)
 			}
 		})
 
@@ -190,9 +191,9 @@ func TestHandleRoleDeleteCmd(t *testing.T) {
 			r := Roles{req, acmd}
 			_ = r.handleRoleDeleteCmd([]string{tt.args})
 			if tt.expectedErr == nil {
-				assert.Equal(t, data, tt.out)
+				assert.Equal(t, tt.out, data)
 			} else {
-				assert.Equal(t, err, tt.expectedErr)
+				assert.Equal(t, tt.expectedErr, err)
 			}
 		})
 
@@ -200,9 +201,9 @@ func TestHandleRoleDeleteCmd(t *testing.T) {
 }
 
 func TestHandleRoleUpsertCmd(t *testing.T) {
-
 	testCase := []struct {
 		name        string
+		roleName    string
 		args        []string
 		apiResponse []byte
 		out         []byte
@@ -210,36 +211,46 @@ func TestHandleRoleUpsertCmd(t *testing.T) {
 		expectedErr *errors.ApiError
 	}{
 		{
-			"Happy path POST",
-			[]string{"user1", "password"},
+			"Successful create",
+			"role1",
+			[]string{"--name", "role1"},
 			[]byte(`test`),
 			[]byte(`test`),
 			"create",
 			nil,
 		},
-
 		{
-			"Happy path PUT",
-			[]string{"user1", "password"},
+			"Successful create",
+			"role1",
+			[]string{"--name", "role1"},
 			[]byte(`test`),
 			[]byte(`test`),
-			"PUT",
+			"update",
 			nil,
+		},
+		{
+			"Create - no name",
+			"",
+			[]string{"--desc", "updated role"},
+			[]byte(`test`),
+			[]byte(`test`),
+			"create",
+			errors.New(e.New("error: must specify " + cst.DataName)),
+		},
+		{
+			"Update - no name",
+			"",
+			[]string{"--desc", "updated role"},
+			[]byte(`test`),
+			[]byte(`test`),
+			"update",
+			errors.New(e.New("error: must specify " + cst.DataName)),
 		},
 	}
 
-	_, err := GetRoleCreateCmd()
-	assert.Nil(t, err)
-
-	_, err = GetRoleUpdateCmd()
-	assert.Nil(t, err)
-
-	_, err = GetCreateCmd()
-	assert.Nil(t, err)
-
 	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {
-
+		viper.Set(cst.DataName, tt.roleName)
 		t.Run(tt.name, func(t *testing.T) {
 			writer := &fake.FakeOutClient{}
 			var data []byte
@@ -260,12 +271,11 @@ func TestHandleRoleUpsertCmd(t *testing.T) {
 			_ = r.handleRoleUpsertCmd(tt.args)
 
 			if tt.expectedErr == nil {
-				assert.Equal(t, data, tt.out)
+				assert.Equal(t, tt.out, data)
 			} else {
-				assert.Equal(t, err, tt.expectedErr)
+				assert.Equal(t, tt.expectedErr.Error(), err.Error())
 			}
 		})
-
 	}
 }
 
