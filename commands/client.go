@@ -108,7 +108,7 @@ func GetClientCreateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounClient, cst.Create},
 		RunFunc:      client{requests.NewHttpClient(), nil}.handleClientUpsertCmd,
-		SynopsisText: fmt.Sprintf("%s %s (<role> | --role)", cst.NounClient, cst.Create),
+		SynopsisText: fmt.Sprintf("%s %s (<role> | --role) |(<uses> | --uses)|(<desc> | --desc)|(<ttl> | --ttl)| (<url> | --url) | ( <urlTTL> | --urlTTL)", cst.NounClient, cst.Create),
 		HelpText: fmt.Sprintf(`%[4]s a %[1]s in %[2]s
 
 Usage:
@@ -116,7 +116,12 @@ Usage:
    • %[1]s %[4]s --role %[3]s
 		`, cst.NounClient, cst.ProductName, cst.ExampleRoleName, cst.Create),
 		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.NounRole): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounRole, Usage: fmt.Sprintf("Name of the %s ", cst.NounRole)}), false},
+			preds.LongFlag(cst.NounRole):            cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounRole, Usage: fmt.Sprintf("Name of the %s ", cst.NounRole)}), false},
+			preds.LongFlag(cst.NounBootstrapUrl):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounBootstrapUrl, Usage: fmt.Sprint("Generate one time use url instead of secret (optional)"), ValueType: "bool"}), false},
+			preds.LongFlag(cst.NounBootstrapurlTTL): cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.NounBootstrapurlTTL, Usage: fmt.Sprint("UrlTTL for generated url (optional)")}), false},
+			preds.LongFlag(cst.NounClientUses):      cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.NounClientUses, Usage: fmt.Sprint("The number of times the client credential can be read.  if set to 0, it can be used infinitely.  default is 0 (optional)")}), false},
+			preds.LongFlag(cst.NounClientDesc):      cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.NounClientDesc, Usage: fmt.Sprint("Client description (optional)")}), false},
+			preds.LongFlag(cst.NounClientTTL):       cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.NounClientTTL, Usage: fmt.Sprint("How long until the client credential expires. if set to 0, it can be used indefinitely.  default is 0.\n (optional)")}), false},
 		},
 		MinNumberArgs: 1,
 	})
@@ -126,7 +131,7 @@ func GetClientSearchCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounClient, cst.Search},
 		RunFunc:      client{requests.NewHttpClient(), nil}.handleClientSearchCmd,
-		SynopsisText: fmt.Sprintf("%s (<query> | --query)", cst.Search),
+		SynopsisText: fmt.Sprintf("%s (<role> | --role)", cst.Search),
 		HelpText: fmt.Sprintf(`Search for %[1]ss attached to a given %[5]s in %[2]s
 
 Usage:
@@ -134,9 +139,9 @@ Usage:
    • %[1]s %[4]s --role %[3]s
 		`, cst.NounClient, cst.ProductName, cst.ExampleRoleName, cst.Search, cst.NounRole),
 		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.Query):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("%s of %s that has attached clients (required)", strings.Title(cst.Query), cst.NounRole)}), false},
-			preds.LongFlag(cst.Limit):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Limit, Shorthand: "l", Usage: fmt.Sprint("Maximum number of results per cursor (optional)")}), false},
-			preds.LongFlag(cst.Cursor): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: fmt.Sprint("Next cursor for additional results (optional)")}), false},
+			preds.LongFlag(cst.NounRole): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounRole, Usage: "Role that has attached clients (required)"}), false},
+			preds.LongFlag(cst.Limit):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Limit, Shorthand: "l", Usage: fmt.Sprint("Maximum number of results per cursor (optional)")}), false},
+			preds.LongFlag(cst.Cursor):   cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: fmt.Sprint("Next cursor for additional results (optional)")}), false},
 		},
 		MinNumberArgs: 1,
 	})
@@ -211,6 +216,11 @@ func (c client) handleClientUpsertCmd(args []string) int {
 	var err *errors.ApiError
 	var data []byte
 	roleName := viper.GetString(cst.NounRole)
+	url := viper.GetBool(cst.NounBootstrapUrl)
+	urlTTL := viper.GetInt64(cst.NounBootstrapurlTTL)
+	ttl := viper.GetInt64(cst.NounClientTTL)
+	desc := viper.GetString(cst.NounClientDesc)
+	uses := viper.GetInt(cst.NounClientUses)
 	if roleName == "" && len(args) > 0 {
 		roleName = args[0]
 	}
@@ -218,7 +228,12 @@ func (c client) handleClientUpsertCmd(args []string) int {
 		return cli.RunResultHelp
 	}
 	client := Client{
-		Role: roleName,
+		Role:        roleName,
+		Url:         url,
+		UrlTTL:      urlTTL,
+		Uses:        uses,
+		Description: desc,
+		TTL:         ttl,
 	}
 	reqMethod := strings.ToLower(viper.GetString(cst.LastCommandKey))
 	var uri string
@@ -241,17 +256,17 @@ func (c client) handleClientUpsertCmd(args []string) int {
 func (c client) handleClientSearchCmd(args []string) int {
 	var err *errors.ApiError
 	var data []byte
-	query := viper.GetString(cst.Query)
+	role := viper.GetString(cst.NounRole)
 	limit := viper.GetString(cst.Limit)
 	cursor := viper.GetString(cst.Cursor)
-	if query == "" && len(args) > 0 {
-		query = args[0]
+	if role == "" && len(args) > 0 {
+		role = args[0]
 	}
-	if query == "" {
-		err = errors.NewS("error: must specify " + cst.Query)
+	if role == "" {
+		err = errors.NewS("error: must specify " + cst.NounRole)
 	} else {
 		queryParams := map[string]string{
-			cst.NounRole: query,
+			cst.NounRole: role,
 			cst.Limit:    limit,
 			cst.Cursor:   cursor,
 		}
@@ -268,5 +283,10 @@ func (c client) handleClientSearchCmd(args []string) int {
 }
 
 type Client struct {
-	Role string `json:"role"`
+	Role        string `json:"role"`
+	Url         bool   `json:"url,omitempty"`
+	UrlTTL      int64  `json:"urlTTL,omitempty"`
+	TTL         int64  `json:"ttl,omitempty"`
+	Uses        int    `json:"usesLimit,omitempty"`
+	Description string `json:"description,omitempty"`
 }

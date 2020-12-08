@@ -34,10 +34,10 @@ func BasePredictorWrappers() cli.PredictorWrappers {
 		preds.LongFlag(cst.Profile):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Profile, Usage: "Configuration Profile [default:default]", Global: true}), false},
 		preds.LongFlag(cst.Tenant):       cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Tenant, Shorthand: "t", Usage: "Tenant used for auth", Global: true}), false},
 		preds.LongFlag(cst.Encoding):     cli.PredictorWrapper{preds.EncodingTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.Encoding, Shorthand: "e", Usage: "Output encoding (json|yaml) [default:json]", Global: true}), false},
-		preds.LongFlag(cst.Beautify):     cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Beautify, Shorthand: "b", Usage: "Should beautify output", Global: true, ValueType: "bool"}), false},
+		preds.LongFlag(cst.Beautify):     cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Beautify, Shorthand: "b", Usage: "Should beautify output", Global: true, ValueType: "bool", Hidden: true}), false},
 		// we could get away with just one of beautify / plain but gets tricky because we want the default to be beautify,
 		// unless it's a read operation
-		preds.LongFlag(cst.Plain):   cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Plain, Usage: "Should not beautify output (overrides beautify)", Global: true, ValueType: "bool", Hidden: true}), false},
+		preds.LongFlag(cst.Plain):   cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Plain, Usage: "Should not beautify output (overrides beautify)", Global: true, ValueType: "bool"}), false},
 		preds.LongFlag(cst.Verbose): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Verbose, Shorthand: "v", Usage: "Verbose output [default:false]", Global: true, ValueType: "bool"}), false},
 		preds.LongFlag(cst.Config):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Config, Shorthand: "c", Usage: fmt.Sprintf("Config file path [default:%s%s.thy.yaml]", homePath, string(os.PathSeparator)), Global: true}), false},
 		preds.LongFlag(cst.Filter):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Filter, Shorthand: "f", Usage: "Filter in jq (stedolan.github.io/jq)", Global: true}), false},
@@ -135,6 +135,9 @@ func (c *baseCommand) preRun(args []string) int {
 	setVerbosity()
 
 	configureFormattingOptions()
+
+	// Set profile name to lower case globally.
+	viper.Set(cst.Profile, strings.ToLower(viper.GetString(cst.Profile)))
 
 	if upd, err := version.CheckLatestVersion(); err != nil {
 		log.Println(err)

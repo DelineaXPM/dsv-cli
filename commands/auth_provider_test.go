@@ -2,12 +2,13 @@ package cmd
 
 import (
 	e "errors"
-	"github.com/spf13/viper"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	cst "thy/constants"
 	"thy/errors"
 	"thy/fake"
+
+	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHandleAuthProviderReadCommand(t *testing.T) {
@@ -128,7 +129,7 @@ func TestHandleAuthProviderUpsertCommand(t *testing.T) {
 				return tt.out, tt.expectedErr
 			}
 
-			p := &AuthProvider{req, writer}
+			p := &AuthProvider{req, writer, nil}
 			viper.Set(cst.LastCommandKey, tt.method)
 
 			if len(tt.dataAction) == 2 {
@@ -193,7 +194,7 @@ func TestHandleAuthProviderDeleteCmd(t *testing.T) {
 				return tt.out, tt.expectedErr
 			}
 
-			p := &AuthProvider{req, writer}
+			p := &AuthProvider{req, writer, nil}
 			_ = p.handleAuthProviderDeleteCmd(tt.args)
 			if tt.expectedErr == nil {
 				assert.Equal(t, data, tt.out)

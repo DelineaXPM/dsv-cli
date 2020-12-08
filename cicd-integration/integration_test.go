@@ -343,6 +343,8 @@ func init() {
 		{"user-read-fail", []string{"user", "read", user1}, outputPattern("will be removed")},
 		{"user-restore", []string{"user", "restore", user1}, outputEmpty()},
 		{"user-read-pass-verify-restore", []string{"user", "read", user1}, outputPattern(`"userName": "mrmittens"`)},
+		{"user-create-provider-missing", []string{"user", "create", "--username", "bob", "--external-id", "1234"}, outputPattern("must specify both provider and external ID")},
+		{"user-create-external-id-missing", []string{"user", "create", "--username", "bob", "--provider", "aws-dev"}, outputPattern("must specify both provider and external ID")},
 
 		// group operations
 		{"group-help", []string{"group", ""}, outputPattern(`Execute an action on a group.*`)},
@@ -364,6 +366,8 @@ func init() {
 		{"role-get-implicit-pass", []string{"role", roleName}, outputPattern(fmt.Sprintf(`"name":\s*"%s"`, roleName))},
 		{"role-search-find-pass", []string{"role", "search", roleName[:3], "data.[0].name"}, outputPattern(roleName)},
 		{"role-search-none-pass", []string{"role", "search", "abcdef"}, outputPattern(`"data": null`)},
+		{"role-create-provider-missing", []string{"role", "create", "--name", "bob", "--external-id", "1234"}, outputPattern("must specify both provider and external ID")},
+		{"role-create-external-id-missing", []string{"role", "create", "--name", "bob", "--provider", "aws-dev"}, outputPattern("must specify both provider and external ID")},
 
 		// client operations
 		{"client-help", []string{"client", ""}, outputPattern(`Execute an action on a client.*`)},
@@ -426,6 +430,16 @@ func init() {
 		{"home-rollback", []string{"home", "rollback", homeSecretPath}, outputPattern(`"version": "2"`)},
 		{"home-get-by-version", []string{"home", "read", homeSecretPath, "version", "2"}, outputPattern(`"version": "2"`)},
 
+		// Pool
+		{"pool", []string{"pool", "create", "--name", "mypool"}, outputPattern(`"name": "mypool"`)},
+		{"pool", []string{"pool", "read", "--name", "mypool"}, outputPattern(`"name": "mypool"`)},
+
+		// Engine
+		{"engine", []string{"engine", "create", "--name", "myengine", "--pool-name", "bad-pool"}, outputPattern(`specified pool doesn't exist`)},
+		{"engine", []string{"engine", "create", "--name", "myengine", "--pool-name", "mypool"}, outputPattern(`"name": "myengine"`)},
+		{"engine", []string{"engine", "read", "--name", "myengine"}, outputPattern(`"name": "myengine"`)},
+		{"engine", []string{"engine", "delete", "myengine"}, outputEmpty()},
+
 		// Whoami
 		{"whoami", []string{"whoami", ""}, outputPattern(`users:` + adminUser)},
 
@@ -473,6 +487,7 @@ func init() {
 		{"rootCA-secret-delete", []string{"secret", "delete", "--path", existingRootSecret, "--force"}, outputEmpty()},
 		{"leafCA-secret-delete", []string{"secret", "delete", "--path", leafSecretPath, "--force"}, outputEmpty()},
 		{"home-secret-delete", []string{"home", "delete", homeSecretPath, "--force"}, outputEmpty()},
+		{"pool", []string{"pool", "delete", "mypool"}, outputEmpty()},
 	}
 }
 

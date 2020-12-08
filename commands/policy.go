@@ -156,7 +156,7 @@ Usage:
 			preds.LongFlag(cst.DataEffect):      cli.PredictorWrapper{preds.EffectTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.DataEffect, Usage: fmt.Sprintf("Policy effect to be stored in a %s. Defaults to allow if not specified", cst.NounPolicy), Default: "allow"}), false},
 			preds.LongFlag(cst.DataDescription): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataDescription, Usage: fmt.Sprintf("Policy description to be stored in a %s ", cst.NounPolicy)}), false},
 			preds.LongFlag(cst.DataSubject):     cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataSubject, Usage: fmt.Sprintf("Policy subjects to be stored in a %s (required, regex and list supported)(required)", cst.NounPolicy)}), false},
-			preds.LongFlag(cst.DataCidr):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataCidr, Usage: fmt.Sprintf("Policy cidr condition to be stored in a %s ", cst.NounPolicy)}), false},
+			preds.LongFlag(cst.DataCidr):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataCidr, Usage: fmt.Sprintf("Policy CIDR condition remote IP to be stored in a %s ", cst.NounPolicy)}), false},
 			preds.LongFlag(cst.DataResource):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataResource, Usage: fmt.Sprintf("Policy resources to be stored in a %s. Defaults to the path plus all paths below (<.*>) ", cst.NounPolicy)}), false},
 		},
 		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
@@ -183,7 +183,7 @@ Usage:
 			preds.LongFlag(cst.DataEffect):      cli.PredictorWrapper{preds.EffectTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.DataEffect, Usage: fmt.Sprintf("Policy effect to be stored in a %s. Defaults to allow if not specified", cst.NounPolicy), Default: "allow"}), false},
 			preds.LongFlag(cst.DataDescription): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataDescription, Usage: fmt.Sprintf("Policy description to be stored in a %s ", cst.NounPolicy)}), false},
 			preds.LongFlag(cst.DataSubject):     cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataSubject, Usage: fmt.Sprintf("Policy subjects to be stored in a %s (required, regex and list supported)(required)", cst.NounPolicy)}), false},
-			preds.LongFlag(cst.DataCidr):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataCidr, Usage: fmt.Sprintf("Policy cidr condition to be stored in a %s ", cst.NounPolicy)}), false},
+			preds.LongFlag(cst.DataCidr):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataCidr, Usage: fmt.Sprintf("Policy CIDR condition remote IP to be stored in a %s ", cst.NounPolicy)}), false},
 			preds.LongFlag(cst.DataResource):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataResource, Usage: fmt.Sprintf("Policy resources to be stored in a %s. Defaults to the path plus all paths below (<.*>) ", cst.NounPolicy)}), false},
 		},
 		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
@@ -492,7 +492,7 @@ func (p Policy) handlePolicyUpsertWorkflow(args []string) int {
 	}
 
 	if cidr, err := getStringAndValidate(
-		ui, "CIDR condition (optional):", true, nil, false, false); err != nil {
+		ui, "CIDR condition remote IP (optional):", true, nil, false, false); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
@@ -638,7 +638,7 @@ func setCidrCondition(policy *defaultPolicy, cidr string) *errors.ApiError {
 		if policy.Conditions == nil {
 			policy.Conditions = make(map[string]jsonCondition, 1)
 		}
-		policy.Conditions["CIDRCondition"] = jc
+		policy.Conditions["remoteIP"] = jc
 		return nil
 	}
 }

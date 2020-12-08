@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 
 	config "thy/cli-config"
 	cmd "thy/commands"
@@ -80,6 +81,7 @@ func runCLI(args []string) (exitStatus int, err error) {
 		"config auth-provider restore":  cmd.GetAuthProviderRestoreCmd,
 		"config auth-provider create":   cmd.GetAuthProviderCreateCmd,
 		"config auth-provider update":   cmd.GetAuthProviderUpdateCmd,
+		"config auth-provider edit":     cmd.GetAuthProviderEditCmd,
 		"config auth-provider rollback": cmd.GetAuthProviderRollbackCmd,
 		"role":                          cmd.GetRoleCmd,
 		"role read":                     cmd.GetRoleReadCmd,
@@ -127,6 +129,15 @@ func runCLI(args []string) (exitStatus int, err error) {
 		"home edit":                     cmd.GetHomeEditCmd,
 		"home rollback":                 cmd.GetHomeRollbackCmd,
 		"home restore":                  cmd.GetHomeRestoreCmd,
+		"pool":                          cmd.GetPoolCmd,
+		"pool create":                   cmd.GetPoolCreateCmd,
+		"pool read":                     cmd.GetPoolReadCmd,
+		"pool delete":                   cmd.GetPoolDeleteCmd,
+		"engine":                        cmd.GetEngineCmd,
+		"engine read":                   cmd.GetEngineReadCmd,
+		"engine create":                 cmd.GetEngineCreateCmd,
+		"engine delete":                 cmd.GetEngineDeleteCmd,
+		"engine ping":                   cmd.GetEnginePingCmd,
 	}
 
 	c.Autocomplete = true
@@ -135,7 +146,7 @@ func runCLI(args []string) (exitStatus int, err error) {
 	log.SetOutput(ioutil.Discard)
 
 	cfgFile := config.GetFlagBeforeParse(cst.Config, c.Args)
-	profile := config.GetFlagBeforeParse(cst.Profile, c.Args)
+	profile := strings.ToLower(config.GetFlagBeforeParse(cst.Profile, c.Args))
 
 	if !cmd.IsInit(c.Args) {
 		// TODO : We do this twice to support autocomplete. Investigate how to only do once instead

@@ -289,6 +289,11 @@ func (r Roles) handleRoleUpsertCmd(args []string) int {
 	if !isUpdate {
 		role.ExternalID = viper.GetString(cst.DataExternalID)
 		role.Provider = viper.GetString(cst.DataProvider)
+		if (role.Provider != "" && role.ExternalID == "") || (role.Provider == "" && role.ExternalID != "") {
+			err := errors.NewS("error: must specify both provider and external ID for third-party roles")
+			r.outClient.WriteResponse(nil, err)
+			return utils.GetExecStatus(err)
+		}
 	}
 
 	data, err := r.submitRole(name, role, isUpdate)
@@ -324,18 +329,45 @@ func (r Roles) handleRoleWorkflow(args []string) int {
 	}
 
 	if !isUpdate {
-		if resp, err := getStringAndValidate(ui, "Provider:", true, nil, false, false); err != nil {
-			ui.Error(err.Error())
-			return 1
-		} else {
-			params["provider"] = resp
+		baseType := strings.Join([]string{cst.Config, cst.NounAuth}, "/")
+		data, err := handleSearch(nil, baseType, r.request)
+		if err != nil {
+			r.outClient.Fail(err)
+			return utils.GetExecStatus(err)
+		}
+		providers, parseErr := parseAuthProviders(data)
+		if parseErr != nil {
+			r.outClient.FailS("Failed to parse out available auth providers.")
+			return utils.GetExecStatus(parseErr)
 		}
 
-		if resp, err := getStringAndValidate(ui, "External ID:", true, nil, false, false); err != nil {
-			ui.Error(err.Error())
-			return 1
-		} else {
-			params["externalId"] = resp
+		if len(providers) > 0 {
+			var providerName string
+			options := []option{{"local", "local"}}
+			for _, p := range providers {
+				// Skip thycoticone - roles cannot have it as a provider.
+				if p.Type == cst.ThyOne {
+					continue
+				}
+				v := fmt.Sprintf("%s:%s", p.Name, p.Type)
+				options = append(options, option{v, strings.Replace(v, ":", " - ", 1)})
+			}
+			if resp, err := getStringAndValidate(ui, "Provider:", true, options, false, false); err != nil {
+				ui.Error(err.Error())
+				return 1
+			} else {
+				providerName = resp
+			}
+
+			if p := strings.Split(providerName, ":"); p[0] != "local" {
+				if resp, err := getStringAndValidate(ui, "External ID:", false, nil, false, false); err != nil {
+					ui.Error(err.Error())
+					return 1
+				} else {
+					params["provider"] = strings.Split(providerName, ":")[0]
+					params["externalId"] = resp
+				}
+			}
 		}
 	}
 

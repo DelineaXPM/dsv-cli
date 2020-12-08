@@ -206,36 +206,52 @@ func TestHandleUserCreateCmd(t *testing.T) {
 		args        []string
 		userName    string
 		password    string
+		provider    string
+		externalID  string
 		apiResponse []byte
 		out         []byte
 		expectedErr *errors.ApiError
 	}{
 		{
-			"Happy path",
-			[]string{"--username", "user1", "--password", "password"},
-			"user1",
-			"password",
-			[]byte(`test`),
-			[]byte(`test`),
-			nil,
+			name:        "Successful local user create",
+			args:        []string{"--username", "user1", "--password", "password"},
+			userName:    "user1",
+			password:    "password",
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
 		},
 		{
-			"no username",
-			[]string{"--password", "password"},
-			"",
-			"password",
-			[]byte(`test`),
-			[]byte(`test`),
-			errors.New(e.New("error: must specify " + cst.DataUsername)),
+			name:        "Create fails no username",
+			args:        []string{"--password", "password"},
+			password:    "password",
+			expectedErr: errors.New(e.New("error: must specify " + cst.DataUsername)),
 		},
 		{
-			"no password",
-			[]string{"--username", "user"},
-			"user1",
-			"",
-			[]byte(`test`),
-			[]byte(`test`),
-			errors.New(e.New("error: must specify " + cst.DataPassword)),
+			name:        "Create fails no password",
+			args:        []string{"--username", "user"},
+			userName:    "user1",
+			expectedErr: errors.New(e.New("error: must specify password for local users")),
+		},
+		{
+			name:        "3rd party provider missing",
+			args:        []string{"--username", "user", "--external-id", "1234"},
+			userName:    "user1",
+			externalID:  "1234",
+			expectedErr: errors.New(e.New("error: must specify both provider and external ID for third-party users")),
+		},
+		{
+			name:        "3rd party external ID missing",
+			args:        []string{"--username", "user", "--provider", "aws-dev"},
+			userName:    "user1",
+			provider:    "aws-dev",
+			expectedErr: errors.New(e.New("error: must specify both provider and external ID for third-party users")),
+		},
+		{
+			name:       "Successful 3rd party user create",
+			args:       []string{"--username", "user", "--provider", "aws-dev", "--external-id", "1234"},
+			userName:   "user1",
+			provider:   "aws-dev",
+			externalID: "1234",
 		},
 	}
 
@@ -246,6 +262,8 @@ func TestHandleUserCreateCmd(t *testing.T) {
 	for _, tt := range testCase {
 		viper.Set(cst.DataUsername, tt.userName)
 		viper.Set(cst.DataPassword, tt.password)
+		viper.Set(cst.DataProvider, tt.provider)
+		viper.Set(cst.DataExternalID, tt.externalID)
 		t.Run(tt.name, func(t *testing.T) {
 			acmd := &fake.FakeOutClient{}
 			var data []byte

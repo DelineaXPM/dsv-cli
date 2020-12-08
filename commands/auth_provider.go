@@ -26,6 +26,7 @@ import (
 type AuthProvider struct {
 	request   requests.Client
 	outClient format.OutClient
+	edit      func([]byte, dataFunc, *errors.ApiError, bool) ([]byte, *errors.ApiError)
 }
 
 func (p AuthProvider) Run(args []string) int {
@@ -65,7 +66,7 @@ func GetAuthProviderCmd() (cli.Command, error) {
 			if name == "" {
 				return cli.RunResultHelp
 			}
-			return AuthProvider{requests.NewHttpClient(), nil}.handleAuthProviderReadCmd(args)
+			return AuthProvider{requests.NewHttpClient(), nil, nil}.handleAuthProviderReadCmd(args)
 		},
 		SynopsisText:   "manage 3rd party authentication providers",
 		HelpText:       fmt.Sprintf("Execute an action on an %s from %s", cst.NounAuthProvider, cst.ProductName),
@@ -154,6 +155,7 @@ Usage:
 			preds.LongFlag(cst.ThyOneAuthClientBaseUri): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientBaseUri, Usage: fmt.Sprintf("Thycotic One base URI")}), false},
 			preds.LongFlag(cst.ThyOneAuthClientID):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientID, Usage: fmt.Sprintf("Thycotic One client ID")}), false},
 			preds.LongFlag(cst.ThyOneAuthClientSecret):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientSecret, Usage: fmt.Sprintf("Thycotic One client secret")}), false},
+			preds.LongFlag(cst.SendWelcomeEmail):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.SendWelcomeEmail, Usage: fmt.Sprintf("Whether to send welcome email for thycotic-one users linked to the auth provider (true or false)")}), false},
 		},
 		MinNumberArgs: 0,
 	})
@@ -182,8 +184,27 @@ Usage:
 			preds.LongFlag(cst.ThyOneAuthClientBaseUri): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientBaseUri, Usage: fmt.Sprintf("Thycotic One base URI")}), false},
 			preds.LongFlag(cst.ThyOneAuthClientID):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientID, Usage: fmt.Sprintf("Thycotic One client ID")}), false},
 			preds.LongFlag(cst.ThyOneAuthClientSecret):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientSecret, Usage: fmt.Sprintf("Thycotic One client secret")}), false},
+			preds.LongFlag(cst.SendWelcomeEmail):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.SendWelcomeEmail, Usage: fmt.Sprintf("Whether to send welcome email for thycotic-one users linked to the auth provider (true or false)")}), false},
 		},
 		MinNumberArgs: 0,
+	})
+}
+
+func GetAuthProviderEditCmd() (cli.Command, error) {
+	return NewCommand(CommandArgs{
+		Path:         []string{cst.Config, cst.NounAuthProvider, cst.Edit},
+		RunFunc:      AuthProvider{request: requests.NewHttpClient(), outClient: nil, edit: EditData}.handleAuthProviderEdit,
+		SynopsisText: fmt.Sprintf("%s %s %s (<name> | --name|-n)", cst.NounConfig, cst.NounAuthProvider, cst.Edit),
+		HelpText: fmt.Sprintf(`Edit an auth provider
+
+Usage:
+   • %[1]s %[2]s %[4]s %[3]s
+   • %[1]s %[2]s %[4]s --name %[3]s
+		`, cst.NounConfig, cst.NounAuthProvider, cst.ExampleAuthProviderName, cst.Edit),
+		FlagsPredictor: cli.PredictorWrappers{
+			preds.LongFlag(cst.DataName): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataName, Shorthand: "n", Usage: fmt.Sprintf("Target %s to an %s", cst.Path, cst.NounAuthProvider)}), false},
+		},
+		MinNumberArgs: 1,
 	})
 }
 
@@ -325,7 +346,7 @@ func (p AuthProvider) handleAuthProviderUpsertWorkflow(args []string) int {
 				{"aws", "AWS"},
 				{"azure", "Azure"},
 				{"gcp", "GCP"},
-				{"thycoticone", "Thycotic One"},
+				{cst.ThyOne, "Thycotic One"},
 			}, false, false); err != nil {
 			ui.Error(err.Error())
 			return utils.GetExecStatus(err)
@@ -380,7 +401,7 @@ func (p AuthProvider) handleAuthProviderUpsertWorkflow(args []string) int {
 			}
 			params.Properties = props
 		}
-	case "thycoticone":
+	case cst.ThyOne:
 		if url, err := getStringAndValidate(
 			ui, "Base URL:", false, nil, false, false); err != nil {
 			ui.Error(err.Error())
@@ -401,6 +422,16 @@ func (p AuthProvider) handleAuthProviderUpsertWorkflow(args []string) int {
 			return utils.GetExecStatus(err)
 		} else {
 			params.Properties.ClientSecret = clientSecret
+		}
+		if sendWelcomeEmail, err := getStringAndValidate(
+			ui, "Send welcome email (true or false):", true, nil, false, false); err != nil {
+			ui.Error(err.Error())
+			return utils.GetExecStatus(err)
+		} else {
+			sendWelcomeEmail, parseErr := strconv.ParseBool(sendWelcomeEmail)
+			if parseErr == nil {
+				params.Properties.SendWelcomeEmail = sendWelcomeEmail
+			}
 		}
 	default:
 		ui.Error("Unsupported auth provider type.")
@@ -454,6 +485,11 @@ func (p AuthProvider) handleAuthProviderUpsert(args []string) int {
 			},
 		}
 	}
+	sendWelcomeEmail, parseErr := strconv.ParseBool(viper.GetString(cst.SendWelcomeEmail))
+	if parseErr == nil && model.Type == cst.ThyOne {
+		model.Properties.SendWelcomeEmail = sendWelcomeEmail
+	}
+
 	resp, apiErr := p.submitAuthProvider(model)
 	p.outClient.WriteResponse(resp, apiErr)
 	return utils.GetExecStatus(err)
@@ -526,6 +562,42 @@ func (p AuthProvider) handleAuthProviderSearchCommand(args []string) int {
 	return utils.GetExecStatus(err)
 }
 
+func (p AuthProvider) handleAuthProviderEdit(args []string) int {
+	if p.outClient == nil {
+		p.outClient = format.NewDefaultOutClient()
+	}
+
+	var err *errors.ApiError
+	var resp []byte
+
+	path, status := getAuthProviderParams(args)
+	if status != 0 {
+		return status
+	}
+	baseType := strings.Join([]string{cst.Config, cst.NounAuth}, "/")
+	uri := paths.CreateResourceURI(baseType, paths.ProcessPath(path), "", true, nil, false)
+
+	resp, err = p.request.DoRequest("GET", uri, nil)
+	if err != nil {
+		p.outClient.WriteResponse(resp, err)
+		return utils.GetExecStatus(err)
+	}
+
+	saveFunc := dataFunc(func(data []byte) (resp []byte, err *errors.ApiError) {
+		var model authProvider
+		if mErr := json.Unmarshal(data, &model); mErr != nil {
+			return nil, errors.New(mErr).Grow("invalid format for auth provider")
+		}
+		if model.Type != cst.ThyOne {
+			model.Properties.SendWelcomeEmail = false
+		}
+		_, err = p.request.DoRequest("PUT", uri, &model)
+		return nil, err
+	})
+	resp, err = p.edit(resp, saveFunc, nil, false)
+	p.outClient.WriteResponse(resp, err)
+	return utils.GetExecStatus(err)
+}
 func getAuthProviderParams(args []string) (name string, status int) {
 	status = 0
 	name = viper.GetString(cst.DataName)

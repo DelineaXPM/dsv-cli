@@ -204,6 +204,8 @@ func TestHandleRoleUpsertCmd(t *testing.T) {
 	testCase := []struct {
 		name        string
 		roleName    string
+		provider    string
+		externalID  string
 		args        []string
 		apiResponse []byte
 		out         []byte
@@ -211,46 +213,74 @@ func TestHandleRoleUpsertCmd(t *testing.T) {
 		expectedErr *errors.ApiError
 	}{
 		{
-			"Successful create",
-			"role1",
-			[]string{"--name", "role1"},
-			[]byte(`test`),
-			[]byte(`test`),
-			"create",
-			nil,
+			name:        "Successful create",
+			roleName:    "role1",
+			args:        []string{"--name", "role1"},
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			method:      "create",
 		},
 		{
-			"Successful create",
-			"role1",
-			[]string{"--name", "role1"},
-			[]byte(`test`),
-			[]byte(`test`),
-			"update",
-			nil,
+			name:        "Successful update",
+			roleName:    "role1",
+			args:        []string{"--name", "role1"},
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			method:      "update",
 		},
 		{
-			"Create - no name",
-			"",
-			[]string{"--desc", "updated role"},
-			[]byte(`test`),
-			[]byte(`test`),
-			"create",
-			errors.New(e.New("error: must specify " + cst.DataName)),
+			name:        "Create fails no name",
+			args:        []string{"--desc", "new role"},
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			method:      "create",
+			expectedErr: errors.New(e.New("error: must specify " + cst.DataName)),
 		},
 		{
-			"Update - no name",
-			"",
-			[]string{"--desc", "updated role"},
-			[]byte(`test`),
-			[]byte(`test`),
-			"update",
-			errors.New(e.New("error: must specify " + cst.DataName)),
+			name:        "Update fails no name",
+			args:        []string{"--desc", "updated role"},
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			method:      "update",
+			expectedErr: errors.New(e.New("error: must specify " + cst.DataName)),
+		},
+		{
+			name:        "Create fails external ID is missing",
+			roleName:    "role2",
+			provider:    "aws-dev",
+			args:        []string{"--name", "role2", "--provider", "aws-dev"},
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			method:      "create",
+			expectedErr: errors.New(e.New("error: must specify both provider and external ID for third-party roles")),
+		},
+		{
+			name:        "Create fails provider is missing",
+			roleName:    "role2",
+			externalID:  "1234",
+			args:        []string{"--name", "role2", "--external-id", "1234"},
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			method:      "create",
+			expectedErr: errors.New(e.New("error: must specify both provider and external ID for third-party roles")),
+		},
+		{
+			name:        "Successful 3rd party role create",
+			roleName:    "role1",
+			provider:    "aws-dev",
+			externalID:  "1234",
+			args:        []string{"--name", "role2", "--provider", "aws-dev", "--external-id", "1234"},
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			method:      "create",
 		},
 	}
 
 	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {
 		viper.Set(cst.DataName, tt.roleName)
+		viper.Set(cst.DataProvider, tt.provider)
+		viper.Set(cst.DataExternalID, tt.externalID)
 		t.Run(tt.name, func(t *testing.T) {
 			writer := &fake.FakeOutClient{}
 			var data []byte

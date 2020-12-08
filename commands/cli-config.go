@@ -336,13 +336,14 @@ func handleCliConfigInitCmd(args []string) int {
 		cfgPath = config.GetCliConfigPath()
 	}
 
-	profile := viper.GetString(cst.Profile)
+	profile := strings.ToLower(viper.GetString(cst.Profile))
 	if profile == "" {
 		profile = cst.DefaultProfile
 	} else {
 		// If not default profile, that means the user specified --profile [name], so the intent is to add a profile to the config.
 		addProfile = true
 	}
+	viper.Set(cst.Profile, profile)
 
 	if cfgPath != "" {
 		if cfgInfo, err := os.Stat(cfgPath); err == nil && cfgInfo != nil {
@@ -383,16 +384,18 @@ func handleCliConfigInitCmd(args []string) int {
 
 				// If default profile, that means the user did not specify --profile [name], so ask for profile name.
 				if addProfile && profile == cst.DefaultProfile {
-					if p, err := getStringAndValidate(ui, "Please enter profile name:", false, nil, false, false); err != nil {
+					var p string
+					if p, err = getStringAndValidate(ui, "Please enter profile name:", false, nil, false, false); err != nil {
 						return 1
-					} else if err := viper.ReadInConfig(p); err == nil {
+					}
+					p = strings.ToLower(p)
+					if err := viper.ReadInConfig(p); err == nil {
 						msg := fmt.Sprintf("Profile %q already exists in the config.", p)
 						ui.Info(msg)
 						return 1
-					} else {
-						profile = p
-						viper.Set(cst.Profile, profile)
 					}
+					profile = p
+					viper.Set(cst.Profile, profile)
 				}
 			}
 		} else if profile != cst.DefaultProfile {

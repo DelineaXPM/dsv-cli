@@ -286,24 +286,32 @@ func (u User) handleUserCreateCmd(args []string) int {
 		u.outClient.WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
-	passData := viper.GetString(cst.DataPassword)
-	if passData == "" && len(args) > 1 {
-		passData = args[1]
-	}
-	if passData == "" {
-		err := errors.NewS("error: must specify " + cst.DataPassword)
+	provider := viper.GetString(cst.DataProvider)
+	externalID := viper.GetString(cst.DataExternalID)
+	if (provider != "" && externalID == "") || (provider == "" && externalID != "") {
+		err := errors.NewS("error: must specify both provider and external ID for third-party users")
 		u.outClient.WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
-	providerData := viper.GetString(cst.DataProvider)
-	externalIdData := viper.GetString(cst.DataExternalID)
+
+	isUserLocal := provider == "" || externalID == ""
+	password := viper.GetString(cst.DataPassword)
+	if password == "" && isUserLocal {
+		err := errors.NewS("error: must specify password for local users")
+		u.outClient.WriteResponse(nil, err)
+		return utils.GetExecStatus(err)
+	}
 
 	data := map[string]string{
-		"name":       userName,
-		"username":   userName,
-		"password":   passData,
-		"provider":   providerData,
-		"externalId": externalIdData,
+		"name":     userName,
+		"username": userName,
+	}
+
+	if password != "" && isUserLocal {
+		data["password"] = password
+	} else {
+		data["provider"] = provider
+		data["externalId"] = externalID
 	}
 
 	resp, apiError := u.submitUser("", data, false)
@@ -438,7 +446,7 @@ func (u User) handleUserWorkflow(args []string) int {
 			} else {
 				params["password"] = resp
 			}
-		} else if p[1] == "thycoticone" {
+		} else if p[1] == cst.ThyOne {
 			params["provider"] = strings.Split(providerName, ":")[0]
 		} else {
 			if resp, err := getStringAndValidate(ui, "External ID:", false, nil, false, false); err != nil {

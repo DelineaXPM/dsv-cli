@@ -230,7 +230,7 @@ func TestHandleClientSearchCmd(t *testing.T) {
 			"",
 			[]byte(`test`),
 			[]byte(`test`),
-			errors.New(e.New("error: must specify " + cst.Query)),
+			errors.New(e.New("error: must specify " + cst.NounRole)),
 		},
 	}
 

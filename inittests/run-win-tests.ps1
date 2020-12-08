@@ -14,12 +14,12 @@ if ((Test-Path -Path winenv) -eq $false)
     virtualenv -p python winenv
 }
 
-if (-not (Test-Path env:CONSTANTS_CLINAME)) {
-    $env:CONSTANTS_CLINAME = 'dsv'
+if (-not (Test-Path env:INIT_CLINAME)) {
+    $env:INIT_CLINAME = 'dsv'
 }
 
-$env:BINARY_PATH = "$env:CONSTANTS_CLINAME-win-x64.exe"
-echo "WIN CLI NAME: $env:CONSTANTS_CLINAME"
+$env:BINARY_PATH = "$env:INIT_CLINAME"
+echo "WIN CLI NAME: $env:INIT_CLINAME"
 
 #/cd..
 Set-Location ..
