@@ -7,8 +7,8 @@ import (
 	"thy/errors"
 	"thy/fake"
 
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
-	"github.com/thycotic-rd/viper"
 )
 
 func TestHandleClientReadCmd(t *testing.T) {
@@ -230,7 +230,7 @@ func TestHandleClientSearchCmd(t *testing.T) {
 			"",
 			[]byte(`test`),
 			[]byte(`test`),
-			errors.New(e.New("error: must specify " + cst.Query)),
+			errors.New(e.New("error: must specify " + cst.NounRole)),
 		},
 	}
 

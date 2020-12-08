@@ -1,4 +1,4 @@
-./thy-win-x64.exe init --dev [INIT_DEV_DOMAIN] --config configs/advanced_auth_win_cred_pass_test.yml
+./[INIT_CLINAME] init --dev [INIT_DEV_DOMAIN] --config configs/advanced_auth_win_cred_pass_test.yml
 [INIT_TENANT]
 4
 2

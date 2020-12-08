@@ -1,10 +1,7 @@
+import difflib
+import json
 import os
 import re
-import difflib
-import pathlib
-import subprocess
-import shutil
-import json
 import uuid
 
 # Default response timeout for the CLI.
@@ -96,21 +93,3 @@ def create_secret_file() -> str:
     f.write(json.dumps(secret_json))
     f.close()
     return path
-
-
-def clear_environment():
-    """Removes the $HOME/.thy.yml config, all tokens and secrets in the store directory and copies 
-    the encryption key into $HOME/.thy."""
-    home = pathlib.Path.home()
-    os.remove(home / ".thy.yml")
-    try:
-        os.remove("configs/config_edit_pass.yml")
-    except:
-        print("configs/config_edit_pass.yml " + "does not exist")
-    config_path = "configs/base.yml"
-    c = get_rendered_config(config_path)
-    overwrite_config("configs/base_modified.yml", c)
-    subprocess.run(["./thy", "auth", "clear", "--config", config_path])
-    key_file = "encryptionkey-ambarco-cli-unit-test"
-    shutil.copyfile(pathlib.Path("configs") / key_file, home / ".thy" / key_file)
-    subprocess.run(["./thy", "auth", "--config", "configs/base_modified.yml"])

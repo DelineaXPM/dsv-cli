@@ -1,3 +1,3 @@
-./thy init --dev [INIT_DEV_DOMAIN] --config configs/advanced_auth_pass.yml
+./[INIT_CLINAME] init --dev [INIT_DEV_DOMAIN] --config configs/advanced_auth_pass.yml
 a
 default

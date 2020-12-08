@@ -15,6 +15,7 @@ import (
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
+	"thy/paths"
 	preds "thy/predictors"
 	"thy/requests"
 	"thy/store"
@@ -22,8 +23,8 @@ import (
 	"thy/utils"
 
 	"github.com/posener/complete"
+	"github.com/spf13/viper"
 	"github.com/thycotic-rd/cli"
-	"github.com/thycotic-rd/viper"
 	"gopkg.in/yaml.v2"
 )
 
@@ -335,13 +336,14 @@ func handleCliConfigInitCmd(args []string) int {
 		cfgPath = config.GetCliConfigPath()
 	}
 
-	profile := viper.GetString(cst.Profile)
+	profile := strings.ToLower(viper.GetString(cst.Profile))
 	if profile == "" {
 		profile = cst.DefaultProfile
 	} else {
 		// If not default profile, that means the user specified --profile [name], so the intent is to add a profile to the config.
 		addProfile = true
 	}
+	viper.Set(cst.Profile, profile)
 
 	if cfgPath != "" {
 		if cfgInfo, err := os.Stat(cfgPath); err == nil && cfgInfo != nil {
@@ -382,15 +384,18 @@ func handleCliConfigInitCmd(args []string) int {
 
 				// If default profile, that means the user did not specify --profile [name], so ask for profile name.
 				if addProfile && profile == cst.DefaultProfile {
-					if p, err := getStringAndValidate(ui, "Please enter profile name:", false, nil, false, false); err != nil {
+					var p string
+					if p, err = getStringAndValidate(ui, "Please enter profile name:", false, nil, false, false); err != nil {
 						return 1
-					} else if err := viper.ReadInConfig(p); err == nil {
+					}
+					p = strings.ToLower(p)
+					if err := viper.ReadInConfig(p); err == nil {
 						msg := fmt.Sprintf("Profile %q already exists in the config.", p)
 						ui.Info(msg)
 						return 1
-					} else {
-						profile = p
 					}
+					profile = p
+					viper.Set(cst.Profile, profile)
 				}
 			}
 		} else if profile != cst.DefaultProfile {
@@ -433,7 +438,7 @@ func handleCliConfigInitCmd(args []string) int {
 	// check if tenant has been setup yet
 	viper.Set(cst.DomainKey, domain)
 	var setupRequired bool
-	heartbeatURI := utils.CreateURI("heartbeat", nil)
+	heartbeatURI := paths.CreateURI("heartbeat", nil)
 	if respData, err := requests.NewHttpClient().DoRequest("GET", heartbeatURI, nil); err != nil {
 		ui.Error(fmt.Sprintf("Failed to contact %s to determine if initial admin setup is required.", cst.ProductName))
 		return 1
@@ -501,18 +506,24 @@ func handleCliConfigInitCmd(args []string) int {
 
 	//auth
 	var authType, user, password, passwordKey, authProvider, encryptionKeyFileName string
-	if at, err := getStringAndValidate(ui, "Please enter auth type:", true, []option{
-		o(string(auth.Password), "Password (local user)"),
-		o(string(auth.ClientCredential), "Client Credential"),
-		o(string(auth.FederatedThyOne), "Thycotic One (federated)"),
-		o(string(auth.FederatedAws), "AWS IAM (federated)"),
-		o(string(auth.FederatedAzure), "Azure (federated)"),
-		o(string(auth.FederatedGcp), "GCP (federated)"),
-	}, false, false); err != nil {
-		return 1
-	} else {
-		authType = at
-		viper.Set(cst.AuthType, authType)
+	// allow overriding option with flag
+	authType = viper.GetString(cst.AuthType)
+	authProvider = viper.GetString(cst.AuthProvider)
+	if authType == "" {
+		if at, err := getStringAndValidate(ui, "Please enter auth type:", true, []option{
+			o(string(auth.Password), "Password (local user)"),
+			o(string(auth.ClientCredential), "Client Credential"),
+			o(string(auth.FederatedThyOne), "Thycotic One (federated)"),
+			o(string(auth.FederatedAws), "AWS IAM (federated)"),
+			o(string(auth.FederatedAzure), "Azure (federated)"),
+			o(string(auth.FederatedGcp), "GCP (federated)"),
+			o(string(auth.Oidc), "OIDC (federated)"),
+		}, false, false); err != nil {
+			return 1
+		} else {
+			authType = at
+			viper.Set(cst.AuthType, authType)
+		}
 	}
 	AddNode(&cfg, jsonish{cst.Type: authType}, profile, cst.NounAuth)
 	if storeType != store.None {
@@ -559,15 +570,13 @@ func handleCliConfigInitCmd(args []string) int {
 			}
 			if auth.AuthType(authType) == auth.FederatedThyOne {
 				authProviderMessage = fmt.Sprintf("Thycotic One authentication provider name (default %s):", cst.DefaultThyOneName)
-				if authProvider, err = getStringAndValidate(ui, authProviderMessage, true, nil, false, false); err != nil {
-					return 1
-				} else {
-					if authProvider == "" {
-						authProvider = cst.DefaultThyOneName
+				if authProvider == "" {
+					if authProvider, err = getStringAndValidateDefault(ui, authProviderMessage, cst.DefaultThyOneName, true, nil, false, false); err != nil {
+						return 1
 					}
-					AddNode(&cfg, jsonish{cst.DataProvider: authProvider}, profile, cst.NounAuth)
 					viper.Set(cst.AuthProvider, authProvider)
 				}
+				AddNode(&cfg, jsonish{cst.DataProvider: authProvider}, profile, cst.NounAuth)
 			}
 
 		} else if auth.AuthType(authType) == auth.ClientCredential {
@@ -584,6 +593,7 @@ func handleCliConfigInitCmd(args []string) int {
 					if err := store.StoreSecureSetting(strings.Join([]string{profile, cst.NounAuth, cst.NounClient, cst.NounSecret}, "."), secret, storeType); err != nil {
 						ui.Error(err.Error())
 						return 1
+
 					}
 				} else {
 					AddNode(&cfg, jsonish{cst.NounSecret: secret}, profile, cst.NounAuth, cst.NounClient)
@@ -599,11 +609,25 @@ func handleCliConfigInitCmd(args []string) int {
 			}
 			AddNode(&cfg, jsonish{cst.NounAwsProfile: awsProfile}, profile, cst.NounAuth)
 			viper.Set(cst.AwsProfile, awsProfile)
+		} else if auth.AuthType(authType) == auth.Oidc {
+			if authProvider == "" {
+				if authProvider, err = getStringAndValidateDefault(ui, fmt.Sprintf("Please enter auth provider name (default:  %s):", cst.DefaultThyOneName), cst.DefaultThyOneName, true, nil, false, false); err != nil {
+					return 1
+				}
+				viper.Set(cst.AuthProvider, authProvider)
+			}
+			AddNode(&cfg, jsonish{cst.DataProvider: authProvider}, profile, cst.NounAuth)
+			var callback string
+			if callback = viper.GetString(cst.Callback); callback == "" {
+				callback = cst.DefaultCallback
+			}
+			viper.Set(cst.Callback, callback)
+			AddNode(&cfg, jsonish{cst.DataCallback: callback}, profile, cst.NounAuth)
 		}
 	}
 
 	if setupRequired {
-		heartbeatURI := utils.CreateURI("initialize", nil)
+		heartbeatURI := paths.CreateURI("initialize", nil)
 		body := initializeRequest{
 			UserName: user,
 			Password: password,
@@ -766,6 +790,14 @@ func getMainAction(response string) string {
 	} else {
 		return "n"
 	}
+}
+
+func getStringAndValidateDefault(ui cli.Ui, question string, defaultAnswer string, blankAllowed bool, options []option, secure bool, confirm bool) (string, error) {
+	answer, err := getStringAndValidate(ui, question, blankAllowed, options, secure, confirm)
+	if answer == "" {
+		return defaultAnswer, err
+	}
+	return answer, err
 }
 
 func getStringAndValidate(ui cli.Ui, question string, blankAllowed bool, options []option, secure bool, confirm bool) (string, error) {

@@ -9,8 +9,8 @@ import (
 	"thy/fake"
 	"thy/store"
 
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
-	"github.com/thycotic-rd/viper"
 )
 
 func TestHandleAuth(t *testing.T) {

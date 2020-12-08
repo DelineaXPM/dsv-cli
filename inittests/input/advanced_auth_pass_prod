@@ -1,4 +1,4 @@
-./thy init --config configs/advanced_auth_pass_prod
+./[INIT_CLINAME] init --config configs/advanced_auth_pass_prod
 [INIT_TENANT]
 1
 1

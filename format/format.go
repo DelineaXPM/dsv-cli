@@ -12,9 +12,9 @@ import (
 	"thy/utils"
 
 	"github.com/fatih/color"
+	"github.com/hokaccha/go-prettyjson"
 	"github.com/savaki/jq"
-	"github.com/thycotic-rd/go-prettyjson"
-	"github.com/thycotic-rd/viper"
+	"github.com/spf13/viper"
 	"github.com/tidwall/pretty"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -135,7 +135,6 @@ func prettifyUnix(data []byte, colorify bool) ([]byte, *errors.ApiError) {
 	if isJson {
 		formatter := prettyjson.NewFormatter()
 		formatter.KeyColor = color.New(color.FgMagenta, color.FgCyan)
-		formatter.JsonMarshalFunc = JsonMarshal
 		if !colorify {
 			formatter.DisabledColor = true
 		}

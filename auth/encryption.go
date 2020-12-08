@@ -6,7 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"github.com/thycotic-rd/viper"
+	"github.com/spf13/viper"
 	"io"
 	cst "thy/constants"
 	"thy/errors"
@@ -43,7 +43,7 @@ func Encrypt(key, data string) (string, string, error) {
 // GetEncryptionKey attempts to fetch and return the encryption key stored in fileName.
 // If it does not find the key, it generates and returns a slice of random bytes as a new encryption key.
 func GetEncryptionKey(fileName string) ([]byte, error) {
-	if s, err := store.ReadFile(fileName); err == nil {
+	if s, err := store.ReadFileInDefaultPath(fileName); err == nil {
 		return []byte(s), nil
 	}
 	return generateRandomBytes(32)
@@ -88,7 +88,7 @@ func generateRandomBytes(n int) ([]byte, error) {
 func EncipherPassword(plaintext string) (string, error) {
 	userName := viper.GetString(cst.Username)
 	keyPath := GetEncryptionKeyFilename(viper.GetString(cst.Tenant), userName)
-	key, err := store.ReadFile(keyPath)
+	key, err := store.ReadFileInDefaultPath(keyPath)
 	if err != nil || key == "" {
 		return "", KeyfileNotFoundError
 	}

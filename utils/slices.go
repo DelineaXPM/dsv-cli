@@ -15,3 +15,12 @@ func SlicesEqual(a, b []byte) bool {
 	}
 	return true
 }
+
+func Contains(slice []string, target string) bool {
+	for _, ele := range slice {
+		if ele == target {
+			return true
+		}
+	}
+	return false
+}

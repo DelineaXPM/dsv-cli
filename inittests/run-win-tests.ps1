@@ -14,6 +14,13 @@ if ((Test-Path -Path winenv) -eq $false)
     virtualenv -p python winenv
 }
 
+if (-not (Test-Path env:INIT_CLINAME)) {
+    $env:INIT_CLINAME = 'dsv'
+}
+
+$env:BINARY_PATH = "$env:INIT_CLINAME"
+echo "WIN CLI NAME: $env:INIT_CLINAME"
+
 #/cd..
 Set-Location ..
 
@@ -25,11 +32,11 @@ $env:GO111MODULE = "on"
 if ($env:IS_SYSTEM_TEST -eq "true")
 {
     echo "building system test"
-    go test -c -covermode=count -coverpkg ./... -o inittests/thy-win-x64.exe
+    go test -c -covermode=count -coverpkg ./... -o inittests\$env:BINARY_PATH
 }
 else
 {
-    go build -o inittests/thy-win-x64.exe
+    go build -o inittests\$env:BINARY_PATH
 }
 
 Set-Location ./inittests
@@ -41,7 +48,7 @@ python tests-win.py
 
 deactivate
 
-Remove-Item thy-win-x64.exe
+Remove-Item $env:BINARY_PATH
 
 if (Test-Path -Path "$HOME\.thy2.yml")
 {

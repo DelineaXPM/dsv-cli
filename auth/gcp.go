@@ -5,17 +5,18 @@ import (
 	"encoding/json"
 	serrors "errors"
 	"fmt"
-	"google.golang.org/api/option"
 	"io/ioutil"
 	"net/http"
+
 	cst "thy/constants"
-	"thy/utils"
+	"thy/paths"
 
 	"github.com/apex/log"
-	"github.com/thycotic-rd/viper"
+	"github.com/spf13/viper"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	iam "google.golang.org/api/iam/v1"
+	"google.golang.org/api/option"
 )
 
 type GcpClient struct{}
@@ -126,6 +127,7 @@ func (c *GcpClient) GetJwtToken() (string, error) {
 				return resp.SignedJwt, nil
 			}
 		}
+		log.Errorf("gcp iam auth failed: %v", errSecondary)
 	}
 	if errPrimary != nil {
 		return "", errPrimary
@@ -148,7 +150,7 @@ func ParseMetadataIdentityResponse(resp *http.Response) (string, error) {
 
 func GetAudience() string {
 	t := viper.GetString(cst.Tenant)
-	d := utils.GetDomain()
+	d := paths.GetDomain()
 	return fmt.Sprintf("https://%s.%s", t, d)
 }
 

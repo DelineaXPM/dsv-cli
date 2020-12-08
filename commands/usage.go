@@ -6,13 +6,14 @@ import (
 
 	"thy/errors"
 	"thy/format"
+	"thy/paths"
 	preds "thy/predictors"
 	"thy/requests"
 	"thy/utils"
 
 	"github.com/posener/complete"
+	"github.com/spf13/viper"
 	"github.com/thycotic-rd/cli"
-	"github.com/thycotic-rd/viper"
 
 	cst "thy/constants"
 )
@@ -57,7 +58,7 @@ func (u usage) handleGetUsageCmd(args []string) int {
 			"endDate":   endDate,
 		}
 
-		uri := utils.CreateURI(cst.NounUsage, usageRequest)
+		uri := paths.CreateURI(cst.NounUsage, usageRequest)
 		data, err = u.request.DoRequest("GET", uri, nil)
 	}
 

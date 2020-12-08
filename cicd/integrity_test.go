@@ -13,23 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var blacklistPackages = []string{
-	"github.com/spf13/viper", // should be "github.com/thycotic-rd/viper"
-}
-
-func TestEnsureNoWrongImports(t *testing.T) {
-	files, err := getListGoFilePaths()
-	assert.Nil(t, err)
-	for _, f := range files {
-		b, err := ioutil.ReadFile(f)
-		assert.Nil(t, err)
-		for _, p := range blacklistPackages {
-
-			assert.False(t, bytes.Contains(b, []byte(p)), fmt.Sprintf("Disallowed package '%s' found in file '%s'", p, f))
-		}
-	}
-}
-
 func TestEnsureNoFmtUsage(t *testing.T) {
 	fmtPackageName := `fmt.P`
 	files, err := getListGoFilePaths()

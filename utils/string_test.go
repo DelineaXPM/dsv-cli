@@ -50,3 +50,37 @@ func TestStringToSlice(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckPrefix(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		prefixes []string
+		expected bool
+	}{
+		{
+			name:     "One prefix - match",
+			input:    "users:json/test/test1/test2",
+			prefixes: []string{"users:"},
+			expected: true,
+		},
+		{
+			name:     "Two prefix - match",
+			input:    "roles:json/test/test1/test2",
+			prefixes: []string{"users:", "roles:"},
+			expected: true,
+		},
+		{
+			name:     "Not match",
+			input:    "users:json/test/test1/test2",
+			prefixes: []string{"other:"},
+			expected: false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			actual := CheckPrefix(test.input, test.prefixes...)
+			assert.Equal(t, test.expected, actual)
+		})
+	}
+}

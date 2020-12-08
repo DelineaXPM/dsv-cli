@@ -9,8 +9,8 @@ import (
 	"thy/store"
 	"time"
 
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
-	"github.com/thycotic-rd/viper"
 )
 
 func TestHandleDescribeCmd(t *testing.T) {
@@ -88,7 +88,7 @@ func TestHandleDescribeCmd(t *testing.T) {
 
 			viper.Set(cst.StoreType, tt.storeType)
 			viper.Set(cst.CacheStrategy, tt.cacheStrategy)
-			sec := &Secret{req, writer, store.GetStore, nil}
+			sec := &Secret{req, writer, store.GetStore, nil, cst.NounSecret}
 			sec.getStore = func(stString string) (i store.Store, apiError *errors.ApiError) {
 				return st, nil
 			}
@@ -153,7 +153,7 @@ func TestHandleSecretSearchCmd(t *testing.T) {
 				return tt.out, tt.expectedErr
 			}
 
-			sec := &Secret{req, writer, store.GetStore, nil}
+			sec := &Secret{req, writer, store.GetStore, nil, cst.NounSecret}
 			_ = sec.handleSecretSearchCmd([]string{tt.args})
 			if tt.expectedErr == nil {
 				assert.Equal(t, data, tt.out)
@@ -207,7 +207,7 @@ func TestHandleDeleteCmd(t *testing.T) {
 				return tt.out, tt.expectedErr
 			}
 
-			sec := &Secret{req, writer, store.GetStore, nil}
+			sec := &Secret{req, writer, store.GetStore, nil, cst.NounSecret}
 			_ = sec.handleDeleteCmd([]string{tt.args})
 			if tt.expectedErr == nil {
 				assert.Equal(t, data, tt.out)
@@ -259,7 +259,7 @@ func TestHandleRollbackCmd(t *testing.T) {
 				return tt.out, tt.expectedErr
 			}
 
-			sec := &Secret{req, writer, store.GetStore, nil}
+			sec := &Secret{req, writer, store.GetStore, nil, cst.NounSecret}
 			_ = sec.handleRollbackCmd([]string{tt.args})
 			if tt.expectedErr == nil {
 				assert.Equal(t, tt.out, data)
@@ -344,7 +344,7 @@ func TestHandleReadCmd(t *testing.T) {
 			viper.Set(cst.Version, "v1")
 			viper.Set(cst.StoreType, tt.storeType)
 			viper.Set(cst.CacheStrategy, tt.cacheStrategy)
-			sec := &Secret{req, writer, store.GetStore, nil}
+			sec := &Secret{req, writer, store.GetStore, nil, cst.NounSecret}
 			sec.getStore = func(stString string) (i store.Store, apiError *errors.ApiError) {
 				return st, nil
 			}
@@ -417,7 +417,7 @@ func TestHandleUpsertCmd(t *testing.T) {
 				return tt.out, tt.expectedErr
 			}
 
-			sec := &Secret{req, writer, store.GetStore, nil}
+			sec := &Secret{req, writer, store.GetStore, nil, cst.NounSecret}
 			viper.Set(cst.LastCommandKey, tt.method)
 
 			_ = sec.handleUpsertCmd(tt.args)
@@ -475,7 +475,7 @@ func TestHandleBustCacheCmd(t *testing.T) {
 			}
 
 			viper.Set(cst.StoreType, tt.storeType)
-			sec := &Secret{nil, writer, store.GetStore, nil}
+			sec := &Secret{nil, writer, store.GetStore, nil, cst.NounSecret}
 			sec.getStore = func(stString string) (i store.Store, apiError *errors.ApiError) {
 				return st, nil
 			}

@@ -11,6 +11,7 @@ const (
 	ExampleDataPath         = "@/tmp/data.json"
 	ExampleConfigPath       = "@/tmp/config.yml"
 	ExampleUser             = "kadmin"
+	ExampleSIEM             = "LogsInc"
 	ExamplePassword         = "********"
 	ExampleUserSearch       = "adm"
 	ExamplePolicySearch     = "secrets/databases"
@@ -20,5 +21,6 @@ const (
 	ExampleClientSecret     = "pLaKNWL99IK2kL-xMI"
 	ExampleGroup            = "administrators"
 	ExampleGroupCreate      = `{"groupName": "administrators"}`
-	ExampleGroupAddMembers  = `{"memberNames": ["member1","member2"]}`
+	ExampleGroupAddMembers  = `{"members": ["member1","member2"]}`
+	GCPNote                 = `GCP GCE metadata auth provider can be created in the command line, but a GCP Service Account must be done using a file.  See the Authentication:GCP portion of the documentation.`
 )

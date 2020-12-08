@@ -6,11 +6,17 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"reflect"
+	"runtime"
 	"strings"
 	"time"
+
+	"thy/paths"
+
+	"github.com/thycotic-rd/cli"
 
 	config "thy/cli-config"
 	cst "thy/constants"
@@ -19,17 +25,18 @@ import (
 	"thy/store"
 	"thy/utils"
 
+	"github.com/Azure/go-autorest/autorest"
+	azure "github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/thycotic-rd/go-autorest/autorest"
-	azure "github.com/thycotic-rd/go-autorest/autorest/azure/auth"
-	"github.com/thycotic-rd/viper"
+	"github.com/pkg/browser"
+	"github.com/spf13/viper"
 )
 
 const (
 	leewaySecondsTokenExp   = 10
-	refreshTokenLifeSeconds = 60 * 60 * 48
+	refreshTokenLifeSeconds = 60 * 60 * 720
 )
 
 // Note that this global error variable is of type *ApiError, not regular error.
@@ -49,6 +56,7 @@ const (
 	FederatedAws     = AuthType("aws")
 	FederatedAzure   = AuthType("azure")
 	FederatedGcp     = AuthType("gcp")
+	Oidc             = AuthType("oidc")
 )
 
 // GetTokenKey gets the key for the auth type
@@ -116,6 +124,12 @@ func NewAuthenticator(store store.Store, client requests.Client) Authenticator {
 }
 
 func (a *authenticator) GetToken() (*TokenResponse, *errors.ApiError) {
+	if AuthType(viper.GetString(cst.AuthType)) == ClientCredential && (strings.TrimSpace(viper.GetString(cst.AuthClientID)) != "" || strings.TrimSpace(viper.GetString(cst.AuthClientSecret)) != "") {
+		return a.GetTokenCacheOverride(false)
+	}
+	if AuthType(viper.GetString(cst.AuthType)) == Password && strings.TrimSpace(viper.GetString(cst.Password)) != "" {
+		return a.GetTokenCacheOverride(false)
+	}
 	return a.GetTokenCacheOverride(true)
 }
 
@@ -159,18 +173,24 @@ func (a *authenticator) getTokenForAuthType(at AuthType, useCache bool) (*TokenR
 		if keySuffix == "" {
 			keySuffix = cst.DefaultProfile
 		}
+	} else if at == Oidc {
+		profile := viper.GetString(cst.Profile)
+		keySuffix = viper.GetString(keyName)
+		if profile != "" && profile != cst.DefaultProfile {
+			keySuffix = fmt.Sprintf("%s-%s", keySuffix, profile)
+		}
 	} else {
 		keySuffix = viper.GetString(keyName)
 	}
 
 	keyToken := at.GetTokenKey(keySuffix)
 
-	if useCache && strings.TrimSpace(viper.GetString(cst.Password)) == "" {
+	if useCache {
 		if err := a.store.Get(keyToken, &tr); err != nil {
 			return nil, err
 		} else if tr != nil && !tr.IsNil() {
 			// If init (cli-config) or config, invalidate existing token and later re-authenticate.
-			if cmd := viper.GetString(cst.MainCommand); cmd == cst.NounCliConfig || cmd == cst.NounConfig {
+			if cmd := viper.GetString(cst.MainCommand); cmd == cst.NounCliConfig {
 				err := a.store.Wipe(keyToken)
 				if err != nil {
 					return nil, err
@@ -274,6 +294,10 @@ func (a *authenticator) getTokenForAuthType(at AuthType, useCache bool) (*TokenR
 				}
 				data.RefreshToken = refreshToken
 			}
+		} else if at == Oidc {
+			data.Provider = viper.GetString(cst.AuthProvider)
+			data.CallbackHost = viper.GetString(cst.Callback)
+			data.CallbackUrl = fmt.Sprintf("http://%s/callback", viper.GetString(cst.Callback))
 		}
 	}
 
@@ -305,12 +329,78 @@ func (a *authenticator) getTokenForAuthType(at AuthType, useCache bool) (*TokenR
 	}
 }
 
+type RedirectResponse struct {
+	RedirectUrl string `json:"redirect_url"`
+}
+
+type AuthResponse struct {
+	state    string
+	authCode string
+	message  string
+	err      *errors.ApiError
+}
+
 func (a *authenticator) fetchTokenVault(at AuthType, data requestBody) (*TokenResponse, *errors.ApiError) {
 	var response TokenResponse
 	if err := data.ValidateForAuthType(at); err != nil {
 		return nil, errors.New(err)
 	}
-	uri := utils.CreateURI(cst.NounToken, nil)
+	if at == Oidc {
+		ui := cli.BasicUi{
+			Writer:      os.Stdout,
+			Reader:      os.Stdin,
+			ErrorWriter: os.Stderr,
+		}
+
+		var redirectResponse RedirectResponse
+		uri := paths.CreateURI("oidc/auth", nil)
+
+		if err := a.requestClient.DoRequestOut("POST", uri, data, &redirectResponse); err != nil {
+			return nil, err
+		}
+		callbackListener, err := net.Listen("tcp", data.CallbackHost)
+		if err != nil {
+			return nil, errors.NewF("unable to open callback listener: %v", err)
+		}
+		defer callbackListener.Close()
+
+		authChannel := make(chan AuthResponse)
+		http.HandleFunc("/callback", a.handleOidcAuth(authChannel))
+
+		go func() {
+			err := http.Serve(callbackListener, nil)
+			if err != nil && err != http.ErrServerClosed {
+				authChannel <- AuthResponse{
+					message: "login failed",
+					err:     errors.New(err),
+				}
+			}
+		}()
+
+		browserOpened := false
+		if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
+			if err = browser.OpenURL(redirectResponse.RedirectUrl); err == nil {
+				browserOpened = true
+			}
+		}
+		if !browserOpened {
+			ui.Info(fmt.Sprintf("Unable to open browser, complete login process here:\n %s", redirectResponse.RedirectUrl))
+		}
+
+		select {
+		case ar := <-authChannel:
+			if ar.err != nil {
+				return nil, ar.err
+			}
+			data.State = ar.state
+			data.AuthorizationCode = ar.authCode
+			ui.Info(fmt.Sprintf("Received response from oidc provider, submitting authorization code to %s", cst.ProductName))
+		case <-time.After(5 * time.Minute):
+			ui.Info(fmt.Sprintf("Timeout occurred waiting for callback from oidc provider"))
+			return nil, errors.NewS("no callback occurred after redirect")
+		}
+	}
+	uri := paths.CreateURI(cst.NounToken, nil)
 	if err := a.requestClient.DoRequestOut("POST", uri, data, &response); err != nil {
 		return nil, err
 	} else if response.IsNil() {
@@ -318,6 +408,41 @@ func (a *authenticator) fetchTokenVault(at AuthType, data requestBody) (*TokenRe
 	}
 	response.Granted = time.Now().UTC()
 	return &response, nil
+}
+
+//
+func (a *authenticator) handleOidcAuth(doneCh chan<- AuthResponse) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+
+		b, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			w.Write([]byte(err.Error()))
+			doneCh <- AuthResponse{
+				err:     errors.New(err),
+				message: "error in callback",
+			}
+		}
+
+		code := req.URL.Query().Get("code")
+		state := req.URL.Query().Get("state")
+
+		if code == "" || state == "" {
+			doneCh <- AuthResponse{
+				err: errors.NewS("missing values in callback, authorization code or state are empty"),
+			}
+			w.Write(b)
+			return
+		}
+
+		w.Write([]byte(youDidIt))
+		doneCh <- AuthResponse{
+			err:      nil,
+			message:  "success",
+			authCode: code,
+			state:    state,
+		}
+
+	}
 }
 
 // setupDataForPasswordAuth prepares the requestBody object with data for password auth.
@@ -339,7 +464,7 @@ func setupDataForPasswordAuth(data *requestBody) error {
 		if pass, err := config.GetSecureSetting(passSetting); err == nil && pass != "" {
 			if passSetting == cst.SecurePassword {
 				keyPath := GetEncryptionKeyFilename(viper.GetString(cst.Tenant), userName)
-				key, err := store.ReadFile(keyPath)
+				key, err := store.ReadFileInDefaultPath(keyPath)
 				if err != nil || key == "" {
 					return KeyfileNotFoundError
 				}
@@ -392,6 +517,10 @@ type requestBody struct {
 	AwsHeaders        string `json:"aws_headers"`
 	Jwt               string `json:"jwt"`
 	AzureAuthClientID string
+	AuthorizationCode string `json:"authorization_code"`
+	CallbackUrl       string `json:"callback_url"`
+	State             string `json:"state"`
+	CallbackHost      string `json:"_"`
 }
 
 type TokenResponse struct {
@@ -442,6 +571,7 @@ var authTypeToGrantType = map[AuthType]string{
 	FederatedAws:     "aws_iam",
 	FederatedAzure:   "azure",
 	FederatedGcp:     "gcp",
+	Oidc:             "oidc",
 }
 
 type paramSpec struct {
@@ -549,6 +679,13 @@ var paramSpecDict = map[AuthType][]paramSpec{
 		},
 		{PropName: "Service",
 			ArgName:    "Service",
+			IsKey:      true,
+			RequestVar: false,
+		},
+	},
+	Oidc: {
+		{PropName: "AuthType",
+			ArgName:    cst.AuthType,
 			IsKey:      true,
 			RequestVar: false,
 		},

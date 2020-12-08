@@ -7,8 +7,8 @@ import (
 	"thy/errors"
 	"thy/fake"
 
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
-	"github.com/thycotic-rd/viper"
 )
 
 func TestHandlePolicyReadCommand(t *testing.T) {
@@ -57,9 +57,9 @@ func TestHandlePolicyReadCommand(t *testing.T) {
 			p := Policy{request: req, outClient: acmd}
 			_ = p.handlePolicyReadCmd(tt.args)
 			if tt.expectedErr == nil {
-				assert.Equal(t, data, tt.out)
+				assert.Equal(t, tt.out, data)
 			} else {
-				assert.Equal(t, err, tt.expectedErr)
+				assert.Equal(t, tt.expectedErr, err)
 			}
 		})
 	}
@@ -121,9 +121,9 @@ func TestHandlePolicyEditCommand(t *testing.T) {
 
 			_ = p.handlePolicyEditCmd(tt.args)
 			if tt.expectedErr == nil {
-				assert.Equal(t, data, tt.out)
+				assert.Equal(t, tt.out, data)
 			} else {
-				assert.Equal(t, err, tt.expectedErr)
+				assert.Equal(t, tt.expectedErr, err)
 			}
 		})
 	}
@@ -178,7 +178,6 @@ func TestHandlePolicyUpsertCommand(t *testing.T) {
 
 	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {
-
 		t.Run(tt.name, func(t *testing.T) {
 			writer := &fake.FakeOutClient{}
 			var data []byte
@@ -209,9 +208,9 @@ func TestHandlePolicyUpsertCommand(t *testing.T) {
 			_ = p.handlePolicyUpsertCmd(tt.args)
 
 			if tt.expectedErr == nil {
-				assert.Equal(t, data, tt.out)
+				assert.Equal(t, tt.out, data)
 			} else {
-				assert.Equal(t, err, tt.expectedErr)
+				assert.Equal(t, tt.expectedErr, err)
 			}
 			viper.Set(cst.ID, "")
 			viper.Set(cst.DataCidr, "")
@@ -266,9 +265,9 @@ func TestHandlePolicyDeleteCmd(t *testing.T) {
 			p := &Policy{req, writer, nil}
 			_ = p.handlePolicyDeleteCmd(tt.args)
 			if tt.expectedErr == nil {
-				assert.Equal(t, data, tt.out)
+				assert.Equal(t, tt.out, data)
 			} else {
-				assert.Equal(t, err, tt.expectedErr)
+				assert.Equal(t, tt.expectedErr, err)
 			}
 		})
 	}
@@ -320,9 +319,9 @@ func TestHandlePolicySearchCommand(t *testing.T) {
 			p := Policy{request: req, outClient: acmd}
 			_ = p.handlePolicySearchCommand(tt.args)
 			if tt.expectedErr == nil {
-				assert.Equal(t, data, tt.out)
+				assert.Equal(t, tt.out, data)
 			} else {
-				assert.Equal(t, err, tt.expectedErr)
+				assert.Equal(t, tt.expectedErr, err)
 			}
 		})
 	}

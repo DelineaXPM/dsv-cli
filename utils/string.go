@@ -17,3 +17,13 @@ func StringToSlice(str string) []string {
 	}
 	return strings.Split(str, ",")
 }
+
+//CheckPrefix check prefixes and returns true if one of prefixes satisfies the condition
+func CheckPrefix(path string, prefixes ...string) bool {
+	for _, p := range prefixes {
+		if strings.HasPrefix(path, p) {
+			return true
+		}
+	}
+	return false
+}

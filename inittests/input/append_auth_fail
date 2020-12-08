@@ -1,4 +1,4 @@
-./thy init --dev [INIT_DEV_DOMAIN]
+./[INIT_CLINAME] init --dev [INIT_DEV_DOMAIN]
 a
 blah
 ambarco

@@ -4,19 +4,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
+	"thy/paths"
 	preds "thy/predictors"
 	"thy/requests"
 	"thy/utils"
 
 	"github.com/posener/complete"
+	"github.com/spf13/viper"
 	"github.com/thycotic-rd/cli"
-	"github.com/thycotic-rd/viper"
 )
 
 type Policy struct {
@@ -38,7 +40,7 @@ func GetPolicyCmd() (cli.Command, error) {
 		RunFunc: func(args []string) int {
 			path := viper.GetString(cst.Path)
 			if path == "" {
-				path = utils.GetPath(args)
+				path = paths.GetPath(args)
 			}
 			if path == "" {
 				return cli.RunResultHelp
@@ -50,7 +52,7 @@ func GetPolicyCmd() (cli.Command, error) {
 
 Usage:
    • %[1]s %[2]s
-   • %[1]s --path %[2]s 
+   • %[1]s --path %[2]s
 		`, cst.NounPolicy, cst.ExamplePolicyPath),
 		FlagsPredictor: GetNoDataOpPolicyWrappers(),
 		MinNumberArgs:  1,
@@ -65,8 +67,8 @@ func GetPolicyReadCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`Read a %[1]s
 
 Usage:
-   • %[1]s %[3]s %[2]s 
-   • %[1]s %[3]s --path %[2]s 
+   • %[1]s %[3]s %[2]s
+   • %[1]s %[3]s --path %[2]s
 		`, cst.NounPolicy, cst.ExamplePolicyPath, cst.Read),
 		FlagsPredictor:    GetNoDataOpPolicyWrappers(),
 		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
@@ -85,8 +87,8 @@ func GetPolicyEditCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`Edit a %[1]s
 
 Usage:
-   • %[1]s %[3]s %[2]s 
-   • %[1]s %[3]s --path %[2]s 
+   • %[1]s %[3]s %[2]s
+   • %[1]s %[3]s --path %[2]s
 		`, cst.NounPolicy, cst.ExamplePolicyPath, cst.Edit),
 		FlagsPredictor:    GetNoDataOpPolicyWrappers(),
 		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
@@ -141,24 +143,24 @@ func GetPolicyCreateCmd() (cli.Command, error) {
 		Path:         []string{cst.NounPolicy, cst.Create},
 		RunFunc:      Policy{requests.NewHttpClient(), nil, EditData}.handlePolicyUpsertCmd,
 		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r) ((--data|-d) | --subjects --actions --effect[default:allow] --desc --cidr  --resources)", cst.NounPolicy, cst.Create),
-		HelpText: fmt.Sprintf(`Add a %[1]s 
+		HelpText: fmt.Sprintf(`Add a %[1]s
 
 Usage:
-   • %[1]s %[3]s %[2]s --subjects '<users:kadmin|groups:admin>',users:userA --actions create,update --cidr 192.168.0.15/24
-   • %[1]s %[3]s --path %[2]s --data %[4]s 
+   • %[1]s %[3]s %[2]s --subjects 'users:<kadmin|groups:admin>',users:userA --actions create,update --cidr 192.168.0.15/24
+   • %[1]s %[3]s --path %[2]s --data %[4]s
 		`, cst.NounPolicy, cst.ExamplePolicyPath, cst.Create, cst.ExampleDataPath),
 		FlagsPredictor: cli.PredictorWrappers{
 			preds.LongFlag(cst.Data):            cli.PredictorWrapper{preds.NewPrefixFilePredictor("*"), preds.NewFlagValue(preds.Params{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in a %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), cst.NounPolicy)}), false},
 			preds.LongFlag(cst.Path):            cli.PredictorWrapper{preds.NewSecretPathPredictorDefault(), preds.NewFlagValue(preds.Params{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounPolicy)}), false},
-			preds.LongFlag(cst.DataAction):      cli.PredictorWrapper{preds.ActionTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.DataAction, Usage: fmt.Sprintf("Policy actions to be stored in a %s (regex and list supported)", cst.NounPolicy)}), false},
-			preds.LongFlag(cst.DataEffect):      cli.PredictorWrapper{preds.EffectTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.DataEffect, Usage: fmt.Sprintf("Policy effect to be stored in a %s ", cst.NounPolicy), Default: "allow"}), false},
+			preds.LongFlag(cst.DataAction):      cli.PredictorWrapper{preds.ActionTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.DataAction, Usage: fmt.Sprintf("Policy actions to be stored in a %s (required, regex and list supported)(required)", cst.NounPolicy)}), false},
+			preds.LongFlag(cst.DataEffect):      cli.PredictorWrapper{preds.EffectTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.DataEffect, Usage: fmt.Sprintf("Policy effect to be stored in a %s. Defaults to allow if not specified", cst.NounPolicy), Default: "allow"}), false},
 			preds.LongFlag(cst.DataDescription): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataDescription, Usage: fmt.Sprintf("Policy description to be stored in a %s ", cst.NounPolicy)}), false},
-			preds.LongFlag(cst.DataSubject):     cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataSubject, Usage: fmt.Sprintf("Policy subjects to be stored in a %s (regex and list supported)", cst.NounPolicy)}), false},
-			preds.LongFlag(cst.DataCidr):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataCidr, Usage: fmt.Sprintf("Policy cidr condition to be stored in a %s ", cst.NounPolicy)}), false},
-			preds.LongFlag(cst.DataResource):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataResource, Usage: fmt.Sprintf("Policy resources to be stored in a %s ", cst.NounPolicy)}), false},
+			preds.LongFlag(cst.DataSubject):     cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataSubject, Usage: fmt.Sprintf("Policy subjects to be stored in a %s (required, regex and list supported)(required)", cst.NounPolicy)}), false},
+			preds.LongFlag(cst.DataCidr):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataCidr, Usage: fmt.Sprintf("Policy CIDR condition remote IP to be stored in a %s ", cst.NounPolicy)}), false},
+			preds.LongFlag(cst.DataResource):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataResource, Usage: fmt.Sprintf("Policy resources to be stored in a %s. Defaults to the path plus all paths below (<.*>) ", cst.NounPolicy)}), false},
 		},
 		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
-		MinNumberArgs:     2,
+		MinNumberArgs:     0,
 	})
 }
 
@@ -170,21 +172,22 @@ func GetPolicyUpdateCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`Update a %[1]s
 
 Usage:
-   • %[1]s %[3]s %[2]s --subjects '<users:kadmin|groups:admin>',users:userA --actions update --cidr 192.168.0.15/24
-   • %[1]s %[3]s --path %[2]s --data %[4]s 
+   • Policy Updates are all or nothing, so required fields must be included in the update and if optional fields are not included, they are deleted or go to default
+   • %[1]s %[3]s %[2]s --subjects 'users:<kadmin|groups:admin>',users:userA --actions update --cidr 192.168.0.15/24
+   • %[1]s %[3]s --path %[2]s --data %[4]s
 		`, cst.NounPolicy, cst.ExamplePolicyPath, cst.Update, cst.ExampleDataPath),
 		FlagsPredictor: cli.PredictorWrappers{
 			preds.LongFlag(cst.Data):            cli.PredictorWrapper{preds.NewPrefixFilePredictor("*"), preds.NewFlagValue(preds.Params{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in a %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), cst.NounPolicy)}), false},
 			preds.LongFlag(cst.Path):            cli.PredictorWrapper{preds.NewSecretPathPredictorDefault(), preds.NewFlagValue(preds.Params{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounPolicy)}), false},
-			preds.LongFlag(cst.DataAction):      cli.PredictorWrapper{preds.ActionTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.DataAction, Usage: fmt.Sprintf("Policy actions to be stored in a %s (regex and list supported)", cst.NounPolicy)}), false},
-			preds.LongFlag(cst.DataEffect):      cli.PredictorWrapper{preds.EffectTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.DataEffect, Usage: fmt.Sprintf("Policy effect to be stored in a %s ", cst.NounPolicy), Default: "allow"}), false},
+			preds.LongFlag(cst.DataAction):      cli.PredictorWrapper{preds.ActionTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.DataAction, Usage: fmt.Sprintf("Policy actions to be stored in a %s (required, regex and list supported)(required)", cst.NounPolicy)}), false},
+			preds.LongFlag(cst.DataEffect):      cli.PredictorWrapper{preds.EffectTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.DataEffect, Usage: fmt.Sprintf("Policy effect to be stored in a %s. Defaults to allow if not specified", cst.NounPolicy), Default: "allow"}), false},
 			preds.LongFlag(cst.DataDescription): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataDescription, Usage: fmt.Sprintf("Policy description to be stored in a %s ", cst.NounPolicy)}), false},
-			preds.LongFlag(cst.DataSubject):     cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataSubject, Usage: fmt.Sprintf("Policy subjects to be stored in a %s (regex and list supported)", cst.NounPolicy)}), false},
-			preds.LongFlag(cst.DataCidr):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataCidr, Usage: fmt.Sprintf("Policy cidr condition to be stored in a %s ", cst.NounPolicy)}), false},
-			preds.LongFlag(cst.DataResource):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataResource, Usage: fmt.Sprintf("Policy resources to be stored in a %s ", cst.NounPolicy)}), false},
+			preds.LongFlag(cst.DataSubject):     cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataSubject, Usage: fmt.Sprintf("Policy subjects to be stored in a %s (required, regex and list supported)(required)", cst.NounPolicy)}), false},
+			preds.LongFlag(cst.DataCidr):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataCidr, Usage: fmt.Sprintf("Policy CIDR condition remote IP to be stored in a %s ", cst.NounPolicy)}), false},
+			preds.LongFlag(cst.DataResource):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataResource, Usage: fmt.Sprintf("Policy resources to be stored in a %s. Defaults to the path plus all paths below (<.*>) ", cst.NounPolicy)}), false},
 		},
 		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
-		MinNumberArgs:     2,
+		MinNumberArgs:     0,
 	})
 }
 
@@ -197,7 +200,7 @@ func GetPolicyRollbackCmd() (cli.Command, error) {
 
 Usage:
    • %[1]s %[3]s %[2]s --%[4]s 1
-   • %[1]s %[3]s --path %[2]s 
+   • %[1]s %[3]s --path %[2]s
 		`, cst.NounPolicy, cst.ExamplePolicyPath, cst.Rollback, cst.Version),
 		FlagsPredictor: cli.PredictorWrappers{
 			preds.LongFlag(cst.Path):    cli.PredictorWrapper{preds.NewSecretPathPredictorDefault(), preds.NewFlagValue(preds.Params{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret)}), false},
@@ -241,7 +244,7 @@ func (p Policy) handlePolicyReadCmd(args []string) int {
 	}
 
 	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
-	uri := utils.CreateResourceURI(baseType, path, "", true, nil, false)
+	uri := paths.CreateResourceURI(baseType, paths.ProcessPath(path), "", true, nil, false)
 
 	data, err = p.request.DoRequest("GET", uri, nil)
 
@@ -266,7 +269,7 @@ func (p Policy) handlePolicyEditCmd(args []string) int {
 		return status
 	}
 	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
-	uri := utils.CreateResourceURI(baseType, path, "", true, nil, false)
+	uri := paths.CreateResourceURI(baseType, paths.ProcessPath(path), "", true, nil, false)
 
 	resp, err = p.request.DoRequest("GET", uri, nil)
 	if err != nil {
@@ -299,7 +302,7 @@ func (p Policy) handlePolicyDeleteCmd(args []string) int {
 
 	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
 	query := map[string]string{"force": strconv.FormatBool(force)}
-	uri := utils.CreateResourceURI(baseType, path, "", true, query, false)
+	uri := paths.CreateResourceURI(baseType, paths.ProcessPath(path), "", true, query, false)
 
 	resp, err = p.request.DoRequest("DELETE", uri, nil)
 
@@ -318,12 +321,11 @@ func (p Policy) handlePolicyRestoreCmd(args []string) int {
 	}
 	path := viper.GetString(cst.Path)
 	if path == "" {
-		path = utils.GetPath(args)
+		path = paths.GetPath(args)
 	}
 
 	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
-	uri := utils.CreateResourceURI(baseType, path, "", true, nil, false)
-	uri += "/restore"
+	uri := paths.CreateResourceURI(baseType, paths.ProcessPath(path), "/restore", true, nil, false)
 	data, err = p.request.DoRequest("PUT", uri, nil)
 
 	p.outClient.WriteResponse(data, err)
@@ -340,14 +342,14 @@ func (p Policy) handlePolicyRollbackCmd(args []string) int {
 
 	path := viper.GetString(cst.Path)
 	if path == "" {
-		path = utils.GetPath(args)
+		path = paths.GetPath(args)
 	}
 	version := viper.GetString(cst.Version)
 
 	// If version is not provided, get the current policy item and parse the version from it.
 	// Submit a request for a version that's previous relative to the one found.
 	if version == "" {
-		uri := utils.CreateResourceURI(baseType, path, "", true, nil, false)
+		uri := paths.CreateResourceURI(baseType, paths.ProcessPath(path), "", true, nil, false)
 		resp, apiError = p.request.DoRequest("GET", uri, nil)
 		if apiError != nil {
 			p.outClient.WriteResponse(resp, apiError)
@@ -366,14 +368,155 @@ func (p Policy) handlePolicyRollbackCmd(args []string) int {
 		path = fmt.Sprint(path, "/rollback/", version)
 	}
 
-	uri := utils.CreateResourceURI(baseType, path, "", true, nil, false)
+	uri := paths.CreateResourceURI(baseType, path, "", true, nil, false)
 	resp, apiError = p.request.DoRequest("PUT", uri, nil)
 
 	p.outClient.WriteResponse(resp, apiError)
 	return utils.GetExecStatus(apiError)
 }
 
+func createPolicy(params map[string]string) (*postPolicyModel, error) {
+	policy := defaultPolicy{
+		Description: params[cst.DataDescription],
+		Subjects:    utils.StringToSlice(params[cst.DataSubject]),
+		Effect:      params[cst.DataEffect],
+		Actions:     utils.StringToSlice(params[cst.DataAction]),
+	}
+	if resources := params[cst.DataResource]; resources != "" {
+		policy.Resources = utils.StringToSlice(params[cst.DataResource])
+	}
+	if id := viper.GetString(cst.ID); id != "" {
+		policy.ID = id
+	}
+
+	if params[cst.DataCidr] != "" {
+		if err := setCidrCondition(&policy, params[cst.DataCidr]); err != nil {
+			return nil, err
+		}
+	}
+	doc := document{
+		PermissionDocument: []*defaultPolicy{
+			&policy,
+		},
+	}
+	marshalled, err := json.Marshal(doc)
+	if err != nil {
+		return nil, err
+	}
+	return &postPolicyModel{
+		Policy:        string(marshalled),
+		Path:          params[cst.Path],
+		Serialization: "json",
+	}, nil
+}
+
+func (p Policy) submitPolicy(policy *postPolicyModel) ([]byte, *errors.ApiError) {
+	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
+	var uri string
+	reqMethod := strings.ToLower(viper.GetString(cst.LastCommandKey))
+	if reqMethod == cst.Create {
+		reqMethod = "POST"
+		uri = paths.CreateResourceURI(baseType, "", "", true, nil, false)
+	} else {
+		reqMethod = "PUT"
+		uri = paths.CreateResourceURI(baseType, policy.Path, "", true, nil, false)
+	}
+	return p.request.DoRequest(reqMethod, uri, policy)
+}
+
+func (p Policy) handlePolicyUpsertWorkflow(args []string) int {
+	params := make(map[string]string)
+	var resp []byte
+	var err *errors.ApiError
+	ui := &PasswordUi{
+		cli.BasicUi{
+			Writer:      os.Stdout,
+			Reader:      os.Stdin,
+			ErrorWriter: os.Stderr,
+		},
+	}
+
+	if path, err := getStringAndValidate(
+		ui, "Path to policy:", false, nil, false, false); err != nil {
+		ui.Error(err.Error())
+		return utils.GetExecStatus(err)
+	} else {
+		params[cst.Path] = paths.ProcessPath(path)
+	}
+
+	if viper.GetString(cst.LastCommandKey) == cst.Update {
+		code := p.handlePolicyReadCmd([]string{params[cst.Path]})
+		if code != 0 {
+			return code
+		}
+	}
+
+	if desc, err := getStringAndValidate(
+		ui, "Description of policy (optional):", true, nil, false, false); err != nil {
+		ui.Error(err.Error())
+		return utils.GetExecStatus(err)
+	} else {
+		params[cst.DataDescription] = desc
+	}
+
+	if action, err := getStringAndValidate(
+		ui, "Allowed actions (comma-delimited strings):", false, nil, false, false); err != nil {
+		ui.Error(err.Error())
+		return utils.GetExecStatus(err)
+	} else {
+		params[cst.DataAction] = action
+	}
+
+	if effect, err := getStringAndValidateDefault(
+		ui, "Effect of policy (default:allow):", "allow", true, nil, false, false); err != nil {
+		ui.Error(err.Error())
+		return utils.GetExecStatus(err)
+	} else {
+		params[cst.DataEffect] = effect
+	}
+
+	if resources, err := getStringAndValidate(
+		ui, "Resources of policy (comma-delimited strings):", true, nil, false, false); err != nil {
+		ui.Error(err.Error())
+		return utils.GetExecStatus(err)
+	} else {
+		params[cst.DataResource] = resources
+	}
+
+	if subjects, err := getStringAndValidate(
+		ui, "Subjects of policy (comma-delimited strings):", false, nil, false, false); err != nil {
+		ui.Error(err.Error())
+		return utils.GetExecStatus(err)
+	} else {
+		params[cst.DataSubject] = subjects
+	}
+
+	if cidr, err := getStringAndValidate(
+		ui, "CIDR condition remote IP (optional):", true, nil, false, false); err != nil {
+		ui.Error(err.Error())
+		return utils.GetExecStatus(err)
+	} else {
+		params[cst.DataCidr] = cidr
+	}
+
+	if p.outClient == nil {
+		p.outClient = format.NewDefaultOutClient()
+	}
+
+	policy, e := createPolicy(params)
+	if e != nil {
+		p.outClient.Fail(e)
+		return utils.GetExecStatus(err)
+	}
+	resp, err = p.submitPolicy(policy)
+	p.outClient.WriteResponse(resp, err)
+	return utils.GetExecStatus(err)
+}
+
 func (p Policy) handlePolicyUpsertCmd(args []string) int {
+	if OnlyGlobalArgs(args) {
+		return p.handlePolicyUpsertWorkflow(args)
+	}
 	params := map[string]string{}
 	var resp []byte
 	var err *errors.ApiError
@@ -398,72 +541,31 @@ func (p Policy) handlePolicyUpsertCmd(args []string) int {
 		params[cst.DataEffect] = effect
 		err = ValidateParams(params, []string{cst.DataAction, cst.DataSubject, cst.DataEffect, cst.Path})
 	}
-
+	if p.outClient == nil {
+		p.outClient = format.NewDefaultOutClient()
+	}
 	if err == nil {
 		encoding := viper.GetString(cst.Encoding)
-		var postData interface{}
+		var postData *postPolicyModel
 		if data != "" {
-			postData = postPolicyModel{
+			postData = &postPolicyModel{
 				Policy:        data,
 				Serialization: encoding,
 				Path:          params[cst.Path],
 			}
 		} else {
-
-			policy := defaultPolicy{
-				Description: params[cst.DataDescription],
-				Subjects:    utils.StringToSlice(params[cst.DataSubject]),
-				Effect:      params[cst.DataEffect],
-				Actions:     utils.StringToSlice(params[cst.DataAction]),
+			data, e := createPolicy(params)
+			if e != nil {
+				p.outClient.Fail(e)
+				return utils.GetExecStatus(err)
 			}
-			if resources := params[cst.DataResource]; resources != "" {
-				policy.Resources = utils.StringToSlice(params[cst.DataResource])
-			}
-			if id := viper.GetString(cst.ID); id != "" {
-				policy.ID = id
-			}
-
-			if params[cst.DataCidr] != "" {
-				err = setCidrCondition(&policy, params[cst.DataCidr])
-			}
-			doc := document{
-				PermissionDocument: []*defaultPolicy{
-					&policy,
-				},
-			}
-			if marshalled, err := json.Marshal(doc); err == nil {
-				postData = postPolicyModel{
-					Policy:        string(marshalled),
-					Path:          params[cst.Path],
-					Serialization: "json",
-				}
-			}
+			postData = data
 		}
-		if data == "" && len(args) > 1 {
-			data = args[1]
-
-		}
-
-		baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
-		var uri string
-		reqMethod := strings.ToLower(viper.GetString(cst.LastCommandKey))
-		if reqMethod == cst.Create {
-			reqMethod = "POST"
-			uri = utils.CreateResourceURI(baseType, "", "", true, nil, false)
-		} else {
-			reqMethod = "PUT"
-			uri = utils.CreateResourceURI(baseType, params[cst.Path], "", true, nil, false)
-		}
-		if err == nil {
-			resp, err = p.request.DoRequest(reqMethod, uri, postData)
-		}
+		resp, err = p.submitPolicy(postData)
+		p.outClient.WriteResponse(resp, err)
+		return utils.GetExecStatus(err)
 	}
-
-	outClient := p.outClient
-	if outClient == nil {
-		outClient = format.NewDefaultOutClient()
-	}
-	outClient.WriteResponse(resp, err)
+	p.outClient.WriteResponse(nil, err)
 	return utils.GetExecStatus(err)
 }
 
@@ -536,7 +638,7 @@ func setCidrCondition(policy *defaultPolicy, cidr string) *errors.ApiError {
 		if policy.Conditions == nil {
 			policy.Conditions = make(map[string]jsonCondition, 1)
 		}
-		policy.Conditions["CIDRCondition"] = jc
+		policy.Conditions["remoteIP"] = jc
 		return nil
 	}
 }

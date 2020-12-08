@@ -8,8 +8,8 @@ import (
 	"thy/requests"
 
 	"github.com/jarcoal/httpmock"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
-	"github.com/thycotic-rd/viper"
 )
 
 func TestSetCreds(t *testing.T) {
