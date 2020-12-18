@@ -641,6 +641,10 @@ func handleCliConfigInitCmd(args []string) int {
 
 	if storeType != store.None {
 		if authError := tryAuthenticate(); authError != nil {
+			if isAccountLocked(authError) {
+				ui.Output(authError.Error())
+				return 1
+			}
 			ui.Output("Failed to authenticate, restoring previous config.")
 			ui.Output("Please check your credentials, or tenant name, or domain name and try again.")
 			return 1
@@ -679,6 +683,10 @@ func tryAuthenticate() error {
 		return apiError
 	}
 	return nil
+}
+
+func isAccountLocked(err error) bool {
+	return strings.Contains(err.Error(), "locked out")
 }
 
 // WriteCliConfig writes the actual config file given the path, the config data structure and whether an existing config

@@ -27,7 +27,6 @@ func TestEnsureNoFmtUsage(t *testing.T) {
 		assert.False(t, bytes.Contains(b, []byte(fmtPackageName)), fmt.Sprintf(`Usage of "fmt" found in file '%s'`, f))
 	}
 }
-
 func getListGoFilePaths() ([]string, error) {
 	var pathDelim string
 	if runtime.GOOS == "windows" {

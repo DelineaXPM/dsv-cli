@@ -288,13 +288,8 @@ func (u User) handleUserCreateCmd(args []string) int {
 	}
 	provider := viper.GetString(cst.DataProvider)
 	externalID := viper.GetString(cst.DataExternalID)
-	if (provider != "" && externalID == "") || (provider == "" && externalID != "") {
-		err := errors.NewS("error: must specify both provider and external ID for third-party users")
-		u.outClient.WriteResponse(nil, err)
-		return utils.GetExecStatus(err)
-	}
 
-	isUserLocal := provider == "" || externalID == ""
+	isUserLocal := provider == "" && externalID == ""
 	password := viper.GetString(cst.DataPassword)
 	if password == "" && isUserLocal {
 		err := errors.NewS("error: must specify password for local users")

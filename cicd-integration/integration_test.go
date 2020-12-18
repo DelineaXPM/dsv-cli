@@ -331,6 +331,13 @@ func init() {
 		{"policy-read-fail", []string{"policy", "read", policyName}, outputPattern("will be removed")},
 		{"policy-restore", []string{"policy", "restore", policyName}, outputEmpty()},
 
+		//auth provider operations
+		{"auth-provider-help", []string{"config", "auth-provider", ""}, outputPattern(`Execute an action on an auth-provider.*`)},
+		{"auth-provider-create", []string{"config", "auth-provider", "create", "--name", authProvider, "--type", "aws", "--aws-account-id", "1234"}, outputPattern(fmt.Sprintf(`"name":\s*"%s"`, authProvider))},
+		{"auth-provider-read", []string{"config", "auth-provider", "read", authProvider}, outputPattern(fmt.Sprintf(`"name":\s*"%s"`, authProvider))},
+		{"auth-provider-update", []string{"config", "auth-provider", "update", "--name", authProvider, "--type", "aws", "--aws-account-id", "65433"}, outputPattern(fmt.Sprintf(`"accountId":\s*"%s"`, "65433"))},
+		{"auth-provider-rollback-pass", []string{"config", "auth-provider", "rollback", "--name", authProvider}, outputPattern(fmt.Sprintf(`"accountId":\s*"%s"`, "1234"))},
+
 		// user operations
 		{"user-help", []string{"user", ""}, outputPattern(`Execute an action on a user.*`)},
 		{"user-create-pass", []string{"user", "create", "--username", user1, "--password", user1Pass}, outputPattern(`"userName": "mrmittens"`)},
@@ -343,8 +350,8 @@ func init() {
 		{"user-read-fail", []string{"user", "read", user1}, outputPattern("will be removed")},
 		{"user-restore", []string{"user", "restore", user1}, outputEmpty()},
 		{"user-read-pass-verify-restore", []string{"user", "read", user1}, outputPattern(`"userName": "mrmittens"`)},
-		{"user-create-provider-missing", []string{"user", "create", "--username", "bob", "--external-id", "1234"}, outputPattern("must specify both provider and external ID")},
-		{"user-create-external-id-missing", []string{"user", "create", "--username", "bob", "--provider", "aws-dev"}, outputPattern("must specify both provider and external ID")},
+		{"user-create-provider-missing", []string{"user", "create", "--username", "bob", "--external-id", "1234"}, outputPattern("provider is required")},
+		{"user-create-external-id-missing", []string{"user", "create", "--username", "bob", "--provider", authProvider}, outputPattern("external ID is required")},
 
 		// group operations
 		{"group-help", []string{"group", ""}, outputPattern(`Execute an action on a group.*`)},
@@ -412,13 +419,6 @@ func init() {
 		{"config-help", []string{"config", ""}, outputPattern(`Execute an action on the.*`)},
 		{"config-get-implicit-pass", []string{"config"}, outputPattern(`"permissionDocument":`)},
 		{"config-get-pass", []string{"config", "read"}, outputPattern(`"permissionDocument":`)},
-
-		//auth provider operations
-		{"auth-provider-help", []string{"config", "auth-provider", ""}, outputPattern(`Execute an action on an auth-provider.*`)},
-		{"auth-provider-create", []string{"config", "auth-provider", "create", "--name", authProvider, "--type", "aws", "--aws-account-id", "1234"}, outputPattern(fmt.Sprintf(`"name":\s*"%s"`, authProvider))},
-		{"auth-provider-read", []string{"config", "auth-provider", "read", authProvider}, outputPattern(fmt.Sprintf(`"name":\s*"%s"`, authProvider))},
-		{"auth-provider-update", []string{"config", "auth-provider", "update", "--name", authProvider, "--type", "aws", "--aws-account-id", "65433"}, outputPattern(fmt.Sprintf(`"accountId":\s*"%s"`, "65433"))},
-		{"auth-provider-rollback-pass", []string{"config", "auth-provider", "rollback", "--name", authProvider}, outputPattern(fmt.Sprintf(`"accountId":\s*"%s"`, "1234"))},
 
 		// Home
 		{"home-help", []string{"home", ""}, outputPattern(`Work with secrets in a personal user space`)},

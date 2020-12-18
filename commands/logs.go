@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"time"
 
 	cst "thy/constants"
@@ -26,7 +27,12 @@ func GetLogsSearchCmd() (cli.Command, error) {
 		Path:         []string{cst.NounLogs},
 		RunFunc:      logs{requests.NewHttpClient(), nil}.handleLogsSearch,
 		SynopsisText: "system logs search",
-		HelpText:     "Search system logs",
+		HelpText: fmt.Sprintf(`Search system logs
+
+Usage:
+	• %[1]s --%[2]s 2020-01-01 --%[3]s 2020-01-04 --%[4]s 100
+	• %[1]s --%[2]s 2020-01-01
+	`, cst.NounLogs, cst.StartDate, cst.EndDate, cst.Limit),
 		FlagsPredictor: cli.PredictorWrappers{
 			preds.LongFlag(cst.StartDate):     cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.StartDate, Shorthand: "s", Usage: "Start date from which to fetch system log data (required)"}), false},
 			preds.LongFlag(cst.EndDate):       cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.EndDate, Usage: "End date to which to fetch system log data (optional)"}), false},
@@ -57,8 +63,8 @@ func (l logs) handleLogsSearch(args []string) int {
 	}
 
 	queryParams := map[string]string{
-		cst.StartDate:     startDate,
-		cst.EndDate:       endDate,
+		"startDate":       startDate,
+		"endDate":         endDate,
 		cst.NounPrincipal: viper.GetString(cst.NounPrincipal),
 		cst.Path:          viper.GetString(cst.Path),
 		cst.DataAction:    viper.GetString(cst.DataAction),
