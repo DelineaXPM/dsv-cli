@@ -117,16 +117,16 @@ Export the environment variable or put them in cicd-integration/script/.env.sh
 
 ```bash
     export ADMIN_USER=''  
-    export ADMIN_PASS=''
+    export DSV_ADMIN_PASS=''
     export CLIENT_ID=''  
-    export CLIENT_SECRET=''  
+    export DSV_CLIENT_SECRET=''  
     export USER_NAME=''  
-    export USER_PASSWORD=''  
+    export DSV_USER_PASSWORD=''  
     export DEV_DOMAIN=''
     export LOCAL_DOMAIN=''  
     export TEST_TENANT=''
     export USER1_NAME=''
-    export USER1_PASSWORD=''
+    export DSV_USER1_PASSWORD=''
 ```
 then just run
 ```bash

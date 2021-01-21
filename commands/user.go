@@ -475,7 +475,10 @@ func parseAuthProviders(data []byte) ([]authProvider, error) {
 	if err != nil {
 		return nil, err
 	}
-	d := resp["data"].([]interface{})
+	d, ok := resp["data"].([]interface{})
+	if !ok {
+		return nil, nil
+	}
 	err = mapstructure.Decode(d, &providers)
 	if err != nil {
 		return nil, err

@@ -28,6 +28,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+const ProfileNameContainsRestrictedCharacters = "Profile name contains restricted characters. Leading, trailing and middle whitespace are not allowed."
+
 func GetCliConfigCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path: []string{cst.NounCliConfig},
@@ -319,6 +321,10 @@ func handleCliConfigClearCmd(args []string) int {
 	return 0
 }
 
+func IsValidProfile(profile string) bool {
+	return !strings.Contains(profile, " ")
+}
+
 func handleCliConfigInitCmd(args []string) int {
 	ui := &PasswordUi{
 		cli.BasicUi{
@@ -339,10 +345,14 @@ func handleCliConfigInitCmd(args []string) int {
 	profile := strings.ToLower(viper.GetString(cst.Profile))
 	if profile == "" {
 		profile = cst.DefaultProfile
+	} else if !IsValidProfile(profile) {
+		ui.Info(ProfileNameContainsRestrictedCharacters)
+		return 1
 	} else {
 		// If not default profile, that means the user specified --profile [name], so the intent is to add a profile to the config.
 		addProfile = true
 	}
+
 	viper.Set(cst.Profile, profile)
 
 	if cfgPath != "" {
@@ -388,13 +398,20 @@ func handleCliConfigInitCmd(args []string) int {
 					if p, err = getStringAndValidate(ui, "Please enter profile name:", false, nil, false, false); err != nil {
 						return 1
 					}
+
 					p = strings.ToLower(p)
 					if err := viper.ReadInConfig(p); err == nil {
 						msg := fmt.Sprintf("Profile %q already exists in the config.", p)
 						ui.Info(msg)
 						return 1
 					}
+
 					profile = p
+					if !IsValidProfile(profile) {
+						ui.Info(ProfileNameContainsRestrictedCharacters)
+						return 1
+					}
+
 					viper.Set(cst.Profile, profile)
 				}
 			}

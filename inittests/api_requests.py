@@ -8,7 +8,7 @@ tenant = os.environ.get("INIT_TENANT")
 username = os.environ.get("INIT_USERNAME")
 
 # Not used in script, but useful in the REPL.
-password = os.environ.get("INIT_DEV_PASSWORD")
+password = os.environ.get("DSV_INIT_DEV_PASSWORD")
 
 base_url = f"https://{tenant}.{domain}/v1/"
 

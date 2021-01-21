@@ -1,1 +1,1 @@
-./[INIT_CLINAME] init --dev [INIT_DEV_DOMAIN] --config ./configs/non-existent.yml --profile not-a-profile
+./[INIT_CLINAME] init --dev [INIT_DEV_DOMAIN] --config ./configs/non-existent.yml --profile not_a_profile

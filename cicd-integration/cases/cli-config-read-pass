@@ -3,8 +3,8 @@ default:
   auth:
     client:
       id: {{.CLIENT_ID}}
-      secret: {{.CLIENT_SECRET}}
-    password: {{.USER_PASSWORD}}
+      secret: {{.DSV_CLIENT_SECRET}}
+    password: {{.DSV_USER_PASSWORD}}
     type: password
     username: {{.USER_NAME}}
   domain: {{.DEV_DOMAIN}}
@@ -14,7 +14,7 @@ default:
   tenant: {{.TEST_TENANT}}
 local:
   auth:
-    password: {{.USER_PASSWORD}}
+    password: {{.DSV_USER_PASSWORD}}
     type: password
     username:  {{.USER_NAME}}
   domain: {{.LOCAL_DOMAIN}}

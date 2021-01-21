@@ -158,7 +158,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	if err := test_helpers.AddEncryptionKey(os.Getenv("TEST_TENANT"), os.Getenv("USER_NAME"), os.Getenv("USER_PASSWORD")); err != nil {
+	if err := test_helpers.AddEncryptionKey(os.Getenv("TEST_TENANT"), os.Getenv("USER_NAME"), os.Getenv("DSV_USER_PASSWORD")); err != nil {
 		fmt.Printf("could not create encryption key: %v", err)
 		os.Exit(1)
 	}
@@ -258,7 +258,7 @@ func init() {
 	u, _ := uuid.NewV4()
 	t, _ := uuid.NewV4()
 	adminUser = os.Getenv("ADMIN_USER")
-	adminPass = os.Getenv("ADMIN_PASS")
+	adminPass = os.Getenv("DSV_ADMIN_PASS")
 	secret1Name = u.String()
 	secret1Tag = t.String()
 	secret1Desc = `desc of s1`
@@ -273,7 +273,7 @@ func init() {
 	roleName = r.String()
 
 	user1 = os.Getenv("USER1_NAME")
-	user1Pass = os.Getenv("USER1_PASSWORD")
+	user1Pass = os.Getenv("DSV_USER1_PASSWORD")
 	groupName = u.String()
 	memberName = u.String()
 	groupData = fmt.Sprintf(`{"addedMemberNames": "%s"}`, groupName)
