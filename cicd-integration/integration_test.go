@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -20,6 +19,8 @@ import (
 	"thy/utils/test_helpers"
 
 	"github.com/gobuffalo/uuid"
+
+	"golang.org/x/sys/execabs"
 )
 
 var update = flag.Bool("update", false, "update golden case files")
@@ -73,7 +74,7 @@ func TestCliArgs(t *testing.T) {
 			//args = addLocalProfileArg(args) // run locally
 
 			binary := path.Join(dir, binaryName+".test")
-			cmd := exec.Command(binary, args...)
+			cmd := execabs.Command(binary, args...)
 			output, err := cmd.CombinedOutput()
 
 			actual := string(output)
@@ -163,7 +164,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	makeCmd := exec.Command("make", "build-test")
+	makeCmd := execabs.Command("make", "build-test")
 	err = makeCmd.Run()
 	if err != nil {
 		fmt.Printf("could not make binary for %s: %v", binaryName, err)

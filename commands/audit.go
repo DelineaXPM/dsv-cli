@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"thy/constants"
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
@@ -37,10 +38,10 @@ Usage:
 			preds.LongFlag(cst.StartDate):     cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.StartDate, Shorthand: "s", Usage: "Start date from which to fetch audit data (required)"}), false},
 			preds.LongFlag(cst.EndDate):       cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.EndDate, Usage: "End date to which to fetch audit data (optional)"}), false},
 			preds.LongFlag(cst.Limit):         cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"}), false},
-			preds.LongFlag(cst.Cursor):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: "Next cursor for additional results (optional)"}), false},
+			preds.LongFlag(cst.Cursor):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: constants.CursorHelpMessage}), false},
 			preds.LongFlag(cst.Path):          cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Path, Usage: "Path (optional)"}), false},
 			preds.LongFlag(cst.NounPrincipal): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounPrincipal, Usage: "Principal name (optional)"}), false},
-			preds.LongFlag(cst.DataAction):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataAction, Usage: "Action performed (optional)"}), false},
+			preds.LongFlag(cst.DataAction):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataAction, Usage: constants.ActionHelpMessage}), false},
 		},
 		MinNumberArgs: 1,
 	})
@@ -70,7 +71,9 @@ func (a audit) handleAuditSearch(args []string) int {
 	}
 
 	var endDate time.Time
-	if e == "" || s == e {
+	if e == "" {
+		endDate = time.Now() // end date is today
+	} else if s == e {
 		endDate = startDate
 	} else {
 		endDate, parsingErr = time.Parse(layout, e)
@@ -97,13 +100,13 @@ func (a audit) handleAuditSearch(args []string) int {
 	// Always add one day to the end date to include data for that day.
 	endDate = endDate.AddDate(0, 0, 1)
 	queryParams := map[string]string{
-		"startDate":       startDate.Format(layout),
-		"endDate":         endDate.Format(layout),
-		cst.NounPrincipal: viper.GetString(cst.NounPrincipal),
-		cst.Path:          viper.GetString(cst.Path),
-		cst.DataAction:    viper.GetString(cst.DataAction),
-		cst.Limit:         viper.GetString(cst.Limit),
-		cst.Cursor:        viper.GetString(cst.Cursor),
+		"startDate":        startDate.Format(layout),
+		"endDate":          endDate.Format(layout),
+		cst.NounPrincipal:  viper.GetString(cst.NounPrincipal),
+		cst.Path:           viper.GetString(cst.Path),
+		cst.DataAction[:6]: viper.GetString(cst.DataAction),
+		cst.Limit:          viper.GetString(cst.Limit),
+		cst.Cursor:         viper.GetString(cst.Cursor),
 	}
 	uri := paths.CreateURI("audit", queryParams)
 	data, err = a.request.DoRequest("GET", uri, nil)

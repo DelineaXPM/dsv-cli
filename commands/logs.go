@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"thy/constants"
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
@@ -37,10 +38,11 @@ Usage:
 			preds.LongFlag(cst.StartDate):     cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.StartDate, Shorthand: "s", Usage: "Start date from which to fetch system log data (required)"}), false},
 			preds.LongFlag(cst.EndDate):       cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.EndDate, Usage: "End date to which to fetch system log data (optional)"}), false},
 			preds.LongFlag(cst.Limit):         cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"}), false},
-			preds.LongFlag(cst.Cursor):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: "Next cursor for additional results (optional)"}), false},
+			preds.LongFlag(cst.Cursor):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: constants.CursorHelpMessage}), false},
 			preds.LongFlag(cst.Path):          cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Path, Usage: "Path (optional)"}), false},
 			preds.LongFlag(cst.NounPrincipal): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounPrincipal, Usage: "Principal name (optional)"}), false},
-			preds.LongFlag(cst.DataAction):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataAction, Usage: "Action performed (optional)"}), false},
+			preds.LongFlag(cst.DataAction):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataAction, Usage: constants.ActionHelpMessage}), false},
+			preds.LongFlag(cst.Sort):          cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Sort, Usage: "Change result sorting order (asc|desc) [default:desc] (optional)"}), false},
 		},
 		MinNumberArgs: 1,
 	})
@@ -63,13 +65,14 @@ func (l logs) handleLogsSearch(args []string) int {
 	}
 
 	queryParams := map[string]string{
-		"startDate":       startDate,
-		"endDate":         endDate,
-		cst.NounPrincipal: viper.GetString(cst.NounPrincipal),
-		cst.Path:          viper.GetString(cst.Path),
-		cst.DataAction:    viper.GetString(cst.DataAction),
-		cst.Limit:         viper.GetString(cst.Limit),
-		cst.Cursor:        viper.GetString(cst.Cursor),
+		"startDate":       	startDate,
+		"endDate":         	endDate,
+		cst.NounPrincipal: 	viper.GetString(cst.NounPrincipal),
+		cst.Path:          	viper.GetString(cst.Path),
+		cst.DataAction[:6]: viper.GetString(cst.DataAction),
+		cst.Limit:         	viper.GetString(cst.Limit),
+		cst.Cursor:        	viper.GetString(cst.Cursor),
+		cst.Sort:           viper.GetString(cst.Sort),
 	}
 	uri := paths.CreateURI("system/log", queryParams)
 	data, err = l.request.DoRequest("GET", uri, nil)

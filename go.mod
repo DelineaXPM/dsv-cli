@@ -31,6 +31,7 @@ require (
 	github.com/tidwall/pretty v0.0.0-20180105212114-65a9db5fad51
 	golang.org/x/net v0.0.0-20200301022130-244492dfa37a // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c
 	google.golang.org/api v0.13.0
 	google.golang.org/appengine v1.6.5 // indirect
 	gopkg.in/yaml.v2 v2.2.4

@@ -2,12 +2,14 @@ package errors
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 )
 
 // ApiError is an improved error class
 type ApiError struct {
 	stack []string
+	httpResponse *http.Response
 }
 
 func initError() *ApiError {
@@ -56,6 +58,16 @@ func (e *ApiError) String() string {
 		return ""
 	}
 	return strings.Join(e.stack, "\n")
+}
+
+func (e *ApiError) WithResponse(httpResponse *http.Response) *ApiError {
+	e.httpResponse = httpResponse
+
+	return e
+}
+
+func (e *ApiError) HttpResponse() *http.Response {
+	return e.httpResponse
 }
 
 // Add adds an error to the current error

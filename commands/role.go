@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"thy/constants"
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
@@ -88,7 +89,7 @@ func GetRoleSearchCmd() (cli.Command, error) {
 		FlagsPredictor: cli.PredictorWrappers{
 			preds.LongFlag(cst.Query):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("%s of %ss to fetch (required)", strings.Title(cst.Query), cst.NounRole)}), false},
 			preds.LongFlag(cst.Limit):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Limit, Shorthand: "l", Usage: fmt.Sprint("Maximum number of results per cursor (optional)")}), false},
-			preds.LongFlag(cst.Cursor): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: fmt.Sprint("Next cursor for additional results (optional)")}), false},
+			preds.LongFlag(cst.Cursor): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: constants.CursorHelpMessage}), false},
 		},
 		MinNumberArgs: 1,
 	})
@@ -330,43 +331,60 @@ func (r Roles) handleRoleWorkflow(args []string) int {
 
 	if !isUpdate {
 		baseType := strings.Join([]string{cst.Config, cst.NounAuth}, "/")
-		data, err := handleSearch(nil, baseType, r.request)
-		if err != nil {
-			r.outClient.Fail(err)
-			return utils.GetExecStatus(err)
-		}
-		providers, parseErr := parseAuthProviders(data)
-		if parseErr != nil {
-			r.outClient.FailS("Failed to parse out available auth providers.")
-			return utils.GetExecStatus(parseErr)
-		}
 
-		if len(providers) > 0 {
-			var providerName string
-			options := []option{{"local", "local"}}
-			for _, p := range providers {
-				// Skip thycoticone - roles cannot have it as a provider.
-				if p.Type == cst.ThyOne {
-					continue
+		// If we were able to obtain a list of auth providers, proceed with selection,
+		// otherwise role does not have optional provider or external id
+		if data, err := handleSearch(nil, baseType, r.request); err == nil {
+			providers, parseErr := parseAuthProviders(data)
+			if parseErr != nil {
+				r.outClient.FailS("Failed to parse out available auth providers.")
+				return utils.GetExecStatus(parseErr)
+			}
+
+			if len(providers) > 0 {
+				var providerName string
+				options := []option{{"local", "local"}}
+				for _, p := range providers {
+					// Skip thycoticone - roles cannot have it as a provider.
+					if p.Type == cst.ThyOne {
+						continue
+					}
+					v := fmt.Sprintf("%s:%s", p.Name, p.Type)
+					options = append(options, option{v, strings.Replace(v, ":", " - ", 1)})
 				}
-				v := fmt.Sprintf("%s:%s", p.Name, p.Type)
-				options = append(options, option{v, strings.Replace(v, ":", " - ", 1)})
-			}
-			if resp, err := getStringAndValidate(ui, "Provider:", true, options, false, false); err != nil {
-				ui.Error(err.Error())
-				return 1
-			} else {
-				providerName = resp
-			}
-
-			if p := strings.Split(providerName, ":"); p[0] != "local" {
-				if resp, err := getStringAndValidate(ui, "External ID:", false, nil, false, false); err != nil {
+				if resp, err := getStringAndValidate(ui, "Provider:", true, options, false, false); err != nil {
 					ui.Error(err.Error())
 					return 1
 				} else {
-					params["provider"] = strings.Split(providerName, ":")[0]
-					params["externalId"] = resp
+					providerName = resp
 				}
+
+				if p := strings.Split(providerName, ":"); p[0] != "local" {
+					if resp, err := getStringAndValidate(ui, "External ID:", false, nil, false, false); err != nil {
+						ui.Error(err.Error())
+						return 1
+					} else {
+						params["provider"] = strings.Split(providerName, ":")[0]
+						params["externalId"] = resp
+					}
+				}
+			}
+		} else if err.HttpResponse().StatusCode != 403 {
+			r.outClient.FailS(err.Error())
+			return utils.GetExecStatus(err)
+		} else {
+			if resp, err := getStringAndValidate(ui, "Provider:", true, nil, false, false); err != nil {
+				ui.Error(err.Error())
+				return 1
+			} else {
+				params["provider"] = resp
+			}
+
+			if resp, err := getStringAndValidate(ui, "External ID:", true, nil, false, true); err != nil {
+				ui.Error(err.Error())
+				return 1
+			} else {
+				params["externalId"] = resp
 			}
 		}
 	}

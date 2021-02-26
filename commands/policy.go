@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"thy/constants"
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
@@ -107,7 +108,7 @@ func GetPolicyDeleteCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`Delete %[1]s
 
 Usage:
-   • %[1]s %[3]s %[2]s --all
+   • %[1]s %[3]s %[2]s
    • %[1]s %[3]s --path %[2]s --force
 		`, cst.NounPolicy, cst.ExamplePolicyPath, cst.Delete),
 		FlagsPredictor: cli.PredictorWrappers{
@@ -225,7 +226,7 @@ func GetPolicySearchCommand() (cli.Command, error) {
 		FlagsPredictor: cli.PredictorWrappers{
 			preds.LongFlag(cst.Query):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("Filter %s of items to fetch (required)", strings.Title(cst.Query))}), false},
 			preds.LongFlag(cst.Limit):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Limit, Shorthand: "l", Usage: fmt.Sprint("Maximum number of results per cursor (optional)")}), false},
-			preds.LongFlag(cst.Cursor): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: fmt.Sprint("Next cursor for additional results (optional)")}), false},
+			preds.LongFlag(cst.Cursor): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: constants.CursorHelpMessage}), false},
 		},
 		MinNumberArgs: 0,
 	})

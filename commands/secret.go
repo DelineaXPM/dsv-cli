@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"thy/auth"
+	"thy/constants"
 	"time"
 
 	cst "thy/constants"
@@ -52,10 +53,11 @@ func GetSearchOpWrappers() cli.PredictorWrappers {
 		preds.LongFlag(cst.Query):            cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("%s of %ss to fetch (required)", strings.Title(cst.Query), cst.NounSecret)}), false},
 		preds.LongFlag(cst.SearchLinks):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.SearchLinks, Shorthand: "", Usage: "Find secrets that link to the secret path in the query", Global: false, ValueType: "bool"}), false},
 		preds.LongFlag(cst.Limit):            cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Limit, Shorthand: "l", Usage: fmt.Sprint("Maximum number of results per cursor (optional)")}), false},
-		preds.LongFlag(cst.Cursor):           cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: fmt.Sprint("Next cursor for additional results (optional)")}), false},
+		preds.LongFlag(cst.Cursor):           cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: constants.CursorHelpMessage}), false},
 		preds.LongFlag(cst.SearchField):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.SearchField, Shorthand: "", Usage: "Advanced search on a secret field (optional)", Global: false}), false},
 		preds.LongFlag(cst.SearchType):       cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.SearchType, Shorthand: "", Usage: "Specify the value type for advanced field searching, can be 'number' or 'string' (optional)", Global: false}), false},
 		preds.LongFlag(cst.SearchComparison): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.SearchComparison, Shorthand: "", Usage: "Specify the operator for advanced field searching, can be 'contains' or 'equal' (optional)", Global: false}), false},
+		preds.LongFlag(cst.Sort):             cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Sort, Usage: "Change result sorting order (asc|desc) [default: desc] when search field is specified (optional)"}), false},
 	}
 }
 
@@ -383,6 +385,7 @@ func (se Secret) handleSecretSearchCmd(args []string) int {
 	searchType := viper.GetString(cst.SearchType)
 	searchComparison := viper.GetString(cst.SearchComparison)
 	searchField := viper.GetString(cst.SearchField)
+	sort := viper.GetString(cst.Sort)
 	if query == "" && len(args) > 0 {
 		query = args[0]
 	}
@@ -396,6 +399,7 @@ func (se Secret) handleSecretSearchCmd(args []string) int {
 			cst.SearchType:       searchType,
 			cst.SearchComparison: searchComparison,
 			cst.SearchField:      searchField,
+			cst.Sort:             sort,
 		}
 		if searchLinks {
 			//flag just needs to be present

@@ -79,7 +79,7 @@ func (c *httpClient) DoRequest(method string, uri string, body interface{}) ([]b
 	if err != nil {
 		return nil, errors.NewS("malformed api response")
 	}
-	return getResponse(b, resp.StatusCode)
+	return getResponse(b, resp)
 }
 
 func (c *httpClient) DoRequestOut(method string, uri string, body interface{}, dataOut interface{}) *errors.ApiError {
@@ -133,9 +133,9 @@ func statusCodeIsSuccess(statusCode int) bool {
 	return statusCode >= 200 && statusCode < 300
 }
 
-func getResponse(bodyBytes []byte, statusCode int) ([]byte, *errors.ApiError) {
-	if !statusCodeIsSuccess(statusCode) {
-		return nil, errors.NewS(string(bodyBytes))
+func getResponse(bodyBytes []byte, resp *http.Response) ([]byte, *errors.ApiError) {
+	if !statusCodeIsSuccess(resp.StatusCode) {
+		return nil, errors.NewS(string(bodyBytes)).WithResponse(resp)
 	} else {
 		if len(bodyBytes) == 0 {
 			return bodyBytes, nil

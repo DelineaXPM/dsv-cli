@@ -113,6 +113,7 @@ const (
 	StartDate               = "startdate"
 	EndDate                 = "enddate"
 	Force                   = "force"
+	Sort                    = "sort"
 )
 
 // Data Flags
@@ -150,6 +151,12 @@ const (
 	//group
 	DataGroupName = "group.name"
 	Members       = "members"
+)
+
+// Help Messages
+const (
+	CursorHelpMessage = "Next cursor for additional results. The cursor is provided at the end of each body response (\"cursor\": \"MQ==\") (optional)"
+	ActionHelpMessage = "Action performed (POST, GET, PUT, PATCH or DELETE) (optional)"
 )
 
 // Security

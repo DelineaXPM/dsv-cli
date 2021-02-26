@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 
@@ -21,6 +20,8 @@ import (
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"github.com/thycotic-rd/cli"
+
+	"golang.org/x/sys/execabs"
 )
 
 func BasePredictorWrappers() cli.PredictorWrappers {
@@ -391,7 +392,7 @@ func doEditData(data []byte, startErr *errors.ApiError) (edited []byte, runErr *
 		log.Printf("Warning: failed to close temporary file: '%s'\n%v", tmpFile.Name(), err)
 	}
 
-	editorPath, err := exec.LookPath(editorCmd)
+	editorPath, err := execabs.LookPath(editorCmd)
 	if err != nil {
 		return nil, errors.New(err).Grow(fmt.Sprintf("Error while looking up path to editor %q", editorCmd))
 	}
@@ -401,7 +402,7 @@ func doEditData(data []byte, startErr *errors.ApiError) (edited []byte, runErr *
 		errMsg := fmt.Sprintf("Error saving to %s. Please correct and save again or exit: %s", cst.ProductName, startErr.String())
 		args = append(args, fmt.Sprintf(`:echoerr '%s'`, strings.Replace(errMsg, `'`, `''`, -1)))
 	}
-	cmd := exec.Command(editorPath, args...)
+	cmd := execabs.Command(editorPath, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -438,7 +439,7 @@ func getEditorCmd() (string, *errors.ApiError) {
 	}
 
 	// try to find default editor on system
-	out, err := exec.Command("bash", "-c", getDefaultEditorSh).Output()
+	out, err := execabs.Command("bash", "-c", getDefaultEditorSh).Output()
 	editor = strings.TrimSpace(string(out))
 	if err != nil || editor == "" {
 		return "", errors.New(err).Grow("Failed to find default text editor. Please set 'editor' in the cli-config or make sure $EDITOR, $VISUAL is set on your system.")

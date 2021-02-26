@@ -12,12 +12,12 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
 	"sync"
 	cst "thy/constants"
+	"golang.org/x/sys/execabs"
 )
 
 const PASS_FOLDER = cst.CmdRoot
@@ -99,7 +99,7 @@ func getUrlFromPath(p string) (string, error) {
 
 func (p Pass) runPassHelper(stdinContent string, args ...string) (string, error) {
 	var stdout, stderr bytes.Buffer
-	cmd := exec.Command("pass", args...)
+	cmd := execabs.Command("pass", args...)
 	cmd.Stdin = strings.NewReader(stdinContent)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
