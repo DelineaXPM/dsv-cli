@@ -239,13 +239,14 @@ func (p Policy) handlePolicyReadCmd(args []string) int {
 	if status != 0 {
 		return status
 	}
+	path = paths.ProcessResource(path)
 	version := viper.GetString(cst.Version)
 	if strings.TrimSpace(version) != "" {
 		path = fmt.Sprint(path, "/", cst.Version, "/", version)
 	}
 
 	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
-	uri := paths.CreateResourceURI(baseType, paths.ProcessPath(path), "", true, nil, false)
+	uri := paths.CreateResourceURI(baseType, path, "", true, nil, false)
 
 	data, err = p.request.DoRequest("GET", uri, nil)
 
@@ -270,7 +271,7 @@ func (p Policy) handlePolicyEditCmd(args []string) int {
 		return status
 	}
 	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
-	uri := paths.CreateResourceURI(baseType, paths.ProcessPath(path), "", true, nil, false)
+	uri := paths.CreateResourceURI(baseType, paths.ProcessResource(path), "", true, nil, false)
 
 	resp, err = p.request.DoRequest("GET", uri, nil)
 	if err != nil {
@@ -303,7 +304,7 @@ func (p Policy) handlePolicyDeleteCmd(args []string) int {
 
 	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
 	query := map[string]string{"force": strconv.FormatBool(force)}
-	uri := paths.CreateResourceURI(baseType, paths.ProcessPath(path), "", true, query, false)
+	uri := paths.CreateResourceURI(baseType, paths.ProcessResource(path), "", true, query, false)
 
 	resp, err = p.request.DoRequest("DELETE", uri, nil)
 
@@ -326,7 +327,7 @@ func (p Policy) handlePolicyRestoreCmd(args []string) int {
 	}
 
 	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
-	uri := paths.CreateResourceURI(baseType, paths.ProcessPath(path), "/restore", true, nil, false)
+	uri := paths.CreateResourceURI(baseType, paths.ProcessResource(path), "/restore", true, nil, false)
 	data, err = p.request.DoRequest("PUT", uri, nil)
 
 	p.outClient.WriteResponse(data, err)
@@ -350,7 +351,7 @@ func (p Policy) handlePolicyRollbackCmd(args []string) int {
 	// If version is not provided, get the current policy item and parse the version from it.
 	// Submit a request for a version that's previous relative to the one found.
 	if version == "" {
-		uri := paths.CreateResourceURI(baseType, paths.ProcessPath(path), "", true, nil, false)
+		uri := paths.CreateResourceURI(baseType, paths.ProcessResource(path), "", true, nil, false)
 		resp, apiError = p.request.DoRequest("GET", uri, nil)
 		if apiError != nil {
 			p.outClient.WriteResponse(resp, apiError)
@@ -442,7 +443,7 @@ func (p Policy) handlePolicyUpsertWorkflow(args []string) int {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
-		params[cst.Path] = paths.ProcessPath(path)
+		params[cst.Path] = paths.ProcessResource(path)
 	}
 
 	if viper.GetString(cst.LastCommandKey) == cst.Update {

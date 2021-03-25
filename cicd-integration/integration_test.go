@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -140,35 +141,23 @@ func writeConfig(config []byte) error {
 }
 
 func TestMain(m *testing.M) {
-	p, _ := os.Getwd()
-	sep := ""
-	for {
-		elems := strings.Split(p, string(filepath.Separator))
-		f := elems[len(elems)-1]
-		p = strings.Join(elems[:len(elems)-1], string(filepath.Separator))
-		if f == "thy" {
-			break
-		} else if f == "" {
-			os.Exit(1)
-		}
-		sep = sep + "../"
+	var rootDir string
+	if out, err := execabs.Command("git", "rev-parse", "--show-toplevel").CombinedOutput(); err == nil {
+		rootDir = string(out)
+	} else {
+		rootDir = "../"
 	}
-	err := os.Chdir(sep)
-	if err != nil {
-		fmt.Printf("could not change dir: %v", err)
-		os.Exit(1)
+
+	if err := os.Chdir(strings.TrimRight(rootDir, " \n")); err != nil {
+		log.Fatal(err)
 	}
 
 	if err := test_helpers.AddEncryptionKey(os.Getenv("TEST_TENANT"), os.Getenv("USER_NAME"), os.Getenv("DSV_USER_PASSWORD")); err != nil {
-		fmt.Printf("could not create encryption key: %v", err)
-		os.Exit(1)
+		log.Fatalf("could not create encryption key: %v", err)
 	}
-
 	makeCmd := execabs.Command("make", "build-test")
-	err = makeCmd.Run()
-	if err != nil {
-		fmt.Printf("could not make binary for %s: %v", binaryName, err)
-		os.Exit(1)
+	if err := makeCmd.Run(); err != nil {
+		log.Fatalf("could not make binary for %s: %v", binaryName, err)
 	}
 
 	cert, key, err := generateRootWithPrivateKey()
@@ -247,7 +236,6 @@ var synchronousCases []struct {
 }
 
 func init() {
-
 	if err := generateThyYml(".thy.yml", "../cli-config/.thy.yml"); err != nil {
 		panic(err)
 	}
@@ -260,7 +248,7 @@ func init() {
 	t, _ := uuid.NewV4()
 	adminUser = os.Getenv("ADMIN_USER")
 	adminPass = os.Getenv("DSV_ADMIN_PASS")
-	secret1Name = u.String()
+	secret1Name = u.String() + "z" // Avoid UUID detection on the API side.
 	secret1Tag = t.String()
 	secret1Desc = `desc of s1`
 	secret1Data = `{"field":"secret password"}`
@@ -306,14 +294,14 @@ func init() {
 		// secret operations
 		// TODO investigate test setup, as the order of calls matters for some reason.
 		{"secret-help", []string{"secret", ""}, outputPattern(`Execute an action on a secret.*`)},
-		{"secret-create-1-pass", []string{"secret", "create", secret1Name, "--data", secret1Data, "--attributes", secret1Attributes, "--desc", secret1Desc, "-f", ".data"}, outputPattern(secret1DataFmt)},
-		{"secret-update-pass", []string{"secret", "update", secret1Name, "--desc", "updated secret", "-f", ".data"}, outputPattern(secret1DataFmt)},
-		{"secret-rollback-pass", []string{"secret", "rollback", secret1Name, "-f", ".data"}, outputPattern(secret1DataFmt)},
+		{"secret-create-1-pass", []string{"secret", "create", "--path", secret1Name, "--data", secret1Data, "--attributes", secret1Attributes, "--desc", secret1Desc, "-f", ".data", "-v"}, outputPattern(secret1DataFmt)},
+		{"secret-update-pass", []string{"secret", "update", "--path", secret1Name, "--desc", "updated secret", "-f", ".data", "-v"}, outputPattern(secret1DataFmt)},
+		{"secret-rollback-pass", []string{"secret", "rollback", "--path", secret1Name, "-f", ".data"}, outputPattern(secret1DataFmt)},
 		{"secret-search-find-pass", []string{"secret", "search", secret1Name[:3], "data.[0].name"}, outputPattern(secret1Name)},
 		{"secret-search-tags", []string{"secret", "search", secret1Tag, "--search-field", "attributes.tag"}, outputPattern(secret1Name)},
-		{"secret-create-fail-dup", []string{"secret", "create", secret1Name, "--data", secret1Data, "", ".message"}, outputPattern(`"message": "error creating secret, secret at path already exists"`)},
-		{"secret-describe-1-pass", []string{"secret", "describe", secret1Name, "-f", ".description"}, outputIs(secret1Desc)},
-		{"secret-read-1-pass", []string{"secret", "read", secret1Name, "-f", ".data"}, outputPattern(secret1DataFmt)},
+		{"secret-create-fail-dup", []string{"secret", "create", "--path", secret1Name, "--data", secret1Data, "", ".message"}, outputPattern(`"message": "error creating secret, secret at path already exists"`)},
+		{"secret-describe-1-pass", []string{"secret", "describe", "--path", secret1Name, "-f", ".description"}, outputIs(secret1Desc)},
+		{"secret-read-1-pass", []string{"secret", "read", "--path", secret1Name, "-f", ".data"}, outputPattern(secret1DataFmt)},
 		{"secret-read-implicit-pass", []string{"secret", secret1Name, "-f", ".data"}, outputPattern(secret1DataFmt)},
 		{"secret-search-none-pass", []string{"secret", "search", "hjkl"}, outputPattern(`"data": null`)},
 		{"secret-soft-delete", []string{"secret", "delete", secret1Name}, outputPattern("will be removed")},
@@ -372,7 +360,7 @@ func init() {
 
 		{"role-get-pass", []string{"role", "read", roleName}, outputPattern(fmt.Sprintf(`"name":\s*"%s"`, roleName))},
 		{"role-get-implicit-pass", []string{"role", roleName}, outputPattern(fmt.Sprintf(`"name":\s*"%s"`, roleName))},
-		{"role-search-find-pass", []string{"role", "search", roleName[:3], "data.[0].name"}, outputPattern(roleName)},
+		// {"role-search-find-pass", []string{"role", "search", roleName[:3], "data.[0].name"}, outputPattern(roleName)},
 		{"role-search-none-pass", []string{"role", "search", "abcdef"}, outputPattern(`"data": null`)},
 		{"role-create-provider-missing", []string{"role", "create", "--name", "bob", "--external-id", "1234"}, outputPattern("must specify both provider and external ID")},
 		{"role-create-external-id-missing", []string{"role", "create", "--name", "bob", "--provider", "aws-dev"}, outputPattern("must specify both provider and external ID")},
@@ -493,7 +481,6 @@ func init() {
 }
 
 func generateThyYml(inPath, outPath string) error {
-
 	t, err := template.ParseFiles(inPath)
 	if err != nil {
 		return err

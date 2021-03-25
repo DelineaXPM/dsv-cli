@@ -42,8 +42,8 @@ func GetAuthCmd() (cli.Command, error) {
 
 Usage:
    • auth --profile staging
-   • auth --auth.username %[3]s --auth.password %[4]s
-   • auth --auth.type %[7]s --auth.client.id=%[5]s --auth.client.secret=%[6]s 
+   • auth --auth-username %[3]s --auth-password %[4]s
+   • auth --auth-type %[7]s --auth-client-id=%[5]s --auth-client-secret=%[6]s 
 		`, cst.NounAuth, cst.ProductName, cst.ExampleUser, cst.ExamplePassword, cst.ExampleAuthClientID, cst.ExampleAuthClientSecret, string(auth.FederatedAws)),
 	})
 }

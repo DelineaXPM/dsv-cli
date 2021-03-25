@@ -225,7 +225,7 @@ func (g Group) handleGroupReadCmd(args []string) int {
 	if groupName == "" {
 		err = errors.NewS("error: must specify " + cst.DataGroupName)
 	} else {
-		uri := paths.CreateResourceURI(cst.NounGroup, paths.ProcessPath(groupName), "", true, nil, true)
+		uri := paths.CreateResourceURI(cst.NounGroup, paths.ProcessResource(groupName), "", true, nil, true)
 		data, err = g.request.DoRequest("GET", uri, nil)
 	}
 
@@ -293,7 +293,7 @@ func (g Group) handleGroupDeleteCmd(args []string) int {
 		err = errors.NewS("error: must specify " + cst.DataGroupName)
 	} else {
 		query := map[string]string{"force": strconv.FormatBool(force)}
-		uri := paths.CreateResourceURI(cst.NounGroup, paths.ProcessPath(groupName), "", true, query, true)
+		uri := paths.CreateResourceURI(cst.NounGroup, paths.ProcessResource(groupName), "", true, query, true)
 		data, err = g.request.DoRequest("DELETE", uri, nil)
 	}
 
@@ -319,7 +319,7 @@ func (g Group) handleGroupRestoreCmd(args []string) int {
 	if groupName == "" {
 		err = errors.NewS("error: must specify " + cst.DataGroupName)
 	} else {
-		uri := paths.CreateResourceURI(cst.NounGroup, paths.ProcessPath(groupName), "/restore", true, nil, true)
+		uri := paths.CreateResourceURI(cst.NounGroup, paths.ProcessResource(groupName), "/restore", true, nil, true)
 		data, err = g.request.DoRequest("PUT", uri, nil)
 	}
 
@@ -338,7 +338,7 @@ func (g Group) handleAddMembersCmd(args []string) int {
 		g.outClient.WriteResponse(nil, errors.NewS("--group-name required"))
 		return utils.GetExecStatus(err)
 	}
-	uri := paths.CreateResourceURI(cst.NounGroup, paths.ProcessPath(groupName), "/members", true, nil, true)
+	uri := paths.CreateResourceURI(cst.NounGroup, paths.ProcessResource(groupName), "/members", true, nil, true)
 	members := viper.GetString(cst.Members)
 	data := viper.GetString(cst.Data)
 	if data == "" {
@@ -377,10 +377,6 @@ func (g Group) handleUsersGroupReadCmd(args []string) int {
 	if userData == "" {
 		err = errors.NewS("error: must specify " + cst.DataUsername)
 	} else {
-		version := viper.GetString(cst.Version)
-		if strings.TrimSpace(version) != "" {
-			userData = fmt.Sprint(userData, "/", cst.Version, "/", version)
-		}
 		uri := paths.CreateResourceURI(cst.NounUser, userData, "/groups", true, nil, true)
 		data, err = g.request.DoRequest("GET", uri, nil)
 	}
@@ -399,7 +395,7 @@ func (g Group) handleDeleteMemberCmd(args []string) int {
 	var resp []byte
 	groupName := viper.GetString(cst.DataGroupName)
 
-	uri := paths.CreateResourceURI(cst.NounGroup, paths.ProcessPath(groupName), "/members", true, nil, true)
+	uri := paths.CreateResourceURI(cst.NounGroup, paths.ProcessResource(groupName), "/members", true, nil, true)
 	data := viper.GetString(cst.Data)
 	if g.outClient == nil {
 		g.outClient = format.NewDefaultOutClient()

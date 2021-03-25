@@ -46,10 +46,10 @@ func GetResourceURIFromResourcePath(resourceType string, path string, id string,
 	if path != "" {
 		resourcePath = GetURIPathFromInternalPath(path)
 	}
-	requestURI := CreateResourceURI(resourceType, resourcePath, suffix, trailingSlash, queryTerms, pluralize)
 	if id != "" {
-		requestURI = requestURI + fmt.Sprintf("?id=%s", id)
+		queryTerms["id"] = id
 	}
+	requestURI := CreateResourceURI(resourceType, resourcePath, suffix, trailingSlash, queryTerms, pluralize)
 	return requestURI, nil
 }
 
@@ -104,10 +104,10 @@ func GetPath(args []string) string {
 	return path
 }
 
-// ProcessPath converts a slash-delimited path into a colon-delimited path.
-// The path is any name, like user name, role name, group name, etc.
-func ProcessPath(path string) string {
-	return strings.ReplaceAll(path, "/", ":")
+// ProcessResource converts a slash-delimited resource path into a colon-delimited resource path.
+// The resource is any name, like user name, role name, group name, etc.
+func ProcessResource(resource string) string {
+	return strings.ReplaceAll(resource, "/", ":")
 }
 
 func GetDomain() string {
@@ -148,14 +148,4 @@ func GetFilenameFromArgs(args []string) string {
 		}
 	}
 	return fileName
-}
-
-// GetDefault tries to parse the flag and if it is blank it gets the first item in the args
-// Use for the default first parameter, like path, name, username, etc...
-func GetDefault(args []string, flagName string) string {
-	val := viper.GetString(flagName)
-	if val == "" && len(args) > 0 {
-		val = args[0]
-	}
-	return val
 }

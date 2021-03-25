@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestParse(t *testing.T) {
+func TestParseHours(t *testing.T) {
 	tests := []struct {
 		input         string
 		output        int
@@ -33,10 +33,10 @@ func TestParse(t *testing.T) {
 		t.Run(test.input, func(t *testing.T) {
 			d, err := ParseHours(test.input)
 			if (err == nil && test.errorExpected) || (err != nil && !test.errorExpected) {
-				t.Fatalf("Unexpected error to be %v, but got %v", test.errorExpected, err)
+				t.Fatalf("expected error to be %v, but got %v", test.errorExpected, err)
 			}
 			if d != test.output {
-				t.Errorf("Expected to get %d, but got %d", test.output, d)
+				t.Errorf("expected to get %d, but got %d", test.output, d)
 			}
 		})
 	}

@@ -255,6 +255,7 @@ func (p AuthProvider) handleAuthProviderReadCmd(args []string) int {
 	if status != 0 {
 		return status
 	}
+	path = paths.ProcessResource(path)
 	ver := viper.GetString(cst.Version)
 	if strings.TrimSpace(ver) != "" {
 		path = fmt.Sprint(path, "/", cst.Version, "/", ver)
@@ -330,7 +331,7 @@ func (p AuthProvider) handleAuthProviderUpsertWorkflow(args []string) int {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
-		params.Name = paths.ProcessPath(name)
+		params.Name = paths.ProcessResource(name)
 	}
 
 	if isUpdate {
@@ -431,7 +432,7 @@ func (p AuthProvider) handleAuthProviderUpsertWorkflow(args []string) int {
 		} else {
 			sendWelcomeEmail, parseErr := strconv.ParseBool(sendWelcomeEmail)
 			if parseErr == nil {
-				params.Properties.SendWelcomeEmail = sendWelcomeEmail
+				params.Properties.SendWelcomeEmail = &sendWelcomeEmail
 			}
 		}
 	default:
@@ -488,7 +489,7 @@ func (p AuthProvider) handleAuthProviderUpsert(args []string) int {
 	}
 	sendWelcomeEmail, parseErr := strconv.ParseBool(viper.GetString(cst.SendWelcomeEmail))
 	if parseErr == nil && model.Type == cst.ThyOne {
-		model.Properties.SendWelcomeEmail = sendWelcomeEmail
+		model.Properties.SendWelcomeEmail = &sendWelcomeEmail
 	}
 
 	resp, apiErr := p.submitAuthProvider(model)
@@ -576,7 +577,7 @@ func (p AuthProvider) handleAuthProviderEdit(args []string) int {
 		return status
 	}
 	baseType := strings.Join([]string{cst.Config, cst.NounAuth}, "/")
-	uri := paths.CreateResourceURI(baseType, paths.ProcessPath(path), "", true, nil, false)
+	uri := paths.CreateResourceURI(baseType, paths.ProcessResource(path), "", true, nil, false)
 
 	resp, err = p.request.DoRequest("GET", uri, nil)
 	if err != nil {
@@ -588,9 +589,6 @@ func (p AuthProvider) handleAuthProviderEdit(args []string) int {
 		var model authProvider
 		if mErr := json.Unmarshal(data, &model); mErr != nil {
 			return nil, errors.New(mErr).Grow("invalid format for auth provider")
-		}
-		if model.Type != cst.ThyOne {
-			model.Properties.SendWelcomeEmail = false
 		}
 		_, err = p.request.DoRequest("PUT", uri, &model)
 		return nil, err
@@ -650,5 +648,5 @@ type Properties struct {
 	Type             string `json:"type,omitempty"`
 	BaseURI          string `json:"baseUri,omitempty"`
 	UsernameClaim    string `json:"usernameClaim,omitempty"`
-	SendWelcomeEmail bool   `json:"sendWelcomeEmail,omitempty"`
+	SendWelcomeEmail *bool  `json:"sendWelcomeEmail,omitempty"`
 }

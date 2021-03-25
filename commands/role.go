@@ -179,11 +179,12 @@ func (r Roles) handleRoleReadCmd(args []string) int {
 	if name == "" {
 		err = errors.NewS("error: must specify " + cst.DataName)
 	} else {
+		name = paths.ProcessResource(name)
 		version := viper.GetString(cst.Version)
 		if strings.TrimSpace(version) != "" {
 			name = fmt.Sprint(name, "/", cst.Version, "/", version)
 		}
-		uri := paths.CreateResourceURI(cst.NounRole, paths.ProcessPath(name), "", true, nil, true)
+		uri := paths.CreateResourceURI(cst.NounRole, name, "", true, nil, true)
 		data, err = r.request.DoRequest("GET", uri, nil)
 	}
 
@@ -236,7 +237,7 @@ func (r Roles) handleRoleDeleteCmd(args []string) int {
 		err = errors.NewS("error: must specify " + cst.DataName)
 	} else {
 		query := map[string]string{"force": strconv.FormatBool(force)}
-		uri := paths.CreateResourceURI(cst.NounRole, paths.ProcessPath(name), "", true, query, true)
+		uri := paths.CreateResourceURI(cst.NounRole, paths.ProcessResource(name), "", true, query, true)
 		data, err = r.request.DoRequest("DELETE", uri, nil)
 	}
 
@@ -261,7 +262,7 @@ func (r Roles) handleRoleRestoreCmd(args []string) int {
 	if name == "" {
 		err = errors.NewS("error: must specify " + cst.DataName)
 	} else {
-		uri := paths.CreateResourceURI(cst.NounRole, paths.ProcessPath(name), "/restore", true, nil, true)
+		uri := paths.CreateResourceURI(cst.NounRole, paths.ProcessResource(name), "/restore", true, nil, true)
 		data, err = r.request.DoRequest("PUT", uri, nil)
 	}
 

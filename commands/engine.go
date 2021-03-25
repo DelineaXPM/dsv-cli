@@ -116,7 +116,7 @@ func (e engineHandler) handleRead(args []string) int {
 	if name == "" {
 		err = errors.NewS("error: must specify " + cst.DataName)
 	} else {
-		uri := paths.CreateResourceURI(cst.NounEngine, paths.ProcessPath(name), "", true, nil, true)
+		uri := paths.CreateResourceURI(cst.NounEngine, paths.ProcessResource(name), "", true, nil, true)
 		data, err = e.request.DoRequest("GET", uri, nil)
 	}
 
@@ -139,7 +139,7 @@ func (e engineHandler) handleDelete(args []string) int {
 	}
 
 	query := map[string]string{"force": strconv.FormatBool(true)}
-	uri := paths.CreateResourceURI(cst.NounEngine, paths.ProcessPath(name), "", true, query, true)
+	uri := paths.CreateResourceURI(cst.NounEngine, paths.ProcessResource(name), "", true, query, true)
 
 	data, err := e.request.DoRequest(http.MethodDelete, uri, nil)
 	e.outClient.WriteResponse(data, err)
@@ -160,7 +160,7 @@ func (e engineHandler) handlePing(args []string) int {
 		return utils.GetExecStatus(err)
 	}
 
-	uri := paths.CreateResourceURI(cst.NounEngine, paths.ProcessPath(name), "/ping", true, nil, true)
+	uri := paths.CreateResourceURI(cst.NounEngine, paths.ProcessResource(name), "/ping", true, nil, true)
 	data, err := e.request.DoRequest(http.MethodPost, uri, nil)
 	e.outClient.WriteResponse(data, err)
 	return utils.GetExecStatus(err)

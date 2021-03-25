@@ -100,7 +100,7 @@ func (p poolHandler) handleRead(args []string) int {
 	if name == "" {
 		err = errors.NewS("error: must specify " + cst.DataName)
 	} else {
-		uri := paths.CreateResourceURI(cst.NounPool, paths.ProcessPath(name), "", true, nil, true)
+		uri := paths.CreateResourceURI(cst.NounPool, paths.ProcessResource(name), "", true, nil, true)
 		data, err = p.request.DoRequest("GET", uri, nil)
 	}
 
@@ -144,7 +144,7 @@ func (p poolHandler) handleDelete(args []string) int {
 	}
 
 	query := map[string]string{"force": strconv.FormatBool(true)}
-	uri := paths.CreateResourceURI(cst.NounPool, paths.ProcessPath(name), "", true, query, true)
+	uri := paths.CreateResourceURI(cst.NounPool, paths.ProcessResource(name), "", true, query, true)
 
 	data, err := p.request.DoRequest(http.MethodDelete, uri, nil)
 	p.outClient.WriteResponse(data, err)

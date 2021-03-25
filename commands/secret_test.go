@@ -23,6 +23,10 @@ func TestHandleDescribeCmd(t *testing.T) {
 		storeType     string
 		expectedErr   *errors.ApiError
 		apiError      *errors.ApiError
+		flags         []struct {
+			flag  string
+			value string
+		}
 	}{
 		{
 			"Happy Path no cacheStrategy",
@@ -32,6 +36,35 @@ func TestHandleDescribeCmd(t *testing.T) {
 			"",
 			nil,
 			nil,
+			nil,
+		},
+		{
+			"Happy Path no cacheStrategy",
+			[]string{"140a372c-7d37-11eb-bc08-00155d19ad95"},
+			"",
+			[]byte(`test data`),
+			"",
+			nil,
+			nil,
+			nil,
+		},
+		{
+			"Happy Path no cacheStrategy",
+			[]string{""},
+			"",
+			[]byte(`test data`),
+			"",
+			nil,
+			nil,
+			[]struct{
+				flag string
+				value string
+			}{
+				{
+					cst.ID,
+					"140a372c-7d37-11eb-bc08-00155d19ad95",
+				},
+			},
 		},
 		{
 			"Happy Path cache.server cacheStrategy",
@@ -41,6 +74,35 @@ func TestHandleDescribeCmd(t *testing.T) {
 			"",
 			nil,
 			nil,
+			nil,
+		},
+		{
+			"Happy Path cache.server cacheStrategy",
+			[]string{"140a372c-7d37-11eb-bc08-00155d19ad95"},
+			"cache.server",
+			[]byte(`test data from cache`),
+			"",
+			nil,
+			nil,
+			nil,
+		},
+		{
+			"Happy Path cache.server cacheStrategy",
+			[]string{""},
+			"cache.server",
+			[]byte(`test data from cache`),
+			"",
+			nil,
+			nil,
+			[]struct{
+				flag string
+				value string
+			}{
+				{
+					cst.ID,
+					"140a372c-7d37-11eb-bc08-00155d19ad95",
+				},
+			},
 		},
 		{
 			"Happy Path server.cache cacheStrategy",
@@ -50,6 +112,35 @@ func TestHandleDescribeCmd(t *testing.T) {
 			"",
 			nil,
 			errors.New(e.New("error")),
+			nil,
+		},
+		{
+			"Happy Path server.cache cacheStrategy",
+			[]string{"140a372c-7d37-11eb-bc08-00155d19ad95"},
+			"server.cache",
+			[]byte(`test data from cache`),
+			"",
+			nil,
+			errors.New(e.New("error")),
+			nil,
+		},
+		{
+			"Happy Path server.cache cacheStrategy",
+			[]string{""},
+			"server.cache",
+			[]byte(`test data from cache`),
+			"",
+			nil,
+			errors.New(e.New("error")),
+			[]struct{
+				flag string
+				value string
+			}{
+				{
+					cst.ID,
+					"140a372c-7d37-11eb-bc08-00155d19ad95",
+				},
+			},
 		},
 	}
 
@@ -58,6 +149,11 @@ func TestHandleDescribeCmd(t *testing.T) {
 
 	for _, tt := range testCase {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.flags != nil {
+				for _, f := range tt.flags {
+					viper.Set(f.flag, f.value)
+				}
+			}
 			writer := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
@@ -98,6 +194,11 @@ func TestHandleDescribeCmd(t *testing.T) {
 			} else {
 				assert.Equal(t, err, tt.expectedErr)
 			}
+			if tt.flags != nil {
+				for _, f := range tt.flags {
+					viper.Set(f.flag, "")
+				}
+			}
 		})
 	}
 }
@@ -110,19 +211,26 @@ func TestHandleSecretSearchCmd(t *testing.T) {
 		apiResponse []byte
 		out         []byte
 		expectedErr *errors.ApiError
+		flags       []struct {
+			flag  string
+			value string
+		}
 	}{
 		{
 			"Happy path",
 			"user1",
 			[]byte(`test`),
 			[]byte(`test`),
-			nil},
+			nil,
+			nil,
+		},
 		{
 			"api Error",
 			"user1",
 			[]byte(`test`),
 			[]byte(`test`),
 			errors.New(e.New("error")),
+			nil,
 		},
 		{
 			"No Search query",
@@ -130,6 +238,7 @@ func TestHandleSecretSearchCmd(t *testing.T) {
 			[]byte(`test`),
 			[]byte(`test`),
 			errors.New(e.New("error: must specify " + cst.Query)),
+			nil,
 		},
 	}
 
@@ -140,6 +249,11 @@ func TestHandleSecretSearchCmd(t *testing.T) {
 	for _, tt := range testCase {
 
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.flags != nil {
+				for _, f := range tt.flags {
+					viper.Set(f.flag, f.value)
+				}
+			}
 			writer := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
@@ -160,6 +274,11 @@ func TestHandleSecretSearchCmd(t *testing.T) {
 			} else {
 				assert.Equal(t, err, tt.expectedErr)
 			}
+			if tt.flags != nil {
+				for _, f := range tt.flags {
+					viper.Set(f.flag, "")
+				}
+			}
 		})
 
 	}
@@ -172,19 +291,74 @@ func TestHandleDeleteCmd(t *testing.T) {
 		apiResponse []byte
 		out         []byte
 		expectedErr *errors.ApiError
+		flags       []struct {
+			flag  string
+			value string
+		}
 	}{
 		{
 			"Happy path",
 			"user1",
 			[]byte(`test`),
 			[]byte(`test`),
-			nil},
+			nil,
+			nil,
+		},
+		{
+			"Happy ID",
+			"140a372c-7d37-11eb-bc08-00155d19ad95",
+			[]byte(`test`),
+			[]byte(`test`),
+			nil,
+			nil,
+		},
+		{
+			"Happy ID",
+			"",
+			[]byte(`test`),
+			[]byte(`test`),
+			nil,
+			[]struct{
+				flag string
+				value string
+			}{
+				{
+					cst.ID,
+					"140a372c-7d37-11eb-bc08-00155d19ad95",
+				},
+			},
+		},
 		{
 			"api Error",
 			"user1",
 			[]byte(`test`),
 			[]byte(`test`),
 			errors.New(e.New("error")),
+			nil,
+		},
+		{
+			"api Error",
+			"140a372c-7d37-11eb-bc08-00155d19ad95",
+			[]byte(`test`),
+			[]byte(`test`),
+			errors.New(e.New("error")),
+			nil,
+		},
+		{
+			"api Error",
+			"",
+			[]byte(`test`),
+			[]byte(`test`),
+			errors.New(e.New("error")),
+			[]struct{
+				flag string
+				value string
+			}{
+				{
+					cst.ID,
+					"140a372c-7d37-11eb-bc08-00155d19ad95",
+				},
+			},
 		},
 	}
 
@@ -194,6 +368,11 @@ func TestHandleDeleteCmd(t *testing.T) {
 	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.flags != nil {
+				for _, f := range tt.flags {
+					viper.Set(f.flag, f.value)
+				}
+			}
 			writer := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
@@ -214,6 +393,11 @@ func TestHandleDeleteCmd(t *testing.T) {
 			} else {
 				assert.Equal(t, err, tt.expectedErr)
 			}
+			if tt.flags != nil {
+				for _, f := range tt.flags {
+					viper.Set(f.flag, "")
+				}
+			}
 		})
 	}
 }
@@ -225,19 +409,74 @@ func TestHandleRollbackCmd(t *testing.T) {
 		apiResponse []byte
 		out         []byte
 		expectedErr *errors.ApiError
+		flags       []struct {
+			flag  string
+			value string
+		}
 	}{
 		{
-			"success (no version passed in)",
+			"success (no version passed in) (ID)",
+			"140a372c-7d37-11eb-bc08-00155d19ad95",
+			[]byte(`test`),
+			[]byte(`{"version": "4"}`),
+			nil,
+			nil,
+		},
+		{
+			"success (no version passed in) (ID)",
+			"",
+			[]byte(`test`),
+			[]byte(`{"version": "4"}`),
+			nil,
+			[]struct{
+				flag string
+				value string
+			}{
+				{
+					cst.ID,
+					"140a372c-7d37-11eb-bc08-00155d19ad95",
+				},
+			},
+		},
+		{
+			"success (no version passed in) (path)",
 			"azure-dev",
 			[]byte(`test`),
 			[]byte(`{"version": "4"}`),
-			nil},
+			nil,
+			nil,
+		},
 		{
-			"error (no version passed in)",
+			"error (no version passed in) (ID)",
+			"140a372c-7d37-11eb-bc08-00155d19ad95",
+			[]byte(`test`),
+			[]byte(`{"someData": "hello"}`),
+			errors.NewS("version not found"),
+			nil,
+		},
+		{
+			"error (no version passed in) (ID)",
+			"",
+			[]byte(`test`),
+			[]byte(`{"someData": "hello"}`),
+			errors.NewS("version not found"),
+			[]struct{
+				flag string
+				value string
+			}{
+				{
+					cst.ID,
+					"140a372c-7d37-11eb-bc08-00155d19ad95",
+				},
+			},
+		},
+		{
+			"error (no version passed in) (path)",
 			"azure-dev",
 			[]byte(`test`),
 			[]byte(`{"someData": "hello"}`),
 			errors.NewS("version not found"),
+			nil,
 		},
 	}
 
@@ -246,6 +485,11 @@ func TestHandleRollbackCmd(t *testing.T) {
 
 	for _, tt := range testCase {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.flags != nil {
+				for _, f := range tt.flags {
+					viper.Set(f.flag, f.value)
+				}
+			}
 			writer := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
@@ -266,6 +510,11 @@ func TestHandleRollbackCmd(t *testing.T) {
 			} else {
 				assert.Equal(t, tt.expectedErr, err)
 			}
+			if tt.flags != nil {
+				for _, f := range tt.flags {
+					viper.Set(f.flag, "")
+				}
+			}
 		})
 	}
 }
@@ -279,13 +528,46 @@ func TestHandleReadCmd(t *testing.T) {
 		storeType     string
 		expectedErr   *errors.ApiError
 		apiError      *errors.ApiError
+		flags         []struct {
+			flag  string
+			value string
+		}
 	}{
+		{
+			"Happy Path no cacheStrategy (ID)",
+			[]string{"140a372c-7d37-11eb-bc08-00155d19ad95"},
+			"",
+			[]byte(`test data`),
+			"",
+			nil,
+			nil,
+			nil,
+		},
+		{
+			"Happy Path no cacheStrategy (ID)",
+			[]string{""},
+			"",
+			[]byte(`test data`),
+			"",
+			nil,
+			nil,
+			[]struct{
+				flag string
+				value string
+			}{
+				{
+					cst.ID,
+					"140a372c-7d37-11eb-bc08-00155d19ad95",
+				},
+			},
+		},
 		{
 			"Happy Path no cacheStrategy",
 			[]string{"path1"},
 			"",
 			[]byte(`test data`),
 			"",
+			nil,
 			nil,
 			nil,
 		},
@@ -297,6 +579,35 @@ func TestHandleReadCmd(t *testing.T) {
 			"",
 			nil,
 			nil,
+			nil,
+		},
+		{
+			"Happy Path cache.server cacheStrategy",
+			[]string{""},
+			"cache.server",
+			[]byte(`test data from cache`),
+			"",
+			nil,
+			nil,
+			[]struct{
+				flag string
+				value string
+			}{
+				{
+					cst.ID,
+					"140a372c-7d37-11eb-bc08-00155d19ad95",
+				},
+			},
+		},
+		{
+			"Happy Path cache.server cacheStrategy",
+			[]string{"140a372c-7d37-11eb-bc08-00155d19ad95"},
+			"cache.server",
+			[]byte(`test data from cache`),
+			"",
+			nil,
+			nil,
+			nil,
 		},
 		{
 			"Happy Path server.cache cacheStrategy",
@@ -306,6 +617,35 @@ func TestHandleReadCmd(t *testing.T) {
 			"",
 			nil,
 			errors.New(e.New("error")),
+			nil,
+		},
+		{
+			"Happy Path server.cache cacheStrategy",
+			[]string{"path1"},
+			"server.cache",
+			[]byte(`test data from cache`),
+			"",
+			nil,
+			errors.New(e.New("error")),
+			[]struct{
+				flag string
+				value string
+			}{
+				{
+					cst.ID,
+					"140a372c-7d37-11eb-bc08-00155d19ad95",
+				},
+			},
+		},
+		{
+			"Happy Path server.cache cacheStrategy",
+			[]string{"140a372c-7d37-11eb-bc08-00155d19ad95"},
+			"server.cache",
+			[]byte(`test data from cache`),
+			"",
+			nil,
+			errors.New(e.New("error")),
+			nil,
 		},
 	}
 
@@ -314,6 +654,11 @@ func TestHandleReadCmd(t *testing.T) {
 
 	for _, tt := range testCase {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.flags != nil {
+				for _, f := range tt.flags {
+					viper.Set(f.flag, f.value)
+				}
+			}
 			writer := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
@@ -356,6 +701,11 @@ func TestHandleReadCmd(t *testing.T) {
 			}
 			viper.Set(cst.StoreType, "")
 			viper.Set(cst.CacheStrategy, "")
+			if tt.flags != nil {
+				for _, f := range tt.flags {
+					viper.Set(f.flag, "")
+				}
+			}
 		})
 	}
 }
@@ -367,6 +717,10 @@ func TestHandleUpsertCmd(t *testing.T) {
 		out         []byte
 		method      string
 		expectedErr *errors.ApiError
+		flags       []struct {
+			flag  string
+			value string
+		}
 	}{
 		{
 			"Happy path POST",
@@ -374,12 +728,46 @@ func TestHandleUpsertCmd(t *testing.T) {
 			[]byte(`test`),
 			"create",
 			nil,
+			nil,
 		},
 		{
-			"Happy path PUT",
+			"Happy path POST",
+			[]string{"mySecret"},
+			[]byte(`test`),
+			"create",
+			nil,
+			nil,
+		},
+		{
+			"Happy path PUT (ID)",
+			[]string{"140a372c-7d37-11eb-bc08-00155d19ad95"},
+			[]byte(`test`),
+			"update",
+			nil,
+			nil,
+		},
+		{
+			"Happy path PUT (ID)",
+			[]string{""},
+			[]byte(`test`),
+			"update",
+			nil,
+			[]struct{
+				flag string
+				value string
+			}{
+				{
+					cst.ID,
+					"140a372c-7d37-11eb-bc08-00155d19ad95",
+				},
+			},
+		},
+		{
+			"Happy path PUT (path)",
 			[]string{"mySecret"},
 			[]byte(`test`),
 			"update",
+			nil,
 			nil,
 		},
 		{
@@ -388,6 +776,7 @@ func TestHandleUpsertCmd(t *testing.T) {
 			[]byte(`test`),
 			"",
 			errors.New(e.New("error: must specify --id or --path (or [path])")),
+			nil,
 		},
 	}
 
@@ -404,6 +793,11 @@ func TestHandleUpsertCmd(t *testing.T) {
 	viper.Set(cst.DataDescription, "new description")
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.flags != nil {
+				for _, f := range tt.flags {
+					viper.Set(f.flag, f.value)
+				}
+			}
 			writer := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
@@ -427,6 +821,11 @@ func TestHandleUpsertCmd(t *testing.T) {
 			} else {
 				assert.Equal(t, tt.expectedErr, err)
 			}
+			if tt.flags != nil {
+				for _, f := range tt.flags {
+					viper.Set(f.flag, "")
+				}
+			}
 		})
 	}
 }
@@ -438,12 +837,17 @@ func TestHandleBustCacheCmd(t *testing.T) {
 		out         []byte
 		storeType   string
 		expectedErr *errors.ApiError
+		flags       []struct {
+			flag  string
+			value string
+		}
 	}{
 		{
 			"Happy Path",
 			[]string{},
 			nil,
 			"",
+			nil,
 			nil,
 		},
 		{
@@ -452,6 +856,7 @@ func TestHandleBustCacheCmd(t *testing.T) {
 			nil,
 			"",
 			errors.New(e.New("error")),
+			nil,
 		},
 	}
 
@@ -460,6 +865,11 @@ func TestHandleBustCacheCmd(t *testing.T) {
 
 	for _, tt := range testCase {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.flags != nil {
+				for _, f := range tt.flags {
+					viper.Set(f.flag, f.value)
+				}
+			}
 			writer := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
@@ -485,6 +895,11 @@ func TestHandleBustCacheCmd(t *testing.T) {
 			} else {
 				assert.Equal(t, err, tt.expectedErr)
 			}
+			if tt.flags != nil {
+				for _, f := range tt.flags {
+					viper.Set(f.flag, "")
+				}
+			}
 		})
 	}
 }
@@ -498,6 +913,10 @@ func TestHandleEditCmd(t *testing.T) {
 		expectedErr  *errors.ApiError
 		apiError     *errors.ApiError
 		editError    *errors.ApiError
+		flags         []struct {
+			flag  string
+			value string
+		}
 	}{
 		{
 			"Happy Path",
@@ -507,6 +926,35 @@ func TestHandleEditCmd(t *testing.T) {
 			nil,
 			nil,
 			nil,
+			nil,
+		},
+		{
+			"Happy Path",
+			[]string{"140a372c-7d37-11eb-bc08-00155d19ad95"},
+			[]byte(`test data`),
+			[]byte(`test data`),
+			nil,
+			nil,
+			nil,
+			nil,
+		},
+		{
+			"Happy Path",
+			[]string{""},
+			[]byte(`test data`),
+			[]byte(`test data`),
+			nil,
+			nil,
+			nil,
+			[]struct{
+				flag string
+				value string
+			}{
+				{
+					cst.ID,
+					"140a372c-7d37-11eb-bc08-00155d19ad95",
+				},
+			},
 		},
 		{
 			"error get permission",
@@ -516,6 +964,7 @@ func TestHandleEditCmd(t *testing.T) {
 			errors.New(e.New("error")),
 			errors.New(e.New("error")),
 			nil,
+			nil,
 		},
 	}
 
@@ -524,6 +973,11 @@ func TestHandleEditCmd(t *testing.T) {
 
 	for _, tt := range testCase {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.flags != nil {
+				for _, f := range tt.flags {
+					viper.Set(f.flag, f.value)
+				}
+			}
 			writer := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
@@ -569,6 +1023,11 @@ func TestHandleEditCmd(t *testing.T) {
 				assert.Equal(t, data, tt.out)
 			} else {
 				assert.Equal(t, err, tt.expectedErr)
+			}
+			if tt.flags != nil {
+				for _, f := range tt.flags {
+					viper.Set(f.flag, "")
+				}
 			}
 		})
 	}

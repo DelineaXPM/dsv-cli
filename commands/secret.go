@@ -44,6 +44,7 @@ func GetDataOpWrappers(targetEntity string) cli.PredictorWrappers {
 func GetNoDataOpWrappers(targetEntity string) cli.PredictorWrappers {
 	return cli.PredictorWrappers{
 		preds.LongFlag(cst.Path):    cli.PredictorWrapper{preds.NewSecretPathPredictorDefault(), preds.NewFlagValue(preds.Params{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, targetEntity)}), false},
+		preds.LongFlag(cst.ID):    	 cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ID, Shorthand: "i", Usage: fmt.Sprintf("Target %s for a %s", cst.ID, targetEntity)}), false},
 		preds.LongFlag(cst.Version): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Version, Shorthand: "", Usage: "List the current and last (n) versions"}), false},
 	}
 }
@@ -67,7 +68,7 @@ func GetSecretCmd() (cli.Command, error) {
 		RunFunc: func(args []string) int {
 			id := viper.GetString(cst.ID)
 			path := viper.GetString(cst.Path)
-			if path == "" {
+			if path == "" && id == "" {
 				path = paths.GetPath(args)
 			}
 			if path == "" && id == "" {
@@ -145,6 +146,7 @@ Usage:
 				`, cst.Delete, cst.NounSecret, cst.ProductName, cst.ExamplePath),
 		FlagsPredictor: cli.PredictorWrappers{
 			preds.LongFlag(cst.Path):  cli.PredictorWrapper{preds.NewSecretPathPredictorDefault(), preds.NewFlagValue(preds.Params{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret)}), false},
+			preds.LongFlag(cst.ID):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ID, Shorthand: "i", Usage: fmt.Sprintf("Target %s for a %s", cst.ID, cst.NounSecret)}), false},
 			preds.LongFlag(cst.Force): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Force, Shorthand: "", Usage: fmt.Sprintf("Immediately delete %s", cst.NounSecret), Global: false, ValueType: "bool"}), false},
 		},
 		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
@@ -167,6 +169,7 @@ Usage:
 				`, cst.Restore, cst.NounSecret, cst.ProductName, cst.ExamplePath),
 		FlagsPredictor: cli.PredictorWrappers{
 			preds.LongFlag(cst.Path): cli.PredictorWrapper{preds.NewSecretPathPredictorDefault(), preds.NewFlagValue(preds.Params{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret)}), false},
+			preds.LongFlag(cst.ID):   cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ID, Shorthand: "i", Usage: fmt.Sprintf("Target %s for a %s", cst.ID, cst.NounSecret)}), false},
 		},
 		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
 		MinNumberArgs:     1,
@@ -187,7 +190,14 @@ Usage:
 	• secret %[1]s --path %[4]s --data %[5]s
 	• secret %[1]s --path %[4]s --data %[6]s
 				`, cst.Update, cst.NounSecret, cst.ProductName, cst.ExamplePath, cst.ExampleDataJSON, cst.ExampleDataPath),
-		FlagsPredictor:    GetDataOpWrappers(cst.NounSecret),
+		FlagsPredictor:    cli.PredictorWrappers{
+			preds.LongFlag(cst.Data):            cli.PredictorWrapper{preds.NewPrefixFilePredictor("*"), preds.NewFlagValue(preds.Params{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in a %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), cst.NounSecret)}), false},
+			preds.LongFlag(cst.Path):            cli.PredictorWrapper{preds.NewSecretPathPredictorDefault(), preds.NewFlagValue(preds.Params{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret)}), false},
+			preds.LongFlag(cst.DataDescription): cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.DataDescription, Usage: fmt.Sprintf("Description of a %s", cst.NounSecret)}), false},
+			preds.LongFlag(cst.DataAttributes):  cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.DataAttributes, Usage: fmt.Sprintf("Attributes of a %s", cst.NounSecret)}), false},
+			preds.LongFlag(cst.Overwrite):       cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.Overwrite, Usage: fmt.Sprintf("Overwrite all the contents of %s data", cst.NounSecret), Global: false, ValueType: "bool"}), false},
+			preds.LongFlag(cst.ID):              cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ID, Shorthand: "i", Usage: fmt.Sprintf("Target %s for a %s", cst.ID, cst.NounSecret)}), false},
+		},
 		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
 		MinNumberArgs:     2,
 	})
@@ -208,6 +218,7 @@ Usage:
 				`, cst.Rollback, cst.NounSecret, cst.ProductName, cst.ExamplePath, cst.Version),
 		FlagsPredictor: cli.PredictorWrappers{
 			preds.LongFlag(cst.Path):    cli.PredictorWrapper{preds.NewSecretPathPredictorDefault(), preds.NewFlagValue(preds.Params{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret)}), false},
+			preds.LongFlag(cst.ID):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ID, Shorthand: "i", Usage: fmt.Sprintf("Target %s for a %s", cst.ID, cst.NounSecret)}), false},
 			preds.LongFlag(cst.Version): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Version, Shorthand: "", Usage: "The version to which to rollback"}), false},
 		},
 		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
@@ -315,6 +326,10 @@ func (se Secret) handleDescribeCmd(args []string) int {
 	id := viper.GetString(cst.ID)
 	path := viper.GetString(cst.Path)
 	if path == "" {
+		path = viper.GetString(cst.ID)
+		id = ""
+	}
+	if path == "" {
 		path = paths.GetPath(args)
 	}
 	resp, err := se.getSecret(path, id, false, cst.SuffixDescription)
@@ -332,6 +347,10 @@ func (se Secret) handleReadCmd(args []string) int {
 	id := viper.GetString(cst.ID)
 	path := viper.GetString(cst.Path)
 	if path == "" {
+		path = viper.GetString(cst.ID)
+		id = ""
+	}
+	if path == ""  {
 		path = paths.GetPath(args)
 	}
 	version := viper.GetString(cst.Version)
@@ -355,6 +374,9 @@ func (se Secret) handleRestoreCmd(args []string) int {
 	}
 
 	path := viper.GetString(cst.Path)
+	if path == "" {
+		path = viper.GetString(cst.ID)
+	}
 	if path == "" {
 		path = paths.GetPath(args)
 	}
@@ -425,8 +447,13 @@ func (se Secret) handleDeleteCmd(args []string) int {
 	}
 	var err *errors.ApiError
 	var resp []byte
+	id := viper.GetString(cst.ID)
 	path := viper.GetString(cst.Path)
 	force := viper.GetBool(cst.Force)
+	if path == "" {
+		path = viper.GetString(cst.ID)
+		id = ""
+	}
 	if path == "" {
 		path = paths.GetPath(args)
 	}
@@ -438,8 +465,7 @@ func (se Secret) handleDeleteCmd(args []string) int {
 		return utils.GetExecStatus(err)
 	}
 	path = rc.path
-	uri, err := paths.GetResourceURIFromResourcePath(rc.resourceType, path, "", "", true, query, rc.pluralize)
-
+	uri, err := paths.GetResourceURIFromResourcePath(rc.resourceType, path, id, "", true, query, rc.pluralize)
 	resp, err = se.request.DoRequest("DELETE", uri, nil)
 
 	outClient.WriteResponse(resp, err)
@@ -454,6 +480,9 @@ func (se Secret) handleRollbackCmd(args []string) int {
 	}
 
 	path := viper.GetString(cst.Path)
+	if path == "" {
+		path = viper.GetString(cst.ID)
+	}
 	if path == "" {
 		path = paths.GetPath(args)
 	}
@@ -499,6 +528,10 @@ func (se Secret) handleUpsertCmd(args []string) int {
 	id := viper.GetString(cst.ID)
 	path := viper.GetString(cst.Path)
 	overwrite := viper.GetBool(cst.Overwrite)
+	if path == "" {
+		path = viper.GetString(cst.ID)
+		id = ""
+	}
 	if path == "" {
 		path = paths.GetPath(args)
 	}
@@ -557,6 +590,10 @@ func (se Secret) handleEditCmd(args []string) int {
 	var resp []byte
 	id := viper.GetString(cst.ID)
 	path := viper.GetString(cst.Path)
+	if path == "" {
+		path = viper.GetString(cst.ID)
+		id = ""
+	}
 	if path == "" {
 		path = paths.GetPath(args)
 	}

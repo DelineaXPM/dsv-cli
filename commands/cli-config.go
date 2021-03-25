@@ -436,10 +436,13 @@ func handleCliConfigInitCmd(args []string) int {
 	// domain
 	var domain string
 	var err error
+	var isDevDomain bool
+
 	if devDomain := viper.GetString(cst.Dev); devDomain != "" {
+		isDevDomain = true
 		domain = devDomain
 	} else {
-		if domain, err = getStringAndValidate(ui, fmt.Sprintf("Please choose domain:"), true, []option{
+		if domain, err = getStringAndValidate(ui, "Please choose domain:", true, []option{
 			{cst.Domain, cst.Domain},
 			{cst.DomainEU, cst.DomainEU},
 			{cst.DomainAU, cst.DomainAU},
@@ -585,14 +588,20 @@ func handleCliConfigInitCmd(args []string) int {
 					viper.Set(cst.Password, password)
 				}
 			}
+
 			if auth.AuthType(authType) == auth.FederatedThyOne {
-				authProviderMessage = fmt.Sprintf("Thycotic One authentication provider name (default %s):", cst.DefaultThyOneName)
-				if authProvider == "" {
+				authProvider = cst.DefaultThyOneName
+
+				if authProvider == "" && isDevDomain {
+					authProviderMessage = fmt.Sprintf("Thycotic One authentication provider name (default %s):", cst.DefaultThyOneName)
 					if authProvider, err = getStringAndValidateDefault(ui, authProviderMessage, cst.DefaultThyOneName, true, nil, false, false); err != nil {
 						return 1
+
 					}
-					viper.Set(cst.AuthProvider, authProvider)
 				}
+
+				viper.Set(cst.AuthProvider, authProvider)
+
 				AddNode(&cfg, jsonish{cst.DataProvider: authProvider}, profile, cst.NounAuth)
 			}
 

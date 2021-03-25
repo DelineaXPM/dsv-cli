@@ -202,20 +202,24 @@ func TestHandleUserSearchCmd(t *testing.T) {
 
 func TestHandleUserCreateCmd(t *testing.T) {
 	testCase := []struct {
-		name        string
-		args        []string
-		userName    string
-		password    string
-		provider    string
-		externalID  string
-		apiResponse []byte
-		out         []byte
-		expectedErr *errors.ApiError
+		name, userName, displayName, password, provider, externalID string
+		args                                                        []string
+		apiResponse, out                                            []byte
+		expectedErr                                                 *errors.ApiError
 	}{
 		{
 			name:        "Successful local user create",
 			args:        []string{"--username", "user1", "--password", "password"},
 			userName:    "user1",
+			password:    "password",
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+		},
+		{
+			name:        "Successful local user create with displayname",
+			args:        []string{"--username", "user1", "--password", "password"},
+			userName:    "user1",
+			displayName: "user1 display name",
 			password:    "password",
 			apiResponse: []byte(`test`),
 			out:         []byte(`test`),
@@ -261,6 +265,7 @@ func TestHandleUserCreateCmd(t *testing.T) {
 	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {
 		viper.Set(cst.DataUsername, tt.userName)
+		viper.Set(cst.DataDisplayname, tt.displayName)
 		viper.Set(cst.DataPassword, tt.password)
 		viper.Set(cst.DataProvider, tt.provider)
 		viper.Set(cst.DataExternalID, tt.externalID)
@@ -301,7 +306,7 @@ func TestHandleUserUpdateCmd(t *testing.T) {
 		expectedErr *errors.ApiError
 	}{
 		{
-			"Happy path",
+			"Happy path with password only",
 			[]string{"--username", "user1", "--password", "password"},
 			"user1",
 			"password",
@@ -319,13 +324,31 @@ func TestHandleUserUpdateCmd(t *testing.T) {
 			errors.New(e.New("error: must specify " + cst.DataUsername)),
 		},
 		{
-			"no password",
+			"no password and no display name",
 			[]string{"--username", "user"},
 			"user1",
 			"",
 			[]byte(`test`),
 			[]byte(`test`),
-			errors.New(e.New("error: must specify " + cst.DataPassword)),
+			errMustSpecifyPassowrdOrDisplayname,
+		},
+		{
+			"Happy path with display name only",
+			[]string{"--username", "user1", "--displayname", "display name 2"},
+			"user1",
+			"password",
+			[]byte(`test`),
+			[]byte(`test`),
+			nil,
+		},
+		{
+			"Happy path with password and display name",
+			[]string{"--username", "user1", "--password", "password", "--displayname", "display name 2"},
+			"user1",
+			"password",
+			[]byte(`test`),
+			[]byte(`test`),
+			nil,
 		},
 	}
 

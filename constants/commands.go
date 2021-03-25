@@ -18,6 +18,9 @@ const (
 	DeleteMember   = "delete-members"
 	Restore        = "restore"
 	Ping           = "ping"
+	Rotate         = "rotate"
+	Encrypt        = "encrypt"
+	Decrypt        = "decrypt"
 )
 
 // Nouns
@@ -53,6 +56,8 @@ const (
 	NounClientUses      = "uses"
 	NounClientTTL       = "ttl"
 	NounClientDesc      = "desc"
+	NounDataKey         = "key"
+	NounEncryption      = "crypto"
 )
 
 // Cli-Config only
@@ -110,6 +115,8 @@ const (
 	ClientID                = "client.id"
 	ClientSecret            = "client.secret"
 	Version                 = "version"
+	VersionStart            = "version-start"
+	VersionEnd              = "version-end"
 	StartDate               = "startdate"
 	EndDate                 = "enddate"
 	Force                   = "force"
@@ -128,6 +135,7 @@ const (
 	DataUsername       = "username"
 	DataSecurePassword = "securePassword"
 	DataPassword       = "password"
+	DataDisplayname    = "displayname"
 
 	// permission
 	DataSubject   = "subjects"

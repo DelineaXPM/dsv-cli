@@ -23,6 +23,10 @@ import (
 	"github.com/thycotic-rd/cli"
 )
 
+var (
+	errMustSpecifyPassowrdOrDisplayname = errors.NewF("error: must specify %s or %s", cst.DataPassword, cst.DataDisplayname)
+)
+
 type User struct {
 	request   requests.Client
 	outClient format.OutClient
@@ -30,10 +34,11 @@ type User struct {
 
 func GetDataOpUserWrappers(targetEntity string) cli.PredictorWrappers {
 	return cli.PredictorWrappers{
-		preds.LongFlag(cst.DataUsername):   cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to be updated (required)", strings.Title(cst.DataUsername), targetEntity)}), false},
-		preds.LongFlag(cst.DataPassword):   cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataPassword, Usage: fmt.Sprintf("%s of %s to be updated (required)", strings.Title(cst.Password), targetEntity)}), false},
-		preds.LongFlag(cst.DataExternalID): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataExternalID, Usage: fmt.Sprintf("%s of %s to be updated", strings.Title(strings.Replace(cst.DataExternalID, ".", " ", -1)), targetEntity)}), false},
-		preds.LongFlag(cst.DataProvider):   cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataProvider, Usage: fmt.Sprintf("External %s of %s to be updated", strings.Title(cst.DataProvider), targetEntity)}), false},
+		preds.LongFlag(cst.DataUsername):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to be updated (required)", strings.Title(cst.DataUsername), targetEntity)}), false},
+		preds.LongFlag(cst.DataDisplayname): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataDisplayname, Usage: fmt.Sprintf("%s of %s to be updated", strings.Title(cst.DataDisplayname), targetEntity)}), false},
+		preds.LongFlag(cst.DataPassword):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataPassword, Usage: fmt.Sprintf("%s of %s to be updated (required)", strings.Title(cst.Password), targetEntity)}), false},
+		preds.LongFlag(cst.DataExternalID):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataExternalID, Usage: fmt.Sprintf("%s of %s to be updated", strings.Title(strings.Replace(cst.DataExternalID, ".", " ", -1)), targetEntity)}), false},
+		preds.LongFlag(cst.DataProvider):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataProvider, Usage: fmt.Sprintf("External %s of %s to be updated", strings.Title(cst.DataProvider), targetEntity)}), false},
 	}
 }
 func GetNoDataOpUserWrappers(targetEntity string) cli.PredictorWrappers {
@@ -127,7 +132,7 @@ func GetUserRestoreCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounUser, cst.Read},
 		RunFunc:      User{requests.NewHttpClient(), nil}.handleUserRestoreCmd,
-		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r)", cst.NounUser, cst.Restore),
+		SynopsisText: fmt.Sprintf("%s %s (<username> | --username)", cst.NounUser, cst.Restore),
 		HelpText: fmt.Sprintf(`Restore a deleted %[2]s in %[3]s
 Usage:
 	• user %[1]s %[4]s
@@ -161,15 +166,16 @@ func GetUserUpdateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounUser, cst.Update},
 		RunFunc:      User{requests.NewHttpClient(), nil}.handleUserUpdateCmd,
-		SynopsisText: fmt.Sprintf("%s (<path> <password> | (--path|r) --password)", cst.Update),
+		SynopsisText: fmt.Sprintf("%s (<username> <password> | (--username) --password)", cst.Update),
 		HelpText: fmt.Sprintf(`Update a %[2]s's password in %[3]s
 
 Usage:
    • user %[1]s --username %[4]s --password %[5]s
 		`, cst.Update, cst.NounUser, cst.ProductName, cst.ExampleUser, cst.ExamplePassword),
 		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.DataPassword): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataPassword, Usage: fmt.Sprintf("%s of %s to be updated (required)", strings.Title(cst.Password), cst.NounUser)}), false},
-			preds.LongFlag(cst.DataUsername): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to be updated (required)", strings.Title(cst.DataUsername), cst.NounUser)}), false},
+			preds.LongFlag(cst.DataPassword):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataPassword, Usage: fmt.Sprintf("%s of %s to be updated (required)", strings.Title(cst.Password), cst.NounUser)}), false},
+			preds.LongFlag(cst.DataUsername):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to be updated (required)", strings.Title(cst.DataUsername), cst.NounUser)}), false},
+			preds.LongFlag(cst.DataDisplayname): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataDisplayname, Usage: fmt.Sprintf("%s of %s to be updated", strings.Title(cst.DataDisplayname), cst.NounUser)}), false},
 		},
 		MinNumberArgs: 0,
 	})
@@ -185,11 +191,12 @@ func (u User) handleUserReadCmd(args []string) int {
 	if userName == "" {
 		err = errors.NewS("error: must specify " + cst.DataUsername)
 	} else {
+		userName = paths.ProcessResource(userName)
 		version := viper.GetString(cst.Version)
 		if strings.TrimSpace(version) != "" {
 			userName = fmt.Sprint(userName, "/", cst.Version, "/", version)
 		}
-		uri := paths.CreateResourceURI(cst.NounUser, paths.ProcessPath(userName), "", true, nil, true)
+		uri := paths.CreateResourceURI(cst.NounUser, userName, "", true, nil, true)
 		data, err = u.request.DoRequest("GET", uri, nil)
 	}
 
@@ -242,7 +249,7 @@ func (u User) handleUserDeleteCmd(args []string) int {
 		err = errors.NewS("error: must specify " + cst.DataUsername)
 	} else {
 		query := map[string]string{"force": strconv.FormatBool(force)}
-		uri := paths.CreateResourceURI(cst.NounUser, paths.ProcessPath(userName), "", true, query, true)
+		uri := paths.CreateResourceURI(cst.NounUser, paths.ProcessResource(userName), "", true, query, true)
 		data, err = u.request.DoRequest("DELETE", uri, nil)
 	}
 	if u.outClient == nil {
@@ -266,7 +273,7 @@ func (u User) handleUserRestoreCmd(args []string) int {
 	if userName == "" {
 		err = errors.NewS("error: must specify " + cst.DataUsername)
 	} else {
-		uri := paths.CreateResourceURI(cst.NounUser, paths.ProcessPath(userName), "/restore", true, nil, true)
+		uri := paths.CreateResourceURI(cst.NounUser, paths.ProcessResource(userName), "/restore", true, nil, true)
 		data, err = u.request.DoRequest("PUT", uri, nil)
 	}
 
@@ -298,9 +305,11 @@ func (u User) handleUserCreateCmd(args []string) int {
 		return utils.GetExecStatus(err)
 	}
 
+	displayName := viper.GetString(cst.DataDisplayname)
 	data := map[string]string{
-		"name":     userName,
-		"username": userName,
+		"name":        userName,
+		"username":    userName,
+		"displayName": displayName,
 	}
 
 	if password != "" && isUserLocal {
@@ -329,14 +338,16 @@ func (u User) handleUserUpdateCmd(args []string) int {
 		return utils.GetExecStatus(err)
 	}
 	passData := viper.GetString(cst.DataPassword)
-	if passData == "" {
-		err := errors.NewS("error: must specify " + cst.DataPassword)
+	displayName := viper.GetString(cst.DataDisplayname)
+	if passData == "" && displayName == "" {
+		err := errMustSpecifyPassowrdOrDisplayname
 		u.outClient.WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
 
 	data := map[string]string{
-		"password": passData,
+		"password":    passData,
+		"displayName": displayName,
 	}
 
 	resp, apiError := u.submitUser(userName, data, true)
@@ -378,7 +389,7 @@ func (u User) handleUserWorkflow(args []string) int {
 		params["username"] = resp
 	}
 
-	// Update only allows to change the password, relevant only for local users.
+	// Update only allows to change the password or display name, relevant only for local users (does not have a provider).
 	if isUpdate {
 		// Read the user, make sure it exists and is a local user (does not have a provider).
 		existingUser, err := u.readUser(params["username"])
@@ -386,20 +397,63 @@ func (u User) handleUserWorkflow(args []string) int {
 			u.outClient.Fail(err)
 			return utils.GetExecStatus(err)
 		}
-		if existingUser.Provider != "" {
-			u.outClient.FailS("User has a third-party auth provider, so there is nothing to update.")
-			return 1
-		}
-		if resp, err := getStringAndValidate(ui, "New password for the user:", false, nil, true, true); err != nil {
+
+		var passwordResp, displannameResp bool
+
+		// Password
+		if resp, err := getStringAndValidateDefault(
+			ui, "Would you like to update the password [y/n] (default: n):", "n", true, nil, false, false); err != nil {
 			ui.Error(err.Error())
-			return 1
+			return utils.GetExecStatus(err)
 		} else {
-			params["password"] = resp
+			passwordResp = isYes(resp, false)
+			if passwordResp {
+				if existingUser.Provider != "" {
+					u.outClient.FailS("User has a third-party auth provider, so there is nothing to update.")
+					return 1
+				}
+
+				if resp, err := getStringAndValidate(ui, "New password for the user:", false, nil, true, true); err != nil {
+					ui.Error(err.Error())
+					return 1
+				} else {
+					params["password"] = resp
+				}
+			}
+		}
+
+		// Display name
+		if resp, err := getStringAndValidateDefault(
+			ui, "Would you like to update the display name [y/n] (default: n):", "n", true, nil, false, false); err != nil {
+			ui.Error(err.Error())
+			return utils.GetExecStatus(err)
+		} else {
+			displannameResp = isYes(resp, false)
+			if displannameResp {
+				if resp, err := getStringAndValidate(ui, "Display name:", true, nil, false, false); err != nil {
+					ui.Error(err.Error())
+					return 1
+				} else {
+					params[cst.DataDisplayname] = resp
+				}
+			}
+		}
+
+		if !passwordResp && !displannameResp {
+			return 0
 		}
 
 		resp, apiError := u.submitUser(params["username"], params, true)
 		u.outClient.WriteResponse(resp, apiError)
 		return utils.GetExecStatus(apiError)
+	}
+
+	// Create user workflow
+	if resp, err := getStringAndValidate(ui, "Display name:", true, nil, false, false); err != nil {
+		ui.Error(err.Error())
+		return 1
+	} else {
+		params[cst.DataDisplayname] = resp
 	}
 
 	baseType := strings.Join([]string{cst.Config, cst.NounAuth}, "/")

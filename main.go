@@ -97,7 +97,6 @@ func runCLI(args []string) (exitStatus int, err error) {
 		"client create":                 cmd.GetClientCreateCmd,
 		"client search":                 cmd.GetClientSearchCmd,
 		"usage":                         cmd.GetUsageCmd,
-		"logs":                          cmd.GetLogsSearchCmd,
 		"audit":                         cmd.GetAuditSearchCmd,
 		"group":                         cmd.GetGroupCmd,
 		"group read":                    cmd.GetGroupReadCmd,
@@ -138,6 +137,14 @@ func runCLI(args []string) (exitStatus int, err error) {
 		"engine create":                 cmd.GetEngineCreateCmd,
 		"engine delete":                 cmd.GetEngineDeleteCmd,
 		"engine ping":                   cmd.GetEnginePingCmd,
+		"crypto":                        cmd.GetCryptoCmd,
+		"crypto key-create":             cmd.GetDataKeyCreateCmd,
+		"crypto key-read":               cmd.GetDataKeyReadMetadataCmd,
+		"crypto key-delete":             cmd.GetDataKeyDeleteCmd,
+		"crypto key-restore":            cmd.GetDataKeyRestoreCmd,
+		"crypto encrypt":                cmd.GetEncryptCmd,
+		"crypto decrypt":                cmd.GetDecryptCmd,
+		"crypto rotate":                 cmd.GetEncryptionRotateCmd,
 	}
 
 	c.Autocomplete = true
