@@ -446,6 +446,7 @@ func handleCliConfigInitCmd(args []string) int {
 			{cst.Domain, cst.Domain},
 			{cst.DomainEU, cst.DomainEU},
 			{cst.DomainAU, cst.DomainAU},
+			{cst.DomainCA, cst.DomainCA},
 		}, false, false); err != nil {
 			return 1
 		}

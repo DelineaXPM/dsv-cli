@@ -8,6 +8,7 @@ const (
 	Domain               = "secretsvaultcloud.com"
 	DomainEU             = "secretsvaultcloud.eu"
 	DomainAU             = "secretsvaultcloud.com.au"
+	DomainCA			 = "secretsvaultcloud.ca"
 	HTTPSchemeKey        = "http"
 	HTTPSchemeSecure     = "https"
 	SuffixPermissions    = "::permissions"
