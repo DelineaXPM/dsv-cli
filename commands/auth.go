@@ -37,14 +37,14 @@ func GetAuthCmd() (cli.Command, error) {
 			auth.NewAuthenticatorDefault,
 			store.GetStore, nil}.handleAuth,
 		NoPreAuth:    true,
-		SynopsisText: fmt.Sprintf("%s", cst.NounAuth),
+		SynopsisText: cst.NounAuth,
 		HelpText: fmt.Sprintf(`Authenticate with %[2]s
 
 Usage:
    • auth --profile staging
    • auth --auth-username %[3]s --auth-password %[4]s
-   • auth --auth-type %[7]s --auth-client-id=%[5]s --auth-client-secret=%[6]s 
-		`, cst.NounAuth, cst.ProductName, cst.ExampleUser, cst.ExamplePassword, cst.ExampleAuthClientID, cst.ExampleAuthClientSecret, string(auth.FederatedAws)),
+   • auth --auth-type %[5]s --auth-client-id %[6]s --domain %[7]s --auth-client-secret %[8]s 
+		`, cst.NounAuth, cst.ProductName, cst.ExampleUser, cst.ExamplePassword, cst.ExampleAuthType, cst.ExampleAuthClientID, cst.ExampleDomain, cst.ExampleAuthClientSecret, string(auth.FederatedAws)),
 	})
 }
 
@@ -100,16 +100,42 @@ Usage:
 
 func (ac AuthCommand) handleAuth(args []string) int {
 	var data []byte
-	token, err := ac.token().GetToken()
-	if err == nil {
-		data, err = errors.Convert(format.JsonMarshal(token))
+	token, apiErr := ac.token().GetToken()
+	if apiErr == nil {
+		data, apiErr = errors.Convert(format.JsonMarshal(token))
 	}
+
 	outClient := ac.outClient
 	if outClient == nil {
 		outClient = format.NewDefaultOutClient()
 	}
 
-	outClient.WriteResponse(data, err)
+	// Ask the user for the password, in case if the stored user information is not set to be able to auth AND username is set AND password is not via flags
+	if strings.Contains(apiErr.Error(), auth.KeyfileNotFoundError.Error()) && viper.GetString(cst.Username) != "" && viper.GetString(cst.Password) == "" {
+		ui := &PasswordUi{
+			cli.BasicUi{
+				Writer:      os.Stdout,
+				Reader:      os.Stdin,
+				ErrorWriter: os.Stderr,
+			},
+		}
+
+		if password, err := getStringAndValidate(ui, "Please enter password", false, nil, true, false); err != nil {
+			outClient.WriteResponse(data, errors.New(err))
+
+			return 0
+		} else {
+			viper.Set(cst.Password, password)
+		}
+
+		token, apiErr = ac.token().GetToken()
+		if apiErr == nil {
+			data, apiErr = errors.Convert(format.JsonMarshal(token))
+		}
+	}
+
+	outClient.WriteResponse(data, apiErr)
+
 	return 0
 }
 

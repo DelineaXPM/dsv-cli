@@ -34,6 +34,7 @@ func BasePredictorWrappers() cli.PredictorWrappers {
 		preds.LongFlag(cst.AuthProvider): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.AuthProvider, Usage: "Authentication provider name for federated authentication", Global: true, Hidden: true}), false},
 		preds.LongFlag(cst.Profile):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Profile, Usage: "Configuration Profile [default:default]", Global: true}), false},
 		preds.LongFlag(cst.Tenant):       cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Tenant, Shorthand: "t", Usage: "Tenant used for auth", Global: true}), false},
+		preds.LongFlag(cst.DomainName):   cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DomainName, Usage: "Domain used for auth", Global: true}), false},
 		preds.LongFlag(cst.Encoding):     cli.PredictorWrapper{preds.EncodingTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.Encoding, Shorthand: "e", Usage: "Output encoding (json|yaml) [default:json]", Global: true}), false},
 		preds.LongFlag(cst.Beautify):     cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Beautify, Shorthand: "b", Usage: "Should beautify output", Global: true, ValueType: "bool", Hidden: true}), false},
 		// we could get away with just one of beautify / plain but gets tricky because we want the default to be beautify,

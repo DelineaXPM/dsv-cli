@@ -116,6 +116,12 @@ var certPath = strings.Join([]string{"cicd-integration", "data", "cert.pem"}, st
 var privateKeyPath = strings.Join([]string{"cicd-integration", "data", "key.pem"}, string(filepath.Separator))
 var csrPath = strings.Join([]string{"cicd-integration", "data", "csr.pem"}, string(filepath.Separator))
 
+var manualKeyPath = "thekey:first"
+var manualPrivateKey = "MnI1dTh4L0E/RChHK0tiUGVTaFZtWXEzczZ2OXkkQiY="
+var manualKeyNonce = "S1NzeHdFcHB6b1Bz"
+var plaintext = "hello there"
+var ciphertext = "8Tns2mbY/w6YHoICfiDGQM+rDlQzwrZWpqK7"
+
 func addConfigArg(args []string) []string {
 	args = append(args, "--config")
 	args = append(args, configPath)
@@ -360,7 +366,7 @@ func init() {
 
 		{"role-get-pass", []string{"role", "read", roleName}, outputPattern(fmt.Sprintf(`"name":\s*"%s"`, roleName))},
 		{"role-get-implicit-pass", []string{"role", roleName}, outputPattern(fmt.Sprintf(`"name":\s*"%s"`, roleName))},
-		// {"role-search-find-pass", []string{"role", "search", roleName[:3], "data.[0].name"}, outputPattern(roleName)},
+		{"role-search-find-pass", []string{"role", "search", roleName[:3], "data.[0].name"}, outputPattern(roleName)},
 		{"role-search-none-pass", []string{"role", "search", "abcdef"}, outputPattern(`"data": null`)},
 		{"role-create-provider-missing", []string{"role", "create", "--name", "bob", "--external-id", "1234"}, outputPattern("must specify both provider and external ID")},
 		{"role-create-external-id-missing", []string{"role", "create", "--name", "bob", "--provider", "aws-dev"}, outputPattern("must specify both provider and external ID")},
@@ -419,15 +425,22 @@ func init() {
 		{"home-rollback", []string{"home", "rollback", homeSecretPath}, outputPattern(`"version": "2"`)},
 		{"home-get-by-version", []string{"home", "read", homeSecretPath, "version", "2"}, outputPattern(`"version": "2"`)},
 
+		// EaaS-Manual
+		{"crypto-manual-key-upload", []string{"crypto", "manual", "key-upload", "--path", manualKeyPath, "--private-key", manualPrivateKey, "--nonce", manualKeyNonce, "--scheme", "symmetric"}, outputPattern(`"version": "0"`)},
+		{"crypto-manual-key-read", []string{"crypto", "manual", "key-read", "--path", manualKeyPath}, outputPattern(`"version": "0"`)},
+		{"crypto-manual-encrypt", []string{"crypto", "manual", "encrypt", "--path", manualKeyPath, "--data", plaintext}, outputPattern(`"version": "0"`)},
+		{"crypto-manual-decrypt", []string{"crypto", "manual", "decrypt", "--path", manualKeyPath, "--data", ciphertext}, outputPattern(`"data": "hello there"`)},
+		{"crypto-manual-key-update", []string{"crypto", "manual", "key-update", "--path", manualKeyPath, "--private-key", manualPrivateKey}, outputPattern(`"version": "1"`)},
+
 		// Pool
-		{"pool", []string{"pool", "create", "--name", "mypool"}, outputPattern(`"name": "mypool"`)},
-		{"pool", []string{"pool", "read", "--name", "mypool"}, outputPattern(`"name": "mypool"`)},
+		{"pool-create", []string{"pool", "create", "--name", "mypool"}, outputPattern(`"name": "mypool"`)},
+		{"pool-read", []string{"pool", "read", "--name", "mypool"}, outputPattern(`"name": "mypool"`)},
 
 		// Engine
-		{"engine", []string{"engine", "create", "--name", "myengine", "--pool-name", "bad-pool"}, outputPattern(`specified pool doesn't exist`)},
-		{"engine", []string{"engine", "create", "--name", "myengine", "--pool-name", "mypool"}, outputPattern(`"name": "myengine"`)},
-		{"engine", []string{"engine", "read", "--name", "myengine"}, outputPattern(`"name": "myengine"`)},
-		{"engine", []string{"engine", "delete", "myengine"}, outputEmpty()},
+		{"engine-create-fail", []string{"engine", "create", "--name", "myengine", "--pool-name", "bad-pool"}, outputPattern(`specified pool doesn't exist`)},
+		{"engine-create-pass", []string{"engine", "create", "--name", "myengine", "--pool-name", "mypool"}, outputPattern(`"name": "myengine"`)},
+		{"engine-read", []string{"engine", "read", "--name", "myengine"}, outputPattern(`"name": "myengine"`)},
+		{"engine-delete", []string{"engine", "delete", "myengine"}, outputEmpty()},
 
 		// Whoami
 		{"whoami", []string{"whoami", ""}, outputPattern(`users:` + adminUser)},
@@ -476,7 +489,8 @@ func init() {
 		{"rootCA-secret-delete", []string{"secret", "delete", "--path", existingRootSecret, "--force"}, outputEmpty()},
 		{"leafCA-secret-delete", []string{"secret", "delete", "--path", leafSecretPath, "--force"}, outputEmpty()},
 		{"home-secret-delete", []string{"home", "delete", homeSecretPath, "--force"}, outputEmpty()},
-		{"pool", []string{"pool", "delete", "mypool"}, outputEmpty()},
+		{"pool-delete", []string{"pool", "delete", "mypool"}, outputEmpty()},
+		{"crypto-manual-key-delete", []string{"crypto", "manual", "key-delete", "--path", manualKeyPath, "--force"}, outputEmpty()},
 	}
 }
 

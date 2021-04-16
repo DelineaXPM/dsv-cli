@@ -5,7 +5,7 @@ const youDidIt = `<!DOCTYPE html>
 
 <head>
   <meta charset="utf-8">
-  <title>OIDC Sign In Complete</title>
+  <title>{{.providerName}} Sign In Complete</title>
 
   <style>
  /*
@@ -190,7 +190,7 @@ hr {
   <div class="container">
     <div class="row">
       <div class="two-thirds column" style="margin-top: 25%">
-        <h2>OIDC Provider Sign In Complete</h2>
+        <h2>{{.providerName}} Provider Sign In Complete</h2>
         <h5>Return to the CLI to verify sign in to DevOps Secrets Vault finished.</h5>
       </div>
     </div>

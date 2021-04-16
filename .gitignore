@@ -28,6 +28,8 @@ bin/*
 /svc_acct_creds_1
 docs/mkdocsenv/
 docs/site/
+dsv
+dsv.exe
 
 inittests/initenv/
 inittests/__pycache__/

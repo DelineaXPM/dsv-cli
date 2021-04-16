@@ -548,8 +548,8 @@ func handleCliConfigInitCmd(args []string) int {
 	}
 	AddNode(&cfg, jsonish{cst.Type: authType}, profile, cst.NounAuth)
 	if storeType != store.None {
-		if auth.AuthType(authType) == auth.Password || auth.AuthType(authType) == auth.FederatedThyOne {
-			var passwordMessage, userMessage, authProviderMessage string
+		if auth.AuthType(authType) == auth.Password {
+			var passwordMessage, userMessage string
 			var confirmRequired bool
 			tenant := viper.GetString(cst.Tenant)
 			if setupRequired {
@@ -589,23 +589,6 @@ func handleCliConfigInitCmd(args []string) int {
 					viper.Set(cst.Password, password)
 				}
 			}
-
-			if auth.AuthType(authType) == auth.FederatedThyOne {
-				authProvider = cst.DefaultThyOneName
-
-				if authProvider == "" && isDevDomain {
-					authProviderMessage = fmt.Sprintf("Thycotic One authentication provider name (default %s):", cst.DefaultThyOneName)
-					if authProvider, err = getStringAndValidateDefault(ui, authProviderMessage, cst.DefaultThyOneName, true, nil, false, false); err != nil {
-						return 1
-
-					}
-				}
-
-				viper.Set(cst.AuthProvider, authProvider)
-
-				AddNode(&cfg, jsonish{cst.DataProvider: authProvider}, profile, cst.NounAuth)
-			}
-
 		} else if auth.AuthType(authType) == auth.ClientCredential {
 			if id, err := getStringAndValidate(ui, "Please enter client id for client auth:", false, nil, false, false); err != nil {
 				return 1
@@ -636,18 +619,34 @@ func handleCliConfigInitCmd(args []string) int {
 			}
 			AddNode(&cfg, jsonish{cst.NounAwsProfile: awsProfile}, profile, cst.NounAuth)
 			viper.Set(cst.AwsProfile, awsProfile)
-		} else if auth.AuthType(authType) == auth.Oidc {
-			if authProvider == "" {
-				if authProvider, err = getStringAndValidateDefault(ui, fmt.Sprintf("Please enter auth provider name (default:  %s):", cst.DefaultThyOneName), cst.DefaultThyOneName, true, nil, false, false); err != nil {
-					return 1
+		} else if auth.AuthType(authType) == auth.Oidc || auth.AuthType(authType) == auth.FederatedThyOne {
+			if auth.AuthType(authType) == auth.Oidc {
+				if authProvider == "" {
+					authProviderMessage := fmt.Sprintf("Please enter auth provider name (default:  %s):", cst.DefaultThyOneName)
+					if authProvider, err = getStringAndValidateDefault(ui, authProviderMessage, cst.DefaultThyOneName, true, nil, false, false); err != nil {
+						return 1
+					}
 				}
-				viper.Set(cst.AuthProvider, authProvider)
+			} else {
+				authProvider = cst.DefaultThyOneName
+
+				if isDevDomain {
+					authProviderMessage := fmt.Sprintf("Thycotic One authentication provider name (default %s):", cst.DefaultThyOneName)
+					if authProvider, err = getStringAndValidateDefault(ui, authProviderMessage, cst.DefaultThyOneName, true, nil, false, false); err != nil {
+						return 1
+
+					}
+				}
 			}
+
+			viper.Set(cst.AuthProvider, authProvider)
 			AddNode(&cfg, jsonish{cst.DataProvider: authProvider}, profile, cst.NounAuth)
+
 			var callback string
 			if callback = viper.GetString(cst.Callback); callback == "" {
 				callback = cst.DefaultCallback
 			}
+
 			viper.Set(cst.Callback, callback)
 			AddNode(&cfg, jsonish{cst.DataCallback: callback}, profile, cst.NounAuth)
 		}
@@ -672,13 +671,15 @@ func handleCliConfigInitCmd(args []string) int {
 				ui.Output(authError.Error())
 				return 1
 			}
+
 			ui.Output("Failed to authenticate, restoring previous config.")
 			ui.Output("Please check your credentials, or tenant name, or domain name and try again.")
 			return 1
+
 		}
 
-		// Store encryption key file (for auth types password and thy-one).
-		if auth.AuthType(authType) == auth.Password || auth.AuthType(authType) == auth.FederatedThyOne {
+		// Store encryption key file (for auth type password).
+		if auth.AuthType(authType) == auth.Password {
 			st, apiError := store.GetStore(string(storeType))
 			if apiError != nil {
 				ui.Error(apiError.Error())

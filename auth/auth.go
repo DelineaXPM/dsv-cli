@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
+	"text/template"
 	"time"
 
 	"thy/paths"
@@ -173,7 +174,7 @@ func (a *authenticator) getTokenForAuthType(at AuthType, useCache bool) (*TokenR
 		if keySuffix == "" {
 			keySuffix = cst.DefaultProfile
 		}
-	} else if at == Oidc {
+	} else if at == Oidc || at == FederatedThyOne {
 		profile := viper.GetString(cst.Profile)
 		keySuffix = viper.GetString(keyName)
 		if profile != "" && profile != cst.DefaultProfile {
@@ -271,7 +272,7 @@ func (a *authenticator) getTokenForAuthType(at AuthType, useCache bool) (*TokenR
 		data = requestBody{
 			GrantType: authTypeToGrantType[at],
 		}
-		if at == Password || at == FederatedThyOne {
+		if at == Password {
 			err := setupDataForPasswordAuth(&data)
 			if err != nil {
 				return nil, errors.New(err)
@@ -294,10 +295,16 @@ func (a *authenticator) getTokenForAuthType(at AuthType, useCache bool) (*TokenR
 				}
 				data.RefreshToken = refreshToken
 			}
-		} else if at == Oidc {
+		} else if at == Oidc || at == FederatedThyOne {
 			data.Provider = viper.GetString(cst.AuthProvider)
-			data.CallbackHost = viper.GetString(cst.Callback)
-			data.CallbackUrl = fmt.Sprintf("http://%s/callback", viper.GetString(cst.Callback))
+
+			callback := viper.GetString(cst.Callback)
+			if callback == "" {
+				callback = cst.DefaultCallback
+			}
+
+			data.CallbackHost = callback
+			data.CallbackUrl = fmt.Sprintf("http://%s/callback", callback)
 		}
 	}
 
@@ -345,7 +352,7 @@ func (a *authenticator) fetchTokenVault(at AuthType, data requestBody) (*TokenRe
 	if err := data.ValidateForAuthType(at); err != nil {
 		return nil, errors.New(err)
 	}
-	if at == Oidc {
+	if at == Oidc || at == FederatedThyOne {
 		ui := cli.BasicUi{
 			Writer:      os.Stdout,
 			Reader:      os.Stdin,
@@ -394,9 +401,9 @@ func (a *authenticator) fetchTokenVault(at AuthType, data requestBody) (*TokenRe
 			}
 			data.State = ar.state
 			data.AuthorizationCode = ar.authCode
-			ui.Info(fmt.Sprintf("Received response from oidc provider, submitting authorization code to %s", cst.ProductName))
+			ui.Info(fmt.Sprintf("Received response from %s provider, submitting authorization code to %s", at, cst.ProductName))
 		case <-time.After(5 * time.Minute):
-			ui.Info(fmt.Sprintf("Timeout occurred waiting for callback from oidc provider"))
+			ui.Info(fmt.Sprintf("Timeout occurred waiting for callback from %s provider", at))
 			return nil, errors.NewS("no callback occurred after redirect")
 		}
 	}
@@ -410,10 +417,9 @@ func (a *authenticator) fetchTokenVault(at AuthType, data requestBody) (*TokenRe
 	return &response, nil
 }
 
-//
+// handleOidcAuth handles OIDC and Thycotic One auths
 func (a *authenticator) handleOidcAuth(doneCh chan<- AuthResponse) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-
 		b, err := ioutil.ReadAll(req.Body)
 		if err != nil {
 			w.Write([]byte(err.Error()))
@@ -434,7 +440,28 @@ func (a *authenticator) handleOidcAuth(doneCh chan<- AuthResponse) http.HandlerF
 			return
 		}
 
-		w.Write([]byte(youDidIt))
+		tmpl, err := template.New("youDidIt").Parse(youDidIt)
+		if err != nil {
+			w.Write([]byte(err.Error()))
+			doneCh <- AuthResponse{
+				err:     errors.New(err),
+				message: "error in html parse template",
+			}
+		}
+
+		vars := map[string]interface{}{
+			"providerName": viper.GetString(cst.AuthType),
+		}
+
+		err = tmpl.Execute(w, vars)
+		if err != nil {
+			w.Write([]byte(err.Error()))
+			doneCh <- AuthResponse{
+				err:     errors.New(err),
+				message: "error in html template execute",
+			}
+		}
+
 		doneCh <- AuthResponse{
 			err:      nil,
 			message:  "success",
@@ -564,7 +591,7 @@ func (r *requestBody) ValidateForAuthType(at AuthType) error {
 
 var authTypeToGrantType = map[AuthType]string{
 	Password:         "password",
-	FederatedThyOne:  "password",
+	FederatedThyOne:  "oidc",
 	ClientCredential: "client_credentials",
 	Certificate:      "certificate",
 	Refresh:          "refresh_token",
@@ -600,20 +627,10 @@ var paramSpecDict = map[AuthType][]paramSpec{
 		},
 	},
 	FederatedThyOne: {
-		{PropName: "Password",
-			ArgName:    cst.Password,
-			IsKey:      false,
-			RequestVar: true,
-		},
-		{PropName: "Username",
-			ArgName:    cst.Username,
+		{PropName: "AuthType",
+			ArgName:    cst.AuthType,
 			IsKey:      true,
-			RequestVar: true,
-		},
-		{PropName: "Provider",
-			ArgName:    cst.AuthProvider,
-			IsKey:      false,
-			RequestVar: true,
+			RequestVar: false,
 		},
 	},
 	ClientCredential: {

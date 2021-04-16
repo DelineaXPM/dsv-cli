@@ -6,6 +6,7 @@ const (
 	Create         = "create"
 	Update         = "update"
 	Rollback       = "rollback"
+	Upload         = "upload"
 	Edit           = "edit"
 	Delete         = "delete"
 	Describe       = "describe"
@@ -56,8 +57,9 @@ const (
 	NounClientUses      = "uses"
 	NounClientTTL       = "ttl"
 	NounClientDesc      = "desc"
-	NounDataKey         = "key"
+	NounKey             = "key"
 	NounEncryption      = "crypto"
+	NounReport          = "report"
 )
 
 // Cli-Config only
@@ -75,6 +77,7 @@ const (
 	Data                    = "data"
 	Username                = "auth.username"
 	Tenant                  = "tenant"
+	DomainName              = "domain"
 	Password                = "auth.password"
 	SecurePassword          = "auth.securePassword"
 	CurrentPassword         = "currentPassword"
