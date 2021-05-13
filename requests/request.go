@@ -135,6 +135,9 @@ func statusCodeIsSuccess(statusCode int) bool {
 
 func getResponse(bodyBytes []byte, resp *http.Response) ([]byte, *errors.ApiError) {
 	if !statusCodeIsSuccess(resp.StatusCode) {
+		if len(bodyBytes) == 0 {
+			return nil, errors.NewS("error processing API response")
+		}
 		return nil, errors.NewS(string(bodyBytes)).WithResponse(resp)
 	} else {
 		if len(bodyBytes) == 0 {

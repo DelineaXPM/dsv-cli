@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"thy/predictors"
 
 	"thy/auth"
 	cst "thy/constants"
@@ -98,44 +99,69 @@ Usage:
 	})
 }
 
-func (ac AuthCommand) handleAuth(args []string) int {
-	var data []byte
-	token, apiErr := ac.token().GetToken()
-	if apiErr == nil {
-		data, apiErr = errors.Convert(format.JsonMarshal(token))
+func (ac AuthCommand) capturePassword() error {
+	ui := &PasswordUi{
+		cli.BasicUi{
+			Writer:      os.Stdout,
+			Reader:      os.Stdin,
+			ErrorWriter: os.Stderr,
+		},
 	}
 
+	if password, err := getStringAndValidate(ui, "Please enter password", false, nil, true, false); err != nil {
+		return err
+	} else {
+		viper.Set(cst.Password, password)
+	}
+	return nil
+}
+
+func (ac AuthCommand) handleAuth(args []string) int {
+	var data []byte
 	outClient := ac.outClient
 	if outClient == nil {
 		outClient = format.NewDefaultOutClient()
 	}
 
-	// Ask the user for the password, in case if the stored user information is not set to be able to auth AND username is set AND password is not via flags
-	if strings.Contains(apiErr.Error(), auth.KeyfileNotFoundError.Error()) && viper.GetString(cst.Username) != "" && viper.GetString(cst.Password) == "" {
-		ui := &PasswordUi{
-			cli.BasicUi{
-				Writer:      os.Stdout,
-				Reader:      os.Stdin,
-				ErrorWriter: os.Stderr,
-			},
+	username := predictors.FlagValue(cst.Username, args)
+	if username != "" {
+		// We rely on the password auth type being set in order to trigger that flow later
+		viper.Set(cst.AuthType, "password")
+		password := viper.GetString(cst.Password)
+		if password == "" {
+			if err := ac.capturePassword(); err != nil {
+				outClient.WriteResponse(data, errors.New(err))
+				return 652
+			}
 		}
 
-		if password, err := getStringAndValidate(ui, "Please enter password", false, nil, true, false); err != nil {
-			outClient.WriteResponse(data, errors.New(err))
-
-			return 0
+		// We may have loaded an auth provider from the configuration file, and need to make sure
+		// that we rely solely on the args provided by the user here
+		authTypeArgIdx := utils.IndexOf(args, "--auth-provider")
+		if authTypeArgIdx >= 0 {
+			viper.Set(cst.AuthProvider, args[authTypeArgIdx+1])
 		} else {
-			viper.Set(cst.Password, password)
+			viper.Set(cst.AuthProvider, "")
 		}
 
-		token, apiErr = ac.token().GetToken()
+		token, apiErr := ac.token().GetToken()
 		if apiErr == nil {
 			data, apiErr = errors.Convert(format.JsonMarshal(token))
+			outClient.WriteResponse(data, apiErr)
+		} else {
+			outClient.WriteResponse(data, apiErr)
+			return 516
+		}
+	} else {
+		token, apiErr := ac.token().GetToken()
+		if apiErr == nil {
+			data, apiErr = errors.Convert(format.JsonMarshal(token))
+			outClient.WriteResponse(data, apiErr)
+		} else {
+			outClient.WriteResponse(data, apiErr)
+			return 427
 		}
 	}
-
-	outClient.WriteResponse(data, apiErr)
-
 	return 0
 }
 

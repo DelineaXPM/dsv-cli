@@ -60,6 +60,7 @@ const (
 	NounKey             = "key"
 	NounEncryption      = "crypto"
 	NounReport          = "report"
+	NounBreakglass      = "breakglass"
 )
 
 // Cli-Config only
@@ -111,6 +112,7 @@ const (
 	SearchType              = "search.type"
 	SearchField             = "search.field"
 	Limit                   = "limit"
+	OffSet                  = "offset"
 	Cursor                  = "cursor"
 	RefreshToken            = "refreshtoken"
 	Output                  = "out"
@@ -124,6 +126,9 @@ const (
 	EndDate                 = "enddate"
 	Force                   = "force"
 	Sort                    = "sort"
+	NewAdmins               = "newAdmins"
+	MinNumberOfShares       = "minNumberOfShares"
+	Shares                  = "shares"
 )
 
 // Data Flags

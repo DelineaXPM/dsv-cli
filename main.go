@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"runtime/debug"
 	"strings"
 
 	config "thy/cli-config"
@@ -13,10 +14,26 @@ import (
 	"thy/utils"
 	"thy/version"
 
+	"github.com/spf13/viper"
 	"github.com/thycotic-rd/cli"
 )
 
 func main() {
+	defer func() {
+		if v := recover(); v != nil {
+			out := format.NewDefaultOutClient()
+			if viper.GetString(cst.Verbose) == "" {
+				out.FailS("An unknown error occurred. Use the verbose flag (-v) to see more information.")
+			} else {
+				err, ok := v.(error)
+				if ok {
+					out.Fail(err)
+				}
+				out.FailS(string(debug.Stack()))
+			}
+		}
+	}()
+
 	exitStatus, err := runCLI(os.Args)
 	if err != nil {
 		format.NewDefaultOutClient().Fail(err)
@@ -131,9 +148,11 @@ func runCLI(args []string) (exitStatus int, err error) {
 		"pool":                          cmd.GetPoolCmd,
 		"pool create":                   cmd.GetPoolCreateCmd,
 		"pool read":                     cmd.GetPoolReadCmd,
+		"pool list":                     cmd.GetPoolListCmd,
 		"pool delete":                   cmd.GetPoolDeleteCmd,
 		"engine":                        cmd.GetEngineCmd,
 		"engine read":                   cmd.GetEngineReadCmd,
+		"engine list":                   cmd.GetEngineListCmd,
 		"engine create":                 cmd.GetEngineCreateCmd,
 		"engine delete":                 cmd.GetEngineDeleteCmd,
 		"engine ping":                   cmd.GetEnginePingCmd,
@@ -163,6 +182,9 @@ func runCLI(args []string) (exitStatus int, err error) {
 		"crypto manual decrypt":         cmd.GetManualKeyDecryptCmd,
 		"report secret":                 cmd.GetSecretReportCmd,
 		"report group":                  cmd.GetGroupReportCmd,
+		"breakglass status":             cmd.GetBreakglassGetStatusCmd,
+		"breakglass generate":           cmd.GetBreakglassGenerateCmd,
+		"breakglass apply":              cmd.GetBreakglassApplyCmd,
 	}
 
 	c.Autocomplete = true

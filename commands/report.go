@@ -2,7 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
+	"thy/constants"
 	cst "thy/constants"
+	"thy/errors"
 	"thy/format"
 	"thy/paths"
 	preds "thy/predictors"
@@ -40,6 +43,8 @@ Usage:
 			preds.LongFlag(cst.NounGroup): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounGroup, Usage: "Group name (optional)"}), false},
 			preds.LongFlag(cst.NounRole):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounRole, Usage: "Role name (optional)"}), false},
 			preds.LongFlag(cst.Limit):     cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"}), false},
+			preds.LongFlag(cst.OffSet):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.OffSet, Usage: "Offset for the next secrets (optional)"}), false},
+			preds.LongFlag(cst.Cursor):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: constants.CursorHelpMessage}), false},
 		},
 		MinNumberArgs: 0,
 	})
@@ -68,9 +73,15 @@ Usage:
 func (r report) handleSecretReport(args []string) int {
 	user := viper.GetString(cst.NounUser)
 	group := viper.GetString(cst.NounGroup)
-	path := viper.GetString(cst.Path)
 	role := viper.GetString(cst.NounRole)
 	limit := viper.GetInt(cst.Limit)
+	offset := viper.GetInt(cst.OffSet)
+	cursor := viper.GetString(cst.Cursor)
+
+	path := viper.GetString(cst.Path)
+	if len(args) > 0 && !strings.HasPrefix(args[0], "--") {
+		path = args[0]
+	}
 
 	if r.outClient == nil {
 		r.outClient = format.NewDefaultOutClient()
@@ -78,14 +89,14 @@ func (r report) handleSecretReport(args []string) int {
 
 	switch {
 	case user != "":
-		return r.reportUserSecret(limit, user, path)
+		return r.reportUserSecret(user, path, limit, offset, cursor)
 	case group != "":
-		return r.reportGroupSecret(limit, group, path)
+		return r.reportGroupSecret(group, path, limit, offset)
 	case role != "":
-		return r.reportRoleSecret(limit, role, path)
+		return r.reportRoleSecret(role, path, limit, offset)
 		//read sign in user record
 	default:
-		return r.reportSignInUserSecret(limit, path)
+		return r.reportSignInUserSecret(path, limit, offset, cursor)
 	}
 }
 
@@ -110,144 +121,256 @@ func (r report) handleGroupReport(args []string) int {
 	}
 }
 
-func (r report) reportRoleSecret(limit int, role string, path string) int {
-	var query struct {
-		Role struct {
-			Name           graphql.String
-			ExternalID     graphql.String
-			Provider       graphql.String
-			Created        graphql.String
-			LastModified   graphql.String
-			CreatedBy      graphql.String
-			LastModifiedBy graphql.String
-			Version        graphql.String
-			Description    graphql.String
-			Secrets        []struct {
-				Actions        []graphql.String
-				ID             graphql.String
-				Path           graphql.String
-				Created        graphql.String
-				LastModified   graphql.String
-				LastModifiedBy graphql.String
-				Version        graphql.String
-			} `graphql:"secrets(limit:$limit, path:$path)"`
-		} `graphql:"role(name: $role)" json:"data"`
-	}
+func (r report) reportRoleSecret(role, path string, limit, offset int) int {
 
-	variables := map[string]interface{}{
-		"limit": graphql.Int(limit),
-		"role":  graphql.String(role),
-		"path":  graphql.String(path),
-	}
+	var data []byte
+	var err *errors.ApiError
 
 	uri := paths.CreateURI("report/query", nil)
-	data, err := r.graphClient.DoRequest(uri, &query, variables)
+	switch path {
+	case "<.*>", ".*":
+		var query struct {
+			Role struct {
+				GQRole
+				Secrets Secrets `graphql:"secrets(filter:{limit:$limit, secretType: SECRET, offset:$offset})"`
+				Home    Home    `graphql:"home(limit:$limit)"`
+			} `graphql:"role(name: $role)" json:"data"`
+		}
+		data, err = r.graphClient.DoRequest(uri, &query, map[string]interface{}{
+			"limit":  graphql.Int(limit),
+			"role":   graphql.String(role),
+			"offset": graphql.Int(offset),
+		})
+
+	case "home:<.*>", "home:.*":
+		var query struct {
+			Role struct {
+				GQRole
+				Home Home `graphql:"home(limit:$limit, cursor:$cursor)"`
+			} `graphql:"role(name: $role)" json:"data"`
+		}
+
+		data, err = r.graphClient.DoRequest(uri, &query, map[string]interface{}{
+			"limit":  graphql.Int(limit),
+			"role":   graphql.String(role),
+			"cursor": graphql.String(""),
+		})
+
+	default:
+		variables := map[string]interface{}{
+			"limit":  graphql.Int(limit),
+			"path":   graphql.String(path),
+			"role":   graphql.String(role),
+			"offset": graphql.Int(offset),
+		}
+		if strings.HasSuffix(path, "<.*>") || strings.HasSuffix(path, ".*") {
+			var query struct {
+				Role struct {
+					GQRole
+					Secrets Secrets `graphql:"secrets(filter:{limit:$limit, secretType: SECRET, offset:$offset, path:$path})"`
+				} `graphql:"role(name: $role)" json:"data"`
+			}
+
+			data, err = r.graphClient.DoRequest(uri, &query, variables)
+
+		} else {
+			var query struct {
+				Role struct {
+					GQRole
+					Secrets Secrets `graphql:"secrets(filter:{limit:$limit, secretType: ALL, offset:$offset, path:$path})"`
+				} `graphql:"role(name: $role)" json:"data"`
+			}
+
+			data, err = r.graphClient.DoRequest(uri, &query, variables)
+		}
+	}
+
 	r.outClient.WriteResponse(data, err)
 	return utils.GetExecStatus(err)
 }
 
-func (r report) reportGroupSecret(limit int, group string, path string) int {
-	var query struct {
-		Group struct {
-			Name           graphql.String
-			Created        graphql.String
-			LastModified   graphql.String
-			CreatedBy      graphql.String
-			LastModifiedBy graphql.String
-			Version        graphql.String
-			Secrets        []struct {
-				Actions        []graphql.String
-				ID             graphql.String
-				Path           graphql.String
-				Created        graphql.String
-				LastModified   graphql.String
-				LastModifiedBy graphql.String
-				Version        graphql.String
-			} `graphql:"secrets(limit:$limit, path:$path)"`
-		} `graphql:"group(groupName: $group)" json:"data"`
-	}
-	variables := map[string]interface{}{
-		"limit": graphql.Int(limit),
-		"group": graphql.String(group),
-		"path":  graphql.String(path),
-	}
+func (r report) reportGroupSecret(group, path string, limit, offset int) int {
+
+	var data []byte
+	var err *errors.ApiError
 
 	uri := paths.CreateURI("report/query", nil)
-	data, err := r.graphClient.DoRequest(uri, &query, variables)
+	switch path {
+	case "<.*>", ".*":
+		var query struct {
+			Group struct {
+				GQGroup
+				Secrets Secrets `graphql:"secrets(filter:{limit:$limit, secretType: SECRET, offset:$offset})"`
+			} `graphql:"group(groupName: $group)" json:"data"`
+		}
+		data, err = r.graphClient.DoRequest(uri, &query, map[string]interface{}{
+			"limit":  graphql.Int(limit),
+			"group":  graphql.String(group),
+			"offset": graphql.Int(offset),
+		})
+
+	default:
+		variables := map[string]interface{}{
+			"limit":  graphql.Int(limit),
+			"path":   graphql.String(path),
+			"group":  graphql.String(group),
+			"offset": graphql.Int(offset),
+		}
+		if strings.HasSuffix(path, "<.*>") || strings.HasSuffix(path, ".*") {
+			var query struct {
+				Group struct {
+					GQGroup
+					Secrets Secrets `graphql:"secrets(filter:{limit:$limit, secretType: SECRET, offset:$offset, path:$path})"`
+				} `graphql:"group(groupName: $group)" json:"data"`
+			}
+
+			data, err = r.graphClient.DoRequest(uri, &query, variables)
+
+		} else {
+			var query struct {
+				Group struct {
+					GQGroup
+					Secrets Secrets `graphql:"secrets(filter:{limit:$limit, secretType: ALL, offset:$offset, path:$path})"`
+				} `graphql:"group(groupName: $group)" json:"data"`
+			}
+
+			data, err = r.graphClient.DoRequest(uri, &query, variables)
+		}
+	}
+
 	r.outClient.WriteResponse(data, err)
 	return utils.GetExecStatus(err)
 }
 
-func (r report) reportUserSecret(limit int, user string, path string) int {
-	var query struct {
-		User struct {
-			UserName       graphql.String
-			Provider       graphql.String
-			Created        graphql.String
-			LastModified   graphql.String
-			CreatedBy      graphql.String
-			LastModifiedBy graphql.String
-			Version        graphql.String
-			Secrets        []struct {
-				Actions        []graphql.String
-				ID             graphql.String
-				Path           graphql.String
-				Created        graphql.String
-				LastModified   graphql.String
-				LastModifiedBy graphql.String
-				Version        graphql.String
-			} `graphql:"secrets(limit:$limit, path:$path)"`
-		} `graphql:"user(name: $user)" json:"data"`
-	}
-
-	variables := map[string]interface{}{
-		"limit": graphql.Int(limit),
-		"user":  graphql.String(user),
-		"path":  graphql.String(path),
-	}
+func (r report) reportUserSecret(user, path string, limit, offset int, cursor string) int {
+	var data []byte
+	var err *errors.ApiError
 
 	uri := paths.CreateURI("report/query", nil)
-	data, err := r.graphClient.DoRequest(uri, &query, variables)
+	switch path {
+	case "<.*>", ".*":
+		var query struct {
+			User struct {
+				GQUser
+				Secrets Secrets `graphql:"secrets(filter:{limit:$limit, secretType: SECRET, offset:$offset})"`
+				Home    Home    `graphql:"home(limit:$limit), cursor:$cursor)"`
+			} `graphql:"user(name: $user)" json:"data"`
+		}
+		data, err = r.graphClient.DoRequest(uri, &query, map[string]interface{}{
+			"limit":  graphql.Int(limit),
+			"user":   graphql.String(user),
+			"offset": graphql.Int(offset),
+			"cursor": graphql.String(cursor),
+		})
+
+	case "home:<.*>", "home:.*":
+		var query struct {
+			User struct {
+				GQUser
+				Home Home `graphql:"home(limit:$limit, cursor:$cursor)"`
+			} `graphql:"user(name: $user)" json:"data"`
+		}
+
+		data, err = r.graphClient.DoRequest(uri, &query, map[string]interface{}{
+			"limit":  graphql.Int(limit),
+			"user":   graphql.String(user),
+			"cursor": graphql.String(cursor),
+		})
+
+	default:
+		variables := map[string]interface{}{
+			"limit":  graphql.Int(limit),
+			"path":   graphql.String(path),
+			"user":   graphql.String(user),
+			"offset": graphql.Int(offset),
+		}
+		if strings.HasSuffix(path, "<.*>") || strings.HasSuffix(path, ".*") {
+			var query struct {
+				User struct {
+					GQUser
+					Secrets Secrets `graphql:"secrets(filter:{limit:$limit, secretType: SECRET, offset:$offset, path:$path})"`
+				} `graphql:"user(name: $user)" json:"data"`
+			}
+
+			data, err = r.graphClient.DoRequest(uri, &query, variables)
+
+		} else {
+			var query struct {
+				User struct {
+					GQUser
+					Secrets Secrets `graphql:"secrets(filter:{limit:$limit, secretType: ALL, offset:$offset, path:$path})"`
+				} `graphql:"user(name: $user)" json:"data"`
+			}
+
+			data, err = r.graphClient.DoRequest(uri, &query, variables)
+		}
+	}
+
 	r.outClient.WriteResponse(data, err)
 	return utils.GetExecStatus(err)
 }
 
-func (r report) reportSignInUserSecret(limit int, path string) int {
-	var query struct {
-		Me struct {
-			UserName       graphql.String
-			Provider       graphql.String
-			Created        graphql.String
-			LastModified   graphql.String
-			CreatedBy      graphql.String
-			LastModifiedBy graphql.String
-			Version        graphql.String
-			Secrets        []struct {
-				Actions        []graphql.String
-				ID             graphql.String
-				Path           graphql.String
-				Created        graphql.String
-				LastModified   graphql.String
-				LastModifiedBy graphql.String
-				Version        graphql.String
-			} `graphql:"secrets(limit:$limit, path:$path)"`
-			Home []struct {
-				ID             graphql.String
-				Path           graphql.String
-				Created        graphql.String
-				LastModified   graphql.String
-				LastModifiedBy graphql.String
-				Version        graphql.String
-			} `graphql:"home(limit:$limit)"`
-		} `json:"data"`
-	}
+func (r report) reportSignInUserSecret(path string, limit, offset int, cursor string) int {
+	var data []byte
+	var err *errors.ApiError
 
-	variables := map[string]interface{}{
-		"limit": graphql.Int(limit),
-		"path":  graphql.String(path),
-	}
 	uri := paths.CreateURI("report/me", nil)
-	data, err := r.graphClient.DoRequest(uri, &query, variables)
+	switch path {
+	case "<.*>", ".*":
+		var query struct {
+			Me struct {
+				GQUser
+				Secrets Secrets `graphql:"secrets(filter:{limit:$limit, secretType: SECRET, offset:$offset})"`
+				Home    Home    `graphql:"home(limit:$limit, cursor:$cursor)"`
+			} `json:"data"`
+		}
+		data, err = r.graphClient.DoRequest(uri, &query, map[string]interface{}{
+			"limit":  graphql.Int(limit),
+			"offset": graphql.Int(offset),
+			"cursor": graphql.String(cursor),
+		})
+
+	case "home:<.*>", "home:.*":
+		var query struct {
+			Me struct {
+				GQUser
+				Home Home `graphql:"home(limit:$limit, cursor:$cursor)"`
+			} `json:"data"`
+		}
+
+		data, err = r.graphClient.DoRequest(uri, &query, map[string]interface{}{
+			"limit":  graphql.Int(limit),
+			"cursor": graphql.String(cursor),
+		})
+
+	default:
+		variables := map[string]interface{}{
+			"limit":  graphql.Int(limit),
+			"path":   graphql.String(path),
+			"offset": graphql.Int(offset),
+		}
+		if strings.HasSuffix(path, "<.*>") || strings.HasSuffix(path, ".*") {
+			var query struct {
+				Me struct {
+					GQUser
+					Secrets Secrets `graphql:"secrets(filter:{limit:$limit, secretType: SECRET, offset:$offset, path:$path})"`
+				}
+			}
+
+			data, err = r.graphClient.DoRequest(uri, &query, variables)
+
+		} else {
+			var query struct {
+				Me struct {
+					GQUser
+					Secrets Secrets `graphql:"secrets(filter:{limit:$limit, secretType: ALL, offset:$offset, path:$path})"`
+				}
+			}
+
+			data, err = r.graphClient.DoRequest(uri, &query, variables)
+		}
+	}
+
 	r.outClient.WriteResponse(data, err)
 	return utils.GetExecStatus(err)
 }
@@ -328,4 +451,67 @@ func (r report) reportUserGroup(user string) int {
 	data, err := r.graphClient.DoRequest(uri, &query, variables)
 	r.outClient.WriteResponse(data, nil)
 	return utils.GetExecStatus(err)
+}
+
+type Secrets struct {
+	Secrets []struct {
+		Actions        []graphql.String
+		ID             graphql.String
+		Path           graphql.String
+		Created        graphql.String
+		LastModified   graphql.String
+		LastModifiedBy graphql.String
+		Version        graphql.String
+	}
+	Pagination struct {
+		Offset   graphql.Int
+		Limit    graphql.Int
+		PageSize graphql.Int
+	}
+}
+
+type Home struct {
+	Secrets []struct {
+		ID             graphql.String
+		Path           graphql.String
+		Created        graphql.String
+		LastModified   graphql.String
+		LastModifiedBy graphql.String
+		Version        graphql.String
+	}
+	Pagination struct {
+		Cursor graphql.String
+		Limit  graphql.Int
+	}
+}
+
+type GQUser struct {
+	UserName       graphql.String
+	Provider       graphql.String
+	Created        graphql.String
+	LastModified   graphql.String
+	CreatedBy      graphql.String
+	LastModifiedBy graphql.String
+	Version        graphql.String
+}
+
+type GQGroup struct {
+	Name           graphql.String
+	Created        graphql.String
+	LastModified   graphql.String
+	CreatedBy      graphql.String
+	LastModifiedBy graphql.String
+	Version        graphql.String
+}
+
+type GQRole struct {
+	Name           graphql.String
+	ExternalID     graphql.String
+	Provider       graphql.String
+	Created        graphql.String
+	LastModified   graphql.String
+	CreatedBy      graphql.String
+	LastModifiedBy graphql.String
+	Version        graphql.String
+	Description    graphql.String
 }

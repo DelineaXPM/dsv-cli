@@ -4,6 +4,7 @@ import (
 	flag "github.com/spf13/pflag"
 	"github.com/thycotic-rd/cli"
 	"strings"
+	"thy/utils"
 )
 
 type Params struct {
@@ -42,4 +43,12 @@ func LongFlag(flag string) string {
 
 func CmdFriendlyName(flag string) string {
 	return strings.Replace(flag, ".", "-", -1)
+}
+
+func FlagValue(flag string, args []string) string {
+	if i := utils.IndexOf(args, LongFlag(strings.ToLower(flag))); i >= 0 && len(args) >= i {
+		return args[i+1]
+	} else {
+		return ""
+	}
 }

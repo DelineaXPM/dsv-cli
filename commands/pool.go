@@ -72,6 +72,17 @@ Usage:
 	})
 }
 
+func GetPoolListCmd() (cli.Command, error) {
+	return NewCommand(CommandArgs{
+		Path:         []string{cst.NounPool, cst.List},
+		RunFunc:      poolHandler{requests.NewHttpClient(), nil}.handleList,
+		SynopsisText: "List the names of all existing pools",
+		HelpText: fmt.Sprintf(`
+Usage:
+   • %[1]s %[2]s`, cst.NounPool, cst.List),
+	})
+}
+
 func GetPoolDeleteCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounPool, cst.Delete},
@@ -125,6 +136,19 @@ func (p poolHandler) handleCreate(args []string) int {
 	uri := paths.CreateResourceURI(cst.NounPool, "", "", true, nil, true)
 
 	data, err := p.request.DoRequest(http.MethodPost, uri, &pool)
+	p.outClient.WriteResponse(data, err)
+	return utils.GetExecStatus(err)
+}
+
+func (p poolHandler) handleList(args []string) int {
+	if p.outClient == nil {
+		p.outClient = format.NewDefaultOutClient()
+	}
+	var err *errors.ApiError
+	var data []byte
+	uri := paths.CreateResourceURI(cst.NounPool, "", "", false, nil, true)
+	data, err = p.request.DoRequest("GET", uri, nil)
+
 	p.outClient.WriteResponse(data, err)
 	return utils.GetExecStatus(err)
 }

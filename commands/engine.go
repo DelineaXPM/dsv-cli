@@ -57,6 +57,17 @@ Usage:
 	})
 }
 
+func GetEngineListCmd() (cli.Command, error) {
+	return NewCommand(CommandArgs{
+		Path:         []string{cst.NounEngine, cst.List},
+		RunFunc:      engineHandler{requests.NewHttpClient(), nil}.handleList,
+		SynopsisText: "List the names of all existing engines and their appropriate pool names",
+		HelpText: fmt.Sprintf(`
+Usage:
+   • %[1]s %[2]s`, cst.NounEngine, cst.List),
+	})
+}
+
 func GetEngineDeleteCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounEngine, cst.Delete},
@@ -119,6 +130,19 @@ func (e engineHandler) handleRead(args []string) int {
 		uri := paths.CreateResourceURI(cst.NounEngine, paths.ProcessResource(name), "", true, nil, true)
 		data, err = e.request.DoRequest("GET", uri, nil)
 	}
+
+	e.outClient.WriteResponse(data, err)
+	return utils.GetExecStatus(err)
+}
+
+func (e engineHandler) handleList(args []string) int {
+	if e.outClient == nil {
+		e.outClient = format.NewDefaultOutClient()
+	}
+	var err *errors.ApiError
+	var data []byte
+	uri := paths.CreateResourceURI(cst.NounEngine, "", "", false, nil, true)
+	data, err = e.request.DoRequest("GET", uri, nil)
 
 	e.outClient.WriteResponse(data, err)
 	return utils.GetExecStatus(err)
