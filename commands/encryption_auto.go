@@ -38,8 +38,8 @@ func GetCryptoCmd() (cli.Command, error) {
 		RunFunc: func(args []string) int {
 			return cli.RunResultHelp
 		},
-		SynopsisText:  "Encryption-as-a-Service with a key managed by DSV (auto)",
-		HelpText:      "Encryption-as-a-Service with a key managed by DSV (auto)",
+		SynopsisText:  "Encryption-as-a-Service",
+		HelpText:      "Encryption-as-a-Service",
 		MinNumberArgs: 0,
 	})
 }

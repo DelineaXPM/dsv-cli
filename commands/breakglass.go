@@ -27,30 +27,38 @@ func newBreakglass() breakglass {
 	return breakglass{requests.NewHttpClient(), format.NewDefaultOutClient()}
 }
 
-func GetBreakglassGetStatusCmd() (cli.Command, error) {
-	helpText := fmt.Sprintf(`
-Usage:
-   • %[1]s
-   `, cst.NounBreakglass)
-
+func GetBreakglassCmd() (cli.Command, error) {
 	flagsPredictor := cli.PredictorWrappers{}
 
 	return NewCommand(CommandArgs{
-		Path:           []string{cst.NounBreakglass},
-		RunFunc:        newBreakglass().handleBreakglassGetStatusCmd,
-		SynopsisText:   "Get status of Break Glass feature",
-		HelpText:       helpText,
+		Path: []string{cst.NounBreakglass},
+		RunFunc: func(args []string) int {
+			return cli.RunResultHelp
+		},
+		SynopsisText:   "breakglass <action>",
+		HelpText:       "Initiate restoration of admin users",
+		FlagsPredictor: flagsPredictor,
+		MinNumberArgs:  0,
+	})
+}
+
+func GetBreakglassGetStatusCmd() (cli.Command, error) {
+	flagsPredictor := cli.PredictorWrappers{}
+
+	return NewCommand(CommandArgs{
+		Path:         []string{cst.NounBreakglass, cst.Status},
+		RunFunc:      newBreakglass().handleBreakglassGetStatusCmd,
+		SynopsisText: "Check whether Break Glass feature is set up for the tenant",
+		HelpText: fmt.Sprintf(`
+Usage:
+   • %[1]s %[2]s
+   `, cst.NounBreakglass, cst.Status),
 		FlagsPredictor: flagsPredictor,
 		MinNumberArgs:  0,
 	})
 }
 
 func GetBreakglassGenerateCmd() (cli.Command, error) {
-	helpText := fmt.Sprintf(`
-Usage:
-   • %[1]s --%[2]s 'newAdminUsername1,newAdminUsername2,' --%[3]s 3
-   `, cst.NounBreakglass, cst.NewAdmins, cst.MinNumberOfShares)
-
 	flagsPredictor := cli.PredictorWrappers{
 		preds.LongFlag(cst.NewAdmins): cli.PredictorWrapper{
 			complete.PredictAnything,
@@ -58,26 +66,24 @@ Usage:
 			false},
 		preds.LongFlag(cst.MinNumberOfShares): cli.PredictorWrapper{
 			complete.PredictAnything,
-			preds.NewFlagValue(preds.Params{Name: cst.MinNumberOfShares, Usage: "Min number of shares to apply action (required)"}),
+			preds.NewFlagValue(preds.Params{Name: cst.MinNumberOfShares, Usage: "Minimum number of shares to apply (required)"}),
 			false},
 	}
 
 	return NewCommand(CommandArgs{
-		Path:           []string{cst.NounBreakglass},
-		RunFunc:        newBreakglass().handleBreakglassGenerateCmd,
-		SynopsisText:   "Generate and store admin secret and new admins shares",
-		HelpText:       helpText,
+		Path:         []string{cst.NounBreakglass, cst.Generate},
+		RunFunc:      newBreakglass().handleBreakglassGenerateCmd,
+		SynopsisText: "Generate and store admin secret and new admins' shares",
+		HelpText: fmt.Sprintf(`
+Usage:
+   • %[1]s %[2]s --%[3]s 'newAdminUsername1,newAdminUsername2' --%[4]s 2
+   `, cst.NounBreakglass, cst.Generate, cst.NewAdmins, cst.MinNumberOfShares),
 		FlagsPredictor: flagsPredictor,
 		MinNumberArgs:  2,
 	})
 }
 
 func GetBreakglassApplyCmd() (cli.Command, error) {
-	helpText := fmt.Sprintf(`
-Usage:
-   • %[1]s --%[2]s '{share1},{share2},...,{shareN}'
-   `, cst.NounBreakglass, cst.Shares)
-
 	flagsPredictor := cli.PredictorWrappers{
 		preds.LongFlag(cst.Shares): cli.PredictorWrapper{
 			complete.PredictAnything,
@@ -86,10 +92,13 @@ Usage:
 	}
 
 	return NewCommand(CommandArgs{
-		Path:           []string{cst.NounBreakglass},
-		RunFunc:        newBreakglass().handleBreakglassApplyCmd,
-		SynopsisText:   "Apply shares and break glass",
-		HelpText:       helpText,
+		Path:         []string{cst.NounBreakglass, cst.Apply},
+		RunFunc:      newBreakglass().handleBreakglassApplyCmd,
+		SynopsisText: "Apply shares and break glass",
+		HelpText: fmt.Sprintf(`
+Usage:
+   • %[1]s %[2]s --%[3]s '{share1},{share2},...,{shareN}'
+   `, cst.NounBreakglass, cst.Apply, cst.Shares),
 		FlagsPredictor: flagsPredictor,
 		MinNumberArgs:  1,
 	})

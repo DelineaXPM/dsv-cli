@@ -182,6 +182,7 @@ func runCLI(args []string) (exitStatus int, err error) {
 		"crypto manual decrypt":         cmd.GetManualKeyDecryptCmd,
 		"report secret":                 cmd.GetSecretReportCmd,
 		"report group":                  cmd.GetGroupReportCmd,
+		"breakglass":                    cmd.GetBreakglassCmd,
 		"breakglass status":             cmd.GetBreakglassGetStatusCmd,
 		"breakglass generate":           cmd.GetBreakglassGenerateCmd,
 		"breakglass apply":              cmd.GetBreakglassApplyCmd,

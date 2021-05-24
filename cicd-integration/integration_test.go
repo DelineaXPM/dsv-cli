@@ -444,7 +444,7 @@ func init() {
 			[]string{"breakglass", "status"},
 			outputPattern(`"status"`)},
 		{"breakglass-generate",
-			[]string{"breakglass", "generate", "--newAdmins", breakGlassNewAdminsString, "--minNumberOfShares", breakGlassMinNumberOfSharesString},
+			[]string{"breakglass", "generate", "--new-admins", breakGlassNewAdminsString, "--min-number-of-shares", breakGlassMinNumberOfSharesString},
 			outputPattern(`"status": "Break Glass feature is set"`)},
 		{"breakglass-apply",
 			[]string{"breakglass", "apply", "--shares", breakGlassSharesString},
@@ -511,6 +511,7 @@ func init() {
 		{"home-secret-delete", []string{"home", "delete", homeSecretPath, "--force"}, outputEmpty()},
 		{"pool-delete", []string{"pool", "delete", "mypool"}, outputEmpty()},
 		{"crypto-manual-key-delete", []string{"crypto", "manual", "key-delete", "--path", manualKeyPath, "--force"}, outputEmpty()},
+		{"breakglass-secret-delete", []string{"secret", "delete", "__breakglass", "--force"}, outputEmpty()},
 	}
 }
 

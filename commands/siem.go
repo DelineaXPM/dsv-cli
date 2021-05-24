@@ -180,6 +180,30 @@ func (s siem) handleCreate([]string) int {
 		params["auth"] = resp
 	}
 
+	if resp, err := getStringAndValidateDefault(ui, "Route Through DSV Engine [y/N]:", "N", false, nil, false, false); err != nil {
+		ui.Error(err.Error())
+		return 1
+	} else {
+		resp = strings.ToLower(resp)
+		if !utils.EqAny(resp, []string{"y", "yes", "n", "no", ""}) {
+			ui.Error("Invalid response, must choose (y)es or (n)o")
+			return 1
+		}
+		if isYes(resp, false) {
+			params["sendToEngine"] = true
+
+			if resp, err := getStringAndValidate(ui, "Engine Pool:", false, nil, false, false); err != nil {
+				ui.Error(err.Error())
+				return 1
+			} else {
+				params["pool"] = resp
+			}
+		} else {
+			params["sendToEngine"] = false
+			params["pool"] = ""
+		}
+	}
+
 	basePath := strings.Join([]string{cst.Config, cst.NounSiem}, "/")
 	uri := paths.CreateURI(basePath, nil)
 	data, apiError = s.request.DoRequest(http.MethodPost, uri, params)
@@ -269,6 +293,31 @@ func (s siem) handleUpdate(args []string) int {
 		return 1
 	} else {
 		params["auth"] = resp
+	}
+
+	if resp, err := getStringAndValidateDefault(ui, "Route Through DSV Engine [y/N]:", "N", false, nil, false, false); err != nil {
+		ui.Error(err.Error())
+		return 1
+	} else {
+		resp = strings.ToLower(resp)
+		if !utils.EqAny(resp, []string{"y", "yes", "n", "no", ""}) {
+			ui.Error("Invalid response, must choose (y)es or (n)o")
+			return 1
+		}
+
+		if isYes(resp, false) {
+			params["sendToEngine"] = true
+
+			if resp, err := getStringAndValidate(ui, "Engine Pool:", false, nil, false, false); err != nil {
+				ui.Error(err.Error())
+				return 1
+			} else {
+				params["pool"] = resp
+			}
+		} else {
+			params["sendToEngine"] = false
+			params["pool"] = ""
+		}
 	}
 
 	basePath := strings.Join([]string{cst.Config, cst.NounSiem}, "/")

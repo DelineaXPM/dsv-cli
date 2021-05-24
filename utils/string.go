@@ -27,3 +27,14 @@ func CheckPrefix(path string, prefixes ...string) bool {
 	}
 	return false
 }
+
+// EqAny checks whether string equals any within a list of candidates
+func EqAny(str string, candidates []string) bool {
+	for _, c := range candidates {
+		if c == str {
+			return true
+		}
+	}
+
+	return false
+}

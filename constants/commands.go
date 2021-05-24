@@ -22,6 +22,9 @@ const (
 	Rotate         = "rotate"
 	Encrypt        = "encrypt"
 	Decrypt        = "decrypt"
+	Generate       = "generate"
+	Apply          = "apply"
+	Status         = "status"
 )
 
 // Nouns
@@ -126,9 +129,10 @@ const (
 	EndDate                 = "enddate"
 	Force                   = "force"
 	Sort                    = "sort"
-	NewAdmins               = "newAdmins"
-	MinNumberOfShares       = "minNumberOfShares"
+	NewAdmins               = "new-admins"
+	MinNumberOfShares       = "min-number-of-shares"
 	Shares                  = "shares"
+	SendToEngine			= "send-to-engine"
 )
 
 // Data Flags
