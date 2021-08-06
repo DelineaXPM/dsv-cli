@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"testing"
+
 	cst "thy/constants"
 	"thy/errors"
 	"thy/fake"
@@ -10,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetBreakglassGetStatusCmd(t *testing.T) {
+func TestGetBreakGlassGetStatusCmd(t *testing.T) {
 	testCase := []struct {
 		name        string
 		args        string
@@ -25,7 +26,7 @@ func TestGetBreakglassGetStatusCmd(t *testing.T) {
 		},
 	}
 
-	_, err := GetBreakglassGetStatusCmd()
+	_, err := GetBreakGlassGetStatusCmd()
 	assert.Nil(t, err)
 
 	viper.Set(cst.Version, "v1")
@@ -45,8 +46,8 @@ func TestGetBreakglassGetStatusCmd(t *testing.T) {
 				return tc.out, tc.expectedErr
 			}
 
-			c := breakglass{req, fakeOutC}
-			_ = c.handleBreakglassGetStatusCmd([]string{tc.args})
+			c := breakGlass{req, fakeOutC}
+			_ = c.handleBreakGlassGetStatusCmd([]string{tc.args})
 
 			if tc.expectedErr == nil {
 				assert.Equal(t, data, tc.out)
@@ -57,21 +58,21 @@ func TestGetBreakglassGetStatusCmd(t *testing.T) {
 	}
 }
 
-func TestGetBreakglassGenerateCmd(t *testing.T) {
+func TestGetBreakGlassGenerateCmd(t *testing.T) {
 	type flag struct {
 		flag, value string
 	}
 
 	testCase := []struct {
 		name        string
-		args        string
+		args        []string
 		out         []byte
 		expectedErr *errors.ApiError
 		flags       []flag
 	}{
 		{
 			"success",
-			"",
+			[]string{"--min-number-of-shares", "2", "--new-admins", "bguser1,bguser2,bguser3"},
 			[]byte(`test`),
 			nil,
 			[]flag{
@@ -87,7 +88,7 @@ func TestGetBreakglassGenerateCmd(t *testing.T) {
 		},
 	}
 
-	_, err := GetBreakglassGenerateCmd()
+	_, err := GetBreakGlassGenerateCmd()
 	assert.Nil(t, err)
 
 	viper.Set(cst.Version, "v1")
@@ -113,8 +114,8 @@ func TestGetBreakglassGenerateCmd(t *testing.T) {
 				return tc.out, tc.expectedErr
 			}
 
-			c := breakglass{req, fakeOutC}
-			_ = c.handleBreakglassGenerateCmd([]string{tc.args})
+			c := breakGlass{req, fakeOutC}
+			_ = c.handleBreakGlassGenerateCmd(tc.args)
 
 			if tc.expectedErr == nil {
 				assert.Equal(t, data, tc.out)
@@ -125,21 +126,21 @@ func TestGetBreakglassGenerateCmd(t *testing.T) {
 	}
 }
 
-func TestGetBreakglassApplyCmd(t *testing.T) {
+func TestGetBreakGlassApplyCmd(t *testing.T) {
 	type flag struct {
 		flag, value string
 	}
 
 	testCase := []struct {
 		name        string
-		args        string
+		args        []string
 		out         []byte
 		expectedErr *errors.ApiError
 		flags       []flag
 	}{
 		{
 			"success",
-			"",
+			[]string{"--shares", "6lFNUss5WgccrKLH39oeO4gQ5c7kA1McXlhDZn6joXQ=Ncc9-J7XRm78c_4SVwQgBAS1_7O6u9rRPHvUETnTBfw=Kmsl6oh1IhdK5SC5J3q1FaMhZhsQvo-sCS3X1Rtln_g=NOdvmZtLRVSkyujYZWgDbq5SjMSrsRbK2ocJFLotMeE=,45pPuy9V9V5zKdF852RNJy9hDZtB02nL6BBzGETteb4=IlyZoX1GL8pBFlNEXeJP8SQfeAxGWg168Xxus6bMp8k=V0d43eNG4aqq8AlerGnDKfftL9x1DJ6eihMaWqeIt0U=r2GibR5fnloRcnS0Ly1zoqpCvv72OLlRkdIwsR09fek="},
 			[]byte(`test`),
 			nil,
 			[]flag{
@@ -151,7 +152,7 @@ func TestGetBreakglassApplyCmd(t *testing.T) {
 		},
 	}
 
-	_, err := GetBreakglassApplyCmd()
+	_, err := GetBreakGlassApplyCmd()
 	assert.Nil(t, err)
 
 	viper.Set(cst.Version, "v1")
@@ -177,8 +178,8 @@ func TestGetBreakglassApplyCmd(t *testing.T) {
 				return tc.out, tc.expectedErr
 			}
 
-			c := breakglass{req, fakeOutC}
-			_ = c.handleBreakglassApplyCmd([]string{tc.args})
+			c := breakGlass{req, fakeOutC}
+			_ = c.handleBreakGlassApplyCmd(tc.args)
 
 			if tc.expectedErr == nil {
 				assert.Equal(t, data, tc.out)

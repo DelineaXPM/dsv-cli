@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 
 	cst "thy/constants"
@@ -95,7 +96,7 @@ Usage:
 			preds.LongFlag(cst.DataName):     cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounEngine)}), false},
 			preds.LongFlag(cst.DataPoolName): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataPoolName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounPool)}), false},
 		},
-		MinNumberArgs: 2,
+		MinNumberArgs: 0,
 	})
 }
 
@@ -191,6 +192,9 @@ func (e engineHandler) handlePing(args []string) int {
 }
 
 func (e engineHandler) handleCreate(args []string) int {
+	if OnlyGlobalArgs(args) {
+		return e.handleCreateWizard(args)
+	}
 	if e.outClient == nil {
 		e.outClient = format.NewDefaultOutClient()
 	}
@@ -206,10 +210,45 @@ func (e engineHandler) handleCreate(args []string) int {
 		PoolName: poolName,
 	}
 
-	uri := paths.CreateResourceURI(cst.NounEngine, "", "", true, nil, true)
-	data, err := e.request.DoRequest(http.MethodPost, uri, &engine)
+	data, err := e.submitEngine(engine)
 	e.outClient.WriteResponse(data, err)
 	return utils.GetExecStatus(err)
+}
+
+func (e engineHandler) handleCreateWizard(args []string) int {
+	ui := &cli.BasicUi{
+		Writer:      os.Stdout,
+		Reader:      os.Stdin,
+		ErrorWriter: os.Stderr,
+	}
+	if e.outClient == nil {
+		e.outClient = format.NewDefaultOutClient()
+	}
+
+	var engine engineCreate
+
+	if resp, err := getStringAndValidate(ui, "Engine name:", false, nil, false, false); err != nil {
+		ui.Error(err.Error())
+		return 1
+	} else {
+		engine.Name = resp
+	}
+
+	if resp, err := getStringAndValidate(ui, "Pool name:", false, nil, false, false); err != nil {
+		ui.Error(err.Error())
+		return 1
+	} else {
+		engine.PoolName = resp
+	}
+
+	data, err := e.submitEngine(engine)
+	e.outClient.WriteResponse(data, err)
+	return utils.GetExecStatus(err)
+}
+
+func (e engineHandler) submitEngine(engine engineCreate) ([]byte, *errors.ApiError) {
+	uri := paths.CreateResourceURI(cst.NounEngine, "", "", true, nil, true)
+	return e.request.DoRequest(http.MethodPost, uri, &engine)
 }
 
 type engineCreate struct {

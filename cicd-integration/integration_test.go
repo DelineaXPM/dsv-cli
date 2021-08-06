@@ -292,13 +292,6 @@ func init() {
 	monthAgoDate := today.AddDate(0, 0, -30).Format("2006-01-02")
 	futureDate := today.AddDate(0, 0, 7).Format("2006-01-02")
 
-	breakGlassNewAdminsString := user1
-	breakGlassMinNumberOfSharesString := "1"
-	breakGlassSharesString := strings.Join([]string{
-		"6lFNUss5WgccrKLH39oeO4gQ5c7kA1McXlhDZn6joXQ=Ncc9-J7XRm78c_4SVwQgBAS1_7O6u9rRPHvUETnTBfw=Kmsl6oh1IhdK5SC5J3q1FaMhZhsQvo-sCS3X1Rtln_g=NOdvmZtLRVSkyujYZWgDbq5SjMSrsRbK2ocJFLotMeE=",
-		"45pPuy9V9V5zKdF852RNJy9hDZtB02nL6BBzGETteb4=IlyZoX1GL8pBFlNEXeJP8SQfeAxGWg168Xxus6bMp8k=V0d43eNG4aqq8AlerGnDKfftL9x1DJ6eihMaWqeIt0U=r2GibR5fnloRcnS0Ly1zoqpCvv72OLlRkdIwsR09fek=",
-	}, ",")
-
 	synchronousCases = []struct {
 		name   string
 		args   []string
@@ -379,10 +372,9 @@ func init() {
 		{"role-create-external-id-missing", []string{"role", "create", "--name", "bob", "--provider", "aws-dev"}, outputPattern("must specify both provider and external ID")},
 
 		// client operations
-		{"client-help", []string{"client", ""}, outputPattern(`Execute an action on a client.*`)},
-		{"client-create-pass", []string{"client", "create", roleName}, outputPattern(`"role":\s*"[^"]+"`)},
-		{"client-create-fail", []string{"client", "create", roleName + "doesntexist"}, outputPattern(`"code": 500`)},
-		{"client-search-pass", []string{"client", "search", roleName}, outputPattern(`"clientId"`)},
+		{"client-create-pass", []string{"client", "create", "--role", roleName}, outputPattern(`"role":\s*"[^"]+"`)},
+		{"client-create-fail", []string{"client", "create", "--role", roleName + "doesntexist"}, outputPattern(`"code": 500`)},
+		{"client-search-pass", []string{"client", "search", "--role", roleName}, outputPattern(`"clientId"`)},
 
 		// delegated access operations
 		{"user-auth-pass", []string{"auth", "-u", user1, "-p", user1Pass}, outputPattern(`"accessToken":\s*"[^"]+",\s*"expiresIn"`)},
@@ -438,17 +430,6 @@ func init() {
 		{"crypto-manual-encrypt", []string{"crypto", "manual", "encrypt", "--path", manualKeyPath, "--data", plaintext}, outputPattern(`"version": "0"`)},
 		{"crypto-manual-decrypt", []string{"crypto", "manual", "decrypt", "--path", manualKeyPath, "--data", ciphertext}, outputPattern(`"data": "hello there"`)},
 		{"crypto-manual-key-update", []string{"crypto", "manual", "key-update", "--path", manualKeyPath, "--private-key", manualPrivateKey}, outputPattern(`"version": "1"`)},
-
-		// Break Glass
-		{"breakglass-get-status",
-			[]string{"breakglass", "status"},
-			outputPattern(`"status"`)},
-		{"breakglass-generate",
-			[]string{"breakglass", "generate", "--new-admins", breakGlassNewAdminsString, "--min-number-of-shares", breakGlassMinNumberOfSharesString},
-			outputPattern(`"status": "Break Glass feature is set"`)},
-		{"breakglass-apply",
-			[]string{"breakglass", "apply", "--shares", breakGlassSharesString},
-			outputPattern(`"message"`)},
 
 		// Pool
 		{"pool-create", []string{"pool", "create", "--name", "mypool"}, outputPattern(`"name": "mypool"`)},
@@ -511,7 +492,6 @@ func init() {
 		{"home-secret-delete", []string{"home", "delete", homeSecretPath, "--force"}, outputEmpty()},
 		{"pool-delete", []string{"pool", "delete", "mypool"}, outputEmpty()},
 		{"crypto-manual-key-delete", []string{"crypto", "manual", "key-delete", "--path", manualKeyPath, "--force"}, outputEmpty()},
-		{"breakglass-secret-delete", []string{"secret", "delete", "__breakglass", "--force"}, outputEmpty()},
 	}
 }
 

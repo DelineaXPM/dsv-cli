@@ -180,6 +180,8 @@ func (a *authenticator) getTokenForAuthType(at AuthType, useCache bool) (*TokenR
 		if profile != "" && profile != cst.DefaultProfile {
 			keySuffix = fmt.Sprintf("%s-%s", keySuffix, profile)
 		}
+	} else if at == Certificate {
+		keySuffix = viper.GetString(cst.Profile)
 	} else {
 		keySuffix = viper.GetString(keyName)
 	}
@@ -305,6 +307,9 @@ func (a *authenticator) getTokenForAuthType(at AuthType, useCache bool) (*TokenR
 
 			data.CallbackHost = callback
 			data.CallbackUrl = fmt.Sprintf("http://%s/callback", callback)
+		} else if at == Certificate {
+			data.AuthProvider = viper.GetString(cst.AuthProvider)
+			data.ClientCertificate = viper.GetString("client_certificate")
 		}
 	}
 
@@ -548,6 +553,8 @@ type requestBody struct {
 	CallbackUrl       string `json:"callback_url"`
 	State             string `json:"state"`
 	CallbackHost      string `json:"_"`
+	AuthProvider      string `json:"auth_provider"`
+	ClientCertificate string `json:"client_certificate"`
 }
 
 type TokenResponse struct {

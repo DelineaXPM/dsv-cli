@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 
 	cst "thy/constants"
@@ -53,7 +54,7 @@ Usage:
 		FlagsPredictor: cli.PredictorWrappers{
 			preds.LongFlag(cst.DataName): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounPool)}), false},
 		},
-		MinNumberArgs: 1,
+		MinNumberArgs: 0,
 	})
 }
 
@@ -120,6 +121,10 @@ func (p poolHandler) handleRead(args []string) int {
 }
 
 func (p poolHandler) handleCreate(args []string) int {
+	if OnlyGlobalArgs(args) {
+		return p.handleCreateWizard(args)
+	}
+
 	if p.outClient == nil {
 		p.outClient = format.NewDefaultOutClient()
 	}
@@ -133,9 +138,7 @@ func (p poolHandler) handleCreate(args []string) int {
 		Name: name,
 	}
 
-	uri := paths.CreateResourceURI(cst.NounPool, "", "", true, nil, true)
-
-	data, err := p.request.DoRequest(http.MethodPost, uri, &pool)
+	data, err := p.submitPool(pool)
 	p.outClient.WriteResponse(data, err)
 	return utils.GetExecStatus(err)
 }
@@ -173,6 +176,35 @@ func (p poolHandler) handleDelete(args []string) int {
 	data, err := p.request.DoRequest(http.MethodDelete, uri, nil)
 	p.outClient.WriteResponse(data, err)
 	return utils.GetExecStatus(err)
+}
+
+func (p poolHandler) handleCreateWizard(args []string) int {
+	ui := &cli.BasicUi{
+		Writer:      os.Stdout,
+		Reader:      os.Stdin,
+		ErrorWriter: os.Stderr,
+	}
+	if p.outClient == nil {
+		p.outClient = format.NewDefaultOutClient()
+	}
+
+	var pool Pool
+
+	if resp, err := getStringAndValidate(ui, "Pool name:", false, nil, false, false); err != nil {
+		ui.Error(err.Error())
+		return 1
+	} else {
+		pool.Name = resp
+	}
+
+	data, err := p.submitPool(pool)
+	p.outClient.WriteResponse(data, err)
+	return utils.GetExecStatus(err)
+}
+
+func (p poolHandler) submitPool(pool Pool) ([]byte, *errors.ApiError) {
+	uri := paths.CreateResourceURI(cst.NounPool, "", "", true, nil, true)
+	return p.request.DoRequest(http.MethodPost, uri, &pool)
 }
 
 type Pool struct {

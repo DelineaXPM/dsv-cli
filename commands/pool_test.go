@@ -69,6 +69,7 @@ func TestHandlePoolReadCmd(t *testing.T) {
 func TestHandlePoolCreateCmd(t *testing.T) {
 	testCases := []struct {
 		name        string
+		args        []string
 		poolName    string
 		apiResponse []byte
 		out         []byte
@@ -76,16 +77,11 @@ func TestHandlePoolCreateCmd(t *testing.T) {
 	}{
 		{
 			"Success",
+			[]string{"--name", "pool1"},
 			"pool1",
 			[]byte(`test`),
 			[]byte(`test`),
-			nil},
-		{
-			"No pool name passed",
-			"",
-			[]byte(`test`),
-			[]byte(`test`),
-			errors.New(e.New("error: must specify " + cst.DataName)),
+			nil,
 		},
 	}
 
@@ -110,7 +106,7 @@ func TestHandlePoolCreateCmd(t *testing.T) {
 			}
 
 			p := poolHandler{req, client}
-			_ = p.handleCreate(nil)
+			_ = p.handleCreate(tt.args)
 			if tt.expectedErr == nil {
 				assert.Equal(t, tt.out, data)
 			} else {

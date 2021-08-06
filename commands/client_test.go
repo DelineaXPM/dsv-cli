@@ -3,6 +3,7 @@ package cmd
 import (
 	e "errors"
 	"testing"
+
 	cst "thy/constants"
 	"thy/errors"
 	"thy/fake"
@@ -137,30 +138,18 @@ func TestHandleClientDeleteCmd(t *testing.T) {
 }
 
 func TestHandleClientUpsertCmd(t *testing.T) {
-
-	testCase := []struct {
+	testCases := []struct {
 		name        string
 		args        []string
 		apiResponse []byte
 		out         []byte
-		method      string
 		expectedErr *errors.ApiError
 	}{
 		{
-			"Happy path POST",
-			[]string{"user1", "password"},
+			"Create client credential",
+			[]string{"--role", "gcp-svc-1"},
 			[]byte(`test`),
 			[]byte(`test`),
-			"create",
-			nil,
-		},
-
-		{
-			"Happy path PUT",
-			[]string{"user1", "password"},
-			[]byte(`test`),
-			[]byte(`test`),
-			"PUT",
 			nil,
 		},
 	}
@@ -172,8 +161,7 @@ func TestHandleClientUpsertCmd(t *testing.T) {
 	assert.Nil(t, err)
 
 	viper.Set(cst.Version, "v1")
-	for _, tt := range testCase {
-
+	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			writer := &fake.FakeOutClient{}
 			var data []byte
@@ -189,7 +177,6 @@ func TestHandleClientUpsertCmd(t *testing.T) {
 			}
 
 			r := &client{req, writer}
-			viper.Set(cst.LastCommandKey, tt.method)
 
 			_ = r.handleClientUpsertCmd(tt.args)
 

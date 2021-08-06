@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -118,13 +119,13 @@ Usage:
 		`, cst.NounClient, cst.ProductName, cst.ExampleRoleName, cst.Create),
 		FlagsPredictor: cli.PredictorWrappers{
 			preds.LongFlag(cst.NounRole):            cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounRole, Usage: fmt.Sprintf("Name of the %s ", cst.NounRole)}), false},
-			preds.LongFlag(cst.NounBootstrapUrl):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounBootstrapUrl, Usage: fmt.Sprint("Generate one time use url instead of secret (optional)"), ValueType: "bool"}), false},
-			preds.LongFlag(cst.NounBootstrapurlTTL): cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.NounBootstrapurlTTL, Usage: fmt.Sprint("UrlTTL for generated url (optional)")}), false},
-			preds.LongFlag(cst.NounClientUses):      cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.NounClientUses, Usage: fmt.Sprint("The number of times the client credential can be read.  if set to 0, it can be used infinitely.  default is 0 (optional)")}), false},
-			preds.LongFlag(cst.NounClientDesc):      cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.NounClientDesc, Usage: fmt.Sprint("Client description (optional)")}), false},
-			preds.LongFlag(cst.NounClientTTL):       cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.NounClientTTL, Usage: fmt.Sprint("How long until the client credential expires. if set to 0, it can be used indefinitely.  default is 0.\n (optional)")}), false},
+			preds.LongFlag(cst.NounBootstrapUrl):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounBootstrapUrl, Usage: fmt.Sprint("Whether to generate a one-time use URL instead of secret (optional)"), ValueType: "bool"}), false},
+			preds.LongFlag(cst.NounBootstrapUrlTTL): cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.NounBootstrapUrlTTL, Usage: fmt.Sprint("TTL for the generated URL (optional)")}), false},
+			preds.LongFlag(cst.NounClientUses):      cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.NounClientUses, Usage: fmt.Sprint("The number of times the client credential can be read. If set to 0, it can be used infinitely. Default is 0 (optional)")}), false},
+			preds.LongFlag(cst.NounClientDesc):      cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.NounClientDesc, Usage: fmt.Sprint("Client credential description (optional)")}), false},
+			preds.LongFlag(cst.NounClientTTL):       cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.NounClientTTL, Usage: fmt.Sprint("How long until the client credential expires. If set to 0, it can be used indefinitely. Default is 0 (optional)")}), false},
 		},
-		MinNumberArgs: 1,
+		MinNumberArgs: 0,
 	})
 }
 
@@ -214,11 +215,18 @@ func (c client) handleClientRestoreCmd(args []string) int {
 }
 
 func (c client) handleClientUpsertCmd(args []string) int {
+	if OnlyGlobalArgs(args) {
+		return c.handleClientCreateWizard(args)
+	}
+
+	if c.outClient == nil {
+		c.outClient = format.NewDefaultOutClient()
+	}
 	var err *errors.ApiError
 	var data []byte
 	roleName := viper.GetString(cst.NounRole)
 	url := viper.GetBool(cst.NounBootstrapUrl)
-	urlTTL := viper.GetInt64(cst.NounBootstrapurlTTL)
+	urlTTL := viper.GetInt64(cst.NounBootstrapUrlTTL)
 	ttl := viper.GetInt64(cst.NounClientTTL)
 	desc := viper.GetString(cst.NounClientDesc)
 	uses := viper.GetInt(cst.NounClientUses)
@@ -229,28 +237,16 @@ func (c client) handleClientUpsertCmd(args []string) int {
 		return cli.RunResultHelp
 	}
 	client := Client{
-		Role:        roleName,
-		Url:         url,
-		UrlTTL:      urlTTL,
-		Uses:        uses,
-		Description: desc,
-		TTL:         ttl,
+		Role:         roleName,
+		UrlRequested: url,
+		UrlTTL:       urlTTL,
+		Uses:         uses,
+		Description:  desc,
+		TTL:          ttl,
 	}
-	reqMethod := strings.ToLower(viper.GetString(cst.LastCommandKey))
-	var uri string
-	if reqMethod == cst.Create {
-		reqMethod = "POST"
-		uri = paths.CreateResourceURI(cst.NounClient, "", "", true, nil, true)
-	} else {
-		reqMethod = "PUT"
-		uri = paths.CreateResourceURI(cst.NounClient, viper.GetString(cst.ClientID), "", true, nil, true)
-	}
-	data, err = c.request.DoRequest(reqMethod, uri, &client)
-	outClient := c.outClient
-	if outClient == nil {
-		outClient = format.NewDefaultOutClient()
-	}
-	outClient.WriteResponse(data, err)
+
+	data, err = c.submitClient(client)
+	c.outClient.WriteResponse(data, err)
 	return utils.GetExecStatus(err)
 }
 
@@ -283,11 +279,106 @@ func (c client) handleClientSearchCmd(args []string) int {
 	return utils.GetExecStatus(err)
 }
 
+func (c client) handleClientCreateWizard(args []string) int {
+	ui := &cli.BasicUi{
+		Writer:      os.Stdout,
+		Reader:      os.Stdin,
+		ErrorWriter: os.Stderr,
+	}
+	if c.outClient == nil {
+		c.outClient = format.NewDefaultOutClient()
+	}
+
+	var client Client
+
+	if resp, err := getStringAndValidate(ui, "Role name:", false, nil, false, false); err != nil {
+		ui.Error(err.Error())
+		return 1
+	} else {
+		client.Role = resp
+	}
+
+	if resp, err := getStringAndValidate(ui, "Client description (optional):", true, nil, false, false); err != nil {
+		ui.Error(err.Error())
+		return 1
+	} else {
+		client.Description = resp
+	}
+
+	if resp, err := getStringAndValidateDefault(ui, "Client TTL (in seconds):", "0", true, nil, false, false); err != nil {
+		ui.Error(err.Error())
+		return 1
+	} else {
+		clientTTL, err := strconv.Atoi(resp)
+		if err != nil {
+			ui.Error("Invalid input. Please enter a valid integer.")
+			return 1
+		}
+		client.TTL = int64(clientTTL)
+	}
+
+	if resp, err := getStringAndValidateDefault(ui, "Request Bootstrap URL? [y/N]:", "N", true, nil, false, false); err != nil {
+		ui.Error(err.Error())
+		return 1
+	} else {
+		resp = strings.ToLower(resp)
+		if !utils.EqAny(resp, []string{"y", "yes", "n", "no", ""}) {
+			ui.Error("Invalid response, must choose (y)es or (n)o")
+			return 1
+		}
+		if isYes(resp, false) {
+			client.UrlRequested = true
+
+			if resp, err := getStringAndValidate(ui, "Bootstrap URL TTL (in seconds):", false, nil, false, false); err != nil {
+				ui.Error(err.Error())
+				return 1
+			} else {
+				urlTTL, err := strconv.Atoi(resp)
+				if err != nil {
+					ui.Error("Invalid input. Please enter a valid integer.")
+					return 1
+				}
+				client.UrlTTL = int64(urlTTL)
+			}
+
+			if resp, err := getStringAndValidateDefault(ui, "Number of client uses:", "0", true, nil, false, false); err != nil {
+				ui.Error(err.Error())
+				return 1
+			} else {
+				uses, err := strconv.Atoi(resp)
+				if err != nil {
+					ui.Error("Invalid input. Please enter a valid integer.")
+					return 1
+				}
+				client.Uses = uses
+			}
+		}
+	}
+
+	data, err := c.submitClient(client)
+	c.outClient.WriteResponse(data, err)
+	return utils.GetExecStatus(err)
+}
+
+func (c client) submitClient(client Client) ([]byte, *errors.ApiError) {
+	reqMethod := strings.ToLower(viper.GetString(cst.LastCommandKey))
+	var uri string
+	if reqMethod == cst.Create {
+		reqMethod = "POST"
+		uri = paths.CreateResourceURI(cst.NounClient, "", "", true, nil, true)
+	} else {
+		reqMethod = "PUT"
+		uri = paths.CreateResourceURI(cst.NounClient, viper.GetString(cst.ClientID), "", true, nil, true)
+	}
+	data, err := c.request.DoRequest(reqMethod, uri, &client)
+	return data, err
+}
+
 type Client struct {
-	Role        string `json:"role"`
-	Url         bool   `json:"url,omitempty"`
-	UrlTTL      int64  `json:"urlTTL,omitempty"`
-	TTL         int64  `json:"ttl,omitempty"`
-	Uses        int    `json:"usesLimit,omitempty"`
-	Description string `json:"description,omitempty"`
+	Role         string `json:"role"`
+	UrlRequested bool   `json:"url,omitempty"`
+	UrlTTL       int64  `json:"urlTTL,omitempty"`
+	TTL          int64  `json:"ttl,omitempty"`
+	Uses         int    `json:"usesLimit,omitempty"`
+	Description  string `json:"description,omitempty"`
 }

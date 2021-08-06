@@ -56,14 +56,14 @@ const (
 	NounPool            = "pool"
 	NounEngine          = "engine"
 	NounBootstrapUrl    = "url"
-	NounBootstrapurlTTL = "url-ttl"
+	NounBootstrapUrlTTL = "url-ttl"
 	NounClientUses      = "uses"
 	NounClientTTL       = "ttl"
 	NounClientDesc      = "desc"
 	NounKey             = "key"
 	NounEncryption      = "crypto"
 	NounReport          = "report"
-	NounBreakglass      = "breakglass"
+	NounBreakGlass      = "breakglass"
 )
 
 // Cli-Config only

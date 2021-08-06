@@ -25,7 +25,8 @@ func TestHandleEngineReadCmd(t *testing.T) {
 			"engine1",
 			[]byte(`test`),
 			[]byte(`test`),
-			nil},
+			nil,
+		},
 		{
 			"No engine name passed",
 			"",
@@ -69,6 +70,7 @@ func TestHandleEngineReadCmd(t *testing.T) {
 func TestHandleEngineCreateCmd(t *testing.T) {
 	testCases := []struct {
 		name        string
+		args        []string
 		engineName  string
 		poolName    string
 		apiResponse []byte
@@ -77,13 +79,16 @@ func TestHandleEngineCreateCmd(t *testing.T) {
 	}{
 		{
 			"Success",
+			[]string{"--name", "engine1", "--pool-name", "pool1"},
 			"engine1",
 			"pool1",
 			[]byte(`test`),
 			[]byte(`test`),
-			nil},
+			nil,
+		},
 		{
 			"No engine name passed",
+			[]string{"--pool-name", "pool1"},
 			"",
 			"pool1",
 			[]byte(`test`),
@@ -92,15 +97,8 @@ func TestHandleEngineCreateCmd(t *testing.T) {
 		},
 		{
 			"No pool name passed",
+			[]string{"--name", "engine1"},
 			"engine1",
-			"",
-			[]byte(`test`),
-			[]byte(`test`),
-			errors.New(e.New("error: must specify engine name and pool name")),
-		},
-		{
-			"Neither pool nor engine name passed",
-			"",
 			"",
 			[]byte(`test`),
 			[]byte(`test`),
@@ -130,7 +128,7 @@ func TestHandleEngineCreateCmd(t *testing.T) {
 			}
 
 			eh := engineHandler{req, client}
-			_ = eh.handleCreate(nil)
+			_ = eh.handleCreate(tt.args)
 			if tt.expectedErr == nil {
 				assert.Equal(t, tt.out, data)
 			} else {

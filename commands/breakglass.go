@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
+
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
@@ -14,24 +16,23 @@ import (
 
 	"github.com/posener/complete"
 	"github.com/spf13/viper"
-
 	"github.com/thycotic-rd/cli"
 )
 
-type breakglass struct {
+type breakGlass struct {
 	request   requests.Client
 	outClient format.OutClient
 }
 
-func newBreakglass() breakglass {
-	return breakglass{requests.NewHttpClient(), format.NewDefaultOutClient()}
+func newBreakGlass() breakGlass {
+	return breakGlass{requests.NewHttpClient(), format.NewDefaultOutClient()}
 }
 
-func GetBreakglassCmd() (cli.Command, error) {
+func GetBreakGlassCmd() (cli.Command, error) {
 	flagsPredictor := cli.PredictorWrappers{}
 
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounBreakglass},
+		Path: []string{cst.NounBreakGlass},
 		RunFunc: func(args []string) int {
 			return cli.RunResultHelp
 		},
@@ -42,23 +43,23 @@ func GetBreakglassCmd() (cli.Command, error) {
 	})
 }
 
-func GetBreakglassGetStatusCmd() (cli.Command, error) {
+func GetBreakGlassGetStatusCmd() (cli.Command, error) {
 	flagsPredictor := cli.PredictorWrappers{}
 
 	return NewCommand(CommandArgs{
-		Path:         []string{cst.NounBreakglass, cst.Status},
-		RunFunc:      newBreakglass().handleBreakglassGetStatusCmd,
+		Path:         []string{cst.NounBreakGlass, cst.Status},
+		RunFunc:      newBreakGlass().handleBreakGlassGetStatusCmd,
 		SynopsisText: "Check whether Break Glass feature is set up for the tenant",
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s
-   `, cst.NounBreakglass, cst.Status),
+   `, cst.NounBreakGlass, cst.Status),
 		FlagsPredictor: flagsPredictor,
 		MinNumberArgs:  0,
 	})
 }
 
-func GetBreakglassGenerateCmd() (cli.Command, error) {
+func GetBreakGlassGenerateCmd() (cli.Command, error) {
 	flagsPredictor := cli.PredictorWrappers{
 		preds.LongFlag(cst.NewAdmins): cli.PredictorWrapper{
 			complete.PredictAnything,
@@ -71,19 +72,19 @@ func GetBreakglassGenerateCmd() (cli.Command, error) {
 	}
 
 	return NewCommand(CommandArgs{
-		Path:         []string{cst.NounBreakglass, cst.Generate},
-		RunFunc:      newBreakglass().handleBreakglassGenerateCmd,
+		Path:         []string{cst.NounBreakGlass, cst.Generate},
+		RunFunc:      newBreakGlass().handleBreakGlassGenerateCmd,
 		SynopsisText: "Generate and store admin secret and new admins' shares",
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s --%[3]s 'newAdminUsername1,newAdminUsername2' --%[4]s 2
-   `, cst.NounBreakglass, cst.Generate, cst.NewAdmins, cst.MinNumberOfShares),
+   `, cst.NounBreakGlass, cst.Generate, cst.NewAdmins, cst.MinNumberOfShares),
 		FlagsPredictor: flagsPredictor,
-		MinNumberArgs:  2,
+		MinNumberArgs:  0,
 	})
 }
 
-func GetBreakglassApplyCmd() (cli.Command, error) {
+func GetBreakGlassApplyCmd() (cli.Command, error) {
 	flagsPredictor := cli.PredictorWrappers{
 		preds.LongFlag(cst.Shares): cli.PredictorWrapper{
 			complete.PredictAnything,
@@ -92,30 +93,34 @@ func GetBreakglassApplyCmd() (cli.Command, error) {
 	}
 
 	return NewCommand(CommandArgs{
-		Path:         []string{cst.NounBreakglass, cst.Apply},
-		RunFunc:      newBreakglass().handleBreakglassApplyCmd,
+		Path:         []string{cst.NounBreakGlass, cst.Apply},
+		RunFunc:      newBreakGlass().handleBreakGlassApplyCmd,
 		SynopsisText: "Apply shares and break glass",
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s --%[3]s '{share1},{share2},...,{shareN}'
-   `, cst.NounBreakglass, cst.Apply, cst.Shares),
+   `, cst.NounBreakGlass, cst.Apply, cst.Shares),
 		FlagsPredictor: flagsPredictor,
-		MinNumberArgs:  1,
+		MinNumberArgs:  0,
 	})
 }
 
-func (self breakglass) handleBreakglassGetStatusCmd(args []string) int {
+func (b breakGlass) handleBreakGlassGetStatusCmd(args []string) int {
 	var err *errors.ApiError
 	var data []byte
 
 	uri := paths.CreateURI("breakglass", nil)
-	data, err = self.request.DoRequest("GET", uri, nil)
-	self.outClient.WriteResponse(data, err)
+	data, err = b.request.DoRequest("GET", uri, nil)
+	b.outClient.WriteResponse(data, err)
 
 	return utils.GetExecStatus(err)
 }
 
-func (self breakglass) handleBreakglassGenerateCmd(args []string) int {
+func (b breakGlass) handleBreakGlassGenerateCmd(args []string) int {
+	if OnlyGlobalArgs(args) {
+		return b.handleBreakGlassGenerateWizard(args)
+	}
+
 	var err *errors.ApiError
 	var data []byte
 	newAdmins := viper.GetString(cst.NewAdmins)
@@ -123,13 +128,13 @@ func (self breakglass) handleBreakglassGenerateCmd(args []string) int {
 
 	if newAdmins == "" {
 		err = errors.NewS("error: must specify " + cst.NewAdmins)
-		self.outClient.WriteResponse(data, err)
+		b.outClient.WriteResponse(data, err)
 		return utils.GetExecStatus(err)
 	}
 
 	if numberOfSharesString == "" {
 		err = errors.NewS("error: must specify " + cst.MinNumberOfShares)
-		self.outClient.WriteResponse(data, err)
+		b.outClient.WriteResponse(data, err)
 		return utils.GetExecStatus(err)
 	}
 
@@ -140,43 +145,118 @@ func (self breakglass) handleBreakglassGenerateCmd(args []string) int {
 
 	trimmedNewAdmins := strings.Trim(newAdmins, ",")
 
-	gr := &breakglassGenerateRequest{
+	gr := &breakGlassGenerateRequest{
 		NewAdmins:         utils.StringToSlice(trimmedNewAdmins),
 		MinNumberOfShares: numberOfShares,
 	}
 
 	uri := paths.CreateURI("breakglass/generate", nil)
-	data, err = self.request.DoRequest("POST", uri, gr)
-	self.outClient.WriteResponse(data, err)
+	data, err = b.request.DoRequest("POST", uri, gr)
+	b.outClient.WriteResponse(data, err)
 
 	return utils.GetExecStatus(err)
 }
 
-func (self breakglass) handleBreakglassApplyCmd(args []string) int {
+func (b breakGlass) handleBreakGlassGenerateWizard(args []string) int {
+	ui := &cli.BasicUi{
+		Writer:      os.Stdout,
+		Reader:      os.Stdin,
+		ErrorWriter: os.Stderr,
+	}
+	if b.outClient == nil {
+		b.outClient = format.NewDefaultOutClient()
+	}
+
+	var numberOfShares int
+	var newAdmins string
+
+	if resp, err := getStringAndValidate(ui, "Minimum number of shares:", false, nil, false, false); err != nil {
+		ui.Error(err.Error())
+		return 1
+	} else {
+		numberOfShares, err = strconv.Atoi(resp)
+		if err != nil {
+			ui.Error("Invalid input. Please enter a valid integer.")
+			return 1
+		}
+	}
+
+	if resp, err := getStringAndValidate(ui, "New admins (comma-separated):", false, nil, false, false); err != nil {
+		ui.Error(err.Error())
+		return 1
+	} else {
+		newAdmins = strings.Trim(resp, ",")
+	}
+
+	gr := &breakGlassGenerateRequest{
+		NewAdmins:         utils.StringToSlice(newAdmins),
+		MinNumberOfShares: numberOfShares,
+	}
+
+	uri := paths.CreateURI("breakglass/generate", nil)
+	data, err := b.request.DoRequest("POST", uri, gr)
+	b.outClient.WriteResponse(data, err)
+
+	return utils.GetExecStatus(err)
+}
+
+func (b breakGlass) handleBreakGlassApplyCmd(args []string) int {
+	if OnlyGlobalArgs(args) {
+		return b.handleBreakGlassApplyWizard(args)
+	}
+
 	var err *errors.ApiError
 	var data []byte
 	shares := viper.GetString(cst.Shares)
 
 	if shares == "" {
 		err = errors.NewS("error: must specify " + cst.Shares)
-		self.outClient.WriteResponse(data, err)
+		b.outClient.WriteResponse(data, err)
 		return utils.GetExecStatus(err)
 	}
 
-	ar := &breakglassApplyRequest{Shares: utils.StringToSlice(shares)}
+	ar := &breakGlassApplyRequest{Shares: utils.StringToSlice(shares)}
 
 	uri := paths.CreateURI("breakglass/apply", nil)
-	data, err = self.request.DoRequest("POST", uri, ar)
-	self.outClient.WriteResponse(data, err)
+	data, err = b.request.DoRequest("POST", uri, ar)
+	b.outClient.WriteResponse(data, err)
 
 	return utils.GetExecStatus(err)
 }
 
-type breakglassGenerateRequest struct {
+func (b breakGlass) handleBreakGlassApplyWizard(args []string) int {
+	ui := &cli.BasicUi{
+		Writer:      os.Stdout,
+		Reader:      os.Stdin,
+		ErrorWriter: os.Stderr,
+	}
+	if b.outClient == nil {
+		b.outClient = format.NewDefaultOutClient()
+	}
+
+	var shares string
+
+	if resp, err := getStringAndValidate(ui, "Shares (comma-separated):", false, nil, false, false); err != nil {
+		ui.Error(err.Error())
+		return 1
+	} else {
+		shares = resp
+	}
+
+	ar := &breakGlassApplyRequest{Shares: utils.StringToSlice(shares)}
+
+	uri := paths.CreateURI("breakglass/apply", nil)
+	data, err := b.request.DoRequest("POST", uri, ar)
+	b.outClient.WriteResponse(data, err)
+
+	return utils.GetExecStatus(err)
+}
+
+type breakGlassGenerateRequest struct {
 	NewAdmins         []string `json:"newAdmins"`
 	MinNumberOfShares int      `json:"minNumberOfShares"`
 }
 
-type breakglassApplyRequest struct {
+type breakGlassApplyRequest struct {
 	Shares []string `json:"shares"`
 }
