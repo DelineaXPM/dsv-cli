@@ -539,7 +539,8 @@ func handleCliConfigInitCmd(args []string) int {
 			o(string(auth.FederatedAzure), "Azure (federated)"),
 			o(string(auth.FederatedGcp), "GCP (federated)"),
 			o(string(auth.Oidc), "OIDC (federated)"),
-			o(string(auth.Certificate), "x509 Certificate"),
+			//TODO: this will be enable once this feature is completed
+			//o(string(auth.Certificate), "x509 Certificate"),
 		}, false, false); err != nil {
 			return 1
 		} else {
