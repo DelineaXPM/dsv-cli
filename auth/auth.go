@@ -310,6 +310,7 @@ func (a *authenticator) getTokenForAuthType(at AuthType, useCache bool) (*TokenR
 		} else if at == Certificate {
 			data.AuthProvider = viper.GetString(cst.AuthProvider)
 			data.ClientCertificate = viper.GetString("client_certificate")
+			data.PrivateKey = viper.GetString("private_key")
 		}
 	}
 
@@ -555,6 +556,7 @@ type requestBody struct {
 	CallbackHost      string `json:"_"`
 	AuthProvider      string `json:"auth_provider"`
 	ClientCertificate string `json:"client_certificate"`
+	PrivateKey        string `json:"private_key"`
 }
 
 type TokenResponse struct {

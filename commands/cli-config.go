@@ -539,7 +539,6 @@ func handleCliConfigInitCmd(args []string) int {
 			o(string(auth.FederatedAzure), "Azure (federated)"),
 			o(string(auth.FederatedGcp), "GCP (federated)"),
 			o(string(auth.Oidc), "OIDC (federated)"),
-			//TODO: this will be enable once this feature is completed
 			//o(string(auth.Certificate), "x509 Certificate"),
 		}, false, false); err != nil {
 			return 1
@@ -652,14 +651,6 @@ func handleCliConfigInitCmd(args []string) int {
 			viper.Set(cst.Callback, callback)
 			AddNode(&cfg, jsonish{cst.DataCallback: callback}, profile, cst.NounAuth)
 		} else if auth.AuthType(authType) == auth.Certificate {
-			if user == "" {
-				if user, err = getStringAndValidate(ui, fmt.Sprintf("Please enter username for tenant %s:", viper.GetString(cst.Tenant)), false, nil, false, false); err != nil {
-					return 1
-				}
-
-				viper.Set(cst.Username, user)
-			}
-
 			if authProvider == "" {
 				if authProvider, err = getStringAndValidate(ui, "Please enter auth provider name:", false, nil, false, false); err != nil {
 					return 1
@@ -677,13 +668,17 @@ func handleCliConfigInitCmd(args []string) int {
 
 			viper.Set("client_certificate", leaf)
 
-			leaf, err = auth.EncipherPassword(leaf)
+			AddNode(&cfg, jsonish{cst.Leaf: leaf}, profile, "leafcert")
+
+			leafPrKey, err := getStringAndValidate(ui, "Leaf private key:", false, nil, false, false)
 			if err != nil {
 				ui.Error(err.Error())
 				return 1
 			}
 
-			AddNode(&cfg, jsonish{cst.Leaf: leaf}, profile, "leafcert")
+			viper.Set("private_key", leafPrKey)
+
+			AddNode(&cfg, jsonish{cst.LeafPrivateKey: leafPrKey}, profile, "leafprivatekey")
 		}
 	}
 

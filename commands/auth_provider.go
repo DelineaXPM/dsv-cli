@@ -135,13 +135,14 @@ func GetAuthProviderCreateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounAuthProvider, cst.Create},
 		RunFunc:      AuthProvider{request: requests.NewHttpClient(), outClient: nil}.handleAuthProviderUpsert,
-		SynopsisText: fmt.Sprintf("%s %s %s (<name> | --name|-n) (--type) ((--data|-d) | --aws-account-id | --azure-tenant-id | --gcp-project-id)", cst.NounConfig, cst.NounAuthProvider, cst.Create),
+		SynopsisText: fmt.Sprintf("%s %s %s (<name> | --name|-n) (--type) ((--data|-d) | --aws-account-id | --azure-tenant-id | --gcp-project-id | --root-ca-path | --assumed-role)", cst.NounConfig, cst.NounAuthProvider, cst.Create),
 		HelpText: fmt.Sprintf(`Add %[1]s provider
 
 Usage:
   • %[1]s %[2]s %[4]s %[3]s --aws-account-id 11652944433808  --type aws
   • %[1]s %[2]s %[4]s --name azure-prod --azure-tenant-id 164543 --type azure
   • %[1]s %[2]s %[4]s --name GCP-prod --gcp-project-id test-proj --type gcp
+  • %[1]s %[2]s %[4]s --name cert-prod --root-ca-path rootcert --assumed-role certauth_role --type certificate
   • %[1]s %[2]s %[4]s --data %[5]s
 
  %[6]s
@@ -157,6 +158,8 @@ Usage:
 			preds.LongFlag(cst.ThyOneAuthClientID):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientID, Usage: fmt.Sprintf("Thycotic One client ID")}), false},
 			preds.LongFlag(cst.ThyOneAuthClientSecret):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientSecret, Usage: fmt.Sprintf("Thycotic One client secret")}), false},
 			preds.LongFlag(cst.SendWelcomeEmail):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.SendWelcomeEmail, Usage: fmt.Sprintf("Whether to send welcome email for thycotic-one users linked to the auth provider (true or false)")}), false},
+			preds.LongFlag(cst.RootCaPath):              cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.RootCaPath, Usage: fmt.Sprintf("Root certificate  secret path")}), false},
+			preds.LongFlag(cst.AssumedRole):             cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.AssumedRole, Usage: fmt.Sprintf("Assumed Role")}), false},
 		},
 		MinNumberArgs: 0,
 	})
@@ -166,13 +169,14 @@ func GetAuthProviderUpdateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.Config, cst.NounAuthProvider, cst.Update},
 		RunFunc:      AuthProvider{request: requests.NewHttpClient(), outClient: nil}.handleAuthProviderUpsert,
-		SynopsisText: fmt.Sprintf("%s %s %s (<name> | --name|-n) (--type) ((--data|-d) | --aws-account-id | --azure-tenant-id | --gcp-project-id)", cst.NounConfig, cst.NounAuthProvider, cst.Update),
+		SynopsisText: fmt.Sprintf("%s %s %s (<name> | --name|-n) (--type) ((--data|-d) | --aws-account-id | --azure-tenant-id | --gcp-project-id | --root-ca-path | --assumed-role)", cst.NounConfig, cst.NounAuthProvider, cst.Update),
 		HelpText: fmt.Sprintf(`Update %[1]s properties
 
 Usage:
   • %[1]s %[2]s %[4]s %[3]s --aws-account-id 11652944433808  --type aws
   • %[1]s %[2]s %[4]s --name azure-prod --azure-tenant-id 164543 --type azure
   • %[1]s %[2]s %[4]s --name GCP-prod --gcp-project-id test-proj --type gcp
+  • %[1]s %[2]s %[4]s --name cert-prod --root-ca-path rootcert --assumed-role certauth_role --type certificate
   • %[1]s %[2]s %[4]s --data %[5]s
 		`, cst.NounConfig, cst.NounAuthProvider, cst.ExampleAuthProviderName, cst.Update, cst.ExampleDataPath),
 		FlagsPredictor: cli.PredictorWrappers{
@@ -186,6 +190,8 @@ Usage:
 			preds.LongFlag(cst.ThyOneAuthClientID):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientID, Usage: fmt.Sprintf("Thycotic One client ID")}), false},
 			preds.LongFlag(cst.ThyOneAuthClientSecret):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientSecret, Usage: fmt.Sprintf("Thycotic One client secret")}), false},
 			preds.LongFlag(cst.SendWelcomeEmail):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.SendWelcomeEmail, Usage: fmt.Sprintf("Whether to send welcome email for thycotic-one users linked to the auth provider (true or false)")}), false},
+			preds.LongFlag(cst.RootCaPath):              cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.RootCaPath, Usage: fmt.Sprintf("Root certificate secret path")}), false},
+			preds.LongFlag(cst.AssumedRole):             cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.AssumedRole, Usage: fmt.Sprintf("Assumed Role")}), false},
 		},
 		MinNumberArgs: 0,
 	})
@@ -349,6 +355,7 @@ func (p AuthProvider) handleAuthProviderUpsertWorkflow(args []string) int {
 				{"azure", "Azure"},
 				{"gcp", "GCP"},
 				{cst.ThyOne, "Thycotic One"},
+				{"certificate", "Certificate"},
 			}, false, false); err != nil {
 			ui.Error(err.Error())
 			return utils.GetExecStatus(err)
@@ -435,6 +442,22 @@ func (p AuthProvider) handleAuthProviderUpsertWorkflow(args []string) int {
 				params.Properties.SendWelcomeEmail = &sendWelcomeEmail
 			}
 		}
+	case "certificate":
+		if rootCaPath, err := getStringAndValidate(
+			ui, "Root certificate path:", false, nil, false, false); err != nil {
+			ui.Error(err.Error())
+			return utils.GetExecStatus(err)
+		} else {
+			params.Properties.RootCaPath = rootCaPath
+		}
+		if assumedrole, err := getStringAndValidate(
+			ui, "Assumed role:", false, nil, false, false); err != nil {
+			ui.Error(err.Error())
+			return utils.GetExecStatus(err)
+		} else {
+			params.Properties.AssumedRole = assumedrole
+		}
+
 	default:
 		ui.Error("Unsupported auth provider type.")
 		return 1
@@ -484,6 +507,8 @@ func (p AuthProvider) handleAuthProviderUpsert(args []string) int {
 				BaseURI:      viper.GetString(cst.ThyOneAuthClientBaseUri),
 				ClientID:     viper.GetString(cst.ThyOneAuthClientID),
 				ClientSecret: viper.GetString(cst.ThyOneAuthClientSecret),
+				RootCaPath:   viper.GetString(cst.RootCaPath),
+				AssumedRole:  viper.GetString(cst.AssumedRole),
 			},
 		}
 	}
@@ -649,4 +674,6 @@ type Properties struct {
 	BaseURI          string `json:"baseUri,omitempty"`
 	UsernameClaim    string `json:"usernameClaim,omitempty"`
 	SendWelcomeEmail *bool  `json:"sendWelcomeEmail,omitempty"`
+	RootCaPath       string `json:"rootcapath,omitempty"`
+	AssumedRole      string `json:"assumedrole,omitempty"`
 }
