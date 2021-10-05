@@ -539,7 +539,7 @@ func handleCliConfigInitCmd(args []string) int {
 			o(string(auth.FederatedAzure), "Azure (federated)"),
 			o(string(auth.FederatedGcp), "GCP (federated)"),
 			o(string(auth.Oidc), "OIDC (federated)"),
-			//o(string(auth.Certificate), "x509 Certificate"),
+			o(string(auth.Certificate), "x509 Certificate"),
 		}, false, false); err != nil {
 			return 1
 		} else {
@@ -652,33 +652,32 @@ func handleCliConfigInitCmd(args []string) int {
 			AddNode(&cfg, jsonish{cst.DataCallback: callback}, profile, cst.NounAuth)
 		} else if auth.AuthType(authType) == auth.Certificate {
 			if authProvider == "" {
-				if authProvider, err = getStringAndValidate(ui, "Please enter auth provider name:", false, nil, false, false); err != nil {
+				authProvider, err = getStringAndValidate(ui, "Please enter auth provider name:", false, nil, false, false)
+				if err != nil {
+					ui.Error(err.Error())
 					return 1
 				}
 			}
 
+			clientCert, err := getStringAndValidate(ui, "Certificate:", false, nil, false, false)
+			if err != nil {
+				ui.Error(err.Error())
+				return 1
+			}
+
+			clientPrivKey, err := getStringAndValidate(ui, "Private key:", false, nil, false, false)
+			if err != nil {
+				ui.Error(err.Error())
+				return 1
+			}
+
 			viper.Set(cst.AuthProvider, authProvider)
+			viper.Set(cst.AuthCert, clientCert)
+			viper.Set(cst.AuthPrivateKey, clientPrivKey)
+
 			AddNode(&cfg, jsonish{cst.DataProvider: authProvider}, profile, cst.NounAuth)
-
-			leaf, err := getStringAndValidate(ui, "Leaf certificate:", false, nil, false, false)
-			if err != nil {
-				ui.Error(err.Error())
-				return 1
-			}
-
-			viper.Set("client_certificate", leaf)
-
-			AddNode(&cfg, jsonish{cst.Leaf: leaf}, profile, "leafcert")
-
-			leafPrKey, err := getStringAndValidate(ui, "Leaf private key:", false, nil, false, false)
-			if err != nil {
-				ui.Error(err.Error())
-				return 1
-			}
-
-			viper.Set("private_key", leafPrKey)
-
-			AddNode(&cfg, jsonish{cst.LeafPrivateKey: leafPrKey}, profile, "leafprivatekey")
+			AddNode(&cfg, jsonish{cst.NounCert: clientCert}, profile, cst.NounAuth)
+			AddNode(&cfg, jsonish{cst.NounPrivateKey: clientPrivKey}, profile, cst.NounAuth)
 		}
 	}
 

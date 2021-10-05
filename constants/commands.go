@@ -64,6 +64,8 @@ const (
 	NounEncryption      = "crypto"
 	NounReport          = "report"
 	NounBreakGlass      = "breakglass"
+	NounCert            = "certificate"
+	NounPrivateKey      = "privateKey"
 )
 
 // Cli-Config only
@@ -103,6 +105,8 @@ const (
 	AuthClientSecret        = "auth.client.secret"
 	AuthClientID            = "auth.client.id"
 	Callback                = "auth.callback"
+	AuthCert                = "auth.certificate"
+	AuthPrivateKey          = "auth.privateKey"
 	AzureAuthClientID       = "AZURE_CLIENT_ID"
 	ThyOne                  = "thycoticone"
 	ThyOneAuthClientBaseUri = "baseUri"

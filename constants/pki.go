@@ -1,12 +1,11 @@
 package constants
 
 const (
-	Register       = "register"
-	Sign           = "sign"
-	Leaf           = "leaf"
-	GenerateRoot   = "generate-root"
-	SSHCert        = "ssh-cert"
-	LeafPrivateKey = "privatekey"
+	Register     = "register"
+	Sign         = "sign"
+	Leaf         = "leaf"
+	GenerateRoot = "generate-root"
+	SSHCert      = "ssh-cert"
 )
 
 const (

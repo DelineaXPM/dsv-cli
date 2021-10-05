@@ -3,8 +3,8 @@ module thy
 replace github.com/spf13/viper => github.com/thycotic-rd/viper v1.7.1
 
 require (
-	github.com/Azure/go-autorest/autorest v0.9.7
-	github.com/Azure/go-autorest/autorest/azure/auth v0.4.2
+	github.com/Azure/go-autorest/autorest v0.11.21
+	github.com/Azure/go-autorest/autorest/azure/auth v0.5.8
 	github.com/apex/log v1.1.0
 	github.com/atotto/clipboard v0.1.1
 	github.com/aws/aws-sdk-go v1.40.37

@@ -269,7 +269,7 @@ func (g Group) handleCreateCmd(args []string) int {
 
 	params := make(map[string]interface{})
 	if dataErr := json.Unmarshal([]byte(data), &params); dataErr != nil {
-		g.outClient.WriteResponse(resp, errors.New(dataErr))
+		outClient.WriteResponse(resp, errors.New(dataErr))
 		return utils.GetExecStatus(dataErr)
 	}
 	if _, ok := params["members"]; !ok {

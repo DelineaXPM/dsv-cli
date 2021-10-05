@@ -1,8 +1,13 @@
 package auth
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha512"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -308,9 +313,16 @@ func (a *authenticator) getTokenForAuthType(at AuthType, useCache bool) (*TokenR
 			data.CallbackHost = callback
 			data.CallbackUrl = fmt.Sprintf("http://%s/callback", callback)
 		} else if at == Certificate {
-			data.AuthProvider = viper.GetString(cst.AuthProvider)
-			data.ClientCertificate = viper.GetString("client_certificate")
-			data.PrivateKey = viper.GetString("private_key")
+			challengeID, challenge, err := a.initiateCertAuth(
+				viper.GetString(cst.AuthProvider),
+				viper.GetString(cst.AuthCert),
+				viper.GetString(cst.AuthPrivateKey),
+			)
+			if err != nil {
+				return nil, err
+			}
+			data.CertChallengeID = challengeID
+			data.DecryptedChallenge = challenge
 		}
 	}
 
@@ -413,6 +425,7 @@ func (a *authenticator) fetchTokenVault(at AuthType, data requestBody) (*TokenRe
 			return nil, errors.NewS("no callback occurred after redirect")
 		}
 	}
+
 	uri := paths.CreateURI(cst.NounToken, nil)
 	if err := a.requestClient.DoRequestOut("POST", uri, data, &response); err != nil {
 		return nil, err
@@ -478,6 +491,52 @@ func (a *authenticator) handleOidcAuth(doneCh chan<- AuthResponse) http.HandlerF
 	}
 }
 
+// initiateCertAuth makes initial request and prepares info for final token request.
+func (a *authenticator) initiateCertAuth(provider, cert, privKey string) (string, string, *errors.ApiError) {
+	log.Println("Reading private key.")
+	der, err := base64.StdEncoding.DecodeString(privKey)
+	if err != nil {
+		return "", "", errors.NewF("unable to read private key: %v", err)
+	}
+	block, _ := pem.Decode(der)
+	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		return "", "", errors.NewF("unable to parse private key: %v", err)
+	}
+
+	request := struct {
+		Provider string `json:"auth_provider"`
+		Cert     string `json:"client_certificate"`
+	}{
+		Provider: provider,
+		Cert:     cert,
+	}
+	response := struct {
+		ID        string `json:"cert_challenge_id"`
+		Encrypted string `json:"encrypted"`
+	}{}
+
+	log.Println("Requesting challenge for certificate authentication.")
+	uri := paths.CreateURI("certificate/auth", nil)
+	requestErr := a.requestClient.DoRequestOut("POST", uri, request, &response)
+	if requestErr != nil {
+		return "", "", requestErr
+	}
+	encrypted, err := base64.StdEncoding.DecodeString(response.Encrypted)
+	if err != nil {
+		return "", "", errors.NewF("unable to read challenge: %v", err)
+	}
+
+	log.Println("Decrypting challenge using private key.")
+	plaintext, err := rsa.DecryptOAEP(sha512.New(), rand.Reader, privateKey, encrypted, nil)
+	if err != nil {
+		return "", "", errors.NewF("unable to decrypt challenge: %v", err)
+	}
+
+	decrypted := base64.StdEncoding.EncodeToString(plaintext)
+	return response.ID, decrypted, nil
+}
+
 // setupDataForPasswordAuth prepares the requestBody object with data for password auth.
 // It should be used in the authentication workflow, not on its own.
 func setupDataForPasswordAuth(data *requestBody) error {
@@ -539,24 +598,23 @@ func buildAwsParams() (headers string, body string, err *errors.ApiError) {
 }
 
 type requestBody struct {
-	GrantType         string `json:"grant_type"`
-	Username          string `json:"username"`
-	Provider          string `json:"provider"`
-	Password          string `json:"password"`
-	AuthClientID      string `json:"client_id"`
-	AuthClientSecret  string `json:"client_secret"`
-	RefreshToken      string `json:"refresh_token"`
-	AwsBody           string `json:"aws_body"`
-	AwsHeaders        string `json:"aws_headers"`
-	Jwt               string `json:"jwt"`
-	AzureAuthClientID string
-	AuthorizationCode string `json:"authorization_code"`
-	CallbackUrl       string `json:"callback_url"`
-	State             string `json:"state"`
-	CallbackHost      string `json:"_"`
-	AuthProvider      string `json:"auth_provider"`
-	ClientCertificate string `json:"client_certificate"`
-	PrivateKey        string `json:"private_key"`
+	GrantType          string `json:"grant_type"`
+	Username           string `json:"username"`
+	Provider           string `json:"provider"`
+	Password           string `json:"password"`
+	AuthClientID       string `json:"client_id"`
+	AuthClientSecret   string `json:"client_secret"`
+	RefreshToken       string `json:"refresh_token"`
+	AwsBody            string `json:"aws_body"`
+	AwsHeaders         string `json:"aws_headers"`
+	Jwt                string `json:"jwt"`
+	AzureAuthClientID  string
+	AuthorizationCode  string `json:"authorization_code"`
+	CallbackUrl        string `json:"callback_url"`
+	State              string `json:"state"`
+	CallbackHost       string `json:"_"`
+	CertChallengeID    string `json:"cert_challenge_id"`
+	DecryptedChallenge string `json:"decrypted_challenge"`
 }
 
 type TokenResponse struct {
