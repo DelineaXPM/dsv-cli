@@ -120,7 +120,7 @@ func (s siem) handleCreate([]string) int {
 	params := make(map[string]interface{})
 
 	if resp, err := getStringAndValidateDefault(
-		ui, "Type of SIEM endpoint (default:syslog):", "syslog", true, nil, false, false); err != nil {
+		ui, "Type of SIEM endpoint (default:syslog):", "syslog", false, false); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
@@ -160,14 +160,14 @@ func (s siem) handleCreate([]string) int {
 		params["protocol"] = resp
 	}
 
-	if resp, err := getStringAndValidateDefault(ui, "Logging Format (default:rfc5424):", "rfc5424", true, nil, false, false); err != nil {
+	if resp, err := getStringAndValidateDefault(ui, "Logging Format (default:rfc5424):", "rfc5424", false, false); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
 		params["loggingFormat"] = resp
 	}
 
-	if resp, err := getStringAndValidateDefault(ui, "Authentication Method (default:token):", "token", true, nil, false, false); err != nil {
+	if resp, err := getStringAndValidateDefault(ui, "Authentication Method (default:token):", "token", false, false); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
@@ -180,7 +180,7 @@ func (s siem) handleCreate([]string) int {
 		params["auth"] = resp
 	}
 
-	if resp, err := getStringAndValidateDefault(ui, "Route Through DSV Engine [y/N]:", "N", false, nil, false, false); err != nil {
+	if resp, err := getStringAndValidateDefault(ui, "Route Through DSV Engine [y/N]:", "N", false, false); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
@@ -242,7 +242,7 @@ func (s siem) handleUpdate(args []string) int {
 	params := make(map[string]interface{})
 
 	if resp, err := getStringAndValidateDefault(
-		ui, "Type of SIEM endpoint (default:syslog):", "syslog", true, nil, false, false); err != nil {
+		ui, "Type of SIEM endpoint (default:syslog):", "syslog", false, false); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
@@ -275,14 +275,14 @@ func (s siem) handleUpdate(args []string) int {
 		params["protocol"] = resp
 	}
 
-	if resp, err := getStringAndValidateDefault(ui, "Logging Format (default:rfc5424):", "rfc5424", true, nil, false, false); err != nil {
+	if resp, err := getStringAndValidateDefault(ui, "Logging Format (default:rfc5424):", "rfc5424", false, false); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
 		params["loggingFormat"] = resp
 	}
 
-	if resp, err := getStringAndValidateDefault(ui, "Authentication Method (default:token):", "token", true, nil, false, false); err != nil {
+	if resp, err := getStringAndValidateDefault(ui, "Authentication Method (default:token):", "token", false, false); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
@@ -295,7 +295,7 @@ func (s siem) handleUpdate(args []string) int {
 		params["auth"] = resp
 	}
 
-	if resp, err := getStringAndValidateDefault(ui, "Route Through DSV Engine [y/N]:", "N", false, nil, false, false); err != nil {
+	if resp, err := getStringAndValidateDefault(ui, "Route Through DSV Engine [y/N]:", "N", false, false); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {

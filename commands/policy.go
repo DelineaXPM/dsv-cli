@@ -470,7 +470,7 @@ func (p Policy) handlePolicyUpsertWorkflow(args []string) int {
 	}
 
 	if effect, err := getStringAndValidateDefault(
-		ui, "Effect of policy (default:allow):", "allow", true, nil, false, false); err != nil {
+		ui, "Effect of policy (default:allow):", "allow", false, false); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {

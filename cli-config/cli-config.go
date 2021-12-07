@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
-
 	cst "thy/constants"
 	terrors "thy/errors"
 	"thy/format"
@@ -125,21 +123,28 @@ func IsInstallCmd(args []string) bool {
 }
 
 func GetFlagBeforeParse(flag string, args []string) string {
+	flagNames := []string{`--` + flag} // Long form of the flag. For example: `--config`
 	shortFlag := cst.GetShortFlag(flag)
-	shortFlagPattern := ""
 	if shortFlag != "" {
-		shortFlagPattern = fmt.Sprintf("|-%s", shortFlag)
+		flagNames = append(flagNames, `-`+shortFlag) // Add short form of the flag. For example: `-c`
 	}
-	flagMatch := fmt.Sprintf("(?:--%s%s)[ =](\\S+)", flag, shortFlagPattern)
-	val := ""
-	re := regexp.MustCompile(flagMatch)
-	match := re.FindStringSubmatch(strings.Join(args, " "))
-	if len(match) > 1 {
-		val = match[1]
+
+	for i, arg := range args {
+		for _, flagName := range flagNames {
+
+			if arg == flagName && len(args)-1 >= i+1 {
+				return args[i+1]
+			}
+
+			if strings.HasPrefix(arg, flagName+"=") {
+				return arg[len(flagName)+1:]
+			}
+		}
 	}
-	if val == "" {
-		envKey := strings.ToUpper(strings.Replace(strings.Replace(cst.CmdRoot+"_"+flag, ".", "_", -1), "-", "_", -1))
-		val = os.Getenv(envKey)
-	}
-	return val
+
+	envKey := cst.CmdRoot + "_" + flag
+	envKey = strings.Replace(envKey, ".", "_", -1)
+	envKey = strings.Replace(envKey, "-", "_", -1)
+	envKey = strings.ToUpper(envKey)
+	return os.Getenv(envKey)
 }

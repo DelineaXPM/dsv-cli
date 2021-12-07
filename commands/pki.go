@@ -332,7 +332,7 @@ func (p pki) handleSignWorkflow(args []string) int {
 	}
 
 	if resp, err := getStringAndValidateDefault(
-		ui, "Chain (optional - include root certificate) y/n:", "n", true, nil, false, false); err != nil {
+		ui, "Chain (optional - include root certificate) [y/N]:", "N", false, false); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
@@ -486,7 +486,7 @@ func (p pki) handleLeafWorkflow(args []string) int {
 	}
 
 	if resp, err := getStringAndValidateDefault(
-		ui, "Chain (optional - include root certificate) y/n:", "n", true, nil, false, false); err != nil {
+		ui, "Chain (optional - include root certificate) [y/N]:", "N", false, false); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {

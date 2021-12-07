@@ -305,7 +305,7 @@ func (c client) handleClientCreateWizard(args []string) int {
 		client.Description = resp
 	}
 
-	if resp, err := getStringAndValidateDefault(ui, "Client TTL (in seconds):", "0", true, nil, false, false); err != nil {
+	if resp, err := getStringAndValidateDefault(ui, "Client TTL (in seconds):", "0", false, false); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
@@ -317,7 +317,7 @@ func (c client) handleClientCreateWizard(args []string) int {
 		client.TTL = int64(clientTTL)
 	}
 
-	if resp, err := getStringAndValidateDefault(ui, "Request Bootstrap URL? [y/N]:", "N", true, nil, false, false); err != nil {
+	if resp, err := getStringAndValidateDefault(ui, "Request Bootstrap URL? [y/N]:", "N", false, false); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
@@ -341,7 +341,7 @@ func (c client) handleClientCreateWizard(args []string) int {
 				client.UrlTTL = int64(urlTTL)
 			}
 
-			if resp, err := getStringAndValidateDefault(ui, "Number of client uses:", "0", true, nil, false, false); err != nil {
+			if resp, err := getStringAndValidateDefault(ui, "Number of client uses:", "0", false, false); err != nil {
 				ui.Error(err.Error())
 				return 1
 			} else {

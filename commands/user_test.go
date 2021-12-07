@@ -301,54 +301,70 @@ func TestHandleUserUpdateCmd(t *testing.T) {
 		args        []string
 		userName    string
 		password    string
+		displayName string
 		apiResponse []byte
 		out         []byte
 		expectedErr *errors.ApiError
 	}{
 		{
-			"Happy path with password only",
-			[]string{"--username", "user1", "--password", "password"},
-			"user1",
-			"password",
-			[]byte(`test`),
-			[]byte(`test`),
-			nil,
+			name:        "Happy path with password only",
+			args:        []string{"--username", "user1", "--password", "password"},
+			userName:    "user1",
+			password:    "password",
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
 		},
 		{
-			"no username",
-			[]string{"--password", "password"},
-			"",
-			"password",
-			[]byte(`test`),
-			[]byte(`test`),
-			errors.New(e.New("error: must specify " + cst.DataUsername)),
+			name:        "no username",
+			args:        []string{"--password", "password"},
+			password:    "password",
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			expectedErr: errors.New(e.New("error: must specify " + cst.DataUsername)),
 		},
 		{
-			"no password and no display name",
-			[]string{"--username", "user"},
-			"user1",
-			"",
-			[]byte(`test`),
-			[]byte(`test`),
-			errMustSpecifyPassowrdOrDisplayname,
+			name:        "no password and no display name",
+			args:        []string{"--username", "user"},
+			userName:    "user1",
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			expectedErr: errMustSpecifyPasswordOrDisplayname,
 		},
 		{
-			"Happy path with display name only",
-			[]string{"--username", "user1", "--displayname", "display name 2"},
-			"user1",
-			"password",
-			[]byte(`test`),
-			[]byte(`test`),
-			nil,
+			name:        "empty display name",
+			args:        []string{"--username", "user", "--displayname", ""},
+			userName:    "user1",
+			displayName: "",
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			expectedErr: errWrongDisplayName,
 		},
 		{
-			"Happy path with password and display name",
-			[]string{"--username", "user1", "--password", "password", "--displayname", "display name 2"},
-			"user1",
-			"password",
-			[]byte(`test`),
-			[]byte(`test`),
-			nil,
+			name:        "short display name",
+			args:        []string{"--username", "user", "--displayname", "X"},
+			userName:    "user1",
+			displayName: "X",
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			expectedErr: errWrongDisplayName,
+		},
+		{
+			name:        "Happy path with display name only",
+			args:        []string{"--username", "user1", "--displayname", "display name 2"},
+			userName:    "user1",
+			password:    "password",
+			displayName: "display name 2",
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+		},
+		{
+			name:        "Happy path with password and display name",
+			args:        []string{"--username", "user1", "--password", "password", "--displayname", "display name 2"},
+			userName:    "user1",
+			password:    "password",
+			displayName: "display name 2",
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
 		},
 	}
 
@@ -359,6 +375,7 @@ func TestHandleUserUpdateCmd(t *testing.T) {
 	for _, tt := range testCase {
 		viper.Set(cst.DataUsername, tt.userName)
 		viper.Set(cst.DataPassword, tt.password)
+		viper.Set(cst.DataDisplayname, tt.displayName)
 		t.Run(tt.name, func(t *testing.T) {
 			acmd := &fake.FakeOutClient{}
 			var data []byte

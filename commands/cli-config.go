@@ -624,7 +624,7 @@ func handleCliConfigInitCmd(args []string) int {
 			if auth.AuthType(authType) == auth.Oidc {
 				if authProvider == "" {
 					authProviderMessage := fmt.Sprintf("Please enter auth provider name (default:  %s):", cst.DefaultThyOneName)
-					if authProvider, err = getStringAndValidateDefault(ui, authProviderMessage, cst.DefaultThyOneName, true, nil, false, false); err != nil {
+					if authProvider, err = getStringAndValidateDefault(ui, authProviderMessage, cst.DefaultThyOneName, false, false); err != nil {
 						return 1
 					}
 				}
@@ -633,7 +633,7 @@ func handleCliConfigInitCmd(args []string) int {
 
 				if isDevDomain {
 					authProviderMessage := fmt.Sprintf("Thycotic One authentication provider name (default %s):", cst.DefaultThyOneName)
-					if authProvider, err = getStringAndValidateDefault(ui, authProviderMessage, cst.DefaultThyOneName, true, nil, false, false); err != nil {
+					if authProvider, err = getStringAndValidateDefault(ui, authProviderMessage, cst.DefaultThyOneName, false, false); err != nil {
 						return 1
 
 					}
@@ -857,8 +857,8 @@ func getMainAction(response string) string {
 	}
 }
 
-func getStringAndValidateDefault(ui cli.Ui, question string, defaultAnswer string, blankAllowed bool, options []option, secure bool, confirm bool) (string, error) {
-	answer, err := getStringAndValidate(ui, question, blankAllowed, options, secure, confirm)
+func getStringAndValidateDefault(ui cli.Ui, question string, defaultAnswer string, secure bool, confirm bool) (string, error) {
+	answer, err := getStringAndValidate(ui, question, true, nil, secure, confirm)
 	if answer == "" {
 		return defaultAnswer, err
 	}
@@ -875,7 +875,7 @@ func getStringAndValidate(ui cli.Ui, question string, blankAllowed bool, options
 		}
 		ask += fmt.Sprintf("\n\t(%d) %s%s", i, o.Display, defaultStr)
 	}
-	if options != nil && len(options) > 0 {
+	if len(options) > 0 {
 		ask += "\nSelection: "
 	}
 	var askFunc func(string) (string, error)
@@ -903,9 +903,9 @@ func getStringAndValidate(ui cli.Ui, question string, blankAllowed bool, options
 				return getStringAndValidate(ui, question, blankAllowed, options, secure, confirm)
 			}
 		}
-		if options != nil && len(options) > 0 {
+		if len(options) > 0 {
 			if resp == "" {
-				resp = "1"
+				return options[0].Value, nil
 			}
 			if respInt, err := strconv.ParseUint(resp, 10, 32); err != nil || respInt > uint64(len(options)) || respInt < 1 {
 				if err != nil && err.Error() == "interrupted" {

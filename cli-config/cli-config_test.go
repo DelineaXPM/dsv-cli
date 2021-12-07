@@ -45,3 +45,82 @@ func TestInstallCommand(t *testing.T) {
 	validInstallCmd = IsInstallCmd([]string{"-install"})
 	assert.Equal(t, true, validInstallCmd)
 }
+
+func TestGetFlagBeforeParse(t *testing.T) {
+	testCases := []struct {
+		name           string
+		flag           string
+		args           []string
+		expectedResult string
+	}{
+
+		{
+			name:           "Correct result for short form of the flag (no conflict with '-c' suffix of the argument value)",
+			flag:           "config",
+			args:           []string{"secret-c", "--profile", "testprofile", "-c", "some_config_value"},
+			expectedResult: "some_config_value",
+		},
+
+		{
+			name:           "Correct result for the config flag in the beginning of the args",
+			flag:           "config",
+			args:           []string{"-c", "some_config_value", "another_arg"},
+			expectedResult: "some_config_value",
+		},
+
+		{
+			name: "Correct result for short form of the flag (no conflict with '-c' suffix of the argument " +
+				"value). With '=' symbol.",
+			flag:           "config",
+			args:           []string{"secret-c", "--profile", "testprofile", "-c=some_config_value"},
+			expectedResult: "some_config_value",
+		},
+
+		{
+			name:           "Correct result for the config flag in the beginning of the args. With '=' symbol.",
+			flag:           "config",
+			args:           []string{"-c=some_config_value", "another_arg"},
+			expectedResult: "some_config_value",
+		},
+
+
+		// long form of the flag
+		{
+			name:           "Long form of the flag. Correct result for short form of the flag (no conflict with '--config' suffix of the argument value)",
+			flag:           "config",
+			args:           []string{"secret--config", "--profile", "testprofile", "--config", "some_config_value"},
+			expectedResult: "some_config_value",
+		},
+
+		{
+			name:           "Long form of the flag. Correct result for the config flag in the beginning of the args",
+			flag:           "config",
+			args:           []string{"--config", "some_config_value", "another_arg"},
+			expectedResult: "some_config_value",
+		},
+
+		{
+			name: "Long form of the flag. Correct result for short form of the flag (no conflict with '--config' " +
+				"suffix of the argument value). With '=' symbol.",
+			flag:           "config",
+			args:           []string{"secret--config", "--profile", "testprofile", "--config=some_config_value"},
+			expectedResult: "some_config_value",
+		},
+
+		{
+			name: "Long form of the flag. Correct result for the config flag in the beginning of the args. " +
+				"With '=' symbol.",
+			flag:           "config",
+			args:           []string{"--config=some_config_value", "another_arg"},
+			expectedResult: "some_config_value",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			flagValue := GetFlagBeforeParse(testCase.flag, testCase.args)
+			assert.Equal(t, testCase.expectedResult, flagValue)
+		})
+	}
+
+}

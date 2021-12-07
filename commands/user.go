@@ -24,7 +24,8 @@ import (
 )
 
 var (
-	errMustSpecifyPassowrdOrDisplayname = errors.NewF("error: must specify %s or %s", cst.DataPassword, cst.DataDisplayname)
+	errMustSpecifyPasswordOrDisplayname = errors.NewF("error: must specify %s or %s", cst.DataPassword, cst.DataDisplayname)
+	errWrongDisplayName = errors.NewS("error: displayname field must be between 3 and 100 characters")
 )
 
 type User struct {
@@ -337,17 +338,30 @@ func (u User) handleUserUpdateCmd(args []string) int {
 		u.outClient.WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
+
+	displayNameExists := hasFlag(args, "--" + cst.DataDisplayname)
 	passData := viper.GetString(cst.DataPassword)
 	displayName := viper.GetString(cst.DataDisplayname)
-	if passData == "" && displayName == "" {
-		err := errMustSpecifyPassowrdOrDisplayname
+	if passData == "" && !displayNameExists {
+		err := errMustSpecifyPasswordOrDisplayname
 		u.outClient.WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
 
-	data := map[string]string{
-		"password":    passData,
-		"displayName": displayName,
+	displayNameLen := len(displayName)
+	if displayNameExists && (displayNameLen < 3 || displayNameLen > 100) {
+		err := errWrongDisplayName
+		u.outClient.WriteResponse(nil, err)
+		return utils.GetExecStatus(err)
+	}
+
+	data := map[string]string{}
+	if passData != "" {
+		data["password"] = passData
+	}
+
+	if displayNameExists {
+		data["displayName"] = displayName
 	}
 
 	resp, apiError := u.submitUser(userName, data, true)
@@ -398,11 +412,11 @@ func (u User) handleUserWorkflow(args []string) int {
 			return utils.GetExecStatus(err)
 		}
 
-		var passwordResp, displannameResp bool
+		var passwordResp, displayNameResp bool
 
 		// Password
 		if resp, err := getStringAndValidateDefault(
-			ui, "Would you like to update the password [y/n] (default: n):", "n", true, nil, false, false); err != nil {
+			ui, "Would you like to update the password [y/n] (default: n):", "n", false, false); err != nil {
 			ui.Error(err.Error())
 			return utils.GetExecStatus(err)
 		} else {
@@ -424,13 +438,13 @@ func (u User) handleUserWorkflow(args []string) int {
 
 		// Display name
 		if resp, err := getStringAndValidateDefault(
-			ui, "Would you like to update the display name [y/n] (default: n):", "n", true, nil, false, false); err != nil {
+			ui, "Would you like to update the display name [y/n] (default: n):", "n", false, false); err != nil {
 			ui.Error(err.Error())
 			return utils.GetExecStatus(err)
 		} else {
-			displannameResp = isYes(resp, false)
-			if displannameResp {
-				if resp, err := getStringAndValidate(ui, "Display name:", true, nil, false, false); err != nil {
+			displayNameResp = isYes(resp, false)
+			if displayNameResp {
+				if resp, err := getStringAndValidate(ui, "Display name:", false, nil, false, false); err != nil {
 					ui.Error(err.Error())
 					return 1
 				} else {
@@ -439,7 +453,7 @@ func (u User) handleUserWorkflow(args []string) int {
 			}
 		}
 
-		if !passwordResp && !displannameResp {
+		if !passwordResp && !displayNameResp {
 			return 0
 		}
 

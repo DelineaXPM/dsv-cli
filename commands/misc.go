@@ -89,3 +89,13 @@ func handleSearch(args []string, resourceType string, request requests.Client) (
 	uri := paths.CreateResourceURI(resourceType, "", "", false, queryParams, false)
 	return request.DoRequest("GET", uri, nil)
 }
+
+
+func hasFlag(args []string, flagName string) bool {
+	for _, fn := range args {
+		if strings.HasPrefix(fn, flagName) {
+			return true
+		}
+	}
+	return false
+}
