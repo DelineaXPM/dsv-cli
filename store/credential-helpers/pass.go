@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"golang.org/x/sys/execabs"
 	"io/ioutil"
 	"log"
 	"os"
@@ -17,7 +18,6 @@ import (
 	"strings"
 	"sync"
 	cst "thy/constants"
-	"golang.org/x/sys/execabs"
 )
 
 const PASS_FOLDER = cst.CmdRoot
@@ -174,9 +174,7 @@ func listPassDir(recurse bool, includeDirs bool, relative bool, args ...string) 
 			}
 			if relative {
 				p = p[len(passDir):]
-				if strings.HasPrefix(p, "/") {
-					p = p[1:]
-				}
+				p = strings.TrimPrefix(p, "/")
 			}
 			paths = append(paths, p)
 			return nil

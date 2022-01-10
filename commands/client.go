@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
+	"thy/internal/prompt"
 	"thy/paths"
 	preds "thy/predictors"
 	"thy/requests"
@@ -119,11 +121,11 @@ Usage:
 		`, cst.NounClient, cst.ProductName, cst.ExampleRoleName, cst.Create),
 		FlagsPredictor: cli.PredictorWrappers{
 			preds.LongFlag(cst.NounRole):            cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounRole, Usage: fmt.Sprintf("Name of the %s ", cst.NounRole)}), false},
-			preds.LongFlag(cst.NounBootstrapUrl):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounBootstrapUrl, Usage: fmt.Sprint("Whether to generate a one-time use URL instead of secret (optional)"), ValueType: "bool"}), false},
-			preds.LongFlag(cst.NounBootstrapUrlTTL): cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.NounBootstrapUrlTTL, Usage: fmt.Sprint("TTL for the generated URL (optional)")}), false},
-			preds.LongFlag(cst.NounClientUses):      cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.NounClientUses, Usage: fmt.Sprint("The number of times the client credential can be read. If set to 0, it can be used infinitely. Default is 0 (optional)")}), false},
-			preds.LongFlag(cst.NounClientDesc):      cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.NounClientDesc, Usage: fmt.Sprint("Client credential description (optional)")}), false},
-			preds.LongFlag(cst.NounClientTTL):       cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.NounClientTTL, Usage: fmt.Sprint("How long until the client credential expires. If set to 0, it can be used indefinitely. Default is 0 (optional)")}), false},
+			preds.LongFlag(cst.NounBootstrapUrl):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounBootstrapUrl, Usage: "Whether to generate a one-time use URL instead of secret (optional)", ValueType: "bool"}), false},
+			preds.LongFlag(cst.NounBootstrapUrlTTL): cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.NounBootstrapUrlTTL, Usage: "TTL for the generated URL (optional)"}), false},
+			preds.LongFlag(cst.NounClientUses):      cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.NounClientUses, Usage: "The number of times the client credential can be read. If set to 0, it can be used infinitely. Default is 0 (optional)"}), false},
+			preds.LongFlag(cst.NounClientDesc):      cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.NounClientDesc, Usage: "Client credential description (optional)"}), false},
+			preds.LongFlag(cst.NounClientTTL):       cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.NounClientTTL, Usage: "How long until the client credential expires. If set to 0, it can be used indefinitely. Default is 0 (optional)"}), false},
 		},
 		MinNumberArgs: 0,
 	})
@@ -160,7 +162,7 @@ func (c client) handleClientReadCmd(args []string) int {
 		err = errors.NewS("error: must specify " + cst.ClientID)
 	} else {
 		uri := paths.CreateResourceURI(cst.NounClient, clientID, "", true, nil, true)
-		data, err = c.request.DoRequest("GET", uri, nil)
+		data, err = c.request.DoRequest(http.MethodGet, uri, nil)
 	}
 
 	outClient := c.outClient
@@ -184,7 +186,7 @@ func (c client) handleClientDeleteCmd(args []string) int {
 	} else {
 		query := map[string]string{"force": strconv.FormatBool(force)}
 		uri := paths.CreateResourceURI(cst.NounClient, clientID, "", true, query, true)
-		data, err = c.request.DoRequest("DELETE", uri, nil)
+		data, err = c.request.DoRequest(http.MethodDelete, uri, nil)
 	}
 	if c.outClient == nil {
 		c.outClient = format.NewDefaultOutClient()
@@ -208,7 +210,7 @@ func (c client) handleClientRestoreCmd(args []string) int {
 		err = errors.NewS("error: must specify " + cst.ClientID)
 	} else {
 		uri := paths.CreateResourceURI(cst.NounClient, clientID, "/restore", true, nil, true)
-		data, err = c.request.DoRequest("PUT", uri, nil)
+		data, err = c.request.DoRequest(http.MethodPut, uri, nil)
 	}
 	c.outClient.WriteResponse(data, err)
 	return utils.GetExecStatus(err)
@@ -268,7 +270,7 @@ func (c client) handleClientSearchCmd(args []string) int {
 			cst.Cursor:   cursor,
 		}
 		uri := paths.CreateResourceURI(cst.NounClient, "", "", false, queryParams, true)
-		data, err = c.request.DoRequest("GET", uri, nil)
+		data, err = c.request.DoRequest(http.MethodGet, uri, nil)
 	}
 
 	outClient := c.outClient
@@ -291,21 +293,21 @@ func (c client) handleClientCreateWizard(args []string) int {
 
 	var client Client
 
-	if resp, err := getStringAndValidate(ui, "Role name:", false, nil, false, false); err != nil {
+	if resp, err := prompt.Ask(ui, "Role name:"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
 		client.Role = resp
 	}
 
-	if resp, err := getStringAndValidate(ui, "Client description (optional):", true, nil, false, false); err != nil {
+	if resp, err := prompt.AskDefault(ui, "Client description", ""); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
 		client.Description = resp
 	}
 
-	if resp, err := getStringAndValidateDefault(ui, "Client TTL (in seconds):", "0", false, false); err != nil {
+	if resp, err := prompt.AskDefault(ui, "Client TTL (in seconds):", "0"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
@@ -317,41 +319,34 @@ func (c client) handleClientCreateWizard(args []string) int {
 		client.TTL = int64(clientTTL)
 	}
 
-	if resp, err := getStringAndValidateDefault(ui, "Request Bootstrap URL? [y/N]:", "N", false, false); err != nil {
+	if yes, err := prompt.YesNo(ui, "Request Bootstrap URL?", false); err != nil {
 		ui.Error(err.Error())
 		return 1
-	} else {
-		resp = strings.ToLower(resp)
-		if !utils.EqAny(resp, []string{"y", "yes", "n", "no", ""}) {
-			ui.Error("Invalid response, must choose (y)es or (n)o")
+	} else if yes {
+		client.UrlRequested = true
+
+		if resp, err := prompt.Ask(ui, "Bootstrap URL TTL (in seconds):"); err != nil {
+			ui.Error(err.Error())
 			return 1
+		} else {
+			urlTTL, err := strconv.Atoi(resp)
+			if err != nil {
+				ui.Error("Invalid input. Please enter a valid integer.")
+				return 1
+			}
+			client.UrlTTL = int64(urlTTL)
 		}
-		if isYes(resp, false) {
-			client.UrlRequested = true
 
-			if resp, err := getStringAndValidate(ui, "Bootstrap URL TTL (in seconds):", false, nil, false, false); err != nil {
-				ui.Error(err.Error())
+		if resp, err := prompt.AskDefault(ui, "Number of client uses:", "0"); err != nil {
+			ui.Error(err.Error())
+			return 1
+		} else {
+			uses, err := strconv.Atoi(resp)
+			if err != nil {
+				ui.Error("Invalid input. Please enter a valid integer.")
 				return 1
-			} else {
-				urlTTL, err := strconv.Atoi(resp)
-				if err != nil {
-					ui.Error("Invalid input. Please enter a valid integer.")
-					return 1
-				}
-				client.UrlTTL = int64(urlTTL)
 			}
-
-			if resp, err := getStringAndValidateDefault(ui, "Number of client uses:", "0", false, false); err != nil {
-				ui.Error(err.Error())
-				return 1
-			} else {
-				uses, err := strconv.Atoi(resp)
-				if err != nil {
-					ui.Error("Invalid input. Please enter a valid integer.")
-					return 1
-				}
-				client.Uses = uses
-			}
+			client.Uses = uses
 		}
 	}
 
@@ -364,10 +359,10 @@ func (c client) submitClient(client Client) ([]byte, *errors.ApiError) {
 	reqMethod := strings.ToLower(viper.GetString(cst.LastCommandKey))
 	var uri string
 	if reqMethod == cst.Create {
-		reqMethod = "POST"
+		reqMethod = http.MethodPost
 		uri = paths.CreateResourceURI(cst.NounClient, "", "", true, nil, true)
 	} else {
-		reqMethod = "PUT"
+		reqMethod = http.MethodPut
 		uri = paths.CreateResourceURI(cst.NounClient, viper.GetString(cst.ClientID), "", true, nil, true)
 	}
 	data, err := c.request.DoRequest(reqMethod, uri, &client)

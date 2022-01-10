@@ -380,7 +380,7 @@ func (a *authenticator) fetchTokenVault(at AuthType, data requestBody) (*TokenRe
 		var redirectResponse RedirectResponse
 		uri := paths.CreateURI("oidc/auth", nil)
 
-		if err := a.requestClient.DoRequestOut("POST", uri, data, &redirectResponse); err != nil {
+		if err := a.requestClient.DoRequestOut(http.MethodPost, uri, data, &redirectResponse); err != nil {
 			return nil, err
 		}
 		callbackListener, err := net.Listen("tcp", data.CallbackHost)
@@ -427,7 +427,7 @@ func (a *authenticator) fetchTokenVault(at AuthType, data requestBody) (*TokenRe
 	}
 
 	uri := paths.CreateURI(cst.NounToken, nil)
-	if err := a.requestClient.DoRequestOut("POST", uri, data, &response); err != nil {
+	if err := a.requestClient.DoRequestOut(http.MethodPost, uri, data, &response); err != nil {
 		return nil, err
 	} else if response.IsNil() {
 		return nil, errors.NewS("Empty token")
@@ -518,7 +518,7 @@ func (a *authenticator) initiateCertAuth(provider, cert, privKey string) (string
 
 	log.Println("Requesting challenge for certificate authentication.")
 	uri := paths.CreateURI("certificate/auth", nil)
-	requestErr := a.requestClient.DoRequestOut("POST", uri, request, &response)
+	requestErr := a.requestClient.DoRequestOut(http.MethodPost, uri, request, &response)
 	if requestErr != nil {
 		return "", "", requestErr
 	}

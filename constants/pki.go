@@ -26,6 +26,7 @@ const (
 	State           = "state"
 	Locality        = "locality"
 	EmailAddress    = "email"
+	Description     = "description"
 	CRL             = "crl"
 )
 

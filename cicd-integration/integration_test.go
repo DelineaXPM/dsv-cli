@@ -76,7 +76,7 @@ func TestCliArgs(t *testing.T) {
 
 			binary := path.Join(dir, binaryName+".test")
 			cmd := execabs.Command(binary, args...)
-			output, err := cmd.CombinedOutput()
+			output, _ := cmd.CombinedOutput()
 
 			actual := string(output)
 			if strings.LastIndex(actual, "PASS") > -1 {
@@ -125,12 +125,6 @@ var ciphertext = "8Tns2mbY/w6YHoICfiDGQM+rDlQzwrZWpqK7"
 func addConfigArg(args []string) []string {
 	args = append(args, "--config")
 	args = append(args, configPath)
-	return args
-}
-
-func addLocalProfileArg(args []string) []string {
-	args = append(args, "--profile")
-	args = append(args, "local")
 	return args
 }
 

@@ -4,6 +4,7 @@ package cmd
 import (
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"strings"
 	"unicode/utf16"
 	"unicode/utf8"
@@ -128,7 +129,7 @@ func (c Config) handleConfigReadCmd(args []string) int {
 		config = fmt.Sprint(config, "/", cst.Version, "/", version)
 	}
 	uri := paths.CreateURI(config, nil)
-	resp, err := c.request.DoRequest("GET", uri, nil)
+	resp, err := c.request.DoRequest(http.MethodGet, uri, nil)
 
 	outClient := c.outClient
 	if outClient == nil {
@@ -165,7 +166,7 @@ func (c Config) handleConfigUpdateCmd(args []string) int {
 		Config:        data,
 		Serialization: encoding,
 	}
-	resp, err = c.request.DoRequest("PUT", uri, &model)
+	resp, err = c.request.DoRequest(http.MethodPut, uri, &model)
 	c.outClient.WriteResponse(resp, err)
 
 	if err == nil && resp != nil && fileName != "" {
@@ -189,7 +190,7 @@ func (c Config) handleConfigEditCmd(args []string) int {
 	var err *errors.ApiError
 	var resp []byte
 	uri := paths.CreateURI("config", nil)
-	resp, err = c.request.DoRequest("GET", uri, nil)
+	resp, err = c.request.DoRequest(http.MethodGet, uri, nil)
 	if err != nil {
 		c.outClient.WriteResponse(resp, err)
 		return utils.GetExecStatus(err)
@@ -200,7 +201,7 @@ func (c Config) handleConfigEditCmd(args []string) int {
 			Config:        string(data),
 			Serialization: encoding,
 		}
-		_, err = c.request.DoRequest("PUT", uri, &model)
+		_, err = c.request.DoRequest(http.MethodPut, uri, &model)
 		return nil, err
 	})
 	resp, err = c.edit(resp, saveFunc, nil, false)

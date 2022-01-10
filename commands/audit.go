@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 
 	"thy/constants"
@@ -109,7 +110,7 @@ func (a audit) handleAuditSearch(args []string) int {
 		cst.Cursor:         viper.GetString(cst.Cursor),
 	}
 	uri := paths.CreateURI("audit", queryParams)
-	data, err = a.request.DoRequest("GET", uri, nil)
+	data, err = a.request.DoRequest(http.MethodGet, uri, nil)
 
 	a.outClient.WriteResponse(data, err)
 	return utils.GetExecStatus(err)

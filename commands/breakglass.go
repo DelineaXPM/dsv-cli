@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
+	"thy/internal/prompt"
 	"thy/paths"
 	preds "thy/predictors"
 	"thy/requests"
@@ -110,7 +112,7 @@ func (b breakGlass) handleBreakGlassGetStatusCmd(args []string) int {
 	var data []byte
 
 	uri := paths.CreateURI("breakglass", nil)
-	data, err = b.request.DoRequest("GET", uri, nil)
+	data, err = b.request.DoRequest(http.MethodGet, uri, nil)
 	b.outClient.WriteResponse(data, err)
 
 	return utils.GetExecStatus(err)
@@ -151,7 +153,7 @@ func (b breakGlass) handleBreakGlassGenerateCmd(args []string) int {
 	}
 
 	uri := paths.CreateURI("breakglass/generate", nil)
-	data, err = b.request.DoRequest("POST", uri, gr)
+	data, err = b.request.DoRequest(http.MethodPost, uri, gr)
 	b.outClient.WriteResponse(data, err)
 
 	return utils.GetExecStatus(err)
@@ -170,7 +172,7 @@ func (b breakGlass) handleBreakGlassGenerateWizard(args []string) int {
 	var numberOfShares int
 	var newAdmins string
 
-	if resp, err := getStringAndValidate(ui, "Minimum number of shares:", false, nil, false, false); err != nil {
+	if resp, err := prompt.Ask(ui, "Minimum number of shares:"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
@@ -181,7 +183,7 @@ func (b breakGlass) handleBreakGlassGenerateWizard(args []string) int {
 		}
 	}
 
-	if resp, err := getStringAndValidate(ui, "New admins (comma-separated):", false, nil, false, false); err != nil {
+	if resp, err := prompt.Ask(ui, "New admins (comma-separated):"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
@@ -194,7 +196,7 @@ func (b breakGlass) handleBreakGlassGenerateWizard(args []string) int {
 	}
 
 	uri := paths.CreateURI("breakglass/generate", nil)
-	data, err := b.request.DoRequest("POST", uri, gr)
+	data, err := b.request.DoRequest(http.MethodPost, uri, gr)
 	b.outClient.WriteResponse(data, err)
 
 	return utils.GetExecStatus(err)
@@ -218,7 +220,7 @@ func (b breakGlass) handleBreakGlassApplyCmd(args []string) int {
 	ar := &breakGlassApplyRequest{Shares: utils.StringToSlice(shares)}
 
 	uri := paths.CreateURI("breakglass/apply", nil)
-	data, err = b.request.DoRequest("POST", uri, ar)
+	data, err = b.request.DoRequest(http.MethodPost, uri, ar)
 	b.outClient.WriteResponse(data, err)
 
 	return utils.GetExecStatus(err)
@@ -236,7 +238,7 @@ func (b breakGlass) handleBreakGlassApplyWizard(args []string) int {
 
 	var shares string
 
-	if resp, err := getStringAndValidate(ui, "Shares (comma-separated):", false, nil, false, false); err != nil {
+	if resp, err := prompt.Ask(ui, "Shares (comma-separated):"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
@@ -246,7 +248,7 @@ func (b breakGlass) handleBreakGlassApplyWizard(args []string) int {
 	ar := &breakGlassApplyRequest{Shares: utils.StringToSlice(shares)}
 
 	uri := paths.CreateURI("breakglass/apply", nil)
-	data, err := b.request.DoRequest("POST", uri, ar)
+	data, err := b.request.DoRequest(http.MethodPost, uri, ar)
 	b.outClient.WriteResponse(data, err)
 
 	return utils.GetExecStatus(err)

@@ -104,7 +104,6 @@ func TestHandleAuthClear(t *testing.T) {
 	for _, tt := range testCase {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			acmd := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
@@ -168,7 +167,6 @@ func TestHandleAuthList(t *testing.T) {
 	for _, tt := range testCase {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			acmd := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError

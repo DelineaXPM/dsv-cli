@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
+	"thy/internal/prompt"
 	"thy/predictors"
 
 	"thy/auth"
@@ -108,7 +110,7 @@ func (ac AuthCommand) capturePassword() error {
 		},
 	}
 
-	if password, err := getStringAndValidate(ui, "Please enter password", false, nil, true, false); err != nil {
+	if password, err := prompt.AskSecure(ui, "Please enter password"); err != nil {
 		return err
 	} else {
 		viper.Set(cst.Password, password)
@@ -238,10 +240,10 @@ func (ac AuthCommand) handleAuthChangePassword(args []string) int {
 	}
 	var currentPassword, newPassword string
 	var err error
-	if currentPassword, err = getStringAndValidate(ui, "Please enter your current password:", false, nil, true, false); err != nil {
+	if currentPassword, err = prompt.AskSecure(ui, "Please enter your current password:"); err != nil {
 		return 1
 	}
-	if newPassword, err = getStringAndValidate(ui, "Please enter the new password:", false, nil, true, true); err != nil {
+	if newPassword, err = prompt.AskSecureConfirm(ui, "Please enter the new password:"); err != nil {
 		return 1
 	}
 	if ac.outClient == nil {
@@ -278,5 +280,5 @@ func (ac AuthCommand) doChangePassword(user, current, new string) ([]byte, *erro
 	body := map[string]string{cst.CurrentPassword: current, cst.NewPassword: new}
 	template := fmt.Sprintf("%ss/%s/%s", cst.NounUser, user, cst.PasswordKey)
 	uri := paths.CreateURI(template, nil)
-	return ac.request.DoRequest("POST", uri, &body)
+	return ac.request.DoRequest(http.MethodPost, uri, &body)
 }

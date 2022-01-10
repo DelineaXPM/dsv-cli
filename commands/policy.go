@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
+	"thy/internal/prompt"
 	"thy/paths"
 	preds "thy/predictors"
 	"thy/requests"
@@ -248,7 +250,7 @@ func (p Policy) handlePolicyReadCmd(args []string) int {
 	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
 	uri := paths.CreateResourceURI(baseType, path, "", true, nil, false)
 
-	data, err = p.request.DoRequest("GET", uri, nil)
+	data, err = p.request.DoRequest(http.MethodGet, uri, nil)
 
 	outClient := p.outClient
 	if outClient == nil {
@@ -273,7 +275,7 @@ func (p Policy) handlePolicyEditCmd(args []string) int {
 	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
 	uri := paths.CreateResourceURI(baseType, paths.ProcessResource(path), "", true, nil, false)
 
-	resp, err = p.request.DoRequest("GET", uri, nil)
+	resp, err = p.request.DoRequest(http.MethodGet, uri, nil)
 	if err != nil {
 		p.outClient.WriteResponse(resp, err)
 		return utils.GetExecStatus(err)
@@ -285,7 +287,7 @@ func (p Policy) handlePolicyEditCmd(args []string) int {
 			Policy:        string(data),
 			Serialization: encoding,
 		}
-		_, err = p.request.DoRequest("PUT", uri, &model)
+		_, err = p.request.DoRequest(http.MethodPut, uri, &model)
 		return nil, err
 	})
 	resp, err = p.edit(resp, saveFunc, nil, false)
@@ -306,7 +308,7 @@ func (p Policy) handlePolicyDeleteCmd(args []string) int {
 	query := map[string]string{"force": strconv.FormatBool(force)}
 	uri := paths.CreateResourceURI(baseType, paths.ProcessResource(path), "", true, query, false)
 
-	resp, err = p.request.DoRequest("DELETE", uri, nil)
+	resp, err = p.request.DoRequest(http.MethodDelete, uri, nil)
 
 	if p.outClient == nil {
 		p.outClient = format.NewDefaultOutClient()
@@ -328,7 +330,7 @@ func (p Policy) handlePolicyRestoreCmd(args []string) int {
 
 	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
 	uri := paths.CreateResourceURI(baseType, paths.ProcessResource(path), "/restore", true, nil, false)
-	data, err = p.request.DoRequest("PUT", uri, nil)
+	data, err = p.request.DoRequest(http.MethodPut, uri, nil)
 
 	p.outClient.WriteResponse(data, err)
 	return utils.GetExecStatus(err)
@@ -352,7 +354,7 @@ func (p Policy) handlePolicyRollbackCmd(args []string) int {
 	// Submit a request for a version that's previous relative to the one found.
 	if version == "" {
 		uri := paths.CreateResourceURI(baseType, paths.ProcessResource(path), "", true, nil, false)
-		resp, apiError = p.request.DoRequest("GET", uri, nil)
+		resp, apiError = p.request.DoRequest(http.MethodGet, uri, nil)
 		if apiError != nil {
 			p.outClient.WriteResponse(resp, apiError)
 			return utils.GetExecStatus(apiError)
@@ -371,7 +373,7 @@ func (p Policy) handlePolicyRollbackCmd(args []string) int {
 	}
 
 	uri := paths.CreateResourceURI(baseType, path, "", true, nil, false)
-	resp, apiError = p.request.DoRequest("PUT", uri, nil)
+	resp, apiError = p.request.DoRequest(http.MethodPut, uri, nil)
 
 	p.outClient.WriteResponse(resp, apiError)
 	return utils.GetExecStatus(apiError)
@@ -417,10 +419,10 @@ func (p Policy) submitPolicy(policy *postPolicyModel) ([]byte, *errors.ApiError)
 	var uri string
 	reqMethod := strings.ToLower(viper.GetString(cst.LastCommandKey))
 	if reqMethod == cst.Create {
-		reqMethod = "POST"
+		reqMethod = http.MethodPost
 		uri = paths.CreateResourceURI(baseType, "", "", true, nil, false)
 	} else {
-		reqMethod = "PUT"
+		reqMethod = http.MethodPut
 		uri = paths.CreateResourceURI(baseType, policy.Path, "", true, nil, false)
 	}
 	return p.request.DoRequest(reqMethod, uri, policy)
@@ -438,8 +440,7 @@ func (p Policy) handlePolicyUpsertWorkflow(args []string) int {
 		},
 	}
 
-	if path, err := getStringAndValidate(
-		ui, "Path to policy:", false, nil, false, false); err != nil {
+	if path, err := prompt.Ask(ui, "Path to policy:"); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
@@ -453,48 +454,42 @@ func (p Policy) handlePolicyUpsertWorkflow(args []string) int {
 		}
 	}
 
-	if desc, err := getStringAndValidate(
-		ui, "Description of policy (optional):", true, nil, false, false); err != nil {
+	if desc, err := prompt.AskDefault(ui, "Description of policy", ""); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.DataDescription] = desc
 	}
 
-	if action, err := getStringAndValidate(
-		ui, "Allowed actions (comma-delimited strings):", false, nil, false, false); err != nil {
+	if action, err := prompt.Ask(ui, "Allowed actions (comma-delimited strings)"); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.DataAction] = action
 	}
 
-	if effect, err := getStringAndValidateDefault(
-		ui, "Effect of policy (default:allow):", "allow", false, false); err != nil {
+	if effect, err := prompt.AskDefault(ui, "Effect of policy", "allow"); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.DataEffect] = effect
 	}
 
-	if resources, err := getStringAndValidate(
-		ui, "Resources of policy (comma-delimited strings):", true, nil, false, false); err != nil {
+	if resources, err := prompt.AskDefault(ui, "Resources of policy (comma-delimited strings):", ""); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.DataResource] = resources
 	}
 
-	if subjects, err := getStringAndValidate(
-		ui, "Subjects of policy (comma-delimited strings):", false, nil, false, false); err != nil {
+	if subjects, err := prompt.Ask(ui, "Subjects of policy (comma-delimited strings):"); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.DataSubject] = subjects
 	}
 
-	if cidr, err := getStringAndValidate(
-		ui, "CIDR condition remote IP (optional):", true, nil, false, false); err != nil {
+	if cidr, err := prompt.AskDefault(ui, "CIDR condition remote IP", ""); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {

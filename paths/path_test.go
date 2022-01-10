@@ -3,9 +3,9 @@ package paths
 import (
 	"testing"
 
-	cst "thy/constants"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	cst "thy/constants"
 )
 
 func TestGetAPIVersion(t *testing.T) {

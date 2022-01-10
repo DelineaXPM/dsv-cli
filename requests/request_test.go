@@ -14,7 +14,7 @@ import (
 
 func TestSetCreds(t *testing.T) {
 	viper.Set(cst.NounToken, "t1")
-	req, _ := http.NewRequest("GET", "", nil)
+	req, _ := http.NewRequest(http.MethodGet, "", nil)
 	c := requests.NewHttpClient()
 	c.SetCreds(&req.Header)
 	assert.Equal(t, viper.GetString(cst.NounToken), string(req.Header.Get("Authorization")))
@@ -38,7 +38,7 @@ func TestHttpClient_DoRequest(t *testing.T) {
 		"data": "ok",
 	}
 
-	httpmock.RegisterResponder("POST", "https://localhost:8088",
+	httpmock.RegisterResponder(http.MethodPost, "https://localhost:8088",
 		func(req *http.Request) (*http.Response, error) {
 			resp, err := httpmock.NewJsonResponse(200, jsonResponse)
 			if err != nil {
@@ -47,7 +47,7 @@ func TestHttpClient_DoRequest(t *testing.T) {
 			return resp, nil
 		},
 	)
-	_, err := c.DoRequest("POST", "https://localhost:8088", body)
+	_, err := c.DoRequest(http.MethodPost, "https://localhost:8088", body)
 	assert.Nil(t, err)
 
 }
@@ -60,7 +60,7 @@ func TestHttpClient_DoRequestOut(t *testing.T) {
 		"data": "ok",
 	}
 
-	httpmock.RegisterResponder("GET", "https://localhost:8088",
+	httpmock.RegisterResponder(http.MethodGet, "https://localhost:8088",
 		func(req *http.Request) (*http.Response, error) {
 			resp, err := httpmock.NewJsonResponse(200, jsonResponse)
 			if err != nil {
@@ -70,7 +70,7 @@ func TestHttpClient_DoRequestOut(t *testing.T) {
 		},
 	)
 	result := map[string]interface{}{}
-	err := c.DoRequestOut("GET", "https://localhost:8088", nil, &result)
+	err := c.DoRequestOut(http.MethodGet, "https://localhost:8088", nil, &result)
 	assert.Nil(t, err)
 	assert.Equal(t, result["data"], jsonResponse["data"])
 }
@@ -85,7 +85,7 @@ func TestHttpClient_DoRequestInvalidBody(t *testing.T) {
 	//need somethign that won't unmarshal
 	body := make(chan int)
 
-	httpmock.RegisterResponder("POST", "https://localhost:8088",
+	httpmock.RegisterResponder(http.MethodPost, "https://localhost:8088",
 		func(req *http.Request) (*http.Response, error) {
 			resp, err := httpmock.NewJsonResponse(200, jsonResponse)
 			if err != nil {
@@ -95,6 +95,6 @@ func TestHttpClient_DoRequestInvalidBody(t *testing.T) {
 		},
 	)
 	result := map[string]interface{}{}
-	err := c.DoRequestOut("POST", "https://localhost:8088", body, &result)
+	err := c.DoRequestOut(http.MethodPost, "https://localhost:8088", body, &result)
 	assert.NotNil(t, err)
 }

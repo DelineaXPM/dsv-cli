@@ -85,7 +85,6 @@ func (s *fileStore) Wipe(prefix string) *errors.ApiError {
 
 func (s *fileStore) List(prefix string) ([]string, *errors.ApiError) {
 	keys := []string{}
-	//cChan := make(chan struct{})
 	keyChan := s.internalStore.Keys(nil)
 	for k := range keyChan {
 		if strings.HasPrefix(k, prefix) {

@@ -55,7 +55,7 @@ func (c *GcpClient) GetJwtToken() (string, error) {
 		}
 		tokenRequestURL := fmt.Sprintf(metadataIdentityTemplate, serviceAcctName, audience)
 		client := &http.Client{}
-		if req, err := http.NewRequest("GET", tokenRequestURL, nil); err != nil {
+		if req, err := http.NewRequest(http.MethodGet, tokenRequestURL, nil); err != nil {
 			errPrimary = err
 		} else {
 			for k, v := range header {

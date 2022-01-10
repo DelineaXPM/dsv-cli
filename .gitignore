@@ -39,3 +39,5 @@ inittests/winenv/
 inittests/localvars/
 inittests/testdata/
 inittests/.defaultvars
+cicd-integration/data/test_policy.json
+cli-config/.thy.yml

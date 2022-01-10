@@ -17,7 +17,7 @@ const leafCommonName = "example.com"
 func generateRootWithPrivateKey() ([]byte, []byte, error) {
 	privateKey, publicKey := generateRSAKeyPair(2048)
 	ca := &x509.Certificate{
-		DNSNames: []string{"thycotic.com"},
+		DNSNames:     []string{"thycotic.com"},
 		SerialNumber: big.NewInt(int64(mrand.Int31n(big.MaxExp))),
 		Subject: pkix.Name{
 			CommonName:         "thycotic.com",
@@ -66,7 +66,7 @@ func generateCSR() ([]byte, error) {
 	template := x509.CertificateRequest{
 		Subject:            subj,
 		SignatureAlgorithm: x509.SHA256WithRSA,
-		DNSNames: []string{leafCommonName},
+		DNSNames:           []string{leafCommonName},
 	}
 
 	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &template, keyBytes)

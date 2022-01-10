@@ -9,6 +9,7 @@ import (
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
+	"thy/internal/prompt"
 	"thy/paths"
 	preds "thy/predictors"
 	"thy/requests"
@@ -129,7 +130,7 @@ func (e engineHandler) handleRead(args []string) int {
 		err = errors.NewS("error: must specify " + cst.DataName)
 	} else {
 		uri := paths.CreateResourceURI(cst.NounEngine, paths.ProcessResource(name), "", true, nil, true)
-		data, err = e.request.DoRequest("GET", uri, nil)
+		data, err = e.request.DoRequest(http.MethodGet, uri, nil)
 	}
 
 	e.outClient.WriteResponse(data, err)
@@ -143,7 +144,7 @@ func (e engineHandler) handleList(args []string) int {
 	var err *errors.ApiError
 	var data []byte
 	uri := paths.CreateResourceURI(cst.NounEngine, "", "", false, nil, true)
-	data, err = e.request.DoRequest("GET", uri, nil)
+	data, err = e.request.DoRequest(http.MethodGet, uri, nil)
 
 	e.outClient.WriteResponse(data, err)
 	return utils.GetExecStatus(err)
@@ -227,14 +228,14 @@ func (e engineHandler) handleCreateWizard(args []string) int {
 
 	var engine engineCreate
 
-	if resp, err := getStringAndValidate(ui, "Engine name:", false, nil, false, false); err != nil {
+	if resp, err := prompt.Ask(ui, "Engine name:"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
 		engine.Name = resp
 	}
 
-	if resp, err := getStringAndValidate(ui, "Pool name:", false, nil, false, false); err != nil {
+	if resp, err := prompt.Ask(ui, "Pool name:"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {

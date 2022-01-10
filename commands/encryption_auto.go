@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"encoding/json"
-	goerrors "errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -25,7 +24,7 @@ import (
 
 const MaxPayloadSizeBytes = 2097152
 
-var ErrPayloadTooLarge = goerrors.New(fmt.Sprintf("payload is too large, maximum size is %dMB", MaxPayloadSizeBytes/1000000))
+var ErrPayloadTooLarge = fmt.Errorf("payload is too large, maximum size is %dMB", MaxPayloadSizeBytes/1000000)
 
 type encryption struct {
 	request   requests.Client

@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"thy/auth"
@@ -44,7 +45,7 @@ func GetDataOpWrappers(targetEntity string) cli.PredictorWrappers {
 func GetNoDataOpWrappers(targetEntity string) cli.PredictorWrappers {
 	return cli.PredictorWrappers{
 		preds.LongFlag(cst.Path):    cli.PredictorWrapper{preds.NewSecretPathPredictorDefault(), preds.NewFlagValue(preds.Params{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, targetEntity)}), false},
-		preds.LongFlag(cst.ID):    	 cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ID, Shorthand: "i", Usage: fmt.Sprintf("Target %s for a %s", cst.ID, targetEntity)}), false},
+		preds.LongFlag(cst.ID):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ID, Shorthand: "i", Usage: fmt.Sprintf("Target %s for a %s", cst.ID, targetEntity)}), false},
 		preds.LongFlag(cst.Version): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Version, Shorthand: "", Usage: "List the current and last (n) versions"}), false},
 	}
 }
@@ -190,7 +191,7 @@ Usage:
 	• secret %[1]s --path %[4]s --data %[5]s
 	• secret %[1]s --path %[4]s --data %[6]s
 				`, cst.Update, cst.NounSecret, cst.ProductName, cst.ExamplePath, cst.ExampleDataJSON, cst.ExampleDataPath),
-		FlagsPredictor:    cli.PredictorWrappers{
+		FlagsPredictor: cli.PredictorWrappers{
 			preds.LongFlag(cst.Data):            cli.PredictorWrapper{preds.NewPrefixFilePredictor("*"), preds.NewFlagValue(preds.Params{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in a %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), cst.NounSecret)}), false},
 			preds.LongFlag(cst.Path):            cli.PredictorWrapper{preds.NewSecretPathPredictorDefault(), preds.NewFlagValue(preds.Params{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret)}), false},
 			preds.LongFlag(cst.DataDescription): cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.DataDescription, Usage: fmt.Sprintf("Description of a %s", cst.NounSecret)}), false},
@@ -350,7 +351,7 @@ func (se Secret) handleReadCmd(args []string) int {
 		path = viper.GetString(cst.ID)
 		id = ""
 	}
-	if path == ""  {
+	if path == "" {
 		path = paths.GetPath(args)
 	}
 	version := viper.GetString(cst.Version)
@@ -388,7 +389,7 @@ func (se Secret) handleRestoreCmd(args []string) int {
 	}
 	path = rc.path
 	uri := paths.CreateResourceURI(rc.resourceType, path, "/restore", true, nil, rc.pluralize)
-	data, err = se.request.DoRequest("PUT", uri, nil)
+	data, err = se.request.DoRequest(http.MethodPut, uri, nil)
 
 	se.outClient.WriteResponse(data, err)
 	return utils.GetExecStatus(err)
@@ -433,7 +434,7 @@ func (se Secret) handleSecretSearchCmd(args []string) int {
 			return utils.GetExecStatus(err)
 		}
 		uri := paths.CreateResourceURI(rc.resourceType, "", "", false, queryParams, rc.pluralize)
-		data, err = se.request.DoRequest("GET", uri, nil)
+		data, err = se.request.DoRequest(http.MethodGet, uri, nil)
 	}
 
 	se.outClient.WriteResponse(data, err)
@@ -466,7 +467,7 @@ func (se Secret) handleDeleteCmd(args []string) int {
 	}
 	path = rc.path
 	uri, err := paths.GetResourceURIFromResourcePath(rc.resourceType, path, id, "", true, query, rc.pluralize)
-	resp, err = se.request.DoRequest("DELETE", uri, nil)
+	resp, err = se.request.DoRequest(http.MethodDelete, uri, nil)
 
 	outClient.WriteResponse(resp, err)
 	return utils.GetExecStatus(err)
@@ -516,7 +517,7 @@ func (se Secret) handleRollbackCmd(args []string) int {
 		path = fmt.Sprint(path, "/rollback/", version)
 	}
 	uri := paths.CreateResourceURI(rc.resourceType, path, "", true, nil, rc.pluralize)
-	resp, apiError = se.request.DoRequest("PUT", uri, nil)
+	resp, apiError = se.request.DoRequest(http.MethodPut, uri, nil)
 
 	se.outClient.WriteResponse(resp, apiError)
 	return utils.GetExecStatus(apiError)
@@ -571,9 +572,9 @@ func (se Secret) handleUpsertCmd(args []string) int {
 		}
 		reqMethod := strings.ToLower(viper.GetString(cst.LastCommandKey))
 		if reqMethod == cst.Create {
-			reqMethod = "POST"
+			reqMethod = http.MethodPost
 		} else {
-			reqMethod = "PUT"
+			reqMethod = http.MethodPut
 		}
 		resp, err = se.request.DoRequest(reqMethod, uri, &postData)
 	}
@@ -618,7 +619,7 @@ func (se Secret) handleEditCmd(args []string) int {
 			return nil, errors.New(mErr).Grow("invalid format for secret")
 		}
 		model.Overwrite = true
-		_, err = se.request.DoRequest("PUT", uri, &model)
+		_, err = se.request.DoRequest(http.MethodPut, uri, &model)
 		return nil, err
 	})
 	resp, err = se.edit(resp, saveFunc, nil, false)
@@ -665,7 +666,7 @@ func (se Secret) getSecret(path string, id string, edit bool, requestSuffix stri
 	if err != nil {
 		return nil, err
 	}
-	respData, err = se.request.DoRequest("GET", uri, nil)
+	respData, err = se.request.DoRequest(http.MethodGet, uri, nil)
 	if err == nil {
 		if cacheStrategy != store.Never {
 			if s == nil {
@@ -696,9 +697,6 @@ func (se Secret) getSecret(path string, id string, edit bool, requestSuffix stri
 		return cacheData, nil
 	}
 
-	if expired == true {
-		return nil, err.Or(errors.NewS("run in verbose mode for more information"))
-	}
 	return nil, err.Or(errors.NewS("run in verbose mode for more information"))
 }
 

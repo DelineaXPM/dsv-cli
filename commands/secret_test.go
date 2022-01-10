@@ -56,8 +56,8 @@ func TestHandleDescribeCmd(t *testing.T) {
 			"",
 			nil,
 			nil,
-			[]struct{
-				flag string
+			[]struct {
+				flag  string
 				value string
 			}{
 				{
@@ -94,8 +94,8 @@ func TestHandleDescribeCmd(t *testing.T) {
 			"",
 			nil,
 			nil,
-			[]struct{
-				flag string
+			[]struct {
+				flag  string
 				value string
 			}{
 				{
@@ -132,8 +132,8 @@ func TestHandleDescribeCmd(t *testing.T) {
 			"",
 			nil,
 			errors.New(e.New("error")),
-			[]struct{
-				flag string
+			[]struct {
+				flag  string
 				value string
 			}{
 				{
@@ -318,8 +318,8 @@ func TestHandleDeleteCmd(t *testing.T) {
 			[]byte(`test`),
 			[]byte(`test`),
 			nil,
-			[]struct{
-				flag string
+			[]struct {
+				flag  string
 				value string
 			}{
 				{
@@ -350,8 +350,8 @@ func TestHandleDeleteCmd(t *testing.T) {
 			[]byte(`test`),
 			[]byte(`test`),
 			errors.New(e.New("error")),
-			[]struct{
-				flag string
+			[]struct {
+				flag  string
 				value string
 			}{
 				{
@@ -428,8 +428,8 @@ func TestHandleRollbackCmd(t *testing.T) {
 			[]byte(`test`),
 			[]byte(`{"version": "4"}`),
 			nil,
-			[]struct{
-				flag string
+			[]struct {
+				flag  string
 				value string
 			}{
 				{
@@ -460,8 +460,8 @@ func TestHandleRollbackCmd(t *testing.T) {
 			[]byte(`test`),
 			[]byte(`{"someData": "hello"}`),
 			errors.NewS("version not found"),
-			[]struct{
-				flag string
+			[]struct {
+				flag  string
 				value string
 			}{
 				{
@@ -551,8 +551,8 @@ func TestHandleReadCmd(t *testing.T) {
 			"",
 			nil,
 			nil,
-			[]struct{
-				flag string
+			[]struct {
+				flag  string
 				value string
 			}{
 				{
@@ -589,8 +589,8 @@ func TestHandleReadCmd(t *testing.T) {
 			"",
 			nil,
 			nil,
-			[]struct{
-				flag string
+			[]struct {
+				flag  string
 				value string
 			}{
 				{
@@ -627,8 +627,8 @@ func TestHandleReadCmd(t *testing.T) {
 			"",
 			nil,
 			errors.New(e.New("error")),
-			[]struct{
-				flag string
+			[]struct {
+				flag  string
 				value string
 			}{
 				{
@@ -752,8 +752,8 @@ func TestHandleUpsertCmd(t *testing.T) {
 			[]byte(`test`),
 			"update",
 			nil,
-			[]struct{
-				flag string
+			[]struct {
+				flag  string
 				value string
 			}{
 				{
@@ -913,7 +913,7 @@ func TestHandleEditCmd(t *testing.T) {
 		expectedErr  *errors.ApiError
 		apiError     *errors.ApiError
 		editError    *errors.ApiError
-		flags         []struct {
+		flags        []struct {
 			flag  string
 			value string
 		}
@@ -946,8 +946,8 @@ func TestHandleEditCmd(t *testing.T) {
 			nil,
 			nil,
 			nil,
-			[]struct{
-				flag string
+			[]struct {
+				flag  string
 				value string
 			}{
 				{

@@ -10,6 +10,7 @@ import (
 	cst "thy/constants"
 	apperrors "thy/errors"
 	"thy/format"
+	"thy/internal/prompt"
 	"thy/paths"
 	preds "thy/predictors"
 	"thy/requests"
@@ -119,29 +120,28 @@ func (s siem) handleCreate([]string) int {
 
 	params := make(map[string]interface{})
 
-	if resp, err := getStringAndValidateDefault(
-		ui, "Type of SIEM endpoint (default:syslog):", "syslog", false, false); err != nil {
+	if resp, err := prompt.AskDefault(ui, "Type of SIEM endpoint", "syslog"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
 		params["siemType"] = resp
 	}
 
-	if resp, err := getStringAndValidate(ui, "Name of SIEM endpoint:", false, nil, false, false); err != nil {
+	if resp, err := prompt.Ask(ui, "Name of SIEM endpoint:"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
 		params["name"] = resp
 	}
 
-	if resp, err := getStringAndValidate(ui, "Host:", false, nil, false, false); err != nil {
+	if resp, err := prompt.Ask(ui, "Host:"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
 		params["host"] = resp
 	}
 
-	if resp, err := getStringAndValidate(ui, "Port:", false, nil, false, false); err != nil {
+	if resp, err := prompt.Ask(ui, "Port:"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
@@ -153,55 +153,50 @@ func (s siem) handleCreate([]string) int {
 		}
 	}
 
-	if resp, err := getStringAndValidate(ui, "Protocol:", false, nil, false, false); err != nil {
+	if resp, err := prompt.Ask(ui, "Protocol:"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
 		params["protocol"] = resp
 	}
 
-	if resp, err := getStringAndValidateDefault(ui, "Logging Format (default:rfc5424):", "rfc5424", false, false); err != nil {
+	if resp, err := prompt.AskDefault(ui, "Logging Format", "rfc5424"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
 		params["loggingFormat"] = resp
 	}
 
-	if resp, err := getStringAndValidateDefault(ui, "Authentication Method (default:token):", "token", false, false); err != nil {
+	if resp, err := prompt.AskDefault(ui, "Authentication Method", "token"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
 		params["authMethod"] = resp
 	}
-	if resp, err := getStringAndValidate(ui, "Authentication:", false, nil, true, true); err != nil {
+	if resp, err := prompt.AskSecureConfirm(ui, "Authentication:"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
 		params["auth"] = resp
 	}
 
-	if resp, err := getStringAndValidateDefault(ui, "Route Through DSV Engine [y/N]:", "N", false, false); err != nil {
+	yes, err := prompt.YesNo(ui, "Route Through DSV Engine", false)
+	if err != nil {
 		ui.Error(err.Error())
 		return 1
-	} else {
-		resp = strings.ToLower(resp)
-		if !utils.EqAny(resp, []string{"y", "yes", "n", "no", ""}) {
-			ui.Error("Invalid response, must choose (y)es or (n)o")
-			return 1
-		}
-		if isYes(resp, false) {
-			params["sendToEngine"] = true
+	}
 
-			if resp, err := getStringAndValidate(ui, "Engine Pool:", false, nil, false, false); err != nil {
-				ui.Error(err.Error())
-				return 1
-			} else {
-				params["pool"] = resp
-			}
+	if yes {
+		params["sendToEngine"] = true
+		if resp, err := prompt.Ask(ui, "Engine Pool:"); err != nil {
+			ui.Error(err.Error())
+			return 1
 		} else {
-			params["sendToEngine"] = false
-			params["pool"] = ""
+			params["pool"] = resp
 		}
+	} else {
+		params["sendToEngine"] = false
+		params["pool"] = ""
 	}
 
 	basePath := strings.Join([]string{cst.Config, cst.NounSiem}, "/")
@@ -241,22 +236,22 @@ func (s siem) handleUpdate(args []string) int {
 
 	params := make(map[string]interface{})
 
-	if resp, err := getStringAndValidateDefault(
-		ui, "Type of SIEM endpoint (default:syslog):", "syslog", false, false); err != nil {
+	if resp, err := prompt.AskDefault(
+		ui, "Type of SIEM endpoint", "syslog"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
 		params["siemType"] = resp
 	}
 
-	if resp, err := getStringAndValidate(ui, "Host:", false, nil, false, false); err != nil {
+	if resp, err := prompt.Ask(ui, "Host:"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
 		params["host"] = resp
 	}
 
-	if resp, err := getStringAndValidate(ui, "Port:", false, nil, false, false); err != nil {
+	if resp, err := prompt.Ask(ui, "Port:"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
@@ -268,56 +263,50 @@ func (s siem) handleUpdate(args []string) int {
 		}
 	}
 
-	if resp, err := getStringAndValidate(ui, "Protocol:", false, nil, false, false); err != nil {
+	if resp, err := prompt.Ask(ui, "Protocol:"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
 		params["protocol"] = resp
 	}
 
-	if resp, err := getStringAndValidateDefault(ui, "Logging Format (default:rfc5424):", "rfc5424", false, false); err != nil {
+	if resp, err := prompt.AskDefault(ui, "Logging Format", "rfc5424"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
 		params["loggingFormat"] = resp
 	}
 
-	if resp, err := getStringAndValidateDefault(ui, "Authentication Method (default:token):", "token", false, false); err != nil {
+	if resp, err := prompt.AskDefault(ui, "Authentication Method", "token"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
 		params["authMethod"] = resp
 	}
-	if resp, err := getStringAndValidate(ui, "Authentication:", false, nil, true, true); err != nil {
+	if resp, err := prompt.AskSecureConfirm(ui, "Authentication:"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
 		params["auth"] = resp
 	}
 
-	if resp, err := getStringAndValidateDefault(ui, "Route Through DSV Engine [y/N]:", "N", false, false); err != nil {
+	yes, err := prompt.YesNo(ui, "Route Through DSV Engine", false)
+	if err != nil {
 		ui.Error(err.Error())
 		return 1
-	} else {
-		resp = strings.ToLower(resp)
-		if !utils.EqAny(resp, []string{"y", "yes", "n", "no", ""}) {
-			ui.Error("Invalid response, must choose (y)es or (n)o")
+	}
+
+	if yes {
+		params["sendToEngine"] = true
+		if resp, err := prompt.Ask(ui, "Engine Pool:"); err != nil {
+			ui.Error(err.Error())
 			return 1
-		}
-
-		if isYes(resp, false) {
-			params["sendToEngine"] = true
-
-			if resp, err := getStringAndValidate(ui, "Engine Pool:", false, nil, false, false); err != nil {
-				ui.Error(err.Error())
-				return 1
-			} else {
-				params["pool"] = resp
-			}
 		} else {
-			params["sendToEngine"] = false
-			params["pool"] = ""
+			params["pool"] = resp
 		}
+	} else {
+		params["sendToEngine"] = false
+		params["pool"] = ""
 	}
 
 	basePath := strings.Join([]string{cst.Config, cst.NounSiem}, "/")

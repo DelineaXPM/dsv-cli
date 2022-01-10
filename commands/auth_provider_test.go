@@ -2,6 +2,7 @@ package cmd
 
 import (
 	e "errors"
+	"net/http"
 	"testing"
 	cst "thy/constants"
 	"thy/errors"
@@ -80,7 +81,7 @@ func TestHandleAuthProviderUpsertCommand(t *testing.T) {
 			[]string{"--path", "oh-hey"},
 			[]byte(`test`),
 			[]byte(`test`),
-			"POST",
+			http.MethodPost,
 			[]string{"type", "accountid"},
 			nil,
 		},
@@ -90,7 +91,7 @@ func TestHandleAuthProviderUpsertCommand(t *testing.T) {
 			[]string{"--name", "oh-hello"},
 			[]byte(`test`),
 			[]byte(`test`),
-			"PUT",
+			http.MethodPut,
 			[]string{"type", "accountid"},
 			nil,
 		},
@@ -100,7 +101,7 @@ func TestHandleAuthProviderUpsertCommand(t *testing.T) {
 			[]string{"--name", "azure-demo"},
 			[]byte(`test`),
 			[]byte(`test`),
-			"PUT",
+			http.MethodPut,
 			[]string{},
 			errors.New(e.New("--type must be set")),
 		},

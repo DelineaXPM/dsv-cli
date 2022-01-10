@@ -3,6 +3,7 @@ package predictors
 import (
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -109,7 +110,7 @@ func (p *secretPathPredictor) Predict(a complete.Args) (prediction []string) {
 	}
 	uri := paths.CreateResourceURI(cst.NounSecret, a.Last, cst.SuffixListPaths, true, nil, true)
 	res := PathAutocompleteResult{}
-	if err := p.getRequestClient().DoRequestOut("GET", uri, nil, &res); err == nil {
+	if err := p.getRequestClient().DoRequestOut(http.MethodGet, uri, nil, &res); err == nil {
 		return preparePaths(res.Data)
 	}
 	return []string{}

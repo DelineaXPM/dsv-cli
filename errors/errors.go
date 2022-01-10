@@ -8,7 +8,7 @@ import (
 
 // ApiError is an improved error class
 type ApiError struct {
-	stack []string
+	stack        []string
 	httpResponse *http.Response
 }
 

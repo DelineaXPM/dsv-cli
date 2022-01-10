@@ -416,7 +416,7 @@ class Suite(unittest.TestCase):
             child.expect("Error. Unable to parse age.")
             child.sendline(next(lines))
 
-            child.expect("Invalid input. Please enter valid integer")
+            child.expect("Invalid option. Please select between '1' and '8' or leave it empty to use default one")
             child.sendline(next(lines))
 
             child.expect("Please enter username")

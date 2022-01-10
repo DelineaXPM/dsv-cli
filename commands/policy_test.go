@@ -2,6 +2,7 @@ package cmd
 
 import (
 	e "errors"
+	"net/http"
 	"testing"
 	cst "thy/constants"
 	"thy/errors"
@@ -144,7 +145,7 @@ func TestHandlePolicyUpsertCommand(t *testing.T) {
 			[]string{"--path", "secrets/servers/dbs"},
 			[]byte(`test`),
 			[]byte(`test`),
-			"POST",
+			http.MethodPost,
 			[]string{"actions", "subjects", "effect"},
 			nil,
 		},
@@ -154,7 +155,7 @@ func TestHandlePolicyUpsertCommand(t *testing.T) {
 			[]string{"--path", "secrets/servers/dbs"},
 			[]byte(`test`),
 			[]byte(`test`),
-			"PUT",
+			http.MethodPut,
 			[]string{"actions", "subjects", "effect"},
 			nil,
 		},
@@ -164,7 +165,7 @@ func TestHandlePolicyUpsertCommand(t *testing.T) {
 			[]string{"--path", "secrets/servers/dbs"},
 			[]byte(`test`),
 			[]byte(`test`),
-			"PUT",
+			http.MethodPut,
 			[]string{},
 			errors.New(e.New("--actions must be set")),
 		},

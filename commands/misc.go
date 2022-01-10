@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 	"thy/auth"
 
@@ -58,9 +59,7 @@ func (m Misc) handleEvaluateFlag(args []string) int {
 		return cli.RunResultHelp
 	}
 	arg := args[0]
-	if strings.HasPrefix(arg, "--") {
-		arg = arg[2:]
-	}
+	arg = strings.TrimPrefix(arg, "--")
 	arg = strings.Replace(arg, "-", ".", -1)
 	arg = strings.Replace(arg, "_", ".", -1)
 
@@ -87,9 +86,8 @@ func handleSearch(args []string, resourceType string, request requests.Client) (
 		cst.Cursor:    cursor,
 	}
 	uri := paths.CreateResourceURI(resourceType, "", "", false, queryParams, false)
-	return request.DoRequest("GET", uri, nil)
+	return request.DoRequest(http.MethodGet, uri, nil)
 }
-
 
 func hasFlag(args []string, flagName string) bool {
 	for _, fn := range args {

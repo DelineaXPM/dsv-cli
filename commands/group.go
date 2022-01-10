@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
+	"thy/internal/prompt"
 	"thy/paths"
 	preds "thy/predictors"
 	"thy/requests"
@@ -226,7 +228,7 @@ func (g Group) handleGroupReadCmd(args []string) int {
 		err = errors.NewS("error: must specify " + cst.DataGroupName)
 	} else {
 		uri := paths.CreateResourceURI(cst.NounGroup, paths.ProcessResource(groupName), "", true, nil, true)
-		data, err = g.request.DoRequest("GET", uri, nil)
+		data, err = g.request.DoRequest(http.MethodGet, uri, nil)
 	}
 
 	outClient := g.outClient
@@ -262,7 +264,7 @@ func (g Group) handleCreateCmd(args []string) int {
 		params["groupName"] = groupName
 		// For backward API compatibility, on group create, members are passed in as "members".
 		params["members"] = utils.StringToSlice(members)
-		resp, err = g.request.DoRequest("POST", uri, &params)
+		resp, err = g.request.DoRequest(http.MethodPost, uri, &params)
 		outClient.WriteResponse(resp, err)
 		return utils.GetExecStatus(err)
 	}
@@ -276,7 +278,7 @@ func (g Group) handleCreateCmd(args []string) int {
 		params["members"] = params["memberNames"]
 		delete(params, "memberNames")
 	}
-	resp, err = g.request.DoRequest("POST", uri, &params)
+	resp, err = g.request.DoRequest(http.MethodPost, uri, &params)
 	outClient.WriteResponse(resp, err)
 	return utils.GetExecStatus(err)
 }
@@ -294,7 +296,7 @@ func (g Group) handleGroupDeleteCmd(args []string) int {
 	} else {
 		query := map[string]string{"force": strconv.FormatBool(force)}
 		uri := paths.CreateResourceURI(cst.NounGroup, paths.ProcessResource(groupName), "", true, query, true)
-		data, err = g.request.DoRequest("DELETE", uri, nil)
+		data, err = g.request.DoRequest(http.MethodDelete, uri, nil)
 	}
 
 	if g.outClient == nil {
@@ -320,7 +322,7 @@ func (g Group) handleGroupRestoreCmd(args []string) int {
 		err = errors.NewS("error: must specify " + cst.DataGroupName)
 	} else {
 		uri := paths.CreateResourceURI(cst.NounGroup, paths.ProcessResource(groupName), "/restore", true, nil, true)
-		data, err = g.request.DoRequest("PUT", uri, nil)
+		data, err = g.request.DoRequest(http.MethodPut, uri, nil)
 	}
 
 	g.outClient.WriteResponse(data, err)
@@ -350,7 +352,7 @@ func (g Group) handleAddMembersCmd(args []string) int {
 		params := make(map[string]interface{})
 		params["memberNames"] = utils.StringToSlice(members)
 		// For backward API compatibility, on adding members, members are passed in as "memberNames".
-		resp, err = g.request.DoRequest("POST", uri, &params)
+		resp, err = g.request.DoRequest(http.MethodPost, uri, &params)
 	} else {
 		params := make(map[string]interface{})
 		if dataErr := json.Unmarshal([]byte(data), &params); dataErr != nil {
@@ -361,7 +363,7 @@ func (g Group) handleAddMembersCmd(args []string) int {
 			params["memberNames"] = params["members"]
 			delete(params, "members")
 		}
-		resp, err = g.request.DoRequest("POST", uri, &params)
+		resp, err = g.request.DoRequest(http.MethodPost, uri, &params)
 	}
 	g.outClient.WriteResponse(resp, err)
 	return utils.GetExecStatus(err)
@@ -378,7 +380,7 @@ func (g Group) handleUsersGroupReadCmd(args []string) int {
 		err = errors.NewS("error: must specify " + cst.DataUsername)
 	} else {
 		uri := paths.CreateResourceURI(cst.NounUser, userData, "/groups", true, nil, true)
-		data, err = g.request.DoRequest("GET", uri, nil)
+		data, err = g.request.DoRequest(http.MethodGet, uri, nil)
 	}
 
 	outClient := g.outClient
@@ -410,7 +412,7 @@ func (g Group) handleDeleteMemberCmd(args []string) int {
 			params["memberNames"] = params["members"]
 			delete(params, "members")
 		}
-		resp, err = g.request.DoRequest("DELETE", uri, &params)
+		resp, err = g.request.DoRequest(http.MethodDelete, uri, &params)
 	} else {
 		members := viper.GetString(cst.Members)
 		if groupName == "" || members == "" {
@@ -421,7 +423,7 @@ func (g Group) handleDeleteMemberCmd(args []string) int {
 		params := make(map[string]interface{})
 		params["memberNames"] = utils.StringToSlice(members)
 		// For backward API compatibility, on deleting members, members are passed in as "memberNames".
-		resp, err = g.request.DoRequest("DELETE", uri, &params)
+		resp, err = g.request.DoRequest(http.MethodDelete, uri, &params)
 	}
 	g.outClient.WriteResponse(resp, err)
 	return utils.GetExecStatus(err)
@@ -445,7 +447,7 @@ func (g Group) handleGroupSearchCmd(args []string) int {
 			cst.Cursor:    cursor,
 		}
 		uri := paths.CreateResourceURI(cst.NounGroup, "", "", false, queryParams, true)
-		data, err = g.request.DoRequest("GET", uri, nil)
+		data, err = g.request.DoRequest(http.MethodGet, uri, nil)
 	}
 	outClient := g.outClient
 	if outClient == nil {
@@ -467,14 +469,14 @@ func (g Group) handleGroupWorkflow(args []string) int {
 		g.outClient = format.NewDefaultOutClient()
 	}
 	params := make(map[string]interface{})
-	if resp, err := getStringAndValidate(ui, "Group name:", false, nil, false, false); err != nil {
+	if resp, err := prompt.Ask(ui, "Group name:"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
 		params["groupName"] = resp
 	}
 
-	if resp, err := getStringAndValidate(ui, "Members (comma-separated):", true, nil, false, false); err != nil {
+	if resp, err := prompt.AskDefault(ui, "Members (comma-separated):", ""); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
@@ -483,7 +485,7 @@ func (g Group) handleGroupWorkflow(args []string) int {
 	}
 
 	uri := paths.CreateResourceURI(cst.NounGroup, "", "", true, nil, true)
-	resp, err := g.request.DoRequest("POST", uri, &params)
+	resp, err := g.request.DoRequest(http.MethodPost, uri, &params)
 	g.outClient.WriteResponse(resp, err)
 	return utils.GetExecStatus(err)
 }

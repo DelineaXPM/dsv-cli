@@ -13,6 +13,7 @@ import (
 	cst "thy/constants"
 	apperrors "thy/errors"
 	"thy/format"
+	"thy/internal/prompt"
 	"thy/paths"
 	preds "thy/predictors"
 	"thy/requests"
@@ -99,6 +100,7 @@ Usage:
 			preds.LongFlag(cst.State):        {complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.State, Usage: "", Global: false}), false},
 			preds.LongFlag(cst.Locality):     {complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Locality, Usage: "", Global: false}), false},
 			preds.LongFlag(cst.EmailAddress): {complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.EmailAddress, Usage: "", Global: false}), false},
+			preds.LongFlag(cst.Description):  {complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Description, Usage: "", Global: false}), false},
 
 			preds.LongFlag(cst.RootCAPath):   cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.RootCAPath, Usage: "Path to a secret which contains the registered root certificate with private key (required)"}), false},
 			preds.LongFlag(cst.PkiStorePath): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.PkiStorePath, Usage: "Path to a new secret in which to store the generated certificate with private key"}), false},
@@ -126,6 +128,7 @@ Usage:
 			preds.LongFlag(cst.State):        {complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.State, Usage: "", Global: false}), false},
 			preds.LongFlag(cst.Locality):     {complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Locality, Usage: "", Global: false}), false},
 			preds.LongFlag(cst.EmailAddress): {complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.EmailAddress, Usage: "", Global: false}), false},
+			preds.LongFlag(cst.Description):  {complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Description, Usage: "", Global: false}), false},
 
 			preds.LongFlag(cst.RootCAPath): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.RootCAPath, Usage: "Path of a new secret in which to store the generated root certificate with private key (required)"}), false},
 			preds.LongFlag(cst.Domains):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Domains, Usage: "List of domains for which certificates could be signed on behalf of the root CA (required)"}), false},
@@ -165,8 +168,7 @@ func (p pki) handleRegisterRootWorkflow(args []string) int {
 		},
 	}
 
-	if certPath, err := getStringAndValidate(
-		ui, "Path to certificate file:", false, nil, false, false); err != nil {
+	if certPath, err := prompt.Ask(ui, "Path to certificate file:"); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
@@ -178,8 +180,7 @@ func (p pki) handleRegisterRootWorkflow(args []string) int {
 		params[cst.CertPath] = data
 	}
 
-	if privKeyPath, err := getStringAndValidate(
-		ui, "Path to private key file:", false, nil, false, false); err != nil {
+	if privKeyPath, err := prompt.Ask(ui, "Path to private key file:"); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
@@ -191,32 +192,28 @@ func (p pki) handleRegisterRootWorkflow(args []string) int {
 		params[cst.PrivKeyPath] = data
 	}
 
-	if rootCAPath, err := getStringAndValidate(
-		ui, "Path to a new secret that will contain root CA registration information:", false, nil, false, false); err != nil {
+	if rootCAPath, err := prompt.Ask(ui, "Path to a new secret that will contain root CA registration information:"); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.RootCAPath] = rootCAPath
 	}
 
-	if domains, err := getStringAndValidate(
-		ui, "List of domains (comma-delimited strings):", false, nil, false, false); err != nil {
+	if domains, err := prompt.Ask(ui, "List of domains (comma-delimited strings):"); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.Domains] = domains
 	}
 
-	if maxTTL, err := getStringAndValidate(
-		ui, "Maximum TTL:", false, nil, false, false); err != nil {
+	if maxTTL, err := prompt.Ask(ui, "Maximum TTL:"); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.MaxTTL] = maxTTL
 	}
 
-	if crl, err := getStringAndValidate(
-		ui, "Certificate Revocation List URL (optional):", true, nil, false, false); err != nil {
+	if crl, err := prompt.AskDefault(ui, "Certificate Revocation List URL", ""); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
@@ -294,8 +291,7 @@ func (p pki) handleSignWorkflow(args []string) int {
 		},
 	}
 
-	if csrPath, err := getStringAndValidate(
-		ui, "Path to certificate signing request file:", false, nil, false, false); err != nil {
+	if csrPath, err := prompt.Ask(ui, "Path to certificate signing request file:"); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
@@ -307,40 +303,37 @@ func (p pki) handleSignWorkflow(args []string) int {
 		params[cst.CSRPath] = data
 	}
 
-	if rootCAPath, err := getStringAndValidate(
-		ui, "Path of an existing secret that contains root CA information:", false, nil, false, false); err != nil {
+	if rootCAPath, err := prompt.Ask(ui, "Path of an existing secret that contains root CA information:"); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.RootCAPath] = rootCAPath
 	}
 
-	if subjectAltNames, err := getStringAndValidate(
-		ui, "List of subject alternative names (comma-delimited strings, optional):", true, nil, false, false); err != nil {
+	if subjectAltNames, err := prompt.AskDefault(ui, "List of subject alternative names (comma-delimited strings)", ""); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.SubjectAltNames] = subjectAltNames
 	}
 
-	if ttl, err := getStringAndValidate(
-		ui, "TTL:", false, nil, false, false); err != nil {
+	if ttl, err := prompt.Ask(ui, "TTL:"); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.TTL] = ttl
 	}
 
-	if resp, err := getStringAndValidateDefault(
-		ui, "Chain (optional - include root certificate) [y/N]:", "N", false, false); err != nil {
+	yes, err := prompt.YesNo(ui, "Chain (optional - include root certificate)", false)
+	if err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
+	}
+
+	if yes {
+		params[cst.Chain] = "true"
 	} else {
-		if isYes(resp, true) {
-			params[cst.Chain] = "true"
-		} else {
-			params[cst.Chain] = "false"
-		}
+		params[cst.Chain] = "false"
 	}
 
 	if p.outClient == nil {
@@ -413,88 +406,80 @@ func (p pki) handleLeafWorkflow(args []string) int {
 		},
 	}
 
-	if rootCAPath, err := getStringAndValidate(
-		ui, "Path of an existing secret that contains root CA information:", false, nil, false, false); err != nil {
+	if rootCAPath, err := prompt.Ask(ui, "Path of an existing secret that contains root CA information:"); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.RootCAPath] = rootCAPath
 	}
 
-	if commonName, err := getStringAndValidate(
-		ui, "Common name:", false, nil, false, false); err != nil {
+	if commonName, err := prompt.Ask(ui, "Common name:"); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.CommonName] = commonName
 	}
 
-	if organization, err := getStringAndValidate(
-		ui, "Organization:", true, nil, false, false); err != nil {
+	if organization, err := prompt.AskDefault(ui, "Organization:", ""); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.Organization] = organization
 	}
 
-	if country, err := getStringAndValidate(
-		ui, "Country:", true, nil, false, false); err != nil {
+	if country, err := prompt.AskDefault(ui, "Country:", ""); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.Country] = country
 	}
 
-	if state, err := getStringAndValidate(
-		ui, "State:", true, nil, false, false); err != nil {
+	if state, err := prompt.AskDefault(ui, "State:", ""); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.State] = state
 	}
 
-	if locality, err := getStringAndValidate(
-		ui, "Locality:", true, nil, false, false); err != nil {
+	if locality, err := prompt.AskDefault(ui, "Locality:", ""); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.Locality] = locality
 	}
 
-	if email, err := getStringAndValidate(
-		ui, "Email:", true, nil, false, false); err != nil {
+	if email, err := prompt.AskDefault(ui, "Email:", ""); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.EmailAddress] = email
 	}
 
-	if ttl, err := getStringAndValidate(
-		ui, "TTL:", true, nil, false, false); err != nil {
+	if ttl, err := prompt.AskDefault(ui, "TTL:", ""); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.TTL] = ttl
 	}
 
-	if storePath, err := getStringAndValidate(
-		ui, "Path to a new secret in which to store the generated certificate with private key (optional):", true, nil, false, false); err != nil {
+	if storePath, err := prompt.AskDefault(
+		ui, "Path to a new secret in which to store the generated certificate with private key", ""); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.PkiStorePath] = storePath
 	}
 
-	if resp, err := getStringAndValidateDefault(
-		ui, "Chain (optional - include root certificate) [y/N]:", "N", false, false); err != nil {
+	yes, err := prompt.YesNo(ui, "Chain (optional - include root certificate)", false)
+	if err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
+	}
+
+	if yes {
+		params[cst.Chain] = "true"
 	} else {
-		if isYes(resp, true) {
-			params[cst.Chain] = "true"
-		} else {
-			params[cst.Chain] = "false"
-		}
+		params[cst.Chain] = "false"
 	}
 
 	resp, err := p.submitLeaf(params)
@@ -521,6 +506,7 @@ func (p pki) submitLeaf(params map[string]string) ([]byte, error) {
 	body.State = params[cst.State]
 	body.Locality = params[cst.Locality]
 	body.EmailAddress = params[cst.EmailAddress]
+	body.Description = params[cst.Description]
 	if c, err := strconv.ParseBool(params[cst.Chain]); err == nil {
 		body.Chain = c
 	}
@@ -556,6 +542,7 @@ func (p pki) handleLeaf(args []string) int {
 	params[cst.State] = viper.GetString(cst.State)
 	params[cst.Locality] = viper.GetString(cst.Locality)
 	params[cst.EmailAddress] = viper.GetString(cst.EmailAddress)
+	params[cst.Description] = viper.GetString(cst.Description)
 	params[cst.Chain] = viper.GetString(cst.Chain)
 
 	data, err := p.submitLeaf(params)
@@ -573,80 +560,71 @@ func (p pki) handleGenerateRootWorkflow(args []string) int {
 		},
 	}
 
-	if rootCAPath, err := getStringAndValidate(
-		ui, "Path of a new secret in which to store the generated root certificate with private key:", false, nil, false, false); err != nil {
+	if rootCAPath, err := prompt.Ask(
+		ui, "Path of a new secret in which to store the generated root certificate with private key:"); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.RootCAPath] = rootCAPath
 	}
 
-	if commonName, err := getStringAndValidate(
-		ui, "Common name:", false, nil, false, false); err != nil {
+	if commonName, err := prompt.Ask(ui, "Common name:"); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.CommonName] = commonName
 	}
 
-	if organization, err := getStringAndValidate(
-		ui, "Organization:", true, nil, false, false); err != nil {
+	if organization, err := prompt.AskDefault(ui, "Organization:", ""); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.Organization] = organization
 	}
 
-	if country, err := getStringAndValidate(
-		ui, "Country:", true, nil, false, false); err != nil {
+	if country, err := prompt.AskDefault(ui, "Country:", ""); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.Country] = country
 	}
 
-	if state, err := getStringAndValidate(
-		ui, "State:", true, nil, false, false); err != nil {
+	if state, err := prompt.AskDefault(ui, "State:", ""); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.State] = state
 	}
 
-	if locality, err := getStringAndValidate(
-		ui, "Locality:", true, nil, false, false); err != nil {
+	if locality, err := prompt.AskDefault(ui, "Locality:", ""); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.Locality] = locality
 	}
 
-	if email, err := getStringAndValidate(
-		ui, "Email:", true, nil, false, false); err != nil {
+	if email, err := prompt.AskDefault(ui, "Email:", ""); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.EmailAddress] = email
 	}
 
-	if domains, err := getStringAndValidate(
-		ui, "List of domains (comma-delimited strings):", false, nil, false, false); err != nil {
+	if domains, err := prompt.Ask(ui, "List of domains (comma-delimited strings):"); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.Domains] = domains
 	}
 
-	if maxTTL, err := getStringAndValidate(
-		ui, "Maximum TTL:", false, nil, false, false); err != nil {
+	if maxTTL, err := prompt.Ask(ui, "Maximum TTL:"); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
 		params[cst.MaxTTL] = maxTTL
 	}
 
-	if crl, err := getStringAndValidate(
-		ui, "Certificate Revocation List URL (optional):", true, nil, false, false); err != nil {
+	if crl, err := prompt.AskDefault(ui, "Certificate Revocation List URL", ""); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
@@ -678,6 +656,7 @@ func (p pki) submitGenerateRoot(params map[string]string) ([]byte, error) {
 	body.State = params[cst.State]
 	body.Locality = params[cst.Locality]
 	body.EmailAddress = params[cst.EmailAddress]
+	body.Description = params[cst.Description]
 	maxTTL, err := utils.ParseHours(params[cst.MaxTTL])
 	if err != nil {
 		return nil, err
@@ -708,6 +687,7 @@ func (p pki) handleGenerateRoot(args []string) int {
 	params[cst.State] = viper.GetString(cst.State)
 	params[cst.Locality] = viper.GetString(cst.Locality)
 	params[cst.EmailAddress] = viper.GetString(cst.EmailAddress)
+	params[cst.Description] = viper.GetString(cst.Description)
 
 	data, err := p.submitGenerateRoot(params)
 	p.outClient.WriteResponse(data, apperrors.New(err))
@@ -780,7 +760,7 @@ type signingRequest struct {
 }
 
 type signingRequestInformation struct {
-	companyInformation
+	subjectInformation
 	RootCAPath string `json:"rootCAPath"`
 	StorePath  string `json:"storePath"`
 	TTL        int    `json:"ttl"`
@@ -788,7 +768,7 @@ type signingRequestInformation struct {
 }
 
 type generateRootInformation struct {
-	companyInformation
+	subjectInformation
 	RootCAPath string   `json:"rootCAPath"`
 	Domains    []string `json:"domains"`
 	MaxTTL     int      `json:"maxTTL"`
@@ -802,7 +782,7 @@ type sshCertificateInformation struct {
 	TTL        int      `json:"ttl"`
 }
 
-type companyInformation struct {
+type subjectInformation struct {
 	Country            string `json:"country"`
 	State              string `json:"state"`
 	Locality           string `json:"locality"`
@@ -810,4 +790,5 @@ type companyInformation struct {
 	OrganizationalUnit string `json:"organizationalUnit"`
 	CommonName         string `json:"commonName"`
 	EmailAddress       string `json:"emailAddress"`
+	Description        string `json:"description"`
 }

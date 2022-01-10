@@ -16,7 +16,7 @@ func TestDoRequest(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 	jsonResponse := []byte(`{"data": {"UserName": "json"}`)
-	httpmock.RegisterResponder("POST", "https://localhost:8088",
+	httpmock.RegisterResponder(http.MethodPost, "https://localhost:8088",
 		func(req *http.Request) (*http.Response, error) {
 			resp := httpmock.NewBytesResponse(200, jsonResponse)
 			return resp, nil

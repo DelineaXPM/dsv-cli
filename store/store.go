@@ -137,10 +137,6 @@ func dataToCreds(key string, data interface{}) (*ch.Credentials, *errors.ApiErro
 	}
 }
 
-func credsToData(creds *ch.Credentials, out interface{}) *errors.ApiError {
-	return errors.New(json.Unmarshal([]byte(creds.Secret), out))
-}
-
 func secretToData(secret string, out interface{}) *errors.ApiError {
 	return errors.New(json.Unmarshal([]byte(secret), out))
 }

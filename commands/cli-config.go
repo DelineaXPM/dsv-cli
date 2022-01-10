@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -15,6 +16,7 @@ import (
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
+	"thy/internal/prompt"
 	"thy/paths"
 	preds "thy/predictors"
 	"thy/requests"
@@ -294,13 +296,14 @@ func handleCliConfigClearCmd(args []string) int {
 		ErrorWriter: os.Stderr,
 	}
 
-	if resp, err := ui.Ask("Are you sure you want to delete CLI configuration? [y/n] (default:n)"); err != nil {
+	if yes, err := prompt.YesNo(ui, "Are you sure you want to delete CLI configuration?", false); err != nil {
 		ui.Error(err.Error())
 		return 1
-	} else if !isYes(resp, false) {
+	} else if !yes {
 		ui.Info("exiting")
 		return 0
 	}
+
 	cfgPath := config.GetFlagBeforeParse(cst.Config, args)
 	if cfgPath == "" {
 		cfgPath = config.GetCliConfigPath()
@@ -395,7 +398,7 @@ func handleCliConfigInitCmd(args []string) int {
 				// If default profile, that means the user did not specify --profile [name], so ask for profile name.
 				if addProfile && profile == cst.DefaultProfile {
 					var p string
-					if p, err = getStringAndValidate(ui, "Please enter profile name:", false, nil, false, false); err != nil {
+					if p, err = prompt.Ask(ui, "Please enter profile name:"); err != nil {
 						return 1
 					}
 
@@ -424,7 +427,7 @@ func handleCliConfigInitCmd(args []string) int {
 	}
 
 	// tenant
-	if tenant, err := getStringAndValidate(ui, "Please enter tenant name:", false, nil, false, false); err != nil {
+	if tenant, err := prompt.Ask(ui, "Please enter tenant name:"); err != nil {
 		return 1
 	} else {
 		cfg[profile] = jsonish{
@@ -442,12 +445,11 @@ func handleCliConfigInitCmd(args []string) int {
 		isDevDomain = true
 		domain = devDomain
 	} else {
-		if domain, err = getStringAndValidate(ui, "Please choose domain:", true, []option{
-			{cst.Domain, cst.Domain},
-			{cst.DomainEU, cst.DomainEU},
-			{cst.DomainAU, cst.DomainAU},
-			{cst.DomainCA, cst.DomainCA},
-		}, false, false); err != nil {
+		if domain, err = prompt.Choose(ui, "Please choose domain:",
+			prompt.Option{cst.Domain, cst.Domain},
+			prompt.Option{cst.DomainEU, cst.DomainEU},
+			prompt.Option{cst.DomainAU, cst.DomainAU},
+			prompt.Option{cst.DomainCA, cst.DomainCA}); err != nil {
 			return 1
 		}
 		if domain == "" {
@@ -460,7 +462,7 @@ func handleCliConfigInitCmd(args []string) int {
 	viper.Set(cst.DomainKey, domain)
 	var setupRequired bool
 	heartbeatURI := paths.CreateURI("heartbeat", nil)
-	if respData, err := requests.NewHttpClient().DoRequest("GET", heartbeatURI, nil); err != nil {
+	if respData, err := requests.NewHttpClient().DoRequest(http.MethodGet, heartbeatURI, nil); err != nil {
 		ui.Error(fmt.Sprintf("Failed to contact %s to determine if initial admin setup is required.", cst.ProductName))
 		return 1
 	} else {
@@ -474,12 +476,11 @@ func handleCliConfigInitCmd(args []string) int {
 	}
 
 	// store
-	if st, err := getStringAndValidate(ui, "Please enter store type:", true, []option{
-		o(string(store.File), "File store"),
-		o(string(store.None), "None (no caching)"),
-		o(string(store.PassLinux), "Pass (Linux only)"),
-		o(string(store.WinCred), "Windows Credential Manager (Windows only)"),
-	}, false, false); err != nil {
+	if st, err := prompt.Choose(ui, "Please enter store type:",
+		prompt.Option{string(store.File), "File store"},
+		prompt.Option{string(store.None), "None (no caching)"},
+		prompt.Option{string(store.PassLinux), "Pass (Linux only)"},
+		prompt.Option{string(store.WinCred), "Windows Credential Manager (Windows only)"}); err != nil {
 		return 1
 	} else {
 		if err := store.ValidateCredentialStore(st); err != nil {
@@ -493,8 +494,8 @@ func handleCliConfigInitCmd(args []string) int {
 		AddNode(&cfg, jsonish{cst.Type: st}, profile, cst.Store)
 		if store.StoreType(st) == store.File {
 			def := filepath.Join(utils.NewEnvProvider().GetHomeDir(), ".thy")
-			sp, _ := getStringAndValidate(ui, fmt.Sprintf("Please enter directory for file store (default:%s):", def), true, nil, false, false)
-			if sp != "" {
+			sp, _ := prompt.AskDefault(ui, "Please enter directory for file store", def)
+			if sp != def {
 				AddNode(&cfg, jsonish{cst.Path: sp}, profile, cst.Store)
 				viper.Set(cst.StorePath, sp)
 			}
@@ -504,17 +505,16 @@ func handleCliConfigInitCmd(args []string) int {
 
 	//cache
 	if storeType != store.None {
-		if strategy, err := getStringAndValidate(ui, "Please enter cache strategy for secrets:", true, []option{
-			o(string(store.Never), "Never"),
-			o(string(store.ServerThenCache), "Server then cache"),
-			o(string(store.CacheThenServer), "Cache then server"),
-			o(string(store.CacheThenServerThenExpired), "Cache then server, but allow expired cache if server unreachable"),
-		}, false, false); err != nil {
+		if strategy, err := prompt.Choose(ui, "Please enter cache strategy for secrets:",
+			prompt.Option{string(store.Never), "Never"},
+			prompt.Option{string(store.ServerThenCache), "Server then cache"},
+			prompt.Option{string(store.CacheThenServer), "Cache then server"},
+			prompt.Option{string(store.CacheThenServerThenExpired), "Cache then server, but allow expired cache if server unreachable"}); err != nil {
 			return 1
 		} else {
 			AddNode(&cfg, jsonish{cst.Strategy: strategy}, profile, cst.Cache)
 			if store.CacheStrategy(strategy) != store.Never {
-				if ageString, err := getStringAndValidate(ui, "Please enter cache age (minutes until expiration):", false, nil, false, false); err != nil {
+				if ageString, err := prompt.Ask(ui, "Please enter cache age (minutes until expiration):"); err != nil {
 					return 1
 				} else if age, err := strconv.Atoi(ageString); err != nil || age <= 0 {
 					format.NewDefaultOutClient().FailS("Error. Unable to parse age. Must be strictly positive int: " + ageString)
@@ -531,16 +531,15 @@ func handleCliConfigInitCmd(args []string) int {
 	authType = viper.GetString(cst.AuthType)
 	authProvider = viper.GetString(cst.AuthProvider)
 	if authType == "" {
-		if at, err := getStringAndValidate(ui, "Please enter auth type:", true, []option{
-			o(string(auth.Password), "Password (local user)"),
-			o(string(auth.ClientCredential), "Client Credential"),
-			o(string(auth.FederatedThyOne), "Thycotic One (federated)"),
-			o(string(auth.FederatedAws), "AWS IAM (federated)"),
-			o(string(auth.FederatedAzure), "Azure (federated)"),
-			o(string(auth.FederatedGcp), "GCP (federated)"),
-			o(string(auth.Oidc), "OIDC (federated)"),
-			o(string(auth.Certificate), "x509 Certificate"),
-		}, false, false); err != nil {
+		if at, err := prompt.Choose(ui, "Please enter auth type:",
+			prompt.Option{string(auth.Password), "Password (local user)"},
+			prompt.Option{string(auth.ClientCredential), "Client Credential"},
+			prompt.Option{string(auth.FederatedThyOne), "Thycotic One (federated)"},
+			prompt.Option{string(auth.FederatedAws), "AWS IAM (federated)"},
+			prompt.Option{string(auth.FederatedAzure), "Azure (federated)"},
+			prompt.Option{string(auth.FederatedGcp), "GCP (federated)"},
+			prompt.Option{string(auth.Oidc), "OIDC (federated)"},
+			prompt.Option{string(auth.Certificate), "x509 Certificate"}); err != nil {
 			return 1
 		} else {
 			authType = at
@@ -551,18 +550,18 @@ func handleCliConfigInitCmd(args []string) int {
 	if storeType != store.None {
 		if auth.AuthType(authType) == auth.Password {
 			var passwordMessage, userMessage string
-			var confirmRequired bool
+			var askFunc = prompt.AskSecure
 			tenant := viper.GetString(cst.Tenant)
 			if setupRequired {
 				userMessage = fmt.Sprintf("Please choose a username for initial local admin for tenant %q:", tenant)
 				passwordMessage = "Please choose password:"
-				confirmRequired = true
+				askFunc = prompt.AskSecureConfirm
 			} else {
 				userMessage = fmt.Sprintf("Please enter username for tenant %q:", tenant)
 				passwordMessage = "Please enter password:"
 			}
 
-			if user, err = getStringAndValidate(ui, userMessage, false, nil, false, false); err != nil {
+			if user, err = prompt.Ask(ui, userMessage); err != nil {
 				return 1
 			} else {
 				AddNode(&cfg, jsonish{cst.DataUsername: user}, profile, cst.NounAuth)
@@ -570,7 +569,7 @@ func handleCliConfigInitCmd(args []string) int {
 			}
 
 			encryptionKeyFileName = auth.GetEncryptionKeyFilename(viper.GetString(cst.Tenant), user)
-			if password, err = getStringAndValidate(ui, passwordMessage, false, nil, true, confirmRequired); err != nil {
+			if password, err = askFunc(ui, passwordMessage); err != nil {
 				return 1
 			} else {
 				if isSecureStore {
@@ -591,13 +590,13 @@ func handleCliConfigInitCmd(args []string) int {
 				}
 			}
 		} else if auth.AuthType(authType) == auth.ClientCredential {
-			if id, err := getStringAndValidate(ui, "Please enter client id for client auth:", false, nil, false, false); err != nil {
+			if id, err := prompt.Ask(ui, "Please enter client id for client auth:"); err != nil {
 				return 1
 			} else {
 				AddNode(&cfg, jsonish{cst.ID: id}, profile, cst.NounAuth, cst.NounClient)
 				viper.Set(cst.AuthClientID, id)
 			}
-			if secret, err := getStringAndValidate(ui, "Please enter client secret for client auth:", false, nil, true, false); err != nil {
+			if secret, err := prompt.AskSecure(ui, "Please enter client secret for client auth:"); err != nil {
 				return 1
 			} else {
 				if isSecureStore {
@@ -613,18 +612,15 @@ func handleCliConfigInitCmd(args []string) int {
 			}
 		} else if auth.AuthType(authType) == auth.FederatedAws {
 			var awsProfile string
-			if awsProfile, err = getStringAndValidate(ui, "Please enter aws profile for federated aws auth (optional, default:default)", true, nil, false, false); err != nil {
+			if awsProfile, err = prompt.AskDefault(ui, "Please enter aws profile for federated aws auth", "default"); err != nil {
 				return 1
-			} else if awsProfile == "" {
-				awsProfile = "default"
 			}
 			AddNode(&cfg, jsonish{cst.NounAwsProfile: awsProfile}, profile, cst.NounAuth)
 			viper.Set(cst.AwsProfile, awsProfile)
 		} else if auth.AuthType(authType) == auth.Oidc || auth.AuthType(authType) == auth.FederatedThyOne {
 			if auth.AuthType(authType) == auth.Oidc {
 				if authProvider == "" {
-					authProviderMessage := fmt.Sprintf("Please enter auth provider name (default:  %s):", cst.DefaultThyOneName)
-					if authProvider, err = getStringAndValidateDefault(ui, authProviderMessage, cst.DefaultThyOneName, false, false); err != nil {
+					if authProvider, err = prompt.AskDefault(ui, "Please enter auth provider name", cst.DefaultThyOneName); err != nil {
 						return 1
 					}
 				}
@@ -632,8 +628,7 @@ func handleCliConfigInitCmd(args []string) int {
 				authProvider = cst.DefaultThyOneName
 
 				if isDevDomain {
-					authProviderMessage := fmt.Sprintf("Thycotic One authentication provider name (default %s):", cst.DefaultThyOneName)
-					if authProvider, err = getStringAndValidateDefault(ui, authProviderMessage, cst.DefaultThyOneName, false, false); err != nil {
+					if authProvider, err = prompt.AskDefault(ui, "Thycotic One authentication provider name", cst.DefaultThyOneName); err != nil {
 						return 1
 
 					}
@@ -652,20 +647,20 @@ func handleCliConfigInitCmd(args []string) int {
 			AddNode(&cfg, jsonish{cst.DataCallback: callback}, profile, cst.NounAuth)
 		} else if auth.AuthType(authType) == auth.Certificate {
 			if authProvider == "" {
-				authProvider, err = getStringAndValidate(ui, "Please enter auth provider name:", false, nil, false, false)
+				authProvider, err = prompt.Ask(ui, "Please enter auth provider name:")
 				if err != nil {
 					ui.Error(err.Error())
 					return 1
 				}
 			}
 
-			clientCert, err := getStringAndValidate(ui, "Certificate:", false, nil, false, false)
+			clientCert, err := prompt.Ask(ui, "Certificate:")
 			if err != nil {
 				ui.Error(err.Error())
 				return 1
 			}
 
-			clientPrivKey, err := getStringAndValidate(ui, "Private key:", false, nil, false, false)
+			clientPrivKey, err := prompt.Ask(ui, "Private key:")
 			if err != nil {
 				ui.Error(err.Error())
 				return 1
@@ -687,7 +682,7 @@ func handleCliConfigInitCmd(args []string) int {
 			UserName: user,
 			Password: password,
 		}
-		if _, err := requests.NewHttpClient().DoRequest("POST", heartbeatURI, body); err != nil {
+		if _, err := requests.NewHttpClient().DoRequest(http.MethodPost, heartbeatURI, body); err != nil {
 			ui.Error(fmt.Sprintf("Failed to initialize tenant with %s. Please try again. Error:", cst.ProductName))
 			format.NewDefaultOutClient().FailE(err)
 			return 1
@@ -838,11 +833,6 @@ func AddNode(n1 *jsonish, n2 jsonish, keyPath ...string) {
 	}
 }
 
-func isYes(response string, blankTrue bool) bool {
-	resUpper := strings.ToUpper(response)
-	return resUpper == "Y" || resUpper == "YES" || (resUpper == "" && blankTrue)
-}
-
 // getMainAction parses the main intent of the CLI initialization command (add profile to config, overwrite config, or do nothing).
 func getMainAction(response string) string {
 	resUpper := strings.ToUpper(response)
@@ -855,86 +845,6 @@ func getMainAction(response string) string {
 	} else {
 		return "n"
 	}
-}
-
-func getStringAndValidateDefault(ui cli.Ui, question string, defaultAnswer string, secure bool, confirm bool) (string, error) {
-	answer, err := getStringAndValidate(ui, question, true, nil, secure, confirm)
-	if answer == "" {
-		return defaultAnswer, err
-	}
-	return answer, err
-}
-
-func getStringAndValidate(ui cli.Ui, question string, blankAllowed bool, options []option, secure bool, confirm bool) (string, error) {
-	ask := question
-	for i, o := range options {
-		i = i + 1
-		defaultStr := ""
-		if i == 1 {
-			defaultStr = " (default)"
-		}
-		ask += fmt.Sprintf("\n\t(%d) %s%s", i, o.Display, defaultStr)
-	}
-	if len(options) > 0 {
-		ask += "\nSelection: "
-	}
-	var askFunc func(string) (string, error)
-	if secure {
-		askFunc = ui.AskSecret
-	} else {
-		askFunc = ui.Ask
-	}
-	if resp, err := askFunc(ask); err != nil || !blankAllowed && resp == "" {
-		if err != nil && err.Error() == "interrupted" {
-			return "", err
-		}
-		ui.Error("Blank input is invalid")
-		return getStringAndValidate(ui, question, blankAllowed, options, secure, confirm)
-	} else {
-		if secure && confirm {
-			if resp2, err := askFunc(strings.Trim(ask, ":") + " (confirm):"); err != nil || !blankAllowed && resp == "" {
-				if err != nil && err.Error() == "interrupted" {
-					return "", err
-				}
-				ui.Error("Blank input is invalid")
-				return getStringAndValidate(ui, question, blankAllowed, options, secure, confirm)
-			} else if resp2 != resp {
-				ui.Error("Inputs do not match. Please retry.")
-				return getStringAndValidate(ui, question, blankAllowed, options, secure, confirm)
-			}
-		}
-		if len(options) > 0 {
-			if resp == "" {
-				return options[0].Value, nil
-			}
-			if respInt, err := strconv.ParseUint(resp, 10, 32); err != nil || respInt > uint64(len(options)) || respInt < 1 {
-				if err != nil && err.Error() == "interrupted" {
-					return "", err
-				}
-				errTxt := ""
-				if err != nil {
-					errTxt += ". Error:" + err.Error()
-				}
-				ui.Error("Invalid input. Please enter valid integer" + errTxt)
-				return getStringAndValidate(ui, question, blankAllowed, options, secure, confirm)
-			} else {
-				return options[respInt-1].Value, nil
-			}
-		}
-		return resp, nil
-	}
-}
-
-func o(value string, display string) option {
-	return option{
-		Value:   value,
-		Display: display,
-	}
-}
-
-type option struct {
-	Value   string
-	Display string
 }
 
 type heartbeatResponse struct {

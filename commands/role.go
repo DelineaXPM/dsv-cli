@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
+	"thy/internal/prompt"
 	"thy/paths"
 	preds "thy/predictors"
 	"thy/requests"
@@ -185,7 +187,7 @@ func (r Roles) handleRoleReadCmd(args []string) int {
 			name = fmt.Sprint(name, "/", cst.Version, "/", version)
 		}
 		uri := paths.CreateResourceURI(cst.NounRole, name, "", true, nil, true)
-		data, err = r.request.DoRequest("GET", uri, nil)
+		data, err = r.request.DoRequest(http.MethodGet, uri, nil)
 	}
 
 	outClient := r.outClient
@@ -215,7 +217,7 @@ func (r Roles) handleRoleSearchCmd(args []string) int {
 			cst.Cursor:    cursor,
 		}
 		uri := paths.CreateResourceURI(cst.NounRole, "", "", false, queryParams, true)
-		data, err = r.request.DoRequest("GET", uri, nil)
+		data, err = r.request.DoRequest(http.MethodGet, uri, nil)
 	}
 	outClient := r.outClient
 	if outClient == nil {
@@ -238,7 +240,7 @@ func (r Roles) handleRoleDeleteCmd(args []string) int {
 	} else {
 		query := map[string]string{"force": strconv.FormatBool(force)}
 		uri := paths.CreateResourceURI(cst.NounRole, paths.ProcessResource(name), "", true, query, true)
-		data, err = r.request.DoRequest("DELETE", uri, nil)
+		data, err = r.request.DoRequest(http.MethodDelete, uri, nil)
 	}
 
 	if r.outClient == nil {
@@ -263,7 +265,7 @@ func (r Roles) handleRoleRestoreCmd(args []string) int {
 		err = errors.NewS("error: must specify " + cst.DataName)
 	} else {
 		uri := paths.CreateResourceURI(cst.NounRole, paths.ProcessResource(name), "/restore", true, nil, true)
-		data, err = r.request.DoRequest("PUT", uri, nil)
+		data, err = r.request.DoRequest(http.MethodPut, uri, nil)
 	}
 
 	r.outClient.WriteResponse(data, err)
@@ -316,14 +318,14 @@ func (r Roles) handleRoleWorkflow(args []string) int {
 	}
 	params := make(map[string]string)
 	isUpdate := viper.GetString(cst.LastCommandKey) == cst.Update
-	if resp, err := getStringAndValidate(ui, "Role name:", false, nil, false, false); err != nil {
+	if resp, err := prompt.Ask(ui, "Role name:"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
 		params["name"] = resp
 	}
 
-	if resp, err := getStringAndValidate(ui, "Description of the role:", true, nil, false, true); err != nil {
+	if resp, err := prompt.AskDefault(ui, "Description of the role:", ""); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
@@ -342,26 +344,25 @@ func (r Roles) handleRoleWorkflow(args []string) int {
 				return utils.GetExecStatus(parseErr)
 			}
 
-			if len(providers) > 0 {
-				var providerName string
-				options := []option{{"local", "local"}}
-				for _, p := range providers {
-					// Skip thycoticone - roles cannot have it as a provider.
-					if p.Type == cst.ThyOne {
-						continue
-					}
-					v := fmt.Sprintf("%s:%s", p.Name, p.Type)
-					options = append(options, option{v, strings.Replace(v, ":", " - ", 1)})
+			options := []prompt.Option{}
+			for _, p := range providers {
+				// Skip thycoticone - roles cannot have it as a provider.
+				if p.Type == cst.ThyOne {
+					continue
 				}
-				if resp, err := getStringAndValidate(ui, "Provider:", true, options, false, false); err != nil {
+				v := fmt.Sprintf("%s:%s", p.Name, p.Type)
+				options = append(options, prompt.Option{v, strings.Replace(v, ":", " - ", 1)})
+			}
+			if len(options) > 0 {
+				var providerName string
+				if resp, err := prompt.Choose(ui, "Provider:", prompt.Option{"local", "local"}, options...); err != nil {
 					ui.Error(err.Error())
 					return 1
 				} else {
 					providerName = resp
 				}
-
 				if p := strings.Split(providerName, ":"); p[0] != "local" {
-					if resp, err := getStringAndValidate(ui, "External ID:", false, nil, false, false); err != nil {
+					if resp, err := prompt.Ask(ui, "External ID:"); err != nil {
 						ui.Error(err.Error())
 						return 1
 					} else {
@@ -374,14 +375,14 @@ func (r Roles) handleRoleWorkflow(args []string) int {
 			r.outClient.FailS(err.Error())
 			return utils.GetExecStatus(err)
 		} else {
-			if resp, err := getStringAndValidate(ui, "Provider:", true, nil, false, false); err != nil {
+			if resp, err := prompt.AskDefault(ui, "Provider:", ""); err != nil {
 				ui.Error(err.Error())
 				return 1
 			} else {
 				params["provider"] = resp
 			}
 
-			if resp, err := getStringAndValidate(ui, "External ID:", true, nil, false, true); err != nil {
+			if resp, err := prompt.AskDefault(ui, "External ID:", ""); err != nil {
 				ui.Error(err.Error())
 				return 1
 			} else {
@@ -400,11 +401,11 @@ func (r Roles) handleRoleWorkflow(args []string) int {
 func (r Roles) submitRole(path string, role Role, update bool) ([]byte, *errors.ApiError) {
 	if update {
 		uri := paths.CreateResourceURI(cst.NounRole, path, "", true, nil, true)
-		return r.request.DoRequest("PUT", uri, &role)
+		return r.request.DoRequest(http.MethodPut, uri, &role)
 
 	} else {
 		uri := paths.CreateResourceURI(cst.NounRole, "", "", true, nil, true)
-		return r.request.DoRequest("POST", uri, &role)
+		return r.request.DoRequest(http.MethodPost, uri, &role)
 	}
 }
 

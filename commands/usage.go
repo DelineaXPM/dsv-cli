@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 
 	"thy/errors"
@@ -44,23 +45,24 @@ func (u usage) handleGetUsageCmd(args []string) int {
 		u.outClient = format.NewDefaultOutClient()
 	}
 	startDate := viper.GetString(cst.StartDate)
-	endDate := viper.GetString(cst.EndDate)
 	if startDate == "" {
 		err = errors.NewS("error: must specify " + cst.StartDate)
 		u.outClient.WriteResponse(data, err)
 		return utils.GetExecStatus(err)
-	} else {
-		if endDate == "" {
-			endDate = time.Now().Format("2006-01-02") // end date is today
-		}
-		usageRequest := map[string]string{
-			"startDate": startDate,
-			"endDate":   endDate,
-		}
-
-		uri := paths.CreateURI(cst.NounUsage, usageRequest)
-		data, err = u.request.DoRequest("GET", uri, nil)
 	}
+
+	endDate := viper.GetString(cst.EndDate)
+	if endDate == "" {
+		endDate = time.Now().Format("2006-01-02") // end date is today
+	}
+
+	usageRequest := map[string]string{
+		"startDate": startDate,
+		"endDate":   endDate,
+	}
+
+	uri := paths.CreateURI(cst.NounUsage, usageRequest)
+	data, err = u.request.DoRequest(http.MethodGet, uri, nil)
 
 	u.outClient.WriteResponse(data, err)
 	return utils.GetExecStatus(err)

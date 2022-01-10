@@ -5,15 +5,11 @@ PKGNAME = dsv
 ifneq ($(CONSTANTS_CLINAME),)
 	PKGNAME = $(CONSTANTS_CLINAME)
 endif
-GOARCH = amd64
+
 ifeq ($(OS),Windows_NT)
-	GOOS = windows
-	THEN = ;
 	EXE_SUFFIX = .exe
 else
 	ifeq ($(shell uname), Linux)
-		GOOS = linux
-		THEN = &&
 		EXE_SUFFIX =
 	endif
 endif
@@ -28,13 +24,13 @@ test:
 	go test ./...
 
 build:
-	GOOS=$(GOOS) GOARCH=$(GOARCH) GO111MODULE=on go build -ldflags="$(LDFLAGS)" -o $(PKGNAME)$(EXE_SUFFIX)
+	GO111MODULE=on go build -ldflags="$(LDFLAGS)" -o $(PKGNAME)$(EXE_SUFFIX)
 
 build-test:
-	GOOS=$(GOOS) GOARCH=$(GOARCH) GO111MODULE=on go test -c -covermode=count -coverpkg ./... -o $(PKGNAME)$(EXE_SUFFIX).test
+	GO111MODULE=on go test -c -covermode=count -coverpkg ./... -o $(PKGNAME)$(EXE_SUFFIX).test
 
 build-release:
-	GOOS=$(GOOS) GOARCH=$(GOARCH) GO111MODULE=on go build -ldflags="$(LDFLAGS_REL)" -o $(PKGNAME)$(EXE_SUFFIX)
+	GO111MODULE=on go build -ldflags="$(LDFLAGS_REL)" -o $(PKGNAME)$(EXE_SUFFIX)
 
 build-release-all:
 	# Note: need to set CGO_ENABLED = 0 for linux build to work on barebones docker containers (like scratch which doesnt have c std libs)

@@ -58,13 +58,13 @@ func GetGroupReportCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`Read group report records
 
 Usage:
-   • %[1]s  --%[2]s testUser  --%[3]s role1 --%[4]s 5
+   • %[1]s --%[2]s testUser --%[3]s 5
    • %[1]s --%[2]s 2020-01-01
-   `, cst.NounReport, cst.NounUser, cst.NounRole, cst.Limit),
+   `, cst.NounReport, cst.NounUser, cst.Limit),
 		FlagsPredictor: cli.PredictorWrappers{
 			preds.LongFlag(cst.NounUser): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounUser, Usage: "User name (optional)"}), false},
-			preds.LongFlag(cst.NounRole): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounRole, Usage: "Role name (optional)"}), false},
 			preds.LongFlag(cst.Limit):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"}), false},
+			preds.LongFlag(cst.OffSet):   cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.OffSet, Usage: "Offset for the next groups (optional)"}), false},
 		},
 		MinNumberArgs: 0,
 	})
@@ -102,7 +102,8 @@ func (r report) handleSecretReport(args []string) int {
 
 func (r report) handleGroupReport(args []string) int {
 	user := viper.GetString(cst.NounUser)
-	role := viper.GetString(cst.NounRole)
+	limit := viper.GetInt(cst.Limit)
+	offset := viper.GetInt(cst.OffSet)
 
 	if r.outClient == nil {
 		r.outClient = format.NewDefaultOutClient()
@@ -110,14 +111,10 @@ func (r report) handleGroupReport(args []string) int {
 
 	switch {
 	case user != "":
-		return r.reportUserGroup(user)
+		return r.reportUserGroup(user, limit, offset)
 
-	case role != "":
-		return r.reportRoleGroup(role)
-
-		//read sign in user record
 	default:
-		return r.reportSignInGroup()
+		return r.reportSignInGroup(limit, offset)
 	}
 }
 
@@ -375,76 +372,35 @@ func (r report) reportSignInUserSecret(path string, limit, offset int, cursor st
 	return utils.GetExecStatus(err)
 }
 
-func (r report) reportSignInGroup() int {
+func (r report) reportSignInGroup(limit, offset int) int {
 	var query struct {
 		Me struct {
-			UserName       graphql.String
-			Provider       graphql.String
-			Created        graphql.String
-			LastModified   graphql.String
-			CreatedBy      graphql.String
-			LastModifiedBy graphql.String
-			Version        graphql.String
-			MemberOf       []struct {
-				Name  graphql.String
-				Since graphql.String
-			} `json:"group"`
+			GQUser
+			MemberOf MemberOf `graphql:"memberOf(limit:$limit, offset:$offset)"`
 		} `json:"data"`
 	}
 
-	data, err := r.graphClient.DoRequest(paths.CreateURI("report/me", nil), &query, nil)
+	data, err := r.graphClient.DoRequest(
+		paths.CreateURI("report/me", nil), &query, map[string]interface{}{
+			"limit":  graphql.Int(limit),
+			"offset": graphql.Int(offset),
+		})
 	r.outClient.WriteResponse(data, nil)
 	return utils.GetExecStatus(err)
 }
 
-func (r report) reportRoleGroup(role string) int {
-	var query struct {
-		Role struct {
-			Name           graphql.String
-			ExternalID     graphql.String
-			Provider       graphql.String
-			Created        graphql.String
-			LastModified   graphql.String
-			CreatedBy      graphql.String
-			LastModifiedBy graphql.String
-			Version        graphql.String
-			Description    graphql.String
-			MemberOf       []struct {
-				Name  graphql.String
-				Since graphql.String
-			} `json:"group"`
-		} `graphql:"role(name: $role)" json:"data"`
-	}
-
-	variables := map[string]interface{}{
-		"role": graphql.String(role),
-	}
-
-	uri := paths.CreateURI("report/query", nil)
-	data, err := r.graphClient.DoRequest(uri, &query, variables)
-	r.outClient.WriteResponse(data, nil)
-	return utils.GetExecStatus(err)
-}
-
-func (r report) reportUserGroup(user string) int {
+func (r report) reportUserGroup(user string, limit, offset int) int {
 	var query struct {
 		User struct {
-			UserName       graphql.String
-			Provider       graphql.String
-			Created        graphql.String
-			LastModified   graphql.String
-			CreatedBy      graphql.String
-			LastModifiedBy graphql.String
-			Version        graphql.String
-			MemberOf       []struct {
-				Name  graphql.String
-				Since graphql.String
-			} `json:"group"`
+			GQUser
+			MemberOf MemberOf `graphql:"memberOf(limit:$limit, offset:$offset)"`
 		} `graphql:"user(name: $user)" json:"data"`
 	}
 
 	variables := map[string]interface{}{
-		"user": graphql.String(user),
+		"user":   graphql.String(user),
+		"limit":  graphql.Int(limit),
+		"offset": graphql.Int(offset),
 	}
 
 	uri := paths.CreateURI("report/query", nil)
@@ -467,6 +423,19 @@ type Secrets struct {
 		Offset   graphql.Int
 		Limit    graphql.Int
 		PageSize graphql.Int
+	}
+}
+
+type MemberOf struct {
+	Groups []struct {
+		Name  graphql.String
+		Since graphql.String
+	}
+	Pagination struct {
+		Offset     graphql.Int
+		Limit      graphql.Int
+		PageSize   graphql.Int
+		TotalItems graphql.Int
 	}
 }
 

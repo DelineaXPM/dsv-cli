@@ -13,17 +13,6 @@ import (
 
 type SecretType string
 
-func GetInternalPathFromURIPath(uriPath string) string {
-	path := strings.Replace(uriPath, "/", ":", -1)
-	if strings.Index(path, ":") == 0 {
-		path = path[1:]
-	}
-	if strings.Index(path, cst.PrefixEntityInternal) < 0 {
-		path = cst.PrefixEntityInternal + path
-	}
-	return path
-}
-
 func GetURIPathFromInternalPath(internalPath string) string {
 	path := strings.Replace(internalPath, ":", "/", -1)
 	if strings.Index(path, "/") == 0 {

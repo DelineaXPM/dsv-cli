@@ -148,17 +148,13 @@ func TestSecretPathPredictor(t *testing.T) {
 				if err != nil {
 					return errors.New(err)
 				}
-				if strings.HasPrefix(parsedUri.Path, "/v1") {
-					parsedUri.Path = parsedUri.Path[len("/v1"):]
-				}
+				parsedUri.Path = strings.TrimPrefix(parsedUri.Path, "/v1")
 				if !strings.HasPrefix(parsedUri.Path, "/secrets/") {
 					return nil
 				} else {
 					prefix = parsedUri.Path[len("/secrets/"):]
 				}
-				if strings.HasSuffix(prefix, "::listpaths") {
-					prefix = prefix[0 : len(prefix)-len("::listpaths")]
-				}
+				prefix = strings.TrimSuffix(prefix, "::listpaths")
 				prefix = strings.Replace(prefix, "/", ":", -1)
 				filteredList := make([]string, 0, 30)
 				for _, r := range listResources {

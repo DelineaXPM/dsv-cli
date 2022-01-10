@@ -114,7 +114,6 @@ type baseCommand struct {
 	synopsisText      string
 	argsPredictorFunc func() complete.Predictor
 	flagsPredictor    map[string]cli.PredictorWrapper
-	flags             flag.Flag
 	authenticatorFunc func() auth.Authenticator
 	noPreAuth         bool
 	minNumberArgs     int

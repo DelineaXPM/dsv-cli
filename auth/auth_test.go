@@ -3,10 +3,6 @@ package auth_test
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
-	"github.com/jarcoal/httpmock"
-	"github.com/spf13/viper"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -19,6 +15,11 @@ import (
 	"thy/requests"
 	"thy/store"
 	"thy/utils/test_helpers"
+
+	"github.com/golang-jwt/jwt/v4"
+	"github.com/jarcoal/httpmock"
+	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -168,7 +169,7 @@ func TestGetToken_Password(t *testing.T) {
 			httpmock.Activate()
 			defer httpmock.DeactivateAndReset()
 
-			registerResponse(tokenEndpoint, tc.apiResponse["status"].(int), "POST", tc.apiResponse["response"].(map[string]interface{}))
+			registerResponse(tokenEndpoint, tc.apiResponse["status"].(int), http.MethodPost, tc.apiResponse["response"].(map[string]interface{}))
 
 			rsp, err := authDef.GetTokenCacheOverride(false)
 
@@ -263,7 +264,7 @@ func TestGetToken_SecurePassword(t *testing.T) {
 			httpmock.Activate()
 			defer httpmock.DeactivateAndReset()
 
-			registerResponse(tokenEndpoint, tc.apiResponse["status"].(int), "POST", tc.apiResponse["response"].(map[string]interface{}))
+			registerResponse(tokenEndpoint, tc.apiResponse["status"].(int), http.MethodPost, tc.apiResponse["response"].(map[string]interface{}))
 
 			rsp, err := authDef.GetToken()
 
@@ -335,7 +336,7 @@ func TestGetToken_RefreshToken(t *testing.T) {
 			httpmock.Activate()
 			defer httpmock.DeactivateAndReset()
 
-			registerResponse(tokenEndpoint, tc.apiResponse["status"].(int), "POST", tc.apiResponse["response"].(map[string]interface{}))
+			registerResponse(tokenEndpoint, tc.apiResponse["status"].(int), http.MethodPost, tc.apiResponse["response"].(map[string]interface{}))
 
 			rsp, err := authDef.GetTokenCacheOverride(false)
 
@@ -415,8 +416,8 @@ func TestGetToken_Azure(t *testing.T) {
 
 			httpmock.Activate()
 			defer httpmock.DeactivateAndReset()
-			registerResponse(tokenEndpoint, tc.apiResponse["status"].(int), "POST", tc.apiResponse["response"].(map[string]interface{}))
-			registerResponse(msiEndpoint, tc.msiResponse["status"].(int), "GET", tc.msiResponse["response"].(map[string]interface{}))
+			registerResponse(tokenEndpoint, tc.apiResponse["status"].(int), http.MethodPost, tc.apiResponse["response"].(map[string]interface{}))
+			registerResponse(msiEndpoint, tc.msiResponse["status"].(int), http.MethodGet, tc.msiResponse["response"].(map[string]interface{}))
 
 			rsp, err := authDef.GetTokenCacheOverride(false)
 
@@ -478,7 +479,7 @@ func TestGetToken_GCP(t *testing.T) {
 
 			httpmock.Activate()
 			defer httpmock.DeactivateAndReset()
-			registerResponse(tokenEndpoint, tc.apiResponse["status"].(int), "POST", tc.apiResponse["response"].(map[string]interface{}))
+			registerResponse(tokenEndpoint, tc.apiResponse["status"].(int), http.MethodPost, tc.apiResponse["response"].(map[string]interface{}))
 
 			rsp, err := authDef.GetTokenCacheOverride(false)
 
@@ -564,7 +565,7 @@ func TestToken_GcpSignJwt(t *testing.T) {
 			}
 
 			if err == nil {
-				claims := &jwt.StandardClaims{}
+				claims := &jwt.RegisteredClaims{}
 				parser := jwt.Parser{}
 				if _, _, err := parser.ParseUnverified(gcpJwt, claims); err != nil {
 					t.Fatalf("failed to parse gcp token: %v", err)

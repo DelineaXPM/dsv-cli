@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
+	"thy/internal/prompt"
 	"thy/paths"
 	preds "thy/predictors"
 	"thy/requests"
@@ -25,7 +27,7 @@ import (
 
 var (
 	errMustSpecifyPasswordOrDisplayname = errors.NewF("error: must specify %s or %s", cst.DataPassword, cst.DataDisplayname)
-	errWrongDisplayName = errors.NewS("error: displayname field must be between 3 and 100 characters")
+	errWrongDisplayName                 = errors.NewS("error: displayname field must be between 3 and 100 characters")
 )
 
 type User struct {
@@ -198,7 +200,7 @@ func (u User) handleUserReadCmd(args []string) int {
 			userName = fmt.Sprint(userName, "/", cst.Version, "/", version)
 		}
 		uri := paths.CreateResourceURI(cst.NounUser, userName, "", true, nil, true)
-		data, err = u.request.DoRequest("GET", uri, nil)
+		data, err = u.request.DoRequest(http.MethodGet, uri, nil)
 	}
 
 	outClient := u.outClient
@@ -228,7 +230,7 @@ func (u User) handleUserSearchCmd(args []string) int {
 			cst.Cursor:    cursor,
 		}
 		uri := paths.CreateResourceURI(cst.NounUser, "", "", false, queryParams, true)
-		data, err = u.request.DoRequest("GET", uri, nil)
+		data, err = u.request.DoRequest(http.MethodGet, uri, nil)
 	}
 	outClient := u.outClient
 	if outClient == nil {
@@ -251,7 +253,7 @@ func (u User) handleUserDeleteCmd(args []string) int {
 	} else {
 		query := map[string]string{"force": strconv.FormatBool(force)}
 		uri := paths.CreateResourceURI(cst.NounUser, paths.ProcessResource(userName), "", true, query, true)
-		data, err = u.request.DoRequest("DELETE", uri, nil)
+		data, err = u.request.DoRequest(http.MethodDelete, uri, nil)
 	}
 	if u.outClient == nil {
 		u.outClient = format.NewDefaultOutClient()
@@ -275,7 +277,7 @@ func (u User) handleUserRestoreCmd(args []string) int {
 		err = errors.NewS("error: must specify " + cst.DataUsername)
 	} else {
 		uri := paths.CreateResourceURI(cst.NounUser, paths.ProcessResource(userName), "/restore", true, nil, true)
-		data, err = u.request.DoRequest("PUT", uri, nil)
+		data, err = u.request.DoRequest(http.MethodPut, uri, nil)
 	}
 
 	u.outClient.WriteResponse(data, err)
@@ -339,7 +341,7 @@ func (u User) handleUserUpdateCmd(args []string) int {
 		return utils.GetExecStatus(err)
 	}
 
-	displayNameExists := hasFlag(args, "--" + cst.DataDisplayname)
+	displayNameExists := hasFlag(args, "--"+cst.DataDisplayname)
 	passData := viper.GetString(cst.DataPassword)
 	displayName := viper.GetString(cst.DataDisplayname)
 	if passData == "" && !displayNameExists {
@@ -371,7 +373,7 @@ func (u User) handleUserUpdateCmd(args []string) int {
 
 func (u User) readUser(name string) (*userModel, error) {
 	uri := paths.CreateResourceURI(cst.NounUser, name, "", true, nil, true)
-	data, apiError := u.request.DoRequest("GET", uri, nil)
+	data, apiError := u.request.DoRequest(http.MethodGet, uri, nil)
 	if apiError != nil {
 		return nil, apiError
 	}
@@ -396,7 +398,7 @@ func (u User) handleUserWorkflow(args []string) int {
 	}
 	params := make(map[string]string)
 	isUpdate := viper.GetString(cst.LastCommandKey) == cst.Update
-	if resp, err := getStringAndValidate(ui, "Username:", false, nil, false, false); err != nil {
+	if resp, err := prompt.Ask(ui, "Username:"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
@@ -412,44 +414,38 @@ func (u User) handleUserWorkflow(args []string) int {
 			return utils.GetExecStatus(err)
 		}
 
-		var passwordResp, displayNameResp bool
-
-		// Password
-		if resp, err := getStringAndValidateDefault(
-			ui, "Would you like to update the password [y/n] (default: n):", "n", false, false); err != nil {
+		passwordResp, err := prompt.YesNo(ui, "Would you like to update the password", false)
+		if err != nil {
 			ui.Error(err.Error())
 			return utils.GetExecStatus(err)
-		} else {
-			passwordResp = isYes(resp, false)
-			if passwordResp {
-				if existingUser.Provider != "" {
-					u.outClient.FailS("User has a third-party auth provider, so there is nothing to update.")
-					return 1
-				}
+		}
 
-				if resp, err := getStringAndValidate(ui, "New password for the user:", false, nil, true, true); err != nil {
-					ui.Error(err.Error())
-					return 1
-				} else {
-					params["password"] = resp
-				}
+		if passwordResp {
+			if existingUser.Provider != "" {
+				u.outClient.FailS("User has a third-party auth provider, so there is nothing to update.")
+				return 1
+			}
+
+			if resp, err := prompt.AskSecureConfirm(ui, "New password for the user:"); err != nil {
+				ui.Error(err.Error())
+				return 1
+			} else {
+				params["password"] = resp
 			}
 		}
 
-		// Display name
-		if resp, err := getStringAndValidateDefault(
-			ui, "Would you like to update the display name [y/n] (default: n):", "n", false, false); err != nil {
+		displayNameResp, err := prompt.YesNo(ui, "Would you like to update the display name", false)
+		if err != nil {
 			ui.Error(err.Error())
 			return utils.GetExecStatus(err)
-		} else {
-			displayNameResp = isYes(resp, false)
-			if displayNameResp {
-				if resp, err := getStringAndValidate(ui, "Display name:", false, nil, false, false); err != nil {
-					ui.Error(err.Error())
-					return 1
-				} else {
-					params[cst.DataDisplayname] = resp
-				}
+		}
+
+		if displayNameResp {
+			if resp, err := prompt.Ask(ui, "Display name:"); err != nil {
+				ui.Error(err.Error())
+				return 1
+			} else {
+				params[cst.DataDisplayname] = resp
 			}
 		}
 
@@ -463,7 +459,7 @@ func (u User) handleUserWorkflow(args []string) int {
 	}
 
 	// Create user workflow
-	if resp, err := getStringAndValidate(ui, "Display name:", true, nil, false, false); err != nil {
+	if resp, err := prompt.AskDefault(ui, "Display name:", ""); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {
@@ -483,7 +479,7 @@ func (u User) handleUserWorkflow(args []string) int {
 	}
 
 	if len(providers) == 0 {
-		if resp, err := getStringAndValidate(ui, "New password for the user:", false, nil, true, true); err != nil {
+		if resp, err := prompt.AskSecureConfirm(ui, "New password for the user:"); err != nil {
 			ui.Error(err.Error())
 			return 1
 		} else {
@@ -491,12 +487,12 @@ func (u User) handleUserWorkflow(args []string) int {
 		}
 	} else {
 		var providerName string
-		options := []option{{"local", "local"}}
+		options := []prompt.Option{}
 		for _, p := range providers {
 			v := fmt.Sprintf("%s:%s", p.Name, p.Type)
-			options = append(options, option{v, strings.Replace(v, ":", " - ", 1)})
+			options = append(options, prompt.Option{v, strings.Replace(v, ":", " - ", 1)})
 		}
-		if resp, err := getStringAndValidate(ui, "Provider:", true, options, false, false); err != nil {
+		if resp, err := prompt.Choose(ui, "Provider:", prompt.Option{"local", "local"}, options...); err != nil {
 			ui.Error(err.Error())
 			return 1
 		} else {
@@ -504,7 +500,7 @@ func (u User) handleUserWorkflow(args []string) int {
 		}
 
 		if p := strings.Split(providerName, ":"); p[0] == "local" {
-			if resp, err := getStringAndValidate(ui, "New password for the user:", false, nil, true, true); err != nil {
+			if resp, err := prompt.AskSecureConfirm(ui, "New password for the user:"); err != nil {
 				ui.Error(err.Error())
 				return 1
 			} else {
@@ -513,7 +509,7 @@ func (u User) handleUserWorkflow(args []string) int {
 		} else if p[1] == cst.ThyOne {
 			params["provider"] = strings.Split(providerName, ":")[0]
 		} else {
-			if resp, err := getStringAndValidate(ui, "External ID:", false, nil, false, false); err != nil {
+			if resp, err := prompt.Ask(ui, "External ID:"); err != nil {
 				ui.Error(err.Error())
 				return 1
 			} else {
@@ -531,10 +527,10 @@ func (u User) handleUserWorkflow(args []string) int {
 func (u User) submitUser(path string, data map[string]string, update bool) ([]byte, *errors.ApiError) {
 	if update {
 		uri := paths.CreateResourceURI(cst.NounUser, path, "", true, nil, true)
-		return u.request.DoRequest("PUT", uri, &data)
+		return u.request.DoRequest(http.MethodPut, uri, &data)
 	}
 	uri := paths.CreateResourceURI(cst.NounUser, "", "", true, nil, true)
-	return u.request.DoRequest("POST", uri, &data)
+	return u.request.DoRequest(http.MethodPost, uri, &data)
 }
 
 func parseAuthProviders(data []byte) ([]authProvider, error) {

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
 	cst "thy/constants"
 	terrors "thy/errors"
 	"thy/format"
@@ -45,25 +46,20 @@ func InitCliConfig(cfgFile string, profile string, args []string) *terrors.ApiEr
 		}
 	}
 
-	flagsToValidate := []string{cst.Tenant}
 	if err := viper.ReadInConfig(profile); err != nil {
-		flagsMissing := false
-		for _, f := range flagsToValidate {
-			if v := GetFlagBeforeParse(f, args); v == "" {
-				flagsMissing = true
-			}
-		}
-		if !flagsMissing {
+		if v := GetFlagBeforeParse(cst.Tenant, args); v != "" {
 			return nil
 		}
+
 		if eString := err.Error(); strings.Contains(eString, "invalid subkey") {
 			return terrors.NewS(fmt.Sprintf("Invalid or non-existent profile in CLI config: %s.", profile))
-		} else {
-			// Do not return the error to allow users to view help text for commands.
-			out := format.NewDefaultOutClient()
-			out.FailS(fmt.Sprintf("Create CLI config file manually or execute command '%s init' to initiate CLI configuration - cannot find config.", cst.CmdRoot))
 		}
+
+		// Do not return the error to allow users to view help text for commands.
+		out := format.NewDefaultOutClient()
+		out.FailS(fmt.Sprintf("Create CLI config file manually or execute command '%s init' to initiate CLI configuration - cannot find config.", cst.CmdRoot))
 	}
+
 	return nil
 }
 

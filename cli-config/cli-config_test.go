@@ -7,10 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	tn = "mocktenant"
-)
-
 func TestGetSecureSetting(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -82,7 +78,6 @@ func TestGetFlagBeforeParse(t *testing.T) {
 			args:           []string{"-c=some_config_value", "another_arg"},
 			expectedResult: "some_config_value",
 		},
-
 
 		// long form of the flag
 		{

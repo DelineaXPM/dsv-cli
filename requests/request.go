@@ -139,31 +139,29 @@ func getResponse(bodyBytes []byte, resp *http.Response) ([]byte, *errors.ApiErro
 			return nil, errors.NewS("error processing API response")
 		}
 		return nil, errors.NewS(string(bodyBytes)).WithResponse(resp)
-	} else {
-		if len(bodyBytes) == 0 {
-			return bodyBytes, nil
-		}
-		var unmarshalled map[string]interface{}
-		if err := json.Unmarshal(bodyBytes, &unmarshalled); err != nil {
-			return nil, UnmarshalingError
-		} else {
-			data := unmarshalled["data"]
-
-			// If there is more than just `data`, marshal and return everything.
-			if len(unmarshalled) > 1 || data == nil {
-				res, err := format.JsonMarshal(unmarshalled)
-				if err != nil {
-					return nil, MarshalingError
-				} else {
-					return res, nil
-				}
-			} else {
-				if marshalled, err := format.JsonMarshal(data); err != nil {
-					return nil, MarshalingError
-				} else {
-					return marshalled, nil
-				}
-			}
-		}
 	}
+
+	if len(bodyBytes) == 0 {
+		return bodyBytes, nil
+	}
+
+	var unmarshalled map[string]interface{}
+	err := json.Unmarshal(bodyBytes, &unmarshalled)
+	if err != nil {
+		return nil, UnmarshalingError
+	}
+
+	data := unmarshalled["data"]
+
+	// If there is more than just `data`, marshal and return everything.
+	var res []byte
+	if len(unmarshalled) > 1 || data == nil {
+		res, err = format.JsonMarshal(unmarshalled)
+	} else {
+		res, err = format.JsonMarshal(data)
+	}
+	if err != nil {
+		return nil, MarshalingError
+	}
+	return res, nil
 }

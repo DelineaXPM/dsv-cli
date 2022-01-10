@@ -9,6 +9,7 @@ import (
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
+	"thy/internal/prompt"
 	"thy/paths"
 	preds "thy/predictors"
 	"thy/requests"
@@ -113,7 +114,7 @@ func (p poolHandler) handleRead(args []string) int {
 		err = errors.NewS("error: must specify " + cst.DataName)
 	} else {
 		uri := paths.CreateResourceURI(cst.NounPool, paths.ProcessResource(name), "", true, nil, true)
-		data, err = p.request.DoRequest("GET", uri, nil)
+		data, err = p.request.DoRequest(http.MethodGet, uri, nil)
 	}
 
 	p.outClient.WriteResponse(data, err)
@@ -150,7 +151,7 @@ func (p poolHandler) handleList(args []string) int {
 	var err *errors.ApiError
 	var data []byte
 	uri := paths.CreateResourceURI(cst.NounPool, "", "", false, nil, true)
-	data, err = p.request.DoRequest("GET", uri, nil)
+	data, err = p.request.DoRequest(http.MethodGet, uri, nil)
 
 	p.outClient.WriteResponse(data, err)
 	return utils.GetExecStatus(err)
@@ -190,7 +191,7 @@ func (p poolHandler) handleCreateWizard(args []string) int {
 
 	var pool Pool
 
-	if resp, err := getStringAndValidate(ui, "Pool name:", false, nil, false, false); err != nil {
+	if resp, err := prompt.Ask(ui, "Pool name:"); err != nil {
 		ui.Error(err.Error())
 		return 1
 	} else {

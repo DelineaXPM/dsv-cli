@@ -15,10 +15,10 @@ func (c clipWriter) Write(p []byte) (n int, err error) {
 		return 0, nil
 	}
 	data := string(p)
-	if err := clipboard.WriteAll(data); err == nil {
+	if e := clipboard.WriteAll(data); e == nil {
 		n = len(p)
 	} else {
-		err = serrors.New("Error writing to clipboard; " + err.Error())
+		err = serrors.New("Error writing to clipboard; " + e.Error())
 	}
 	return n, err
 }
