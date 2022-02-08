@@ -35,13 +35,6 @@ func TestGetSecureSetting(t *testing.T) {
 	}
 }
 
-func TestInstallCommand(t *testing.T) {
-	validInstallCmd := IsInstallCmd([]string{"--install"})
-	assert.Equal(t, true, validInstallCmd)
-	validInstallCmd = IsInstallCmd([]string{"-install"})
-	assert.Equal(t, true, validInstallCmd)
-}
-
 func TestGetFlagBeforeParse(t *testing.T) {
 	testCases := []struct {
 		name           string

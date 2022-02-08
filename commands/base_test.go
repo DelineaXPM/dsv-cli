@@ -5,9 +5,6 @@ import (
 	"testing"
 
 	cst "thy/constants"
-	"thy/utils"
-
-	"github.com/spf13/viper"
 )
 
 func TestIsInit(t *testing.T) {
@@ -41,35 +38,61 @@ func TestIsInit(t *testing.T) {
 	}
 }
 
-func TestIsBareArgs(t *testing.T) {
+func TestIsInstall(t *testing.T) {
 	tests := []struct {
 		args     string
 		expected bool
 	}{
-		{"--profile local", true},
-		{"--config cfg", true},
-		{"--profile local --config cfg", true},
-		{"-v", true},
-		{"--verbose", true},
-		{"--profile local -v", true},
-		{"--profile local --config cfg--verbose", true},
+		{"", false},
+		{cst.CmdRoot, false},
+		{cst.CmdRoot + " " + "secret", false},
+		{cst.CmdRoot + " " + "secret init", false},
+		{cst.CmdRoot + " " + "cli-config", false},
 
-		{"--data", false},
-		{"--path databases/mongo-db01 --data '{\"Key\":\"Value\"}'", false},
+		{"--install", true},
+		{"-install", true},
+		{cst.CmdRoot + " " + "--install", true},
+		{cst.CmdRoot + " " + "-install", true},
 	}
 
 	for _, tc := range tests {
-		viper.Reset()
 		args := strings.Split(tc.args, " ")
-		if utils.Contains(args, "--profile") {
-			viper.Set(cst.Profile, "abc")
-		}
-		if utils.Contains(args, "--config") {
-			viper.Set(cst.Config, "cfg")
-		}
-		got := OnlyGlobalArgs(args)
+		got := IsInstall(args)
 		if got != tc.expected {
-			t.Errorf("Expected OnlyGlobalArgs(%v) to return %v, but got %v", args, tc.expected, got)
+			t.Errorf("Expected IsInstall(%v) to return %v, but got %v", args, tc.expected, got)
 		}
 	}
+}
+
+func TestOnlyGlobalArgs(t *testing.T) {
+	allGlobals := func(flags string) {
+		t.Helper()
+		result := OnlyGlobalArgs(strings.Split(flags, " "))
+		if !result {
+			t.Errorf("OnlyGlobalArgs(%v) must return true", flags)
+		}
+	}
+	notGlobals := func(flags string) {
+		t.Helper()
+		result := OnlyGlobalArgs(strings.Split(flags, " "))
+		if result {
+			t.Errorf("OnlyGlobalArgs(%v) must return false", flags)
+		}
+	}
+
+	allGlobals("--profile local")
+	allGlobals("--config cfg")
+	allGlobals("--profile local --config cfg")
+	allGlobals("-v")
+	allGlobals("--verbose")
+	allGlobals("--profile local -v")
+	allGlobals("--profile local --config cfg--verbose")
+	allGlobals("--auth-type password -v")
+	allGlobals("--auth-type password --auth-username tom --auth-password r1ddle")
+	allGlobals("-a password -u tom -p r1ddle")
+
+	notGlobals("--data")
+	notGlobals("--path databases/mongo-db01 --data '{\"Key\":\"Value\"}'")
+	notGlobals("--effect allow --auth-type password --auth-username tom --auth-password r1ddle")
+	notGlobals("--effect allow -a password -u tom -p r1ddle")
 }

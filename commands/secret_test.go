@@ -2,19 +2,22 @@ package cmd
 
 import (
 	e "errors"
+	"fmt"
+	"net/http"
+	"strings"
 	"testing"
+	"time"
+
 	cst "thy/constants"
 	"thy/errors"
 	"thy/fake"
 	"thy/store"
-	"time"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestHandleDescribeCmd(t *testing.T) {
-
 	testCase := []struct {
 		name          string
 		arg           []string
@@ -149,11 +152,10 @@ func TestHandleDescribeCmd(t *testing.T) {
 
 	for _, tt := range testCase {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.flags != nil {
-				for _, f := range tt.flags {
-					viper.Set(f.flag, f.value)
-				}
+			for _, f := range tt.flags {
+				viper.Set(f.flag, f.value)
 			}
+
 			writer := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
@@ -194,17 +196,15 @@ func TestHandleDescribeCmd(t *testing.T) {
 			} else {
 				assert.Equal(t, err, tt.expectedErr)
 			}
-			if tt.flags != nil {
-				for _, f := range tt.flags {
-					viper.Set(f.flag, "")
-				}
+
+			for _, f := range tt.flags {
+				viper.Set(f.flag, "")
 			}
 		})
 	}
 }
 
 func TestHandleSecretSearchCmd(t *testing.T) {
-
 	testCase := []struct {
 		name        string
 		args        string
@@ -249,11 +249,10 @@ func TestHandleSecretSearchCmd(t *testing.T) {
 	for _, tt := range testCase {
 
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.flags != nil {
-				for _, f := range tt.flags {
-					viper.Set(f.flag, f.value)
-				}
+			for _, f := range tt.flags {
+				viper.Set(f.flag, f.value)
 			}
+
 			writer := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
@@ -274,10 +273,9 @@ func TestHandleSecretSearchCmd(t *testing.T) {
 			} else {
 				assert.Equal(t, err, tt.expectedErr)
 			}
-			if tt.flags != nil {
-				for _, f := range tt.flags {
-					viper.Set(f.flag, "")
-				}
+
+			for _, f := range tt.flags {
+				viper.Set(f.flag, "")
 			}
 		})
 
@@ -368,11 +366,10 @@ func TestHandleDeleteCmd(t *testing.T) {
 	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.flags != nil {
-				for _, f := range tt.flags {
-					viper.Set(f.flag, f.value)
-				}
+			for _, f := range tt.flags {
+				viper.Set(f.flag, f.value)
 			}
+
 			writer := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
@@ -393,10 +390,9 @@ func TestHandleDeleteCmd(t *testing.T) {
 			} else {
 				assert.Equal(t, err, tt.expectedErr)
 			}
-			if tt.flags != nil {
-				for _, f := range tt.flags {
-					viper.Set(f.flag, "")
-				}
+
+			for _, f := range tt.flags {
+				viper.Set(f.flag, "")
 			}
 		})
 	}
@@ -485,11 +481,10 @@ func TestHandleRollbackCmd(t *testing.T) {
 
 	for _, tt := range testCase {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.flags != nil {
-				for _, f := range tt.flags {
-					viper.Set(f.flag, f.value)
-				}
+			for _, f := range tt.flags {
+				viper.Set(f.flag, f.value)
 			}
+
 			writer := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
@@ -510,10 +505,9 @@ func TestHandleRollbackCmd(t *testing.T) {
 			} else {
 				assert.Equal(t, tt.expectedErr, err)
 			}
-			if tt.flags != nil {
-				for _, f := range tt.flags {
-					viper.Set(f.flag, "")
-				}
+
+			for _, f := range tt.flags {
+				viper.Set(f.flag, "")
 			}
 		})
 	}
@@ -654,11 +648,10 @@ func TestHandleReadCmd(t *testing.T) {
 
 	for _, tt := range testCase {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.flags != nil {
-				for _, f := range tt.flags {
-					viper.Set(f.flag, f.value)
-				}
+			for _, f := range tt.flags {
+				viper.Set(f.flag, f.value)
 			}
+
 			writer := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
@@ -701,10 +694,9 @@ func TestHandleReadCmd(t *testing.T) {
 			}
 			viper.Set(cst.StoreType, "")
 			viper.Set(cst.CacheStrategy, "")
-			if tt.flags != nil {
-				for _, f := range tt.flags {
-					viper.Set(f.flag, "")
-				}
+
+			for _, f := range tt.flags {
+				viper.Set(f.flag, "")
 			}
 		})
 	}
@@ -724,31 +716,20 @@ func TestHandleUpsertCmd(t *testing.T) {
 	}{
 		{
 			"Happy path POST",
-			[]string{"mySecret"},
+			[]string{"mySecret", "--desc", "new description"},
 			[]byte(`test`),
 			"create",
 			nil,
-			nil,
-		},
-		{
-			"Happy path POST",
-			[]string{"mySecret"},
-			[]byte(`test`),
-			"create",
-			nil,
-			nil,
+			[]struct {
+				flag  string
+				value string
+			}{
+				{cst.DataDescription, "new description"},
+			},
 		},
 		{
 			"Happy path PUT (ID)",
-			[]string{"140a372c-7d37-11eb-bc08-00155d19ad95"},
-			[]byte(`test`),
-			"update",
-			nil,
-			nil,
-		},
-		{
-			"Happy path PUT (ID)",
-			[]string{""},
+			[]string{"140a372c-7d37-11eb-bc08-00155d19ad95", "--desc", "new description"},
 			[]byte(`test`),
 			"update",
 			nil,
@@ -756,23 +737,39 @@ func TestHandleUpsertCmd(t *testing.T) {
 				flag  string
 				value string
 			}{
-				{
-					cst.ID,
-					"140a372c-7d37-11eb-bc08-00155d19ad95",
-				},
+				{cst.DataDescription, "new description"},
+			},
+		},
+		{
+			"Happy path PUT (ID)",
+			[]string{"--id", "140a372c-7d37-11eb-bc08-00155d19ad95", "--desc", "new description"},
+			[]byte(`test`),
+			"update",
+			nil,
+			[]struct {
+				flag  string
+				value string
+			}{
+				{cst.ID, "140a372c-7d37-11eb-bc08-00155d19ad95"},
+				{cst.DataDescription, "new description"},
 			},
 		},
 		{
 			"Happy path PUT (path)",
-			[]string{"mySecret"},
+			[]string{"mySecret", "--description", "new description"},
 			[]byte(`test`),
 			"update",
 			nil,
-			nil,
+			[]struct {
+				flag  string
+				value string
+			}{
+				{cst.DataDescription, "new description"},
+			},
 		},
 		{
 			"no path",
-			[]string{""},
+			[]string{"--description", "new description"},
 			[]byte(`test`),
 			"",
 			errors.New(e.New("error: must specify --id or --path (or [path])")),
@@ -790,21 +787,22 @@ func TestHandleUpsertCmd(t *testing.T) {
 	assert.Nil(t, err)
 
 	viper.Set(cst.Version, "v1")
-	viper.Set(cst.DataDescription, "new description")
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.flags != nil {
-				for _, f := range tt.flags {
-					viper.Set(f.flag, f.value)
-				}
+			for _, f := range tt.flags {
+				viper.Set(f.flag, f.value)
 			}
-			writer := &fake.FakeOutClient{}
+			viper.Set(cst.LastCommandKey, tt.method)
+
 			var data []byte
 			var err *errors.ApiError
+
+			writer := &fake.FakeOutClient{}
 			writer.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
+			writer.FailEStub = func(apiError *errors.ApiError) { err = apiError }
 
 			req := &fake.FakeClient{}
 			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
@@ -812,8 +810,6 @@ func TestHandleUpsertCmd(t *testing.T) {
 			}
 
 			sec := &Secret{req, writer, store.GetStore, nil, cst.NounSecret}
-			viper.Set(cst.LastCommandKey, tt.method)
-
 			_ = sec.handleUpsertCmd(tt.args)
 
 			if tt.expectedErr == nil {
@@ -821,10 +817,297 @@ func TestHandleUpsertCmd(t *testing.T) {
 			} else {
 				assert.Equal(t, tt.expectedErr, err)
 			}
-			if tt.flags != nil {
-				for _, f := range tt.flags {
-					viper.Set(f.flag, "")
+			for _, f := range tt.flags {
+				viper.Set(f.flag, "")
+			}
+			viper.Set(cst.LastCommandKey, "")
+		})
+	}
+}
+
+// UIMock is a cli.UI mock which will go somewhere else later.
+type UIMock struct {
+	stub func(string) (string, error)
+}
+
+func (u *UIMock) Ask(s string) (string, error)       { return u.stub(s) }
+func (u *UIMock) AskSecret(s string) (string, error) { return u.stub(s) }
+func (u *UIMock) Output(string)                      {}
+func (u *UIMock) Info(string)                        {}
+func (u *UIMock) Error(string)                       {}
+func (u *UIMock) Warn(string)                        {}
+
+func TestHandleCreateWorkflow(t *testing.T) {
+	const tenantName = "createworkflowtest"
+
+	// uiStep contains prefix of the expected line and answer to it.
+	type uiStep struct {
+		inPrefix string
+		out      string
+	}
+
+	cases := []struct {
+		name         string
+		steps        []*uiStep
+		expectedURI  string
+		expectedBody *secretUpsertBody
+	}{
+		{
+			name: "Add description and k/v attributes, but skip data",
+			steps: []*uiStep{
+				{"Path", "key1"},
+				{"Description", "some key"},
+				{"Add Attributes", "2"},
+				{"Key", "aa"},
+				{"Value", "11"},
+				{"Add more?", "no"},
+				{"Add Data", "1"},
+			},
+			expectedURI: "https://createworkflowtest.secretsvaultcloud.com/v1/secrets/key1",
+			expectedBody: &secretUpsertBody{
+				Description: "some key",
+				Data:        map[string]interface{}{},
+				Attributes: map[string]interface{}{
+					"aa": "11",
+				},
+			},
+		},
+		{
+			name: "Add description and json attributes, but skip data",
+			steps: []*uiStep{
+				{"Path", "key1"},
+				{"Description", "some key"},
+				{"Add Attributes", "3"},
+				{"Attributes", "{\"attr1\":\"value1\"}"},
+				{"Add Data", "1"},
+			},
+			expectedURI: "https://createworkflowtest.secretsvaultcloud.com/v1/secrets/key1",
+			expectedBody: &secretUpsertBody{
+				Description: "some key",
+				Data:        map[string]interface{}{},
+				Attributes: map[string]interface{}{
+					"attr1": "value1",
+				},
+			},
+		},
+		{
+			name: "Add description and k/v data, but skip attributes",
+			steps: []*uiStep{
+				{"Path", "key1"},
+				{"Description", "some key"},
+				{"Add Attributes", "1"},
+				{"Add Data", "2"},
+				{"Key", "apikey"},
+				{"Value", "testtest"},
+				{"Add more?", "no"},
+			},
+			expectedURI: "https://createworkflowtest.secretsvaultcloud.com/v1/secrets/key1",
+			expectedBody: &secretUpsertBody{
+				Description: "some key",
+				Data: map[string]interface{}{
+					"apikey": "testtest",
+				},
+				Attributes: map[string]interface{}{},
+			},
+		},
+		{
+			name: "Add description and json data, but skip attributes",
+			steps: []*uiStep{
+				{"Path", "key1"},
+				{"Description", "some key"},
+				{"Add Attributes", "1"},
+				{"Add Data", "3"},
+				{"Data", "{\"apikey\":\"testtesttest\"}"},
+			},
+			expectedURI: "https://createworkflowtest.secretsvaultcloud.com/v1/secrets/key1",
+			expectedBody: &secretUpsertBody{
+				Description: "some key",
+				Data: map[string]interface{}{
+					"apikey": "testtesttest",
+				},
+				Attributes: map[string]interface{}{},
+			},
+		},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			viper.Set(cst.Tenant, tenantName)
+
+			cnt := 0
+			uimock := &UIMock{
+				stub: func(s string) (string, error) {
+					step := tt.steps[cnt]
+					cnt++
+
+					if strings.HasPrefix(s, step.inPrefix) {
+						return step.out, nil
+					}
+					return "", fmt.Errorf("unexpected line: %s", s)
+				},
+			}
+
+			var (
+				reqMethod string
+				reqURI    string
+				reqData   interface{}
+			)
+			req := &fake.FakeClient{}
+			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+				reqMethod = s
+				reqURI = s2
+				reqData = i
+				return nil, nil
+			}
+
+			sec := &Secret{request: req, secretType: cst.NounSecret}
+			_, apiErr := sec.handleCreateWorkflow(uimock)
+
+			viper.Set(cst.Tenant, "")
+
+			assert.Nil(t, apiErr)
+			assert.Equal(t, "POST", reqMethod)
+			assert.Equal(t, tt.expectedURI, reqURI)
+			assert.IsType(t, &secretUpsertBody{}, reqData)
+			assert.Equal(t, tt.expectedBody, reqData)
+		})
+	}
+}
+
+func TestHandleUpdateWorkflow(t *testing.T) {
+	const tenantName = "updateworkflowtest"
+
+	// uiStep contains prefix of the expected line and answer to it.
+	type uiStep struct {
+		inPrefix string
+		out      string
+	}
+
+	cases := []struct {
+		name            string
+		steps           []*uiStep
+		getSecretAPIErr *errors.ApiError
+		expectedURI     string
+		expectedBody    *secretUpsertBody
+		shouldFail      bool
+	}{
+		{
+			name: "Update description only",
+			steps: []*uiStep{
+				{"Path", "key1"},
+				{"Update description", "yes"},
+				{"Description", "new description"},
+				{"Overwrite existing attributes and data?", "no"},
+				{"Update attributes?", "1"},
+				{"Update data?", "1"},
+			},
+			expectedURI: "https://updateworkflowtest.secretsvaultcloud.com/v1/secrets/key1",
+			expectedBody: &secretUpsertBody{
+				Description: "new description",
+				Data:        map[string]interface{}{},
+				Attributes:  map[string]interface{}{},
+				Overwrite:   false,
+			},
+			shouldFail: false,
+		},
+		{
+			name: "Secret does not exist",
+			steps: []*uiStep{
+				{"Path", "key1"},
+			},
+			getSecretAPIErr: errors.NewS("some message").WithResponse(&http.Response{StatusCode: http.StatusNotFound}),
+			shouldFail:      true,
+		},
+		{
+			name: "No permission to read secret",
+			steps: []*uiStep{
+				{"Path", "key1"},
+				{"You are not allowed to read secret under that path. Do you want to continue?", "yes"},
+				{"Update description", "yes"},
+				{"Description", "new description"},
+				{"Overwrite existing attributes and data?", "no"},
+				{"Update attributes?", "1"},
+				{"Update data?", "1"},
+			},
+			getSecretAPIErr: errors.NewS("some message").WithResponse(&http.Response{StatusCode: http.StatusForbidden}),
+			expectedURI:     "https://updateworkflowtest.secretsvaultcloud.com/v1/secrets/key1",
+			expectedBody: &secretUpsertBody{
+				Description: "new description",
+				Data:        map[string]interface{}{},
+				Attributes:  map[string]interface{}{},
+				Overwrite:   false,
+			},
+			shouldFail: false,
+		},
+		{
+			name: "Nothing to update",
+			steps: []*uiStep{
+				{"Path", "key1"},
+				{"Update description", "no"},
+				{"Overwrite existing attributes and data?", "no"},
+				{"Update attributes?", "1"},
+				{"Update data?", "1"},
+			},
+			expectedURI:  "",
+			expectedBody: nil,
+			shouldFail:   false,
+		},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			viper.Set(cst.Tenant, tenantName)
+
+			cnt := 0
+			uimock := &UIMock{
+				stub: func(s string) (string, error) {
+					if len(tt.steps) <= cnt {
+						return "", fmt.Errorf("unexpected line: %s", s)
+					}
+					step := tt.steps[cnt]
+					cnt++
+
+					if strings.HasPrefix(s, step.inPrefix) {
+						return step.out, nil
+					}
+					return "", fmt.Errorf("unexpected line: %s", s)
+				},
+			}
+
+			var (
+				reqMethod string
+				reqURI    string
+				reqData   interface{}
+			)
+			req := &fake.FakeClient{}
+			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+				if s == http.MethodGet {
+					if tt.getSecretAPIErr != nil {
+						return nil, tt.getSecretAPIErr
+					}
+					return nil, nil
 				}
+
+				reqMethod = s
+				reqURI = s2
+				reqData = i
+				return nil, nil
+			}
+
+			sec := &Secret{request: req, secretType: cst.NounSecret}
+			_, apiErr := sec.handleUpdateWorkflow(uimock)
+
+			viper.Set(cst.Tenant, "")
+
+			if tt.shouldFail {
+				assert.NotNil(t, apiErr)
+				return
+			}
+			assert.Nil(t, apiErr)
+
+			if tt.expectedBody != nil {
+				assert.Equal(t, "PUT", reqMethod)
+				assert.Equal(t, tt.expectedURI, reqURI)
+				assert.IsType(t, &secretUpsertBody{}, reqData)
+				assert.Equal(t, tt.expectedBody, reqData)
 			}
 		})
 	}
@@ -865,11 +1148,10 @@ func TestHandleBustCacheCmd(t *testing.T) {
 
 	for _, tt := range testCase {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.flags != nil {
-				for _, f := range tt.flags {
-					viper.Set(f.flag, f.value)
-				}
+			for _, f := range tt.flags {
+				viper.Set(f.flag, f.value)
 			}
+
 			writer := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
@@ -895,10 +1177,9 @@ func TestHandleBustCacheCmd(t *testing.T) {
 			} else {
 				assert.Equal(t, err, tt.expectedErr)
 			}
-			if tt.flags != nil {
-				for _, f := range tt.flags {
-					viper.Set(f.flag, "")
-				}
+
+			for _, f := range tt.flags {
+				viper.Set(f.flag, "")
 			}
 		})
 	}
@@ -973,11 +1254,10 @@ func TestHandleEditCmd(t *testing.T) {
 
 	for _, tt := range testCase {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.flags != nil {
-				for _, f := range tt.flags {
-					viper.Set(f.flag, f.value)
-				}
+			for _, f := range tt.flags {
+				viper.Set(f.flag, f.value)
 			}
+
 			writer := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
@@ -1024,10 +1304,9 @@ func TestHandleEditCmd(t *testing.T) {
 			} else {
 				assert.Equal(t, err, tt.expectedErr)
 			}
-			if tt.flags != nil {
-				for _, f := range tt.flags {
-					viper.Set(f.flag, "")
-				}
+
+			for _, f := range tt.flags {
+				viper.Set(f.flag, "")
 			}
 		})
 	}

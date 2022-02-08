@@ -17,9 +17,6 @@ import (
 
 // InitCliConfig reads in CLI config file and environment variables.
 func InitCliConfig(cfgFile string, profile string, args []string) *terrors.ApiError {
-	if IsInstallCmd(args) {
-		return nil
-	}
 	if cfgFile != "" {
 		viper.SetConfigFile(cfgFile)
 	} else {
@@ -107,15 +104,6 @@ func GetSecureSetting(key string) (string, *terrors.ApiError) {
 		profile = cst.DefaultProfile
 	}
 	return GetSecureSettingForProfile(key, profile)
-}
-
-func IsInstallCmd(args []string) bool {
-	for _, a := range args {
-		if a == "--install" || a == "-install" {
-			return true
-		}
-	}
-	return false
 }
 
 func GetFlagBeforeParse(flag string, args []string) string {

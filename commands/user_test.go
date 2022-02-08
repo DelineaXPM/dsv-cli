@@ -3,6 +3,7 @@ package cmd
 import (
 	e "errors"
 	"testing"
+
 	cst "thy/constants"
 	"thy/errors"
 	"thy/fake"
@@ -11,12 +12,45 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestHandleUserReadCmd(t *testing.T) {
+func TestGetUserCmd(t *testing.T) {
+	_, err := GetUserCmd()
+	assert.Nil(t, err)
+}
 
+func TestGetUserReadCmd(t *testing.T) {
+	_, err := GetUserReadCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetUserSearchCmd(t *testing.T) {
+	_, err := GetUserSearchCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetUserDeleteCmd(t *testing.T) {
+	_, err := GetUserDeleteCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetUserRestoreCmd(t *testing.T) {
+	_, err := GetUserRestoreCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetUserCreateCmd(t *testing.T) {
+	_, err := GetUserCreateCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetUserUpdateCmd(t *testing.T) {
+	_, err := GetUserUpdateCmd()
+	assert.Nil(t, err)
+}
+
+func TestHandleUserReadCmd(t *testing.T) {
 	testCase := []struct {
 		name        string
 		args        string
-		apiResponse []byte
 		out         []byte
 		expectedErr *errors.ApiError
 	}{
@@ -24,12 +58,11 @@ func TestHandleUserReadCmd(t *testing.T) {
 			"Happy path",
 			"user1",
 			[]byte(`test`),
-			[]byte(`test`),
-			nil},
+			nil,
+		},
 		{
 			"api Error",
 			"user1",
-			[]byte(`test`),
 			[]byte(`test`),
 			errors.New(e.New("error")),
 		},
@@ -37,19 +70,13 @@ func TestHandleUserReadCmd(t *testing.T) {
 			"No user passed",
 			"",
 			[]byte(`test`),
-			[]byte(`test`),
 			errors.New(e.New("error: must specify " + cst.DataUsername)),
 		},
 	}
 
-	_, err := GetUserReadCmd()
-	assert.Nil(t, err)
-
 	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {
-
 		t.Run(tt.name, func(t *testing.T) {
-
 			acmd := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
@@ -71,7 +98,6 @@ func TestHandleUserReadCmd(t *testing.T) {
 				assert.Equal(t, tt.expectedErr, err)
 			}
 		})
-
 	}
 }
 
@@ -79,7 +105,6 @@ func TestHandleUserDeleteCmd(t *testing.T) {
 	testCase := []struct {
 		name        string
 		args        string
-		apiResponse []byte
 		out         []byte
 		expectedErr *errors.ApiError
 	}{
@@ -87,12 +112,11 @@ func TestHandleUserDeleteCmd(t *testing.T) {
 			"Happy path",
 			"user1",
 			[]byte(`test`),
-			[]byte(`test`),
-			nil},
+			nil,
+		},
 		{
 			"api Error",
 			"user1",
-			[]byte(`test`),
 			[]byte(`test`),
 			errors.New(e.New("error")),
 		},
@@ -100,17 +124,12 @@ func TestHandleUserDeleteCmd(t *testing.T) {
 			"No DataUsername",
 			"",
 			[]byte(`test`),
-			[]byte(`test`),
 			errors.New(e.New("error: must specify " + cst.DataUsername)),
 		},
 	}
 
-	_, err := GetUserDeleteCmd()
-	assert.Nil(t, err)
-
 	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {
-
 		t.Run(tt.name, func(t *testing.T) {
 			acmd := &fake.FakeOutClient{}
 			var data []byte
@@ -133,16 +152,13 @@ func TestHandleUserDeleteCmd(t *testing.T) {
 				assert.Equal(t, tt.expectedErr, err)
 			}
 		})
-
 	}
 }
 
 func TestHandleUserSearchCmd(t *testing.T) {
-
 	testCase := []struct {
 		name        string
 		args        string
-		apiResponse []byte
 		out         []byte
 		expectedErr *errors.ApiError
 	}{
@@ -150,12 +166,11 @@ func TestHandleUserSearchCmd(t *testing.T) {
 			"Happy path",
 			"user1",
 			[]byte(`test`),
-			[]byte(`test`),
-			nil},
+			nil,
+		},
 		{
 			"api Error",
 			"user1",
-			[]byte(`test`),
 			[]byte(`test`),
 			errors.New(e.New("error")),
 		},
@@ -163,17 +178,12 @@ func TestHandleUserSearchCmd(t *testing.T) {
 			"No Search query",
 			"",
 			[]byte(`test`),
-			[]byte(`test`),
 			errors.New(e.New("error: must specify " + cst.Query)),
 		},
 	}
 
-	_, err := GetUserSearchCmd()
-	assert.Nil(t, err)
-
 	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {
-
 		t.Run(tt.name, func(t *testing.T) {
 			acmd := &fake.FakeOutClient{}
 			var data []byte
@@ -196,7 +206,6 @@ func TestHandleUserSearchCmd(t *testing.T) {
 				assert.Equal(t, tt.expectedErr, err)
 			}
 		})
-
 	}
 }
 
@@ -204,16 +213,15 @@ func TestHandleUserCreateCmd(t *testing.T) {
 	testCase := []struct {
 		name, userName, displayName, password, provider, externalID string
 		args                                                        []string
-		apiResponse, out                                            []byte
+		out                                                         []byte
 		expectedErr                                                 *errors.ApiError
 	}{
 		{
-			name:        "Successful local user create",
-			args:        []string{"--username", "user1", "--password", "password"},
-			userName:    "user1",
-			password:    "password",
-			apiResponse: []byte(`test`),
-			out:         []byte(`test`),
+			name:     "Successful local user create",
+			args:     []string{"--username", "user1", "--password", "password"},
+			userName: "user1",
+			password: "password",
+			out:      []byte(`test`),
 		},
 		{
 			name:        "Successful local user create with displayname",
@@ -221,7 +229,6 @@ func TestHandleUserCreateCmd(t *testing.T) {
 			userName:    "user1",
 			displayName: "user1 display name",
 			password:    "password",
-			apiResponse: []byte(`test`),
 			out:         []byte(`test`),
 		},
 		{
@@ -259,9 +266,6 @@ func TestHandleUserCreateCmd(t *testing.T) {
 		},
 	}
 
-	_, err := GetUserCreateCmd()
-	assert.Nil(t, err)
-
 	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {
 		viper.Set(cst.DataUsername, tt.userName)
@@ -291,7 +295,6 @@ func TestHandleUserCreateCmd(t *testing.T) {
 				assert.Equal(t, tt.expectedErr, err)
 			}
 		})
-
 	}
 }
 
@@ -302,23 +305,20 @@ func TestHandleUserUpdateCmd(t *testing.T) {
 		userName    string
 		password    string
 		displayName string
-		apiResponse []byte
 		out         []byte
 		expectedErr *errors.ApiError
 	}{
 		{
-			name:        "Happy path with password only",
-			args:        []string{"--username", "user1", "--password", "password"},
-			userName:    "user1",
-			password:    "password",
-			apiResponse: []byte(`test`),
-			out:         []byte(`test`),
+			name:     "Happy path with password only",
+			args:     []string{"--username", "user1", "--password", "password"},
+			userName: "user1",
+			password: "password",
+			out:      []byte(`test`),
 		},
 		{
 			name:        "no username",
 			args:        []string{"--password", "password"},
 			password:    "password",
-			apiResponse: []byte(`test`),
 			out:         []byte(`test`),
 			expectedErr: errors.New(e.New("error: must specify " + cst.DataUsername)),
 		},
@@ -326,7 +326,6 @@ func TestHandleUserUpdateCmd(t *testing.T) {
 			name:        "no password and no display name",
 			args:        []string{"--username", "user"},
 			userName:    "user1",
-			apiResponse: []byte(`test`),
 			out:         []byte(`test`),
 			expectedErr: errMustSpecifyPasswordOrDisplayname,
 		},
@@ -335,7 +334,6 @@ func TestHandleUserUpdateCmd(t *testing.T) {
 			args:        []string{"--username", "user", "--displayname", ""},
 			userName:    "user1",
 			displayName: "",
-			apiResponse: []byte(`test`),
 			out:         []byte(`test`),
 			expectedErr: errWrongDisplayName,
 		},
@@ -344,7 +342,6 @@ func TestHandleUserUpdateCmd(t *testing.T) {
 			args:        []string{"--username", "user", "--displayname", "X"},
 			userName:    "user1",
 			displayName: "X",
-			apiResponse: []byte(`test`),
 			out:         []byte(`test`),
 			expectedErr: errWrongDisplayName,
 		},
@@ -354,7 +351,6 @@ func TestHandleUserUpdateCmd(t *testing.T) {
 			userName:    "user1",
 			password:    "password",
 			displayName: "display name 2",
-			apiResponse: []byte(`test`),
 			out:         []byte(`test`),
 		},
 		{
@@ -363,13 +359,9 @@ func TestHandleUserUpdateCmd(t *testing.T) {
 			userName:    "user1",
 			password:    "password",
 			displayName: "display name 2",
-			apiResponse: []byte(`test`),
 			out:         []byte(`test`),
 		},
 	}
-
-	_, err := GetUserUpdateCmd()
-	assert.Nil(t, err)
 
 	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {
@@ -399,10 +391,4 @@ func TestHandleUserUpdateCmd(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestGetUserCmd(t *testing.T) {
-	_, err := GetUserCmd()
-	assert.Nil(t, err)
-	//cmd.Run([]string{"test"})
 }

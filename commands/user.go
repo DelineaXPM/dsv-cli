@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 
-	"thy/constants"
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
@@ -20,7 +19,6 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/posener/complete"
-
 	"github.com/spf13/viper"
 	"github.com/thycotic-rd/cli"
 )
@@ -99,14 +97,14 @@ func GetUserSearchCmd() (cli.Command, error) {
 		SynopsisText: fmt.Sprintf("%s (<query> | --query)", cst.Search),
 		HelpText: fmt.Sprintf(`Search for a %[2]s from %[3]s
 
-		Usage:
-		• user %[1]s %[4]s
-		• user %[1]s --query %[4]s
-				`, cst.Search, cst.NounUser, cst.ProductName, cst.ExampleUserSearch),
+Usage:
+   • user %[1]s %[4]s
+   • user %[1]s --query %[4]s
+		`, cst.Search, cst.NounUser, cst.ProductName, cst.ExampleUserSearch),
 		FlagsPredictor: cli.PredictorWrappers{
 			preds.LongFlag(cst.Query):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("%s of %ss to fetch (required)", strings.Title(cst.Query), cst.NounUser)}), false},
 			preds.LongFlag(cst.Limit):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Limit, Shorthand: "l", Usage: fmt.Sprint("Maximum number of results per cursor (optional)")}), false},
-			preds.LongFlag(cst.Cursor): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: constants.CursorHelpMessage}), false},
+			preds.LongFlag(cst.Cursor): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: cst.CursorHelpMessage}), false},
 		},
 		MinNumberArgs: 1,
 	})
@@ -138,9 +136,9 @@ func GetUserRestoreCmd() (cli.Command, error) {
 		SynopsisText: fmt.Sprintf("%s %s (<username> | --username)", cst.NounUser, cst.Restore),
 		HelpText: fmt.Sprintf(`Restore a deleted %[2]s in %[3]s
 Usage:
-	• user %[1]s %[4]s
-	• user %[1]s --username %[4]s
-				`, cst.Restore, cst.NounUser, cst.ProductName, cst.ExamplePath),
+   • user %[1]s %[4]s
+   • user %[1]s --username %[4]s
+		`, cst.Restore, cst.NounUser, cst.ProductName, cst.ExamplePath),
 		FlagsPredictor: cli.PredictorWrappers{
 			preds.LongFlag(cst.DataUsername): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to fetch (required)", strings.Title(cst.DataUsername), cst.NounUser)}), false},
 		},
@@ -286,7 +284,7 @@ func (u User) handleUserRestoreCmd(args []string) int {
 
 func (u User) handleUserCreateCmd(args []string) int {
 	if OnlyGlobalArgs(args) {
-		return u.handleUserWorkflow(args)
+		return u.handleUserCreateWorkflow(args)
 	}
 	if u.outClient == nil {
 		u.outClient = format.NewDefaultOutClient()
@@ -322,14 +320,14 @@ func (u User) handleUserCreateCmd(args []string) int {
 		data["externalId"] = externalID
 	}
 
-	resp, apiError := u.submitUser("", data, false)
+	resp, apiError := u.createUser(data)
 	u.outClient.WriteResponse(resp, apiError)
 	return utils.GetExecStatus(apiError)
 }
 
 func (u User) handleUserUpdateCmd(args []string) int {
 	if OnlyGlobalArgs(args) {
-		return u.handleUserWorkflow(args)
+		return u.handleUserUpdateWorkflow(args)
 	}
 	if u.outClient == nil {
 		u.outClient = format.NewDefaultOutClient()
@@ -366,7 +364,7 @@ func (u User) handleUserUpdateCmd(args []string) int {
 		data["displayName"] = displayName
 	}
 
-	resp, apiError := u.submitUser(userName, data, true)
+	resp, apiError := u.updateUser(userName, data)
 	u.outClient.WriteResponse(resp, apiError)
 	return utils.GetExecStatus(apiError)
 }
@@ -385,7 +383,7 @@ func (u User) readUser(name string) (*userModel, error) {
 	return &um, nil
 }
 
-func (u User) handleUserWorkflow(args []string) int {
+func (u User) handleUserCreateWorkflow(args []string) int {
 	ui := &PasswordUi{
 		cli.BasicUi{
 			Writer:      os.Stdout,
@@ -397,7 +395,7 @@ func (u User) handleUserWorkflow(args []string) int {
 		u.outClient = format.NewDefaultOutClient()
 	}
 	params := make(map[string]string)
-	isUpdate := viper.GetString(cst.LastCommandKey) == cst.Update
+
 	if resp, err := prompt.Ask(ui, "Username:"); err != nil {
 		ui.Error(err.Error())
 		return 1
@@ -405,60 +403,6 @@ func (u User) handleUserWorkflow(args []string) int {
 		params["username"] = resp
 	}
 
-	// Update only allows to change the password or display name, relevant only for local users (does not have a provider).
-	if isUpdate {
-		// Read the user, make sure it exists and is a local user (does not have a provider).
-		existingUser, err := u.readUser(params["username"])
-		if err != nil {
-			u.outClient.Fail(err)
-			return utils.GetExecStatus(err)
-		}
-
-		passwordResp, err := prompt.YesNo(ui, "Would you like to update the password", false)
-		if err != nil {
-			ui.Error(err.Error())
-			return utils.GetExecStatus(err)
-		}
-
-		if passwordResp {
-			if existingUser.Provider != "" {
-				u.outClient.FailS("User has a third-party auth provider, so there is nothing to update.")
-				return 1
-			}
-
-			if resp, err := prompt.AskSecureConfirm(ui, "New password for the user:"); err != nil {
-				ui.Error(err.Error())
-				return 1
-			} else {
-				params["password"] = resp
-			}
-		}
-
-		displayNameResp, err := prompt.YesNo(ui, "Would you like to update the display name", false)
-		if err != nil {
-			ui.Error(err.Error())
-			return utils.GetExecStatus(err)
-		}
-
-		if displayNameResp {
-			if resp, err := prompt.Ask(ui, "Display name:"); err != nil {
-				ui.Error(err.Error())
-				return 1
-			} else {
-				params[cst.DataDisplayname] = resp
-			}
-		}
-
-		if !passwordResp && !displayNameResp {
-			return 0
-		}
-
-		resp, apiError := u.submitUser(params["username"], params, true)
-		u.outClient.WriteResponse(resp, apiError)
-		return utils.GetExecStatus(apiError)
-	}
-
-	// Create user workflow
 	if resp, err := prompt.AskDefault(ui, "Display name:", ""); err != nil {
 		ui.Error(err.Error())
 		return 1
@@ -486,17 +430,16 @@ func (u User) handleUserWorkflow(args []string) int {
 			params["password"] = resp
 		}
 	} else {
-		var providerName string
 		options := []prompt.Option{}
 		for _, p := range providers {
 			v := fmt.Sprintf("%s:%s", p.Name, p.Type)
 			options = append(options, prompt.Option{v, strings.Replace(v, ":", " - ", 1)})
 		}
-		if resp, err := prompt.Choose(ui, "Provider:", prompt.Option{"local", "local"}, options...); err != nil {
+
+		providerName, err := prompt.Choose(ui, "Provider:", prompt.Option{"local", "local"}, options...)
+		if err != nil {
 			ui.Error(err.Error())
 			return 1
-		} else {
-			providerName = resp
 		}
 
 		if p := strings.Split(providerName, ":"); p[0] == "local" {
@@ -519,31 +462,104 @@ func (u User) handleUserWorkflow(args []string) int {
 		}
 	}
 
-	resp, apiError := u.submitUser(params["username"], params, false)
+	resp, apiError := u.createUser(params)
 	u.outClient.WriteResponse(resp, apiError)
 	return utils.GetExecStatus(apiError)
 }
 
-func (u User) submitUser(path string, data map[string]string, update bool) ([]byte, *errors.ApiError) {
-	if update {
-		uri := paths.CreateResourceURI(cst.NounUser, path, "", true, nil, true)
-		return u.request.DoRequest(http.MethodPut, uri, &data)
+func (u User) handleUserUpdateWorkflow(args []string) int {
+	ui := &PasswordUi{
+		cli.BasicUi{
+			Writer:      os.Stdout,
+			Reader:      os.Stdin,
+			ErrorWriter: os.Stderr,
+		},
 	}
+	if u.outClient == nil {
+		u.outClient = format.NewDefaultOutClient()
+	}
+	params := make(map[string]string)
+
+	if resp, err := prompt.Ask(ui, "Username:"); err != nil {
+		ui.Error(err.Error())
+		return 1
+	} else {
+		params["username"] = resp
+	}
+
+	existingUser, err := u.readUser(params["username"])
+	if err != nil {
+		u.outClient.Fail(err)
+		return utils.GetExecStatus(err)
+	}
+
+	passwordResp, err := prompt.YesNo(ui, "Would you like to update the password", false)
+	if err != nil {
+		ui.Error(err.Error())
+		return utils.GetExecStatus(err)
+	}
+
+	if passwordResp {
+		if existingUser.Provider != "" {
+			u.outClient.FailS("User has a third-party auth provider, so there is nothing to update.")
+			return 1
+		}
+
+		if resp, err := prompt.AskSecureConfirm(ui, "New password for the user:"); err != nil {
+			ui.Error(err.Error())
+			return 1
+		} else {
+			params["password"] = resp
+		}
+	}
+
+	displayNameResp, err := prompt.YesNo(ui, "Would you like to update the display name", false)
+	if err != nil {
+		ui.Error(err.Error())
+		return utils.GetExecStatus(err)
+	}
+
+	if displayNameResp {
+		if resp, err := prompt.Ask(ui, "Display name:"); err != nil {
+			ui.Error(err.Error())
+			return 1
+		} else {
+			params[cst.DataDisplayname] = resp
+		}
+	}
+
+	if !passwordResp && !displayNameResp {
+		return 0
+	}
+
+	resp, apiError := u.updateUser(params["username"], params)
+	u.outClient.WriteResponse(resp, apiError)
+	return utils.GetExecStatus(apiError)
+}
+
+func (u User) createUser(data map[string]string) ([]byte, *errors.ApiError) {
 	uri := paths.CreateResourceURI(cst.NounUser, "", "", true, nil, true)
 	return u.request.DoRequest(http.MethodPost, uri, &data)
 }
 
+func (u User) updateUser(path string, data map[string]string) ([]byte, *errors.ApiError) {
+	uri := paths.CreateResourceURI(cst.NounUser, path, "", true, nil, true)
+	return u.request.DoRequest(http.MethodPut, uri, &data)
+}
+
 func parseAuthProviders(data []byte) ([]authProvider, error) {
-	var providers []authProvider
 	var resp map[string]interface{}
 	err := json.Unmarshal(data, &resp)
 	if err != nil {
 		return nil, err
 	}
+
 	d, ok := resp["data"].([]interface{})
 	if !ok {
 		return nil, nil
 	}
+
+	var providers []authProvider
 	err = mapstructure.Decode(d, &providers)
 	if err != nil {
 		return nil, err
@@ -552,7 +568,7 @@ func parseAuthProviders(data []byte) ([]authProvider, error) {
 }
 
 type userModel struct {
-	UserName   string `json:"userName" `
-	ExternalID string `json:"externalId" `
-	Provider   string `json:"provider" `
+	UserName   string `json:"userName"`
+	ExternalID string `json:"externalId"`
+	Provider   string `json:"provider"`
 }

@@ -11,7 +11,6 @@ const (
 	DomainCA             = "secretsvaultcloud.ca"
 	HTTPSchemeKey        = "http"
 	HTTPSchemeSecure     = "https"
-	SuffixPermissions    = "::permissions"
 	SuffixDescription    = "::description"
 	SuffixListPaths      = "::listpaths"
 	SearchKey            = "searchTerm"

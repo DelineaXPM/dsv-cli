@@ -108,20 +108,18 @@ func GetCliConfigEditCmd() (cli.Command, error) {
 
 func handleCliConfigUpdateCmd(args []string) int {
 	out := format.NewDefaultOutClient()
+
 	key := strings.TrimSpace(viper.GetString(cst.Key))
 	val := strings.TrimSpace(viper.GetString(cst.Value))
+	if key == "" && len(args) > 0 {
+		key = args[0]
+	}
+	if val == "" && len(args) > 1 {
+		// Make value the same as the key name, as in "user:user", for example.
+		val = args[1]
+	}
+
 	var valInterface interface{}
-	if key == "" {
-		if len(args) > 0 {
-			key = args[0]
-		}
-	}
-	if val == "" {
-		if len(args) > 1 {
-			// Make value the same as the key name, as in "user:user", for example.
-			val = args[1]
-		}
-	}
 	if val != "" && val != "0" {
 		if i, err := strconv.Atoi(val); err == nil {
 			valInterface = i
@@ -159,53 +157,63 @@ func handleCliConfigUpdateCmd(args []string) int {
 	key = profile + "." + key
 
 	if !storeKeySecure {
-		keys := strings.Split(key, ".")
-		cfg := jsonish{}
 		if cfgPath == "" {
 			out.FailS("CLI config path could not be resolved. Exiting.")
 			return 1
-		} else if b, err := ioutil.ReadFile(cfgPath); err == nil {
-			var mout interfaceMap
-			if err := yaml.Unmarshal(b, &mout); err != nil || mout == nil {
-				out.FailS("Failed to unmarshal CLI config. Exiting. Error: " + err.Error())
-				return 1
-			} else if err := MapToJsonish(mout, &cfg, nil); err == nil {
-				secure := "auth.securePassword"
-				if strings.HasSuffix(key, secure) {
-					out.FailF("Cannot manually change the value of %q.", secure)
-					return 1
-				}
-				if strings.HasSuffix(key, "auth.password") {
-					key = fmt.Sprintf("%s.%s", profile, secure)
-					keys = strings.Split(key, ".")
-					cipherText, err := auth.EncipherPassword(val)
-					if err != nil {
-						out.FailF("Error encrypting password: %v.", err)
-						return 1
-					}
-					valInterface = cipherText
-					// Set in-memory value of plaintext password, so that the CLI can use it to try to authenticate before writing the config.
-					viper.Set(cst.Password, val)
-					if authError := tryAuthenticate(); authError != nil {
-						out.FailS("Failed to authenticate, restoring previous config.")
-						out.FailS("Please check your credentials and try again.")
-						return 1
-					}
-				}
-				if valInterface == nil {
-					RemoveNode(&cfg, keys...)
-				} else {
-					AddNode(&cfg, jsonish{keys[len(keys)-1]: valInterface}, keys[:len(keys)-1]...)
-				}
-				if err := WriteCliConfig(cfgPath, cfg, false); err != nil {
-					out.FailS(err.Error())
-					return 1
-				}
-			} else {
-				out.FailS("Failed to convert CLI config to expected format. Error: " + err.Error())
-			}
-		} else {
+		}
+
+		cfgContent, err := ioutil.ReadFile(cfgPath)
+		if err != nil {
 			out.FailS("Failed to load CLI config from file. Exiting. Error: " + err.Error())
+			return 1
+		}
+
+		var cfgMap interfaceMap
+		err = yaml.Unmarshal(cfgContent, &cfgMap)
+		if err != nil || cfgMap == nil {
+			out.FailS("Failed to unmarshal CLI config. Exiting. Error: " + err.Error())
+			return 1
+		}
+
+		cfg := jsonish{}
+		err = MapToJsonish(cfgMap, &cfg, nil)
+		if err != nil {
+			out.FailS("Failed to convert CLI config to expected format. Exiting. Error: " + err.Error())
+			return 1
+		}
+
+		keys := strings.Split(key, ".")
+
+		secure := "auth.securePassword"
+		if strings.HasSuffix(key, secure) {
+			out.FailF("Cannot manually change the value of %q.", secure)
+			return 1
+		}
+		if strings.HasSuffix(key, "auth.password") {
+			key = fmt.Sprintf("%s.%s", profile, secure)
+			keys = strings.Split(key, ".")
+			cipherText, err := auth.EncipherPassword(val)
+			if err != nil {
+				out.FailF("Error encrypting password: %v.", err)
+				return 1
+			}
+			valInterface = cipherText
+			// Set in-memory value of plaintext password, so that the CLI can use it to try to authenticate before writing the config.
+			viper.Set(cst.Password, val)
+			if authError := tryAuthenticate(); authError != nil {
+				out.FailS("Failed to authenticate, restoring previous config.")
+				out.FailS("Please check your credentials and try again.")
+				return 1
+			}
+		}
+		if valInterface == nil {
+			RemoveNode(&cfg, keys...)
+		} else {
+			AddNode(&cfg, jsonish{keys[len(keys)-1]: valInterface}, keys[:len(keys)-1]...)
+		}
+		if err := WriteCliConfig(cfgPath, cfg, false); err != nil {
+			out.FailS(err.Error())
+			return 1
 		}
 	} else if err := store.StoreSecureSetting(key, val, storeType); err != nil {
 		out.FailF("Error updating setting in store of type '%s'", string(storeType))
@@ -215,14 +223,15 @@ func handleCliConfigUpdateCmd(args []string) int {
 }
 
 func handleCliConfigReadCmd(args []string) int {
-	var dataOut []byte
 	out := format.NewDefaultOutClient()
+
 	cfgPath := config.GetFlagBeforeParse(cst.Config, args)
-	var didError int
 	if cfgPath == "" {
 		cfgPath = config.GetCliConfigPath()
 	}
-	dataOut = append(dataOut, []byte(fmt.Sprintf("CLI config (%s):\n", cfgPath))...)
+
+	var didError int
+	dataOut := []byte(fmt.Sprintf("CLI config (%s):\n", cfgPath))
 	if cfgPath == "" {
 		out.FailS("CLI config path could not be resolved. Exiting.")
 		didError = 1
@@ -232,17 +241,9 @@ func handleCliConfigReadCmd(args []string) int {
 	} else {
 		dataOut = append(dataOut, b...)
 	}
-	var isSecureStore bool
+
 	storeType := store.StoreType(viper.GetString(cst.StoreType))
-	if storeType == store.Unset {
-		storeType = store.File
-	}
 	if storeType == store.PassLinux || storeType == store.WinCred {
-		isSecureStore = true
-	} else {
-		isSecureStore = false
-	}
-	if isSecureStore {
 		dataOut = append(dataOut, fmt.Sprintf("\nSecure Store Settings (store type: %s):\n", storeType)...)
 		if s, err := store.GetStore(string(storeType)); err != nil {
 			out.FailF("Error: failed to get store of type '%s'\n", string(storeType))
@@ -257,6 +258,7 @@ func handleCliConfigReadCmd(args []string) int {
 			dataOut = append(dataOut, strings.Replace(strings.Join(keys, "\n  "), "-", ".", -1)...)
 		}
 	}
+
 	out.WriteResponse(dataOut, nil)
 	return didError
 }
@@ -646,13 +648,6 @@ func handleCliConfigInitCmd(args []string) int {
 			viper.Set(cst.Callback, callback)
 			AddNode(&cfg, jsonish{cst.DataCallback: callback}, profile, cst.NounAuth)
 		} else if auth.AuthType(authType) == auth.Certificate {
-			if authProvider == "" {
-				authProvider, err = prompt.Ask(ui, "Please enter auth provider name:")
-				if err != nil {
-					ui.Error(err.Error())
-					return 1
-				}
-			}
 
 			clientCert, err := prompt.Ask(ui, "Certificate:")
 			if err != nil {
@@ -666,11 +661,9 @@ func handleCliConfigInitCmd(args []string) int {
 				return 1
 			}
 
-			viper.Set(cst.AuthProvider, authProvider)
 			viper.Set(cst.AuthCert, clientCert)
 			viper.Set(cst.AuthPrivateKey, clientPrivKey)
 
-			AddNode(&cfg, jsonish{cst.DataProvider: authProvider}, profile, cst.NounAuth)
 			AddNode(&cfg, jsonish{cst.NounCert: clientCert}, profile, cst.NounAuth)
 			AddNode(&cfg, jsonish{cst.NounPrivateKey: clientPrivKey}, profile, cst.NounAuth)
 		}
@@ -816,16 +809,14 @@ func RemoveNode(n1 *jsonish, keyPath ...string) {
 
 func AddNode(n1 *jsonish, n2 jsonish, keyPath ...string) {
 	n := n1
-	for i, k := range keyPath {
-		if i < len(keyPath) {
-			currNode := *n
-			untyped, ok := currNode[k]
-			if !ok || untyped == nil {
-				currNode[k] = jsonish{}
-			}
-			nextNode := currNode[k].(jsonish)
-			n = &nextNode
+	for _, k := range keyPath {
+		currNode := *n
+		untyped, ok := currNode[k]
+		if !ok || untyped == nil {
+			currNode[k] = jsonish{}
 		}
+		nextNode := currNode[k].(jsonish)
+		n = &nextNode
 	}
 
 	for k, v := range n2 {

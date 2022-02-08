@@ -2,25 +2,23 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
-	"thy/internal/prompt"
-	"thy/predictors"
 
 	"thy/auth"
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
+	"thy/internal/prompt"
 	"thy/paths"
-
+	"thy/predictors"
 	"thy/requests"
 	"thy/store"
 	"thy/utils"
 
 	"github.com/howeyc/gopass"
-
-	"github.com/apex/log"
 	"github.com/spf13/viper"
 	"github.com/thycotic-rd/cli"
 )
@@ -175,7 +173,7 @@ func (ac AuthCommand) handleAuthClear(args []string) int {
 		err = s.Wipe(cst.TokenRoot)
 	}
 	if err == nil {
-		log.Info("Successfully cleared local cache")
+		log.Print("Successfully cleared local cache")
 	}
 
 	outClient := ac.outClient

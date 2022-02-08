@@ -24,7 +24,7 @@ func GetURIPathFromInternalPath(internalPath string) string {
 	return path
 }
 
-func GetResourceURIFromResourcePath(resourceType string, path string, id string, suffix string, trailingSlash bool, queryTerms map[string]string, pluralize bool) (string, *errors.ApiError) {
+func GetResourceURIFromResourcePath(resourceType string, path string, id string, suffix string, queryTerms map[string]string, pluralize bool) (string, *errors.ApiError) {
 	if id != "" && path != "" {
 		return "", errors.NewS("error: only one of --id and --path (or [path]) may be set")
 	}
@@ -38,7 +38,7 @@ func GetResourceURIFromResourcePath(resourceType string, path string, id string,
 	if id != "" {
 		queryTerms["id"] = id
 	}
-	requestURI := CreateResourceURI(resourceType, resourcePath, suffix, trailingSlash, queryTerms, pluralize)
+	requestURI := CreateResourceURI(resourceType, resourcePath, suffix, true, queryTerms, pluralize)
 	return requestURI, nil
 }
 

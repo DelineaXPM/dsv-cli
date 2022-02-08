@@ -38,3 +38,7 @@ func EqAny(str string, candidates []string) bool {
 
 	return false
 }
+
+func ToPointerString(s string) *string {
+	return &s
+}

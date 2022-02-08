@@ -30,7 +30,6 @@ const (
 // Nouns
 const (
 	NounSecret          = "secret"
-	NounPermission      = "permission"
 	NounPolicy          = "policy"
 	NounPolicies        = "policies"
 	NounAuth            = "auth"
@@ -113,8 +112,6 @@ const (
 	ThyOneAuthClientID      = "clientId"
 	ThyOneAuthClientSecret  = "clientSecret"
 	SendWelcomeEmail        = "send.welcome.email"
-	RootCaPath              = "root.ca.path"
-	AssumedRole             = "assumed.role"
 
 	Query             = "query"
 	SearchLinks       = "search.links"

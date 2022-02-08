@@ -297,9 +297,3 @@ type EncodingTypePredictor struct{}
 func (p EncodingTypePredictor) Predict(a complete.Args) (prediction []string) {
 	return []string{cst.Json, cst.YamlShort}
 }
-
-type PermissionTypePredictor struct{}
-
-func (p PermissionTypePredictor) Predict(a complete.Args) (prediction []string) {
-	return []string{cst.NounSecret, cst.NounRole, cst.NounUser, cst.NounClient}
-}

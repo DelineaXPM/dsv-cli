@@ -196,7 +196,7 @@ func runCLI(args []string) (exitStatus int, err error) {
 	cfgFile := config.GetFlagBeforeParse(cst.Config, c.Args)
 	profile := strings.ToLower(config.GetFlagBeforeParse(cst.Profile, c.Args))
 
-	if !cmd.IsInit(c.Args) {
+	if !cmd.IsInit(c.Args) && !cmd.IsInstall(c.Args) {
 		// TODO : We do this twice to support autocomplete. Investigate how to only do once instead
 		if err := config.InitCliConfig(cfgFile, profile, c.Args); err != nil {
 			return utils.GetExecStatus(err), err

@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"thy/constants"
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
@@ -145,7 +144,7 @@ Usage:
 		FlagsPredictor: cli.PredictorWrappers{
 			preds.LongFlag(cst.NounRole): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounRole, Usage: "Role that has attached clients (required)"}), false},
 			preds.LongFlag(cst.Limit):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Limit, Shorthand: "l", Usage: fmt.Sprint("Maximum number of results per cursor (optional)")}), false},
-			preds.LongFlag(cst.Cursor):   cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: constants.CursorHelpMessage}), false},
+			preds.LongFlag(cst.Cursor):   cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: cst.CursorHelpMessage}), false},
 		},
 		MinNumberArgs: 1,
 	})

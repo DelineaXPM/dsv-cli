@@ -6,12 +6,12 @@ import (
 	serrors "errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 
 	cst "thy/constants"
 	"thy/paths"
 
-	"github.com/apex/log"
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -72,7 +72,7 @@ func (c *GcpClient) GetJwtToken() (string, error) {
 		// reset service account name
 		serviceAcctName = viper.GetString(cst.GcpServiceAccount)
 		if errPrimary != nil {
-			log.Info("Failed auth with auth.gcp.type='gce'. Trying with auth.gcp.type='iam'")
+			log.Print("Failed auth with auth.gcp.type='gce'. Trying with auth.gcp.type='iam'")
 		}
 		ctx := context.Background()
 		scopes := []string{iam.CloudPlatformScope}
@@ -127,7 +127,7 @@ func (c *GcpClient) GetJwtToken() (string, error) {
 				return resp.SignedJwt, nil
 			}
 		}
-		log.Errorf("gcp iam auth failed: %v", errSecondary)
+		log.Printf("gcp iam auth failed: %v", errSecondary)
 	}
 	if errPrimary != nil {
 		return "", errPrimary

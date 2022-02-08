@@ -315,7 +315,17 @@ func IsInit(args []string) bool {
 	return false
 }
 
-func GetFlagName(arg string) string {
+// IsInstall checks if passed in command line args contain an install command.
+func IsInstall(args []string) bool {
+	for _, a := range args {
+		if a == "--install" || a == "-install" {
+			return true
+		}
+	}
+	return false
+}
+
+func getFlagName(arg string) string {
 	if strings.HasPrefix(arg, "--") {
 		return arg[2:]
 	}
@@ -329,18 +339,24 @@ func GetFlagName(arg string) string {
 // It assumes viper had already set values for relevant flags like profile and config.
 func OnlyGlobalArgs(args []string) bool {
 	globalFlags := BasePredictorWrappers()
-outer:
+
+	var isGlobal bool
 	for _, arg := range args {
-		f := GetFlagName(arg)
-		if f == "" || f == "v" {
+		f := getFlagName(arg)
+		if f == "" {
 			continue
 		}
+
+		isGlobal = false
 		for _, g := range globalFlags {
-			if f == g.Flag.Name && g.Flag.Global {
-				continue outer
+			if f == g.Flag.FriendlyName || f == g.Flag.Shorthand {
+				isGlobal = g.Flag.Global
+				break
 			}
 		}
-		return false
+		if !isGlobal {
+			return false
+		}
 	}
 	return true
 }

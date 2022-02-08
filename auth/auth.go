@@ -314,7 +314,6 @@ func (a *authenticator) getTokenForAuthType(at AuthType, useCache bool) (*TokenR
 			data.CallbackUrl = fmt.Sprintf("http://%s/callback", callback)
 		} else if at == Certificate {
 			challengeID, challenge, err := a.initiateCertAuth(
-				viper.GetString(cst.AuthProvider),
 				viper.GetString(cst.AuthCert),
 				viper.GetString(cst.AuthPrivateKey),
 			)
@@ -492,7 +491,7 @@ func (a *authenticator) handleOidcAuth(doneCh chan<- AuthResponse) http.HandlerF
 }
 
 // initiateCertAuth makes initial request and prepares info for final token request.
-func (a *authenticator) initiateCertAuth(provider, cert, privKey string) (string, string, *errors.ApiError) {
+func (a *authenticator) initiateCertAuth(cert, privKey string) (string, string, *errors.ApiError) {
 	log.Println("Reading private key.")
 	der, err := base64.StdEncoding.DecodeString(privKey)
 	if err != nil {
@@ -505,11 +504,9 @@ func (a *authenticator) initiateCertAuth(provider, cert, privKey string) (string
 	}
 
 	request := struct {
-		Provider string `json:"auth_provider"`
-		Cert     string `json:"client_certificate"`
+		Cert string `json:"client_certificate"`
 	}{
-		Provider: provider,
-		Cert:     cert,
+		Cert: cert,
 	}
 	response := struct {
 		ID        string `json:"cert_challenge_id"`

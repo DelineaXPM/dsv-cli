@@ -471,7 +471,7 @@ func (e encryption) handleDecrypt(args []string) int {
 }
 
 func (e encryption) makeKeyURL(path string, query map[string]string) (string, *errors.ApiError) {
-	return paths.GetResourceURIFromResourcePath("crypto/key", path, "", "", true, query, false)
+	return paths.GetResourceURIFromResourcePath("crypto/key", path, "", "", query, false)
 }
 
 type rotationRequest struct {

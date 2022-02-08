@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"strings"
-	"thy/constants"
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
@@ -34,9 +33,9 @@ func GetSecretReportCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`Read secret report records
 
 Usage:
-   • %[1]s --%[2]s /x/y/z --%[3]s testUser --%[4]s sysadmins --%[5]s role1 --%[6]s 5
-   • %[1]s --%[2]s 2020-01-01
-   `, cst.NounReport, cst.Path, cst.NounUser, cst.NounGroup, cst.NounRole, cst.Limit),
+   • %[1]s %[7]s --%[2]s /x/y/z --%[3]s testUser --%[4]s sysadmins --%[5]s role1 --%[6]s 5
+   • %[1]s %[7]s --%[2]s /x/y/z
+   `, cst.NounReport, cst.Path, cst.NounUser, cst.NounGroup, cst.NounRole, cst.Limit, cst.NounSecret),
 		FlagsPredictor: cli.PredictorWrappers{
 			preds.LongFlag(cst.Path):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Path, Usage: "Path (optional)"}), false},
 			preds.LongFlag(cst.NounUser):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounUser, Usage: "User name (optional)"}), false},
@@ -44,7 +43,7 @@ Usage:
 			preds.LongFlag(cst.NounRole):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounRole, Usage: "Role name (optional)"}), false},
 			preds.LongFlag(cst.Limit):     cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"}), false},
 			preds.LongFlag(cst.OffSet):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.OffSet, Usage: "Offset for the next secrets (optional)"}), false},
-			preds.LongFlag(cst.Cursor):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: constants.CursorHelpMessage}), false},
+			preds.LongFlag(cst.Cursor):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: cst.CursorHelpMessage}), false},
 		},
 		MinNumberArgs: 0,
 	})
@@ -58,9 +57,9 @@ func GetGroupReportCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`Read group report records
 
 Usage:
-   • %[1]s --%[2]s testUser --%[3]s 5
-   • %[1]s --%[2]s 2020-01-01
-   `, cst.NounReport, cst.NounUser, cst.Limit),
+   • %[1]s %[4]s --%[2]s testUser --%[3]s 5
+   • %[1]s %[4]s --%[2]s testUser
+   `, cst.NounReport, cst.NounUser, cst.Limit, cst.NounGroup),
 		FlagsPredictor: cli.PredictorWrappers{
 			preds.LongFlag(cst.NounUser): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounUser, Usage: "User name (optional)"}), false},
 			preds.LongFlag(cst.Limit):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"}), false},
@@ -427,9 +426,13 @@ type Secrets struct {
 }
 
 type MemberOf struct {
-	Groups []struct {
-		Name  graphql.String
-		Since graphql.String
+	Memberships []struct {
+		Group struct {
+			ID   graphql.String
+			Name graphql.String
+		}
+		Since     graphql.String
+		CreatedBy graphql.String
 	}
 	Pagination struct {
 		Offset     graphql.Int

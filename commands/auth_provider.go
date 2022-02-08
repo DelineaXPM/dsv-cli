@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 
-	"thy/constants"
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
@@ -18,7 +17,6 @@ import (
 	"thy/requests"
 	"thy/store"
 	"thy/utils"
-	"thy/version"
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/posener/complete"
@@ -30,25 +28,6 @@ type AuthProvider struct {
 	request   requests.Client
 	outClient format.OutClient
 	edit      func([]byte, dataFunc, *errors.ApiError, bool) ([]byte, *errors.ApiError)
-}
-
-func (p AuthProvider) Run(args []string) int {
-	ap := cli.NewCLI(fmt.Sprintf("%s %s %s", cst.CmdRoot, cst.NounConfig, cst.NounAuthProvider), version.Version)
-	ap.Args = args
-	ap.Commands = map[string]cli.CommandFactory{
-		"read":    GetAuthProviderReadCmd,
-		"search":  GetAuthProviderSearchCommand,
-		"delete":  GetAuthProviderDeleteCmd,
-		"restore": GetAuthProviderRestoreCmd,
-		"create":  GetAuthProviderCreateCmd,
-		"update":  GetAuthProviderUpdateCmd,
-	}
-
-	exitStatus, err := ap.Run()
-	if err != nil {
-		return utils.GetExecStatus(err)
-	}
-	return exitStatus
 }
 
 func GetNoDataOpAuthProviderWrappers() cli.PredictorWrappers {
@@ -144,24 +123,21 @@ Usage:
   • %[1]s %[2]s %[4]s %[3]s --aws-account-id 11652944433808  --type aws
   • %[1]s %[2]s %[4]s --name azure-prod --azure-tenant-id 164543 --type azure
   • %[1]s %[2]s %[4]s --name GCP-prod --gcp-project-id test-proj --type gcp
-  • %[1]s %[2]s %[4]s --name cert-prod --root-ca-path rootcert --assumed-role certauth_role --type certificate
   • %[1]s %[2]s %[4]s --data %[5]s
 
  %[6]s
 		`, cst.NounConfig, cst.NounAuthProvider, cst.ExampleAuthProviderName, cst.Create, cst.ExampleDataPath, cst.GCPNote),
 		FlagsPredictor: cli.PredictorWrappers{
 			preds.LongFlag(cst.Data):          cli.PredictorWrapper{preds.NewPrefixFilePredictor("*"), preds.NewFlagValue(preds.Params{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in an auth provider. Prefix with '@' to denote filepath", strings.Title(cst.Data))}), false},
-			preds.LongFlag(cst.DataType):      cli.PredictorWrapper{preds.AuthTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.DataType, Usage: "Auth provider type (azure,aws,gcp,thycoticone)"}), false},
-			preds.LongFlag(cst.DataName):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataName, Shorthand: "n", Usage: "Auth provider friendly name"}), false},
-			preds.LongFlag(cst.DataTenantID):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataTenantID, Usage: "Azure Tenant ID"}), false},
-			preds.LongFlag(cst.DataAccountID): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataAccountID, Usage: "AWS Account ID"}), false}, preds.LongFlag(cst.DataAccountID): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataAccountID, Usage: "AWS Account ID"}), false},
-			preds.LongFlag(cst.DataProjectID):           cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataProjectID, Usage: "GCP Project ID"}), false},
-			preds.LongFlag(cst.ThyOneAuthClientBaseUri): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientBaseUri, Usage: "Thycotic One base URI"}), false},
-			preds.LongFlag(cst.ThyOneAuthClientID):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientID, Usage: "Thycotic One client ID"}), false},
-			preds.LongFlag(cst.ThyOneAuthClientSecret):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientSecret, Usage: "Thycotic One client secret"}), false},
-			preds.LongFlag(cst.SendWelcomeEmail):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.SendWelcomeEmail, Usage: "Whether to send welcome email for thycotic-one users linked to the auth provider (true or false)"}), false},
-			preds.LongFlag(cst.RootCaPath):              cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.RootCaPath, Usage: "Root certificate  secret path"}), false},
-			preds.LongFlag(cst.AssumedRole):             cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.AssumedRole, Usage: "Assumed Role"}), false},
+			preds.LongFlag(cst.DataType):      cli.PredictorWrapper{preds.AuthTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.DataType, Usage: fmt.Sprintf("Auth provider type (azure,aws,gcp,thycoticone)")}), false},
+			preds.LongFlag(cst.DataName):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataName, Shorthand: "n", Usage: fmt.Sprintf("Auth provider friendly name")}), false},
+			preds.LongFlag(cst.DataTenantID):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataTenantID, Usage: fmt.Sprintf("Azure Tenant ID")}), false},
+			preds.LongFlag(cst.DataAccountID): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataAccountID, Usage: fmt.Sprintf("AWS Account ID")}), false}, preds.LongFlag(cst.DataAccountID): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataAccountID, Usage: fmt.Sprintf("AWS Account ID")}), false},
+			preds.LongFlag(cst.DataProjectID):           cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataProjectID, Usage: fmt.Sprintf("GCP Project ID")}), false},
+			preds.LongFlag(cst.ThyOneAuthClientBaseUri): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientBaseUri, Usage: fmt.Sprintf("Thycotic One base URI")}), false},
+			preds.LongFlag(cst.ThyOneAuthClientID):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientID, Usage: fmt.Sprintf("Thycotic One client ID")}), false},
+			preds.LongFlag(cst.ThyOneAuthClientSecret):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientSecret, Usage: fmt.Sprintf("Thycotic One client secret")}), false},
+			preds.LongFlag(cst.SendWelcomeEmail):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.SendWelcomeEmail, Usage: fmt.Sprintf("Whether to send welcome email for thycotic-one users linked to the auth provider (true or false)")}), false},
 		},
 		MinNumberArgs: 0,
 	})
@@ -178,22 +154,19 @@ Usage:
   • %[1]s %[2]s %[4]s %[3]s --aws-account-id 11652944433808  --type aws
   • %[1]s %[2]s %[4]s --name azure-prod --azure-tenant-id 164543 --type azure
   • %[1]s %[2]s %[4]s --name GCP-prod --gcp-project-id test-proj --type gcp
-  • %[1]s %[2]s %[4]s --name cert-prod --root-ca-path rootcert --assumed-role certauth_role --type certificate
   • %[1]s %[2]s %[4]s --data %[5]s
 		`, cst.NounConfig, cst.NounAuthProvider, cst.ExampleAuthProviderName, cst.Update, cst.ExampleDataPath),
 		FlagsPredictor: cli.PredictorWrappers{
 			preds.LongFlag(cst.Data):                    cli.PredictorWrapper{preds.NewPrefixFilePredictor("*"), preds.NewFlagValue(preds.Params{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in an auth provider. Prefix with '@' to denote filepath", strings.Title(cst.Data))}), false},
-			preds.LongFlag(cst.DataType):                cli.PredictorWrapper{preds.AuthTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.DataType, Usage: "Auth provider type (azure,aws,gcp,thycoticone)"}), false},
-			preds.LongFlag(cst.DataName):                cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataName, Shorthand: "n", Usage: "Auth provider friendly name"}), false},
-			preds.LongFlag(cst.DataTenantID):            cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataTenantID, Usage: "Azure Tenant ID"}), false},
-			preds.LongFlag(cst.DataAccountID):           cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataAccountID, Usage: "AWS Account ID"}), false},
-			preds.LongFlag(cst.DataProjectID):           cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataProjectID, Usage: "GCP Project ID"}), false},
-			preds.LongFlag(cst.ThyOneAuthClientBaseUri): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientBaseUri, Usage: "Thycotic One base URI"}), false},
-			preds.LongFlag(cst.ThyOneAuthClientID):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientID, Usage: "Thycotic One client ID"}), false},
-			preds.LongFlag(cst.ThyOneAuthClientSecret):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientSecret, Usage: "Thycotic One client secret"}), false},
-			preds.LongFlag(cst.SendWelcomeEmail):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.SendWelcomeEmail, Usage: "Whether to send welcome email for thycotic-one users linked to the auth provider (true or false)"}), false},
-			preds.LongFlag(cst.RootCaPath):              cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.RootCaPath, Usage: "Root certificate secret path"}), false},
-			preds.LongFlag(cst.AssumedRole):             cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.AssumedRole, Usage: "Assumed Role"}), false},
+			preds.LongFlag(cst.DataType):                cli.PredictorWrapper{preds.AuthTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.DataType, Usage: fmt.Sprintf("Auth provider type (azure,aws,gcp,thycoticone)")}), false},
+			preds.LongFlag(cst.DataName):                cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataName, Shorthand: "n", Usage: fmt.Sprintf("Auth provider friendly name")}), false},
+			preds.LongFlag(cst.DataTenantID):            cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataTenantID, Usage: fmt.Sprintf("Azure Tenant ID")}), false},
+			preds.LongFlag(cst.DataAccountID):           cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataAccountID, Usage: fmt.Sprintf("AWS Account ID")}), false},
+			preds.LongFlag(cst.DataProjectID):           cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataProjectID, Usage: fmt.Sprintf("GCP Project ID")}), false},
+			preds.LongFlag(cst.ThyOneAuthClientBaseUri): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientBaseUri, Usage: fmt.Sprintf("Thycotic One base URI")}), false},
+			preds.LongFlag(cst.ThyOneAuthClientID):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientID, Usage: fmt.Sprintf("Thycotic One client ID")}), false},
+			preds.LongFlag(cst.ThyOneAuthClientSecret):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientSecret, Usage: fmt.Sprintf("Thycotic One client secret")}), false},
+			preds.LongFlag(cst.SendWelcomeEmail):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.SendWelcomeEmail, Usage: fmt.Sprintf("Whether to send welcome email for thycotic-one users linked to the auth provider (true or false)")}), false},
 		},
 		MinNumberArgs: 0,
 	})
@@ -250,7 +223,7 @@ func GetAuthProviderSearchCommand() (cli.Command, error) {
 		FlagsPredictor: cli.PredictorWrappers{
 			preds.LongFlag(cst.Query):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("Filter %s of items to fetch (required)", strings.Title(cst.Query))}), false},
 			preds.LongFlag(cst.Limit):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"}), false},
-			preds.LongFlag(cst.Cursor): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: constants.CursorHelpMessage}), false},
+			preds.LongFlag(cst.Cursor): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: cst.CursorHelpMessage}), false},
 		},
 		MinNumberArgs: 0,
 	})
@@ -355,8 +328,7 @@ func (p AuthProvider) handleAuthProviderUpsertWorkflow(args []string) int {
 			prompt.Option{"aws", "AWS"},
 			prompt.Option{"azure", "Azure"},
 			prompt.Option{"gcp", "GCP"},
-			prompt.Option{cst.ThyOne, "Thycotic One"},
-			prompt.Option{"certificate", "Certificate"}); err != nil {
+			prompt.Option{cst.ThyOne, "Thycotic One"}); err != nil {
 			ui.Error(err.Error())
 			return utils.GetExecStatus(err)
 		} else {
@@ -434,19 +406,6 @@ func (p AuthProvider) handleAuthProviderUpsertWorkflow(args []string) int {
 				params.Properties.SendWelcomeEmail = &sendWelcomeEmail
 			}
 		}
-	case "certificate":
-		if rootCaPath, err := prompt.Ask(ui, "Root certificate path:"); err != nil {
-			ui.Error(err.Error())
-			return utils.GetExecStatus(err)
-		} else {
-			params.Properties.RootCaPath = rootCaPath
-		}
-		if assumedrole, err := prompt.Ask(ui, "Assumed role:"); err != nil {
-			ui.Error(err.Error())
-			return utils.GetExecStatus(err)
-		} else {
-			params.Properties.AssumedRole = assumedrole
-		}
 
 	default:
 		ui.Error("Unsupported auth provider type.")
@@ -497,8 +456,6 @@ func (p AuthProvider) handleAuthProviderUpsert(args []string) int {
 				BaseURI:      viper.GetString(cst.ThyOneAuthClientBaseUri),
 				ClientID:     viper.GetString(cst.ThyOneAuthClientID),
 				ClientSecret: viper.GetString(cst.ThyOneAuthClientSecret),
-				RootCaPath:   viper.GetString(cst.RootCaPath),
-				AssumedRole:  viper.GetString(cst.AssumedRole),
 			},
 		}
 	}
@@ -664,6 +621,4 @@ type Properties struct {
 	BaseURI          string `json:"baseUri,omitempty"`
 	UsernameClaim    string `json:"usernameClaim,omitempty"`
 	SendWelcomeEmail *bool  `json:"sendWelcomeEmail,omitempty"`
-	RootCaPath       string `json:"rootcapath,omitempty"`
-	AssumedRole      string `json:"assumedrole,omitempty"`
 }

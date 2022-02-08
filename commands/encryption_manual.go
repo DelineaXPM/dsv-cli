@@ -467,7 +467,7 @@ func (e manualKeyEncryption) handleManualKeyDecrypt(args []string) int {
 }
 
 func (e manualKeyEncryption) makeKeyURL(path string, query map[string]string) (string, *errors.ApiError) {
-	return paths.GetResourceURIFromResourcePath("crypto/manual/key", path, "", "", true, query, false)
+	return paths.GetResourceURIFromResourcePath("crypto/manual/key", path, "", "", query, false)
 }
 
 type manualKeyData struct {
