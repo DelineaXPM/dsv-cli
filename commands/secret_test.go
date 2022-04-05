@@ -2,16 +2,13 @@ package cmd
 
 import (
 	e "errors"
-	"fmt"
-	"net/http"
-	"strings"
 	"testing"
 	"time"
 
 	cst "thy/constants"
 	"thy/errors"
 	"thy/fake"
-	"thy/store"
+	"thy/vaultcli"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -186,11 +183,17 @@ func TestHandleDescribeCmd(t *testing.T) {
 
 			viper.Set(cst.StoreType, tt.storeType)
 			viper.Set(cst.CacheStrategy, tt.cacheStrategy)
-			sec := &Secret{req, writer, store.GetStore, nil, cst.NounSecret}
-			sec.getStore = func(stString string) (i store.Store, apiError *errors.ApiError) {
-				return st, nil
+
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(req),
+				vaultcli.WithOutClient(writer),
+				vaultcli.WithStore(st),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
 			}
-			_ = sec.handleDescribeCmd(tt.arg)
+
+			_ = handleSecretDescribeCmd(vcli, cst.NounSecret, tt.arg)
 			if tt.expectedErr == nil {
 				assert.Equal(t, data, tt.out)
 			} else {
@@ -266,8 +269,15 @@ func TestHandleSecretSearchCmd(t *testing.T) {
 				return tt.out, tt.expectedErr
 			}
 
-			sec := &Secret{req, writer, store.GetStore, nil, cst.NounSecret}
-			_ = sec.handleSecretSearchCmd([]string{tt.args})
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(req),
+				vaultcli.WithOutClient(writer),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
+			}
+
+			_ = handleSecretSearchCmd(vcli, cst.NounSecret, []string{tt.args})
 			if tt.expectedErr == nil {
 				assert.Equal(t, data, tt.out)
 			} else {
@@ -383,8 +393,15 @@ func TestHandleDeleteCmd(t *testing.T) {
 				return tt.out, tt.expectedErr
 			}
 
-			sec := &Secret{req, writer, store.GetStore, nil, cst.NounSecret}
-			_ = sec.handleDeleteCmd([]string{tt.args})
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(req),
+				vaultcli.WithOutClient(writer),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
+			}
+
+			_ = handleSecretDeleteCmd(vcli, cst.NounSecret, []string{tt.args})
 			if tt.expectedErr == nil {
 				assert.Equal(t, data, tt.out)
 			} else {
@@ -498,8 +515,15 @@ func TestHandleRollbackCmd(t *testing.T) {
 				return tt.out, tt.expectedErr
 			}
 
-			sec := &Secret{req, writer, store.GetStore, nil, cst.NounSecret}
-			_ = sec.handleRollbackCmd([]string{tt.args})
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(req),
+				vaultcli.WithOutClient(writer),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
+			}
+
+			_ = handleSecretRollbackCmd(vcli, cst.NounSecret, []string{tt.args})
 			if tt.expectedErr == nil {
 				assert.Equal(t, tt.out, data)
 			} else {
@@ -682,11 +706,17 @@ func TestHandleReadCmd(t *testing.T) {
 			viper.Set(cst.Version, "v1")
 			viper.Set(cst.StoreType, tt.storeType)
 			viper.Set(cst.CacheStrategy, tt.cacheStrategy)
-			sec := &Secret{req, writer, store.GetStore, nil, cst.NounSecret}
-			sec.getStore = func(stString string) (i store.Store, apiError *errors.ApiError) {
-				return st, nil
+
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(req),
+				vaultcli.WithOutClient(writer),
+				vaultcli.WithStore(st),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
 			}
-			_ = sec.handleReadCmd(tt.arg)
+
+			_ = handleSecretReadCmd(vcli, cst.NounSecret, tt.arg)
 			if tt.expectedErr == nil {
 				assert.Equal(t, data, tt.out)
 			} else {
@@ -809,8 +839,15 @@ func TestHandleUpsertCmd(t *testing.T) {
 				return tt.out, tt.expectedErr
 			}
 
-			sec := &Secret{req, writer, store.GetStore, nil, cst.NounSecret}
-			_ = sec.handleUpsertCmd(tt.args)
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(req),
+				vaultcli.WithOutClient(writer),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
+			}
+
+			_ = handleSecretUpsertCmd(vcli, cst.NounSecret, tt.args)
 
 			if tt.expectedErr == nil {
 				assert.Equal(t, tt.out, data)
@@ -821,294 +858,6 @@ func TestHandleUpsertCmd(t *testing.T) {
 				viper.Set(f.flag, "")
 			}
 			viper.Set(cst.LastCommandKey, "")
-		})
-	}
-}
-
-// UIMock is a cli.UI mock which will go somewhere else later.
-type UIMock struct {
-	stub func(string) (string, error)
-}
-
-func (u *UIMock) Ask(s string) (string, error)       { return u.stub(s) }
-func (u *UIMock) AskSecret(s string) (string, error) { return u.stub(s) }
-func (u *UIMock) Output(string)                      {}
-func (u *UIMock) Info(string)                        {}
-func (u *UIMock) Error(string)                       {}
-func (u *UIMock) Warn(string)                        {}
-
-func TestHandleCreateWorkflow(t *testing.T) {
-	const tenantName = "createworkflowtest"
-
-	// uiStep contains prefix of the expected line and answer to it.
-	type uiStep struct {
-		inPrefix string
-		out      string
-	}
-
-	cases := []struct {
-		name         string
-		steps        []*uiStep
-		expectedURI  string
-		expectedBody *secretUpsertBody
-	}{
-		{
-			name: "Add description and k/v attributes, but skip data",
-			steps: []*uiStep{
-				{"Path", "key1"},
-				{"Description", "some key"},
-				{"Add Attributes", "2"},
-				{"Key", "aa"},
-				{"Value", "11"},
-				{"Add more?", "no"},
-				{"Add Data", "1"},
-			},
-			expectedURI: "https://createworkflowtest.secretsvaultcloud.com/v1/secrets/key1",
-			expectedBody: &secretUpsertBody{
-				Description: "some key",
-				Data:        map[string]interface{}{},
-				Attributes: map[string]interface{}{
-					"aa": "11",
-				},
-			},
-		},
-		{
-			name: "Add description and json attributes, but skip data",
-			steps: []*uiStep{
-				{"Path", "key1"},
-				{"Description", "some key"},
-				{"Add Attributes", "3"},
-				{"Attributes", "{\"attr1\":\"value1\"}"},
-				{"Add Data", "1"},
-			},
-			expectedURI: "https://createworkflowtest.secretsvaultcloud.com/v1/secrets/key1",
-			expectedBody: &secretUpsertBody{
-				Description: "some key",
-				Data:        map[string]interface{}{},
-				Attributes: map[string]interface{}{
-					"attr1": "value1",
-				},
-			},
-		},
-		{
-			name: "Add description and k/v data, but skip attributes",
-			steps: []*uiStep{
-				{"Path", "key1"},
-				{"Description", "some key"},
-				{"Add Attributes", "1"},
-				{"Add Data", "2"},
-				{"Key", "apikey"},
-				{"Value", "testtest"},
-				{"Add more?", "no"},
-			},
-			expectedURI: "https://createworkflowtest.secretsvaultcloud.com/v1/secrets/key1",
-			expectedBody: &secretUpsertBody{
-				Description: "some key",
-				Data: map[string]interface{}{
-					"apikey": "testtest",
-				},
-				Attributes: map[string]interface{}{},
-			},
-		},
-		{
-			name: "Add description and json data, but skip attributes",
-			steps: []*uiStep{
-				{"Path", "key1"},
-				{"Description", "some key"},
-				{"Add Attributes", "1"},
-				{"Add Data", "3"},
-				{"Data", "{\"apikey\":\"testtesttest\"}"},
-			},
-			expectedURI: "https://createworkflowtest.secretsvaultcloud.com/v1/secrets/key1",
-			expectedBody: &secretUpsertBody{
-				Description: "some key",
-				Data: map[string]interface{}{
-					"apikey": "testtesttest",
-				},
-				Attributes: map[string]interface{}{},
-			},
-		},
-	}
-	for _, tt := range cases {
-		t.Run(tt.name, func(t *testing.T) {
-			viper.Set(cst.Tenant, tenantName)
-
-			cnt := 0
-			uimock := &UIMock{
-				stub: func(s string) (string, error) {
-					step := tt.steps[cnt]
-					cnt++
-
-					if strings.HasPrefix(s, step.inPrefix) {
-						return step.out, nil
-					}
-					return "", fmt.Errorf("unexpected line: %s", s)
-				},
-			}
-
-			var (
-				reqMethod string
-				reqURI    string
-				reqData   interface{}
-			)
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
-				reqMethod = s
-				reqURI = s2
-				reqData = i
-				return nil, nil
-			}
-
-			sec := &Secret{request: req, secretType: cst.NounSecret}
-			_, apiErr := sec.handleCreateWorkflow(uimock)
-
-			viper.Set(cst.Tenant, "")
-
-			assert.Nil(t, apiErr)
-			assert.Equal(t, "POST", reqMethod)
-			assert.Equal(t, tt.expectedURI, reqURI)
-			assert.IsType(t, &secretUpsertBody{}, reqData)
-			assert.Equal(t, tt.expectedBody, reqData)
-		})
-	}
-}
-
-func TestHandleUpdateWorkflow(t *testing.T) {
-	const tenantName = "updateworkflowtest"
-
-	// uiStep contains prefix of the expected line and answer to it.
-	type uiStep struct {
-		inPrefix string
-		out      string
-	}
-
-	cases := []struct {
-		name            string
-		steps           []*uiStep
-		getSecretAPIErr *errors.ApiError
-		expectedURI     string
-		expectedBody    *secretUpsertBody
-		shouldFail      bool
-	}{
-		{
-			name: "Update description only",
-			steps: []*uiStep{
-				{"Path", "key1"},
-				{"Update description", "yes"},
-				{"Description", "new description"},
-				{"Overwrite existing attributes and data?", "no"},
-				{"Update attributes?", "1"},
-				{"Update data?", "1"},
-			},
-			expectedURI: "https://updateworkflowtest.secretsvaultcloud.com/v1/secrets/key1",
-			expectedBody: &secretUpsertBody{
-				Description: "new description",
-				Data:        map[string]interface{}{},
-				Attributes:  map[string]interface{}{},
-				Overwrite:   false,
-			},
-			shouldFail: false,
-		},
-		{
-			name: "Secret does not exist",
-			steps: []*uiStep{
-				{"Path", "key1"},
-			},
-			getSecretAPIErr: errors.NewS("some message").WithResponse(&http.Response{StatusCode: http.StatusNotFound}),
-			shouldFail:      true,
-		},
-		{
-			name: "No permission to read secret",
-			steps: []*uiStep{
-				{"Path", "key1"},
-				{"You are not allowed to read secret under that path. Do you want to continue?", "yes"},
-				{"Update description", "yes"},
-				{"Description", "new description"},
-				{"Overwrite existing attributes and data?", "no"},
-				{"Update attributes?", "1"},
-				{"Update data?", "1"},
-			},
-			getSecretAPIErr: errors.NewS("some message").WithResponse(&http.Response{StatusCode: http.StatusForbidden}),
-			expectedURI:     "https://updateworkflowtest.secretsvaultcloud.com/v1/secrets/key1",
-			expectedBody: &secretUpsertBody{
-				Description: "new description",
-				Data:        map[string]interface{}{},
-				Attributes:  map[string]interface{}{},
-				Overwrite:   false,
-			},
-			shouldFail: false,
-		},
-		{
-			name: "Nothing to update",
-			steps: []*uiStep{
-				{"Path", "key1"},
-				{"Update description", "no"},
-				{"Overwrite existing attributes and data?", "no"},
-				{"Update attributes?", "1"},
-				{"Update data?", "1"},
-			},
-			expectedURI:  "",
-			expectedBody: nil,
-			shouldFail:   false,
-		},
-	}
-	for _, tt := range cases {
-		t.Run(tt.name, func(t *testing.T) {
-			viper.Set(cst.Tenant, tenantName)
-
-			cnt := 0
-			uimock := &UIMock{
-				stub: func(s string) (string, error) {
-					if len(tt.steps) <= cnt {
-						return "", fmt.Errorf("unexpected line: %s", s)
-					}
-					step := tt.steps[cnt]
-					cnt++
-
-					if strings.HasPrefix(s, step.inPrefix) {
-						return step.out, nil
-					}
-					return "", fmt.Errorf("unexpected line: %s", s)
-				},
-			}
-
-			var (
-				reqMethod string
-				reqURI    string
-				reqData   interface{}
-			)
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
-				if s == http.MethodGet {
-					if tt.getSecretAPIErr != nil {
-						return nil, tt.getSecretAPIErr
-					}
-					return nil, nil
-				}
-
-				reqMethod = s
-				reqURI = s2
-				reqData = i
-				return nil, nil
-			}
-
-			sec := &Secret{request: req, secretType: cst.NounSecret}
-			_, apiErr := sec.handleUpdateWorkflow(uimock)
-
-			viper.Set(cst.Tenant, "")
-
-			if tt.shouldFail {
-				assert.NotNil(t, apiErr)
-				return
-			}
-			assert.Nil(t, apiErr)
-
-			if tt.expectedBody != nil {
-				assert.Equal(t, "PUT", reqMethod)
-				assert.Equal(t, tt.expectedURI, reqURI)
-				assert.IsType(t, &secretUpsertBody{}, reqData)
-				assert.Equal(t, tt.expectedBody, reqData)
-			}
 		})
 	}
 }
@@ -1167,11 +916,16 @@ func TestHandleBustCacheCmd(t *testing.T) {
 			}
 
 			viper.Set(cst.StoreType, tt.storeType)
-			sec := &Secret{nil, writer, store.GetStore, nil, cst.NounSecret}
-			sec.getStore = func(stString string) (i store.Store, apiError *errors.ApiError) {
-				return st, nil
+
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithOutClient(writer),
+				vaultcli.WithStore(st),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", rerr)
 			}
-			_ = sec.handleBustCacheCmd(tt.arg)
+
+			_ = handleBustCacheCmd(vcli, tt.arg)
 			if tt.expectedErr == nil {
 				assert.Equal(t, data, tt.out)
 			} else {
@@ -1289,16 +1043,22 @@ func TestHandleEditCmd(t *testing.T) {
 			viper.Set(cst.StoreType, "")
 			viper.Set(cst.CacheStrategy, "")
 
-			s := &Secret{request: req, outClient: writer}
-			s.edit = func(bytes2 []byte, d dataFunc, apiError *errors.ApiError, retry bool) (bytes []byte, apiError2 *errors.ApiError) {
-				_, _ = d([]byte(`config`))
+			editFunc := func(data []byte, save vaultcli.SaveFunc) (edited []byte, err *errors.ApiError) {
+				_, _ = save([]byte(`config`))
 				return tt.editResponse, tt.editError
 			}
 
-			s.getStore = func(stString string) (i store.Store, apiError *errors.ApiError) {
-				return st, nil
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(req),
+				vaultcli.WithOutClient(writer),
+				vaultcli.WithStore(st),
+				vaultcli.WithEditFunc(editFunc),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", rerr)
 			}
-			_ = s.handleEditCmd(tt.arg)
+
+			_ = handleSecretEditCmd(vcli, cst.NounSecret, tt.arg)
 			if tt.expectedErr == nil {
 				assert.Equal(t, data, tt.out)
 			} else {

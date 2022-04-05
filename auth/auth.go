@@ -22,7 +22,7 @@ import (
 
 	"thy/paths"
 
-	"github.com/thycotic-rd/cli"
+	"github.com/mitchellh/cli"
 
 	config "thy/cli-config"
 	cst "thy/constants"
@@ -265,7 +265,7 @@ func (a *authenticator) getTokenForAuthType(at AuthType, useCache bool) (*TokenR
 			gcp := GcpClient{}
 			token, err = gcp.GetJwtToken()
 			if err != nil {
-				return nil, errors.New(err).GrowIf("Failed to fetch token for gcp")
+				return nil, errors.New(err).Grow("Failed to fetch token for gcp")
 			}
 			log.Printf("Gcp Token:\n%s\n", token)
 		}
@@ -339,7 +339,7 @@ func (a *authenticator) getTokenForAuthType(at AuthType, useCache bool) (*TokenR
 						return a.getTokenForAuthType(Password, false)
 					}
 				}
-				return nil, errors.New(err).GrowIf("Refresh authentication failed. Please re-authenticate with password or other supported authentication type")
+				return nil, errors.New(err).Grow("Refresh authentication failed. Please re-authenticate with password or other supported authentication type")
 			}
 		}
 		return tr, err.Grow(fmt.Sprintf("Failed to authenticate with auth type '%s'. Please check parameters and try again", at))

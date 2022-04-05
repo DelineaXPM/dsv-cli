@@ -6,185 +6,248 @@ import (
 	cst "thy/constants"
 	"thy/errors"
 	"thy/fake"
+	"thy/vaultcli"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetBreakGlassGetStatusCmd(t *testing.T) {
-	testCase := []struct {
-		name        string
-		args        string
-		out         []byte
-		expectedErr *errors.ApiError
-	}{
-		{
-			"success",
-			"",
-			[]byte(`test`),
-			nil,
-		},
-	}
+func TestGetBreakGlassCmd(t *testing.T) {
+	_, err := GetBreakGlassCmd()
+	assert.Nil(t, err)
+}
 
+func TestGetBreakGlassGetStatusCmd(t *testing.T) {
 	_, err := GetBreakGlassGetStatusCmd()
 	assert.Nil(t, err)
-
-	viper.Set(cst.Version, "v1")
-	for _, tc := range testCase {
-
-		t.Run(tc.name, func(t *testing.T) {
-			fakeOutC := &fake.FakeOutClient{}
-			var data []byte
-			var err *errors.ApiError
-			fakeOutC.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
-				data = bytes
-				err = apiError
-			}
-
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
-				return tc.out, tc.expectedErr
-			}
-
-			c := breakGlass{req, fakeOutC}
-			_ = c.handleBreakGlassGetStatusCmd([]string{tc.args})
-
-			if tc.expectedErr == nil {
-				assert.Equal(t, data, tc.out)
-			} else {
-				assert.Equal(t, err, tc.expectedErr)
-			}
-		})
-	}
 }
 
 func TestGetBreakGlassGenerateCmd(t *testing.T) {
-	type flag struct {
-		flag, value string
-	}
+	_, err := GetBreakGlassGenerateCmd()
+	assert.Nil(t, err)
+}
 
+func TestGetBreakGlassApplyCmd(t *testing.T) {
+	_, err := GetBreakGlassApplyCmd()
+	assert.Nil(t, err)
+}
+
+func TestHandleBreakGlassGetStatusCmd(t *testing.T) {
 	testCase := []struct {
-		name        string
-		args        []string
-		out         []byte
-		expectedErr *errors.ApiError
-		flags       []flag
+		name                string
+		apiOut              []byte
+		apiErr              *errors.ApiError
+		wantOut             []byte
+		wantErr             *errors.ApiError
+		wantNotZeroExitCode bool
 	}{
 		{
-			"success",
-			[]string{"--min-number-of-shares", "2", "--new-admins", "bguser1,bguser2,bguser3"},
-			[]byte(`test`),
-			nil,
-			[]flag{
-				{
-					cst.NewAdmins,
-					"bguser1,bguser2,bguser3",
-				},
-				{
-					cst.MinNumberOfShares,
-					"2",
-				},
-			},
+			name:    "echo API response",
+			apiOut:  []byte(`{"status":"Break Glass feature is set"}`),
+			wantOut: []byte(`{"status":"Break Glass feature is set"}`),
+		},
+		{
+			name:                "echo API error",
+			apiErr:              errors.NewS(`{"error":"message"}`),
+			wantErr:             errors.NewS(`{"error":"message"}`),
+			wantNotZeroExitCode: true,
 		},
 	}
 
-	_, err := GetBreakGlassGenerateCmd()
-	assert.Nil(t, err)
-
-	viper.Set(cst.Version, "v1")
 	for _, tc := range testCase {
-
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.flags != nil {
-				for _, f := range tc.flags {
-					viper.Set(f.flag, f.value)
-				}
-			}
-
-			fakeOutC := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			fakeOutC.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
-				return tc.out, tc.expectedErr
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+				return tc.apiOut, tc.apiErr
 			}
 
-			c := breakGlass{req, fakeOutC}
-			_ = c.handleBreakGlassGenerateCmd(tc.args)
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", rerr)
+			}
 
-			if tc.expectedErr == nil {
-				assert.Equal(t, data, tc.out)
+			code := handleBreakGlassGetStatusCmd(vcli, []string{})
+
+			if tc.wantErr == nil {
+				assert.Equal(t, tc.wantOut, data)
 			} else {
-				assert.Equal(t, err, tc.expectedErr)
+				assert.Equal(t, tc.wantErr, err)
+			}
+
+			if tc.wantNotZeroExitCode {
+				assert.NotEqual(t, 0, code)
+			} else {
+				assert.Equal(t, 0, code)
 			}
 		})
 	}
 }
 
-func TestGetBreakGlassApplyCmd(t *testing.T) {
-	type flag struct {
-		flag, value string
-	}
-
+func TestHandleBreakGlassGenerateCmd(t *testing.T) {
 	testCase := []struct {
-		name        string
-		args        []string
-		out         []byte
-		expectedErr *errors.ApiError
-		flags       []flag
+		name               string
+		fNewAdmins         string
+		fMinNumberOfShares string
+		apiOut             []byte
+		apiErr             *errors.ApiError
+		wantOut            []byte
+		wantErr            *errors.ApiError
 	}{
 		{
-			"success",
-			[]string{"--shares", "6lFNUss5WgccrKLH39oeO4gQ5c7kA1McXlhDZn6joXQ=Ncc9-J7XRm78c_4SVwQgBAS1_7O6u9rRPHvUETnTBfw=Kmsl6oh1IhdK5SC5J3q1FaMhZhsQvo-sCS3X1Rtln_g=NOdvmZtLRVSkyujYZWgDbq5SjMSrsRbK2ocJFLotMeE=,45pPuy9V9V5zKdF852RNJy9hDZtB02nL6BBzGETteb4=IlyZoX1GL8pBFlNEXeJP8SQfeAxGWg168Xxus6bMp8k=V0d43eNG4aqq8AlerGnDKfftL9x1DJ6eihMaWqeIt0U=r2GibR5fnloRcnS0Ly1zoqpCvv72OLlRkdIwsR09fek="},
-			[]byte(`test`),
-			nil,
-			[]flag{
-				{
-					cst.Shares,
-					"6lFNUss5WgccrKLH39oeO4gQ5c7kA1McXlhDZn6joXQ=Ncc9-J7XRm78c_4SVwQgBAS1_7O6u9rRPHvUETnTBfw=Kmsl6oh1IhdK5SC5J3q1FaMhZhsQvo-sCS3X1Rtln_g=NOdvmZtLRVSkyujYZWgDbq5SjMSrsRbK2ocJFLotMeE=,45pPuy9V9V5zKdF852RNJy9hDZtB02nL6BBzGETteb4=IlyZoX1GL8pBFlNEXeJP8SQfeAxGWg168Xxus6bMp8k=V0d43eNG4aqq8AlerGnDKfftL9x1DJ6eihMaWqeIt0U=r2GibR5fnloRcnS0Ly1zoqpCvv72OLlRkdIwsR09fek=",
-				},
-			},
+			name:               "success",
+			fNewAdmins:         "bguser1,bguser2,bguser3",
+			fMinNumberOfShares: "2",
+			apiOut:             []byte(`{"response":"success"}`),
+			wantOut:            []byte(`{"response":"success"}`),
+		},
+		{
+			name:               "API error",
+			fNewAdmins:         "bguser1,bguser2,bguser3",
+			fMinNumberOfShares: "2",
+			apiErr:             errors.NewS(`{"error":"message"}`),
+			wantErr:            errors.NewS(`{"error":"message"}`),
+		},
+		{
+			name:               "missing --new-admins",
+			fMinNumberOfShares: "2",
+			wantErr:            errors.NewS("error: must specify new-admins"),
+		},
+		{
+			name:       "missing --min-number-of-shares",
+			fNewAdmins: "bguser1,bguser2,bguser3",
+			wantErr:    errors.NewS("error: must specify min-number-of-shares"),
+		},
+		{
+			name:               "invalid --min-number-of-shares",
+			fNewAdmins:         "bguser1,bguser2,bguser3",
+			fMinNumberOfShares: "aaa",
+			wantErr:            errors.NewS("error: minimum number of shares must be a valid integer"),
+		},
+		{
+			name:               "negative --min-number-of-shares",
+			fNewAdmins:         "bguser1,bguser2,bguser3",
+			fMinNumberOfShares: "-1",
+			wantErr:            errors.NewS("error: minimum number of shares must be greater than 1"),
+		},
+		{
+			name:               "zero --min-number-of-shares",
+			fNewAdmins:         "bguser1,bguser2,bguser3",
+			fMinNumberOfShares: "0",
+			wantErr:            errors.NewS("error: minimum number of shares must be greater than 1"),
 		},
 	}
 
-	_, err := GetBreakGlassApplyCmd()
-	assert.Nil(t, err)
-
-	viper.Set(cst.Version, "v1")
 	for _, tc := range testCase {
-
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.flags != nil {
-				for _, f := range tc.flags {
-					viper.Set(f.flag, f.value)
-				}
-			}
-
-			fakeOutC := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			fakeOutC.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
-				return tc.out, tc.expectedErr
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+				return tc.apiOut, tc.apiErr
 			}
 
-			c := breakGlass{req, fakeOutC}
-			_ = c.handleBreakGlassApplyCmd(tc.args)
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", rerr)
+			}
 
-			if tc.expectedErr == nil {
-				assert.Equal(t, data, tc.out)
+			viper.Reset()
+			viper.Set(cst.NewAdmins, tc.fNewAdmins)
+			viper.Set(cst.MinNumberOfShares, tc.fMinNumberOfShares)
+
+			_ = handleBreakGlassGenerateCmd(vcli, []string{})
+
+			if tc.wantErr == nil {
+				assert.Equal(t, tc.wantOut, data)
 			} else {
-				assert.Equal(t, err, tc.expectedErr)
+				assert.Equal(t, tc.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestHandleBreakGlassApplyCmd(t *testing.T) {
+	testCase := []struct {
+		name    string
+		fShares string
+		apiOut  []byte
+		apiErr  *errors.ApiError
+		wantOut []byte
+		wantErr *errors.ApiError
+	}{
+		{
+			name:    "success",
+			fShares: "aaaa,bbb",
+			apiOut:  []byte(`{"response":"success"}`),
+			wantOut: []byte(`{"response":"success"}`),
+		},
+		{
+			name:    "API error",
+			fShares: "aaaa,bbb",
+			apiErr:  errors.NewS(`{"error":"message"}`),
+			wantErr: errors.NewS(`{"error":"message"}`),
+		},
+		{
+			name:    "missing --shares",
+			wantErr: errors.NewS("error: must specify shares"),
+		},
+	}
+
+	for _, tc := range testCase {
+		t.Run(tc.name, func(t *testing.T) {
+			var data []byte
+			var err *errors.ApiError
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+				data = bytes
+				err = apiError
+			}
+
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+				return tc.apiOut, tc.apiErr
+			}
+
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", rerr)
+			}
+
+			viper.Reset()
+			viper.Set(cst.Shares, tc.fShares)
+
+			_ = handleBreakGlassApplyCmd(vcli, []string{})
+
+			if tc.wantErr == nil {
+				assert.Equal(t, tc.wantOut, data)
+			} else {
+				assert.Equal(t, tc.wantErr, err)
 			}
 		})
 	}

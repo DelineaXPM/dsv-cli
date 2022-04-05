@@ -37,11 +37,6 @@ type FakeClient struct {
 	doRequestOutReturnsOnCall map[int]struct {
 		result1 *errors.ApiError
 	}
-	SetCredsStub        func(requests.Header)
-	setCredsMutex       sync.RWMutex
-	setCredsArgsForCall []struct {
-		arg1 requests.Header
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -54,15 +49,16 @@ func (fake *FakeClient) DoRequest(arg1 string, arg2 string, arg3 interface{}) ([
 		arg2 string
 		arg3 interface{}
 	}{arg1, arg2, arg3})
+	stub := fake.DoRequestStub
+	fakeReturns := fake.doRequestReturns
 	fake.recordInvocation("DoRequest", []interface{}{arg1, arg2, arg3})
 	fake.doRequestMutex.Unlock()
-	if fake.DoRequestStub != nil {
-		return fake.DoRequestStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.doRequestReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -120,15 +116,16 @@ func (fake *FakeClient) DoRequestOut(arg1 string, arg2 string, arg3 interface{},
 		arg3 interface{}
 		arg4 interface{}
 	}{arg1, arg2, arg3, arg4})
+	stub := fake.DoRequestOutStub
+	fakeReturns := fake.doRequestOutReturns
 	fake.recordInvocation("DoRequestOut", []interface{}{arg1, arg2, arg3, arg4})
 	fake.doRequestOutMutex.Unlock()
-	if fake.DoRequestOutStub != nil {
-		return fake.DoRequestOutStub(arg1, arg2, arg3, arg4)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.doRequestOutReturns
 	return fakeReturns.result1
 }
 
@@ -174,37 +171,6 @@ func (fake *FakeClient) DoRequestOutReturnsOnCall(i int, result1 *errors.ApiErro
 	}{result1}
 }
 
-func (fake *FakeClient) SetCreds(arg1 requests.Header) {
-	fake.setCredsMutex.Lock()
-	fake.setCredsArgsForCall = append(fake.setCredsArgsForCall, struct {
-		arg1 requests.Header
-	}{arg1})
-	fake.recordInvocation("SetCreds", []interface{}{arg1})
-	fake.setCredsMutex.Unlock()
-	if fake.SetCredsStub != nil {
-		fake.SetCredsStub(arg1)
-	}
-}
-
-func (fake *FakeClient) SetCredsCallCount() int {
-	fake.setCredsMutex.RLock()
-	defer fake.setCredsMutex.RUnlock()
-	return len(fake.setCredsArgsForCall)
-}
-
-func (fake *FakeClient) SetCredsCalls(stub func(requests.Header)) {
-	fake.setCredsMutex.Lock()
-	defer fake.setCredsMutex.Unlock()
-	fake.SetCredsStub = stub
-}
-
-func (fake *FakeClient) SetCredsArgsForCall(i int) requests.Header {
-	fake.setCredsMutex.RLock()
-	defer fake.setCredsMutex.RUnlock()
-	argsForCall := fake.setCredsArgsForCall[i]
-	return argsForCall.arg1
-}
-
 func (fake *FakeClient) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -212,8 +178,6 @@ func (fake *FakeClient) Invocations() map[string][][]interface{} {
 	defer fake.doRequestMutex.RUnlock()
 	fake.doRequestOutMutex.RLock()
 	defer fake.doRequestOutMutex.RUnlock()
-	fake.setCredsMutex.RLock()
-	defer fake.setCredsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

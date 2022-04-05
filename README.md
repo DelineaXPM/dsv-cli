@@ -1,21 +1,19 @@
-# Thycotic DevOps Secrets Vault CLI
-
+<h1 align="center">Delinea DevOps Secrets Vault CLI</h1>
 An automation tool for the management of credentials for applications, databases, CI/CD tools, and services.
 
 ## CLI Usage Documentation
-The documentation is available at http://docs.thycotic.com/dsv
+The documentation is available at http://docs.delinea.com/dsv
 
 The documentation repository is available at https://github.com/thycotic/dsv-docs
 
 To request a documentation change, fork and submit a pull request.
 
 ## Development environment setup
-
 * Tasks in the Makefile and cicd-integration tests only run on Linux. On Windows, use the Windows Subsystem for Linux (WSL).
 * Make sure to not convert line endings to CRLF. The `.gitattributes` file should prevent committing CRLF line endings. Configure Git and a text editor as necessary.
-	* Turn off autocrlf: `git config --global --unset core.autocrlf`.
-	* Re-checkout: `git checkout-index --force --all`.
-	* If that fails, run: `git config core.eol lf` and re-checkout again or delete and reclone the repo.
+* Turn off autocrlf: `git config --global --unset core.autocrlf`.
+* Re-checkout: `git checkout-index --force --all`.
+* If that fails, run: `git config core.eol lf` and re-checkout again or delete and reclone the repo.
 
 ## Building the CLI
 To build the program or contribute to its development, use Go version 1.16 or later.
@@ -30,21 +28,17 @@ Run tests:
 make test
 ```
 
-## Installation
-Installation is only required for autocomplete to work on Unix-based systems.
+## Autocompletion
 Autocomplete is a convenience feature to help type commands, subcommands, flags, and secret paths faster.
 It is supported on bash, zsh, and fish shells via https://github.com/posener/complete.
 
 To enable autocomplete:
 ```
-go get -u github.com/posener/complete/gocomplete
-gocomplete -install
 dsv -install
 ```
 To disable it:
 ```
 dsv -uninstall
-gocomplete -uninstall
 ```
 
 ## Working with the CLI
@@ -65,11 +59,11 @@ dsv secret create \
 
 Read a secret field:
 ```bash
-dsv secret read resources/us-east-1/server1 -bf .data.password
+dsv secret read resources/us-east-1/server1 -f .data.password
 ```
 
 ## Authors
-* **Thycotic Software** - [Thycotic](https://thycotic.com)
+* **Delinea** - https://delinea.com/
 
 ## License
-See LICENSE file.
+See [LICENSE](https://github.com/thycotic/dsv-cli/blob/master/LICENSE) for the full license text.

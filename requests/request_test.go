@@ -4,28 +4,11 @@ import (
 	"net/http"
 	"testing"
 
-	cst "thy/constants"
-	"thy/requests"
-
 	"github.com/jarcoal/httpmock"
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+
+	"thy/requests"
 )
-
-func TestSetCreds(t *testing.T) {
-	viper.Set(cst.NounToken, "t1")
-	req, _ := http.NewRequest(http.MethodGet, "", nil)
-	c := requests.NewHttpClient()
-	c.SetCreds(&req.Header)
-	assert.Equal(t, viper.GetString(cst.NounToken), string(req.Header.Get("Authorization")))
-}
-
-func TestHttpClient(t *testing.T) {
-	c := requests.NewHttpClient()
-	r := http.Header{}
-	c.SetCreds(&r)
-	assert.Equal(t, viper.GetString(cst.NounToken), string(r.Get("Authorization")))
-}
 
 func TestHttpClient_DoRequest(t *testing.T) {
 	c := requests.NewHttpClient()

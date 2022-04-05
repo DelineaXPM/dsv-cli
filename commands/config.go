@@ -12,43 +12,18 @@ import (
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
+	"thy/internal/predictor"
 	"thy/paths"
-	preds "thy/predictors"
-	"thy/requests"
-	"thy/store"
 	"thy/utils"
+	"thy/vaultcli"
 
-	"github.com/posener/complete"
-
+	"github.com/mitchellh/cli"
 	"github.com/spf13/viper"
-	"github.com/thycotic-rd/cli"
 )
-
-type Config struct {
-	request   requests.Client
-	outClient format.OutClient
-	getStore  func(stString string) (store.Store, *errors.ApiError)
-	edit      func([]byte, dataFunc, *errors.ApiError, bool) ([]byte, *errors.ApiError)
-}
 
 func GetConfigCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounConfig},
-		RunFunc: func(args []string) int {
-			id := viper.GetString(cst.ID)
-			path := viper.GetString(cst.Path)
-			if path == "" {
-				path = paths.GetPath(args)
-			}
-			if path == "" && id == "" {
-				return cli.RunResultHelp
-			}
-			config := Config{requests.NewHttpClient(),
-				nil,
-				store.GetStore,
-				EditData}
-			return config.handleConfigReadCmd(args)
-		},
+		Path:         []string{cst.NounConfig},
 		SynopsisText: "config",
 		HelpText: fmt.Sprintf(`Execute an action on the %[2]s in %[3]s
 
@@ -57,101 +32,94 @@ Usage:
    • config %[4]s --data %[5]s
 		`, cst.Read, cst.NounConfig, cst.ProductName, cst.Update, cst.ExampleConfigPath),
 		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			id := viper.GetString(cst.ID)
+			path := viper.GetString(cst.Path)
+			if path == "" && len(args) > 0 {
+				path = args[0]
+			}
+			if path == "" && id == "" {
+				return cli.RunResultHelp
+			}
+			return handleConfigReadCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetConfigReadCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounConfig, cst.Read},
-		RunFunc: Config{
-			requests.NewHttpClient(),
-			nil,
-			store.GetStore,
-			EditData}.handleConfigReadCmd,
+		Path:         []string{cst.NounConfig, cst.Read},
 		SynopsisText: fmt.Sprintf("%s %s", cst.NounConfig, cst.Read),
 		HelpText: fmt.Sprintf(`Read the %[2]s from %[3]s
 Usage:
-	• config %[1]s -b
-				`, cst.Read, cst.NounConfig, cst.ProductName),
-		FlagsPredictor: cli.PredictorWrappers{preds.LongFlag(cst.Version): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Version, Shorthand: "", Usage: "List the current and last (n) versions"}), false}},
-		MinNumberArgs:  0,
+   • config %[1]s -b
+		`, cst.Read, cst.NounConfig, cst.ProductName),
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Version, Usage: "List the current and last (n) versions"},
+		},
+		RunFunc: func(args []string) int {
+			return handleConfigReadCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetConfigUpdateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounConfig, cst.Update},
-		RunFunc: Config{
-			requests.NewHttpClient(),
-			nil,
-			store.GetStore,
-			EditData}.handleConfigUpdateCmd,
+		Path:         []string{cst.NounConfig, cst.Update},
 		SynopsisText: fmt.Sprintf("%s %s", cst.NounConfig, cst.Update),
 		HelpText: fmt.Sprintf(`Update the %[2]s in %[3]s
 Usage:
-	• config %[1]s --data %[4]s --encoding yml
-	• config %[1]s @/tmp/conf.json
-	• config %[1]s "{\"tenantName: \"ambarco\"...}\" --encoding json
-				`, cst.Update, cst.NounConfig, cst.ProductName, cst.ExampleConfigPath),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.Data): cli.PredictorWrapper{preds.NewPrefixFilePredictor("*"), preds.NewFlagValue(preds.Params{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in the %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), cst.Config)}), false},
+   • config %[1]s --data %[4]s --encoding yml
+   • config %[1]s @/tmp/conf.json
+   • config %[1]s "{\"tenantName: \"ambarco\"...}\" --encoding json
+		`, cst.Update, cst.NounConfig, cst.ProductName, cst.ExampleConfigPath),
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in the %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), cst.Config), Predictor: predictor.NewPrefixFilePredictor("*")},
 		},
 		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			return handleConfigUpdateCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetConfigEditCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounConfig, cst.Edit},
-		RunFunc: Config{
-			requests.NewHttpClient(),
-			nil,
-			store.GetStore,
-			EditData}.handleConfigEditCmd,
+		Path:         []string{cst.NounConfig, cst.Edit},
 		SynopsisText: fmt.Sprintf("%s %s", cst.NounConfig, cst.Edit),
-		HelpText: fmt.Sprintf(`Edit the %[2]s in %[3]s
+		HelpText: fmt.Sprintf(`Edit the %[1]s in %[2]s
 Usage:
-	• config %[1]s --data %[4]s --encoding yml
-	• config %[1]s @/tmp/conf.json
-	• config %[1]s "{\"tenantName: \"ambarco\"...}\" --encoding json
-				`, cst.Edit, cst.NounConfig, cst.ProductName, cst.ExampleConfigPath),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.Data): cli.PredictorWrapper{preds.NewPrefixFilePredictor("*"), preds.NewFlagValue(preds.Params{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in the %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), cst.Config)}), false},
+   • config edit
+   • config edit --encoding yml
+		`, cst.NounConfig, cst.ProductName),
+		RunFunc: func(args []string) int {
+			return handleConfigEditCmd(vaultcli.New(), args)
 		},
-		MinNumberArgs: 0,
 	})
 }
 
-func (c Config) handleConfigReadCmd(args []string) int {
+func handleConfigReadCmd(vcli vaultcli.CLI, args []string) int {
 	config := "config"
 	version := viper.GetString(cst.Version)
 	if strings.TrimSpace(version) != "" {
 		config = fmt.Sprint(config, "/", cst.Version, "/", version)
 	}
 	uri := paths.CreateURI(config, nil)
-	resp, err := c.request.DoRequest(http.MethodGet, uri, nil)
+	resp, err := vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
 
-	outClient := c.outClient
-	if outClient == nil {
-		outClient = format.NewDefaultOutClient()
-	}
-
-	outClient.WriteResponse(resp, err)
+	vcli.Out().WriteResponse(resp, err)
 	return 0
 }
 
-func (c Config) handleConfigUpdateCmd(args []string) int {
+func handleConfigUpdateCmd(vcli vaultcli.CLI, args []string) int {
 	var err *errors.ApiError
 	var resp []byte
 	uri := paths.CreateURI("config", nil)
 	data := viper.GetString(cst.Data)
 	encoding := viper.GetString(cst.Encoding)
 	var fileName string
-	if c.outClient == nil {
-		c.outClient = format.NewDefaultOutClient()
-	}
 	if data == "" {
-		c.outClient.FailF("Please provide --%s or -%s and a value for it", cst.Data, string(cst.Data[0]))
+		vcli.Out().FailF("Please provide --%s or -%s and a value for it", cst.Data, string(cst.Data[0]))
 		return 1
 	}
 
@@ -166,8 +134,8 @@ func (c Config) handleConfigUpdateCmd(args []string) int {
 		Config:        data,
 		Serialization: encoding,
 	}
-	resp, err = c.request.DoRequest(http.MethodPut, uri, &model)
-	c.outClient.WriteResponse(resp, err)
+	resp, err = vcli.HTTPClient().DoRequest(http.MethodPut, uri, &model)
+	vcli.Out().WriteResponse(resp, err)
 
 	if err == nil && resp != nil && fileName != "" {
 		// Overwrite the given file with the most recent version of the config.
@@ -175,37 +143,33 @@ func (c Config) handleConfigUpdateCmd(args []string) int {
 		color := false
 		text, _ := format.BeautifyBytes(resp, &color)
 		if writeErr := ioutil.WriteFile(fileName, []byte(text), 0644); writeErr != nil {
-			c.outClient.Fail(writeErr)
+			vcli.Out().Fail(writeErr)
 		}
 	}
 
 	return utils.GetExecStatus(err)
 }
 
-func (c Config) handleConfigEditCmd(args []string) int {
-	if c.outClient == nil {
-		c.outClient = format.NewDefaultOutClient()
-	}
-
+func handleConfigEditCmd(vcli vaultcli.CLI, args []string) int {
 	var err *errors.ApiError
 	var resp []byte
 	uri := paths.CreateURI("config", nil)
-	resp, err = c.request.DoRequest(http.MethodGet, uri, nil)
+	resp, err = vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
 	if err != nil {
-		c.outClient.WriteResponse(resp, err)
+		vcli.Out().WriteResponse(resp, err)
 		return utils.GetExecStatus(err)
 	}
-	saveFunc := dataFunc(func(data []byte) (resp []byte, err *errors.ApiError) {
+	saveFunc := func(data []byte) (resp []byte, err *errors.ApiError) {
 		encoding := viper.GetString(cst.Encoding)
 		model := PostConfigModel{
 			Config:        string(data),
 			Serialization: encoding,
 		}
-		_, err = c.request.DoRequest(http.MethodPut, uri, &model)
+		_, err = vcli.HTTPClient().DoRequest(http.MethodPut, uri, &model)
 		return nil, err
-	})
-	resp, err = c.edit(resp, saveFunc, nil, false)
-	c.outClient.WriteResponse(resp, err)
+	}
+	resp, err = vcli.Edit(resp, saveFunc)
+	vcli.Out().WriteResponse(resp, err)
 	return utils.GetExecStatus(err)
 }
 

@@ -5,30 +5,21 @@ import (
 	"strings"
 	cst "thy/constants"
 	"thy/errors"
-	"thy/format"
+	"thy/internal/predictor"
 	"thy/paths"
-	preds "thy/predictors"
-	"thy/requests"
 	"thy/utils"
-
-	"github.com/posener/complete"
+	"thy/vaultcli"
 
 	"github.com/shurcooL/graphql"
 
 	"github.com/spf13/viper"
 
-	"github.com/thycotic-rd/cli"
+	"github.com/mitchellh/cli"
 )
-
-type report struct {
-	graphClient requests.GraphClient
-	outClient   format.OutClient
-}
 
 func GetSecretReportCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounReport},
-		RunFunc:      report{graphClient: requests.NewGraphClient()}.handleSecretReport,
 		SynopsisText: "report secret",
 		HelpText: fmt.Sprintf(`Read secret report records
 
@@ -36,23 +27,24 @@ Usage:
    • %[1]s %[7]s --%[2]s /x/y/z --%[3]s testUser --%[4]s sysadmins --%[5]s role1 --%[6]s 5
    • %[1]s %[7]s --%[2]s /x/y/z
    `, cst.NounReport, cst.Path, cst.NounUser, cst.NounGroup, cst.NounRole, cst.Limit, cst.NounSecret),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.Path):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Path, Usage: "Path (optional)"}), false},
-			preds.LongFlag(cst.NounUser):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounUser, Usage: "User name (optional)"}), false},
-			preds.LongFlag(cst.NounGroup): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounGroup, Usage: "Group name (optional)"}), false},
-			preds.LongFlag(cst.NounRole):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounRole, Usage: "Role name (optional)"}), false},
-			preds.LongFlag(cst.Limit):     cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"}), false},
-			preds.LongFlag(cst.OffSet):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.OffSet, Usage: "Offset for the next secrets (optional)"}), false},
-			preds.LongFlag(cst.Cursor):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: cst.CursorHelpMessage}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Path, Usage: "Path (optional)"},
+			{Name: cst.NounUser, Usage: "User name (optional)"},
+			{Name: cst.NounGroup, Usage: "Group name (optional)"},
+			{Name: cst.NounRole, Usage: "Role name (optional)"},
+			{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
+			{Name: cst.OffSet, Usage: "Offset for the next secrets (optional)"},
+			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 		},
-		MinNumberArgs: 0,
+		RunFunc: func(args []string) int {
+			return handleSecretReport(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetGroupReportCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounReport},
-		RunFunc:      report{graphClient: requests.NewGraphClient()}.handleGroupReport,
 		SynopsisText: "report group",
 		HelpText: fmt.Sprintf(`Read group report records
 
@@ -60,16 +52,18 @@ Usage:
    • %[1]s %[4]s --%[2]s testUser --%[3]s 5
    • %[1]s %[4]s --%[2]s testUser
    `, cst.NounReport, cst.NounUser, cst.Limit, cst.NounGroup),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.NounUser): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounUser, Usage: "User name (optional)"}), false},
-			preds.LongFlag(cst.Limit):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"}), false},
-			preds.LongFlag(cst.OffSet):   cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.OffSet, Usage: "Offset for the next groups (optional)"}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.NounUser, Usage: "User name (optional)"},
+			{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
+			{Name: cst.OffSet, Usage: "Offset for the next groups (optional)"},
 		},
-		MinNumberArgs: 0,
+		RunFunc: func(args []string) int {
+			return handleGroupReport(vaultcli.New(), args)
+		},
 	})
 }
 
-func (r report) handleSecretReport(args []string) int {
+func handleSecretReport(vcli vaultcli.CLI, args []string) int {
 	user := viper.GetString(cst.NounUser)
 	group := viper.GetString(cst.NounGroup)
 	role := viper.GetString(cst.NounRole)
@@ -82,42 +76,34 @@ func (r report) handleSecretReport(args []string) int {
 		path = args[0]
 	}
 
-	if r.outClient == nil {
-		r.outClient = format.NewDefaultOutClient()
-	}
-
 	switch {
 	case user != "":
-		return r.reportUserSecret(user, path, limit, offset, cursor)
+		return reportUserSecret(vcli, user, path, limit, offset, cursor)
 	case group != "":
-		return r.reportGroupSecret(group, path, limit, offset)
+		return reportGroupSecret(vcli, group, path, limit, offset)
 	case role != "":
-		return r.reportRoleSecret(role, path, limit, offset)
+		return reportRoleSecret(vcli, role, path, limit, offset)
 		//read sign in user record
 	default:
-		return r.reportSignInUserSecret(path, limit, offset, cursor)
+		return reportSignInUserSecret(vcli, path, limit, offset, cursor)
 	}
 }
 
-func (r report) handleGroupReport(args []string) int {
+func handleGroupReport(vcli vaultcli.CLI, args []string) int {
 	user := viper.GetString(cst.NounUser)
 	limit := viper.GetInt(cst.Limit)
 	offset := viper.GetInt(cst.OffSet)
 
-	if r.outClient == nil {
-		r.outClient = format.NewDefaultOutClient()
-	}
-
 	switch {
 	case user != "":
-		return r.reportUserGroup(user, limit, offset)
+		return reportUserGroup(vcli, user, limit, offset)
 
 	default:
-		return r.reportSignInGroup(limit, offset)
+		return reportSignInGroup(vcli, limit, offset)
 	}
 }
 
-func (r report) reportRoleSecret(role, path string, limit, offset int) int {
+func reportRoleSecret(vcli vaultcli.CLI, role, path string, limit, offset int) int {
 
 	var data []byte
 	var err *errors.ApiError
@@ -132,7 +118,7 @@ func (r report) reportRoleSecret(role, path string, limit, offset int) int {
 				Home    Home    `graphql:"home(limit:$limit)"`
 			} `graphql:"role(name: $role)" json:"data"`
 		}
-		data, err = r.graphClient.DoRequest(uri, &query, map[string]interface{}{
+		data, err = vcli.GraphQLClient().DoRequest(uri, &query, map[string]interface{}{
 			"limit":  graphql.Int(limit),
 			"role":   graphql.String(role),
 			"offset": graphql.Int(offset),
@@ -146,7 +132,7 @@ func (r report) reportRoleSecret(role, path string, limit, offset int) int {
 			} `graphql:"role(name: $role)" json:"data"`
 		}
 
-		data, err = r.graphClient.DoRequest(uri, &query, map[string]interface{}{
+		data, err = vcli.GraphQLClient().DoRequest(uri, &query, map[string]interface{}{
 			"limit":  graphql.Int(limit),
 			"role":   graphql.String(role),
 			"cursor": graphql.String(""),
@@ -167,7 +153,7 @@ func (r report) reportRoleSecret(role, path string, limit, offset int) int {
 				} `graphql:"role(name: $role)" json:"data"`
 			}
 
-			data, err = r.graphClient.DoRequest(uri, &query, variables)
+			data, err = vcli.GraphQLClient().DoRequest(uri, &query, variables)
 
 		} else {
 			var query struct {
@@ -177,15 +163,15 @@ func (r report) reportRoleSecret(role, path string, limit, offset int) int {
 				} `graphql:"role(name: $role)" json:"data"`
 			}
 
-			data, err = r.graphClient.DoRequest(uri, &query, variables)
+			data, err = vcli.GraphQLClient().DoRequest(uri, &query, variables)
 		}
 	}
 
-	r.outClient.WriteResponse(data, err)
+	vcli.Out().WriteResponse(data, err)
 	return utils.GetExecStatus(err)
 }
 
-func (r report) reportGroupSecret(group, path string, limit, offset int) int {
+func reportGroupSecret(vcli vaultcli.CLI, group, path string, limit, offset int) int {
 
 	var data []byte
 	var err *errors.ApiError
@@ -199,7 +185,7 @@ func (r report) reportGroupSecret(group, path string, limit, offset int) int {
 				Secrets Secrets `graphql:"secrets(filter:{limit:$limit, secretType: SECRET, offset:$offset})"`
 			} `graphql:"group(groupName: $group)" json:"data"`
 		}
-		data, err = r.graphClient.DoRequest(uri, &query, map[string]interface{}{
+		data, err = vcli.GraphQLClient().DoRequest(uri, &query, map[string]interface{}{
 			"limit":  graphql.Int(limit),
 			"group":  graphql.String(group),
 			"offset": graphql.Int(offset),
@@ -220,7 +206,7 @@ func (r report) reportGroupSecret(group, path string, limit, offset int) int {
 				} `graphql:"group(groupName: $group)" json:"data"`
 			}
 
-			data, err = r.graphClient.DoRequest(uri, &query, variables)
+			data, err = vcli.GraphQLClient().DoRequest(uri, &query, variables)
 
 		} else {
 			var query struct {
@@ -230,15 +216,15 @@ func (r report) reportGroupSecret(group, path string, limit, offset int) int {
 				} `graphql:"group(groupName: $group)" json:"data"`
 			}
 
-			data, err = r.graphClient.DoRequest(uri, &query, variables)
+			data, err = vcli.GraphQLClient().DoRequest(uri, &query, variables)
 		}
 	}
 
-	r.outClient.WriteResponse(data, err)
+	vcli.Out().WriteResponse(data, err)
 	return utils.GetExecStatus(err)
 }
 
-func (r report) reportUserSecret(user, path string, limit, offset int, cursor string) int {
+func reportUserSecret(vcli vaultcli.CLI, user, path string, limit, offset int, cursor string) int {
 	var data []byte
 	var err *errors.ApiError
 
@@ -252,7 +238,7 @@ func (r report) reportUserSecret(user, path string, limit, offset int, cursor st
 				Home    Home    `graphql:"home(limit:$limit), cursor:$cursor)"`
 			} `graphql:"user(name: $user)" json:"data"`
 		}
-		data, err = r.graphClient.DoRequest(uri, &query, map[string]interface{}{
+		data, err = vcli.GraphQLClient().DoRequest(uri, &query, map[string]interface{}{
 			"limit":  graphql.Int(limit),
 			"user":   graphql.String(user),
 			"offset": graphql.Int(offset),
@@ -267,7 +253,7 @@ func (r report) reportUserSecret(user, path string, limit, offset int, cursor st
 			} `graphql:"user(name: $user)" json:"data"`
 		}
 
-		data, err = r.graphClient.DoRequest(uri, &query, map[string]interface{}{
+		data, err = vcli.GraphQLClient().DoRequest(uri, &query, map[string]interface{}{
 			"limit":  graphql.Int(limit),
 			"user":   graphql.String(user),
 			"cursor": graphql.String(cursor),
@@ -288,7 +274,7 @@ func (r report) reportUserSecret(user, path string, limit, offset int, cursor st
 				} `graphql:"user(name: $user)" json:"data"`
 			}
 
-			data, err = r.graphClient.DoRequest(uri, &query, variables)
+			data, err = vcli.GraphQLClient().DoRequest(uri, &query, variables)
 
 		} else {
 			var query struct {
@@ -298,15 +284,15 @@ func (r report) reportUserSecret(user, path string, limit, offset int, cursor st
 				} `graphql:"user(name: $user)" json:"data"`
 			}
 
-			data, err = r.graphClient.DoRequest(uri, &query, variables)
+			data, err = vcli.GraphQLClient().DoRequest(uri, &query, variables)
 		}
 	}
 
-	r.outClient.WriteResponse(data, err)
+	vcli.Out().WriteResponse(data, err)
 	return utils.GetExecStatus(err)
 }
 
-func (r report) reportSignInUserSecret(path string, limit, offset int, cursor string) int {
+func reportSignInUserSecret(vcli vaultcli.CLI, path string, limit, offset int, cursor string) int {
 	var data []byte
 	var err *errors.ApiError
 
@@ -320,7 +306,7 @@ func (r report) reportSignInUserSecret(path string, limit, offset int, cursor st
 				Home    Home    `graphql:"home(limit:$limit, cursor:$cursor)"`
 			} `json:"data"`
 		}
-		data, err = r.graphClient.DoRequest(uri, &query, map[string]interface{}{
+		data, err = vcli.GraphQLClient().DoRequest(uri, &query, map[string]interface{}{
 			"limit":  graphql.Int(limit),
 			"offset": graphql.Int(offset),
 			"cursor": graphql.String(cursor),
@@ -334,7 +320,7 @@ func (r report) reportSignInUserSecret(path string, limit, offset int, cursor st
 			} `json:"data"`
 		}
 
-		data, err = r.graphClient.DoRequest(uri, &query, map[string]interface{}{
+		data, err = vcli.GraphQLClient().DoRequest(uri, &query, map[string]interface{}{
 			"limit":  graphql.Int(limit),
 			"cursor": graphql.String(cursor),
 		})
@@ -353,7 +339,7 @@ func (r report) reportSignInUserSecret(path string, limit, offset int, cursor st
 				}
 			}
 
-			data, err = r.graphClient.DoRequest(uri, &query, variables)
+			data, err = vcli.GraphQLClient().DoRequest(uri, &query, variables)
 
 		} else {
 			var query struct {
@@ -363,15 +349,15 @@ func (r report) reportSignInUserSecret(path string, limit, offset int, cursor st
 				}
 			}
 
-			data, err = r.graphClient.DoRequest(uri, &query, variables)
+			data, err = vcli.GraphQLClient().DoRequest(uri, &query, variables)
 		}
 	}
 
-	r.outClient.WriteResponse(data, err)
+	vcli.Out().WriteResponse(data, err)
 	return utils.GetExecStatus(err)
 }
 
-func (r report) reportSignInGroup(limit, offset int) int {
+func reportSignInGroup(vcli vaultcli.CLI, limit, offset int) int {
 	var query struct {
 		Me struct {
 			GQUser
@@ -379,16 +365,16 @@ func (r report) reportSignInGroup(limit, offset int) int {
 		} `json:"data"`
 	}
 
-	data, err := r.graphClient.DoRequest(
+	data, err := vcli.GraphQLClient().DoRequest(
 		paths.CreateURI("report/me", nil), &query, map[string]interface{}{
 			"limit":  graphql.Int(limit),
 			"offset": graphql.Int(offset),
 		})
-	r.outClient.WriteResponse(data, nil)
+	vcli.Out().WriteResponse(data, nil)
 	return utils.GetExecStatus(err)
 }
 
-func (r report) reportUserGroup(user string, limit, offset int) int {
+func reportUserGroup(vcli vaultcli.CLI, user string, limit, offset int) int {
 	var query struct {
 		User struct {
 			GQUser
@@ -403,8 +389,8 @@ func (r report) reportUserGroup(user string, limit, offset int) int {
 	}
 
 	uri := paths.CreateURI("report/query", nil)
-	data, err := r.graphClient.DoRequest(uri, &query, variables)
-	r.outClient.WriteResponse(data, nil)
+	data, err := vcli.GraphQLClient().DoRequest(uri, &query, variables)
+	vcli.Out().WriteResponse(data, nil)
 	return utils.GetExecStatus(err)
 }
 

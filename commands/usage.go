@@ -6,48 +6,38 @@ import (
 	"time"
 
 	"thy/errors"
-	"thy/format"
+	"thy/internal/predictor"
 	"thy/paths"
-	preds "thy/predictors"
-	"thy/requests"
 	"thy/utils"
+	"thy/vaultcli"
 
-	"github.com/posener/complete"
+	"github.com/mitchellh/cli"
 	"github.com/spf13/viper"
-	"github.com/thycotic-rd/cli"
 
 	cst "thy/constants"
 )
 
-type usage struct {
-	request   requests.Client
-	outClient format.OutClient
-}
-
 func GetUsageCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounUsage},
-		RunFunc:      usage{requests.NewHttpClient(), nil}.handleGetUsageCmd,
 		SynopsisText: "usage",
 		HelpText:     fmt.Sprintf("Fetch the number of API calls used daily from %s", cst.ProductName),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.StartDate): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.StartDate, Shorthand: "s", Usage: fmt.Sprintf("Start date from which to fetch usage data (required)")}), false},
-			preds.LongFlag(cst.EndDate):   cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.EndDate, Usage: fmt.Sprintf("End date to which to fetch usage data (optional)")}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.StartDate, Shorthand: "s", Usage: "Start date from which to fetch usage data (required)"},
+			{Name: cst.EndDate, Usage: "End date to which to fetch usage data (optional)"},
 		},
 		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			return handleGetUsageCmd(vaultcli.New(), args)
+		},
 	})
 }
 
-func (u usage) handleGetUsageCmd(args []string) int {
-	var err *errors.ApiError
-	var data []byte
-	if u.outClient == nil {
-		u.outClient = format.NewDefaultOutClient()
-	}
+func handleGetUsageCmd(vcli vaultcli.CLI, args []string) int {
 	startDate := viper.GetString(cst.StartDate)
 	if startDate == "" {
-		err = errors.NewS("error: must specify " + cst.StartDate)
-		u.outClient.WriteResponse(data, err)
+		err := errors.NewS("error: must specify " + cst.StartDate)
+		vcli.Out().WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
 
@@ -62,8 +52,8 @@ func (u usage) handleGetUsageCmd(args []string) int {
 	}
 
 	uri := paths.CreateURI(cst.NounUsage, usageRequest)
-	data, err = u.request.DoRequest(http.MethodGet, uri, nil)
+	data, err := vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
 
-	u.outClient.WriteResponse(data, err)
+	vcli.Out().WriteResponse(data, err)
 	return utils.GetExecStatus(err)
 }

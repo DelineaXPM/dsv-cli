@@ -7,6 +7,7 @@ import (
 	cst "thy/constants"
 	"thy/errors"
 	"thy/fake"
+	"thy/vaultcli"
 	"time"
 
 	"github.com/spf13/viper"
@@ -56,8 +57,15 @@ func TestHandleGetUsageCmd(t *testing.T) {
 				return tt.out, tt.expectedErr
 			}
 
-			u := usage{req, client}
-			_ = u.handleGetUsageCmd([]string{tt.startDate})
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(req),
+				vaultcli.WithOutClient(client),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", rerr)
+			}
+
+			_ = handleGetUsageCmd(vcli, []string{tt.startDate})
 			if tt.expectedErr == nil {
 				assert.Equal(t, data, tt.out)
 			} else {

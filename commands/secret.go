@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -13,74 +12,50 @@ import (
 	"thy/auth"
 	cst "thy/constants"
 	"thy/errors"
-	"thy/format"
-	"thy/internal/prompt"
+	"thy/internal/predictor"
 	"thy/paths"
-	preds "thy/predictors"
-	"thy/requests"
 	"thy/store"
 	"thy/utils"
+	"thy/vaultcli"
 
-	"github.com/posener/complete"
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/mitchellh/cli"
 	"github.com/spf13/viper"
-	"github.com/thycotic-rd/cli"
 )
 
-type Secret struct {
-	request    requests.Client
-	outClient  format.OutClient
-	getStore   func(stString string) (store.Store, *errors.ApiError)
-	edit       func([]byte, dataFunc, *errors.ApiError, bool) ([]byte, *errors.ApiError)
-	secretType paths.SecretType
-}
-
-func GetDataOpWrappers(targetEntity string) cli.PredictorWrappers {
-	return cli.PredictorWrappers{
-		preds.LongFlag(cst.Data):            cli.PredictorWrapper{preds.NewPrefixFilePredictor("*"), preds.NewFlagValue(preds.Params{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in a %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), targetEntity)}), false},
-		preds.LongFlag(cst.Path):            cli.PredictorWrapper{preds.NewSecretPathPredictorDefault(), preds.NewFlagValue(preds.Params{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, targetEntity)}), false},
-		preds.LongFlag(cst.DataDescription): cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.DataDescription, Usage: fmt.Sprintf("Description of a %s", targetEntity)}), false},
-		preds.LongFlag(cst.DataAttributes):  cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.DataAttributes, Usage: fmt.Sprintf("Attributes of a %s", targetEntity)}), false},
-		preds.LongFlag(cst.Overwrite):       cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.Overwrite, Usage: fmt.Sprintf("Overwrite all the contents of %s data", targetEntity), Global: false, ValueType: "bool"}), false},
+func GetDataOpWrappers(targetEntity string) []*predictor.Params {
+	return []*predictor.Params{
+		{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in a %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), targetEntity), Predictor: predictor.NewPrefixFilePredictor("*")},
+		{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, targetEntity), Predictor: predictor.NewSecretPathPredictorDefault()},
+		{Name: cst.DataDescription, Usage: fmt.Sprintf("Description of a %s", targetEntity)},
+		{Name: cst.DataAttributes, Usage: fmt.Sprintf("Attributes of a %s", targetEntity)},
+		{Name: cst.Overwrite, Usage: fmt.Sprintf("Overwrite all the contents of %s data", targetEntity), ValueType: "bool"},
 	}
 }
-func GetNoDataOpWrappers(targetEntity string) cli.PredictorWrappers {
-	return cli.PredictorWrappers{
-		preds.LongFlag(cst.Path):    cli.PredictorWrapper{preds.NewSecretPathPredictorDefault(), preds.NewFlagValue(preds.Params{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, targetEntity)}), false},
-		preds.LongFlag(cst.ID):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ID, Shorthand: "i", Usage: fmt.Sprintf("Target %s for a %s", cst.ID, targetEntity)}), false},
-		preds.LongFlag(cst.Version): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Version, Shorthand: "", Usage: "List the current and last (n) versions"}), false},
+func GetNoDataOpWrappers(targetEntity string) []*predictor.Params {
+	return []*predictor.Params{
+		{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, targetEntity), Predictor: predictor.NewSecretPathPredictorDefault()},
+		{Name: cst.ID, Shorthand: "i", Usage: fmt.Sprintf("Target %s for a %s", cst.ID, targetEntity)},
+		{Name: cst.Version, Usage: "List the current and last (n) versions"},
 	}
 }
 
-func GetSearchOpWrappers() cli.PredictorWrappers {
-	return cli.PredictorWrappers{
-		preds.LongFlag(cst.Query):            cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("%s of %ss to fetch (required)", strings.Title(cst.Query), cst.NounSecret)}), false},
-		preds.LongFlag(cst.SearchLinks):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.SearchLinks, Shorthand: "", Usage: "Find secrets that link to the secret path in the query", Global: false, ValueType: "bool"}), false},
-		preds.LongFlag(cst.Limit):            cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Limit, Shorthand: "l", Usage: fmt.Sprint("Maximum number of results per cursor (optional)")}), false},
-		preds.LongFlag(cst.Cursor):           cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: cst.CursorHelpMessage}), false},
-		preds.LongFlag(cst.SearchField):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.SearchField, Shorthand: "", Usage: "Advanced search on a secret field (optional)", Global: false}), false},
-		preds.LongFlag(cst.SearchType):       cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.SearchType, Shorthand: "", Usage: "Specify the value type for advanced field searching, can be 'number' or 'string' (optional)", Global: false}), false},
-		preds.LongFlag(cst.SearchComparison): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.SearchComparison, Shorthand: "", Usage: "Specify the operator for advanced field searching, can be 'contains' or 'equal' (optional)", Global: false}), false},
-		preds.LongFlag(cst.Sort):             cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Sort, Usage: "Change result sorting order (asc|desc) [default: desc] when search field is specified (optional)"}), false},
+func GetSearchOpWrappers() []*predictor.Params {
+	return []*predictor.Params{
+		{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("%s of %ss to fetch (optional)", strings.Title(cst.Query), cst.NounSecret)},
+		{Name: cst.SearchLinks, Usage: "Find secrets that link to the secret path in the query", ValueType: "bool"},
+		{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
+		{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
+		{Name: cst.SearchField, Usage: "Advanced search on a secret field (optional)"},
+		{Name: cst.SearchType, Usage: "Specify the value type for advanced field searching, can be 'number' or 'string' (optional)"},
+		{Name: cst.SearchComparison, Usage: "Specify the operator for advanced field searching, can be 'contains' or 'equal' (optional)"},
+		{Name: cst.Sort, Usage: "Change result sorting order (asc|desc) [default: desc] when search field is specified (optional)"},
 	}
 }
 
 func GetSecretCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounSecret},
-		RunFunc: func(args []string) int {
-			id := viper.GetString(cst.ID)
-			path := viper.GetString(cst.Path)
-			if path == "" && id == "" {
-				path = paths.GetPath(args)
-			}
-			if path == "" && id == "" {
-				return cli.RunResultHelp
-			}
-			return Secret{
-				requests.NewHttpClient(),
-				nil,
-				store.GetStore, nil, cst.NounSecret}.handleReadCmd(args)
-		},
+		Path:         []string{cst.NounSecret},
 		SynopsisText: "secret (<path> | --path|-r)",
 		HelpText: fmt.Sprintf(`Execute an action on a %s from %s
 
@@ -90,16 +65,23 @@ Usage:
 `, cst.NounSecret, cst.ProductName, cst.ExamplePath),
 		FlagsPredictor: GetNoDataOpWrappers(cst.NounSecret),
 		MinNumberArgs:  1,
+		RunFunc: func(args []string) int {
+			id := viper.GetString(cst.ID)
+			path := viper.GetString(cst.Path)
+			if path == "" && id == "" && len(args) > 0 {
+				path = args[0]
+			}
+			if path == "" && id == "" {
+				return cli.RunResultHelp
+			}
+			return handleSecretReadCmd(vaultcli.New(), cst.NounSecret, args)
+		},
 	})
 }
 
 func GetReadCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounSecret, cst.Read},
-		RunFunc: Secret{
-			requests.NewHttpClient(),
-			nil,
-			store.GetStore, nil, cst.NounSecret}.handleReadCmd,
+		Path:         []string{cst.NounSecret, cst.Read},
 		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r)", cst.NounSecret, cst.Read),
 		HelpText: fmt.Sprintf(`Read a %[2]s from %[3]s
 
@@ -109,18 +91,17 @@ Usage:
    • secret %[1]s --version
 `, cst.Read, cst.NounSecret, cst.ProductName, cst.ExamplePath),
 		FlagsPredictor:    GetNoDataOpWrappers(cst.NounSecret),
-		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
+		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
 		MinNumberArgs:     1,
+		RunFunc: func(args []string) int {
+			return handleSecretReadCmd(vaultcli.New(), cst.NounSecret, args)
+		},
 	})
 }
 
 func GetDescribeCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounSecret, cst.Describe},
-		RunFunc: Secret{
-			requests.NewHttpClient(),
-			nil,
-			store.GetStore, nil, cst.NounSecret}.handleDescribeCmd,
+		Path:         []string{cst.NounSecret, cst.Describe},
 		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r)", cst.NounSecret, cst.Describe),
 		HelpText: fmt.Sprintf(`Describe a %[2]s from %[3]s
 
@@ -129,18 +110,17 @@ Usage:
    • secret %[1]s --path %[4]s -f id
 `, cst.Describe, cst.NounSecret, cst.ProductName, cst.ExamplePath),
 		FlagsPredictor:    GetNoDataOpWrappers(cst.NounSecret),
-		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
+		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
 		MinNumberArgs:     1,
+		RunFunc: func(args []string) int {
+			return handleSecretDescribeCmd(vaultcli.New(), cst.NounSecret, args)
+		},
 	})
 }
 
 func GetDeleteCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounSecret, cst.Delete},
-		RunFunc: Secret{
-			requests.NewHttpClient(),
-			nil,
-			store.GetStore, nil, cst.NounSecret}.handleDeleteCmd,
+		Path:         []string{cst.NounSecret, cst.Delete},
 		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r)", cst.NounSecret, cst.Delete),
 		HelpText: fmt.Sprintf(`Delete a %[2]s from %[3]s
 
@@ -148,45 +128,43 @@ Usage:
    • secret %[1]s %[4]s
    • secret %[1]s --path %[4]s --force
 `, cst.Delete, cst.NounSecret, cst.ProductName, cst.ExamplePath),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.Path):  cli.PredictorWrapper{preds.NewSecretPathPredictorDefault(), preds.NewFlagValue(preds.Params{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret)}), false},
-			preds.LongFlag(cst.ID):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ID, Shorthand: "i", Usage: fmt.Sprintf("Target %s for a %s", cst.ID, cst.NounSecret)}), false},
-			preds.LongFlag(cst.Force): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Force, Shorthand: "", Usage: fmt.Sprintf("Immediately delete %s", cst.NounSecret), Global: false, ValueType: "bool"}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret), Predictor: predictor.NewSecretPathPredictorDefault()},
+			{Name: cst.ID, Shorthand: "i", Usage: fmt.Sprintf("Target %s for a %s", cst.ID, cst.NounSecret)},
+			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s", cst.NounSecret), ValueType: "bool"},
 		},
-		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
+		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
 		MinNumberArgs:     1,
+		RunFunc: func(args []string) int {
+			return handleSecretDeleteCmd(vaultcli.New(), cst.NounSecret, args)
+		},
 	})
 }
 
 func GetSecretRestoreCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounSecret, cst.Read},
-		RunFunc: Secret{
-			requests.NewHttpClient(),
-			nil,
-			store.GetStore, nil, cst.NounSecret}.handleRestoreCmd,
+		Path:         []string{cst.NounSecret, cst.Read},
 		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r)", cst.NounSecret, cst.Restore),
 		HelpText: fmt.Sprintf(`Restore a deleted %[2]s from %[3]s
 
 Usage:
    • secret %[1]s %[4]s
 `, cst.Restore, cst.NounSecret, cst.ProductName, cst.ExamplePath),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.Path): cli.PredictorWrapper{preds.NewSecretPathPredictorDefault(), preds.NewFlagValue(preds.Params{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret)}), false},
-			preds.LongFlag(cst.ID):   cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ID, Shorthand: "i", Usage: fmt.Sprintf("Target %s for a %s", cst.ID, cst.NounSecret)}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret), Predictor: predictor.NewSecretPathPredictorDefault()},
+			{Name: cst.ID, Shorthand: "i", Usage: fmt.Sprintf("Target %s for a %s", cst.ID, cst.NounSecret)},
 		},
-		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
+		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
 		MinNumberArgs:     1,
+		RunFunc: func(args []string) int {
+			return handleSecretRestoreCmd(vaultcli.New(), cst.NounSecret, args)
+		},
 	})
 }
 
 func GetUpdateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounSecret, cst.Update},
-		RunFunc: Secret{
-			requests.NewHttpClient(),
-			nil,
-			store.GetStore, nil, cst.NounSecret}.handleUpsertCmd,
+		Path:         []string{cst.NounSecret, cst.Update},
 		SynopsisText: fmt.Sprintf("%s %s (<path> <data> | (--path|-r) (--data|-d))", cst.NounSecret, cst.Update),
 		HelpText: fmt.Sprintf(`Update a %[2]s in %[3]s
 
@@ -195,26 +173,24 @@ Usage:
    • secret %[1]s --path %[4]s --data %[5]s
    • secret %[1]s --path %[4]s --data %[6]s
 `, cst.Update, cst.NounSecret, cst.ProductName, cst.ExamplePath, cst.ExampleDataJSON, cst.ExampleDataPath),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.Data):            cli.PredictorWrapper{preds.NewPrefixFilePredictor("*"), preds.NewFlagValue(preds.Params{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in a %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), cst.NounSecret)}), false},
-			preds.LongFlag(cst.Path):            cli.PredictorWrapper{preds.NewSecretPathPredictorDefault(), preds.NewFlagValue(preds.Params{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret)}), false},
-			preds.LongFlag(cst.DataDescription): cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.DataDescription, Usage: fmt.Sprintf("Description of a %s", cst.NounSecret)}), false},
-			preds.LongFlag(cst.DataAttributes):  cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.DataAttributes, Usage: fmt.Sprintf("Attributes of a %s", cst.NounSecret)}), false},
-			preds.LongFlag(cst.Overwrite):       cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.Overwrite, Usage: fmt.Sprintf("Overwrite all the contents of %s data", cst.NounSecret), Global: false, ValueType: "bool"}), false},
-			preds.LongFlag(cst.ID):              cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ID, Shorthand: "i", Usage: fmt.Sprintf("Target %s for a %s", cst.ID, cst.NounSecret)}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in a %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), cst.NounSecret), Predictor: predictor.NewPrefixFilePredictor("*")},
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret), Predictor: predictor.NewSecretPathPredictorDefault()},
+			{Name: cst.DataDescription, Usage: fmt.Sprintf("Description of a %s", cst.NounSecret)},
+			{Name: cst.DataAttributes, Usage: fmt.Sprintf("Attributes of a %s", cst.NounSecret)},
+			{Name: cst.Overwrite, Usage: fmt.Sprintf("Overwrite all the contents of %s data", cst.NounSecret), ValueType: "bool"},
+			{Name: cst.ID, Shorthand: "i", Usage: fmt.Sprintf("Target %s for a %s", cst.ID, cst.NounSecret)},
 		},
-		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
-		MinNumberArgs:     0,
+		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
+		RunFunc: func(args []string) int {
+			return handleSecretUpsertCmd(vaultcli.New(), cst.NounSecret, args)
+		},
 	})
 }
 
 func GetRollbackCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounSecret, cst.Rollback},
-		RunFunc: Secret{
-			requests.NewHttpClient(),
-			nil,
-			store.GetStore, nil, cst.NounSecret}.handleRollbackCmd,
+		Path:         []string{cst.NounSecret, cst.Rollback},
 		SynopsisText: fmt.Sprintf("%s %s (<path> | (--path|-r))", cst.NounSecret, cst.Rollback),
 		HelpText: fmt.Sprintf(`Rollback a %[2]s in %[3]s
 
@@ -222,23 +198,22 @@ Usage:
    • secret %[1]s %[4]s --%[5]s 1
    • secret %[1]s --path %[4]s
 `, cst.Rollback, cst.NounSecret, cst.ProductName, cst.ExamplePath, cst.Version),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.Path):    cli.PredictorWrapper{preds.NewSecretPathPredictorDefault(), preds.NewFlagValue(preds.Params{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret)}), false},
-			preds.LongFlag(cst.ID):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ID, Shorthand: "i", Usage: fmt.Sprintf("Target %s for a %s", cst.ID, cst.NounSecret)}), false},
-			preds.LongFlag(cst.Version): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Version, Shorthand: "", Usage: "The version to which to rollback"}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret), Predictor: predictor.NewSecretPathPredictorDefault()},
+			{Name: cst.ID, Shorthand: "i", Usage: fmt.Sprintf("Target %s for a %s", cst.ID, cst.NounSecret)},
+			{Name: cst.Version, Usage: "The version to which to rollback"},
 		},
-		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
+		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
 		MinNumberArgs:     1,
+		RunFunc: func(args []string) int {
+			return handleSecretRollbackCmd(vaultcli.New(), cst.NounSecret, args)
+		},
 	})
 }
 
 func GetEditCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounSecret, cst.Update},
-		RunFunc: Secret{
-			requests.NewHttpClient(),
-			nil,
-			store.GetStore, EditData, cst.NounSecret}.handleEditCmd,
+		Path:         []string{cst.NounSecret, cst.Update},
 		SynopsisText: fmt.Sprintf("%s %s (<path> <data> | (--path|-r))", cst.NounSecret, cst.Edit),
 		HelpText: fmt.Sprintf(`Edit a %[2]s in %[3]s
 
@@ -247,18 +222,17 @@ Usage:
    • secret %[1]s --path %[4]s
 `, cst.Edit, cst.NounSecret, cst.ProductName, cst.ExamplePath),
 		FlagsPredictor:    GetNoDataOpWrappers(cst.NounSecret),
-		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
+		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
 		MinNumberArgs:     1,
+		RunFunc: func(args []string) int {
+			return handleSecretEditCmd(vaultcli.New(), cst.NounSecret, args)
+		},
 	})
 }
 
 func GetCreateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounSecret, cst.Create},
-		RunFunc: Secret{
-			requests.NewHttpClient(),
-			nil,
-			store.GetStore, nil, cst.NounSecret}.handleUpsertCmd,
+		Path:         []string{cst.NounSecret, cst.Create},
 		SynopsisText: fmt.Sprintf("%s %s (<path> <data> | (--path|-r) (--data|-d))", cst.NounSecret, cst.Create),
 		HelpText: fmt.Sprintf(`Create a %[2]s in %[3]s
 
@@ -268,147 +242,125 @@ Usage:
    • secret %[1]s --path %[4]s --data %[6]s
 `, cst.Create, cst.NounSecret, cst.ProductName, cst.ExamplePath, cst.ExampleDataJSON, cst.ExampleDataPath),
 		FlagsPredictor: GetDataOpWrappers(cst.NounSecret),
-		MinNumberArgs:  0,
+		RunFunc: func(args []string) int {
+			return handleSecretUpsertCmd(vaultcli.New(), cst.NounSecret, args)
+		},
 	})
 }
 
 func GetBustCacheCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounSecret, cst.BustCache},
-		RunFunc: Secret{
-			requests.NewHttpClient(),
-			nil,
-			store.GetStore, nil, cst.NounSecret}.handleBustCacheCmd,
+		Path:         []string{cst.NounSecret, cst.BustCache},
 		SynopsisText: fmt.Sprintf("%s %s", cst.NounSecret, cst.BustCache),
 		HelpText: `Bust secret cache
 
 Usage:
    • secret bustcache
 `,
+		RunFunc: func(args []string) int {
+			return handleBustCacheCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetSecretSearchCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounSecret, cst.Search},
-		RunFunc: Secret{
-			requests.NewHttpClient(),
-			nil,
-			store.GetStore, nil, cst.NounSecret}.handleSecretSearchCmd,
+		Path:         []string{cst.NounSecret, cst.Search},
 		SynopsisText: fmt.Sprintf("%s (<query> | --query) --limit[default:25] --cursor --search-type[default:string] --search-comparison[default:contains] --search-field[default:path] --search-links[default:false])", cst.Search),
 		HelpText: fmt.Sprintf(`Search for a %[2]s from %[3]s
 
 Usage:
-    • %[2]s %[1]s %[4]s
-    • %[2]s %[1]s --query %[4]s
-    • %[2]s %[1]s --query aws:base:secret --search-links
-    • %[2]s %[1]s --query aws --search-field attributes.type
-    • %[2]s %[1]s --query 900 --search-field attributes.ttl --search-type number
-    • %[2]s %[1]s --query production --search-field attributes.stage --search-comparison equal
+    • secret %[1]s %[4]s
+    • secret %[1]s --query %[4]s
+    • secret %[1]s --query aws:base:secret --search-links
+    • secret %[1]s --query aws --search-field attributes.type
+    • secret %[1]s --query 900 --search-field attributes.ttl --search-type number
+    • secret %[1]s --query production --search-field attributes.stage --search-comparison equal
 `, cst.Search, cst.NounSecret, cst.ProductName, cst.ExampleUserSearch),
 		FlagsPredictor: GetSearchOpWrappers(),
-		MinNumberArgs:  1,
+		RunFunc: func(args []string) int {
+			return handleSecretSearchCmd(vaultcli.New(), cst.NounSecret, args)
+		},
 	})
 }
 
-func (se Secret) handleBustCacheCmd(args []string) int {
+func handleBustCacheCmd(vcli vaultcli.CLI, args []string) int {
 	var err *errors.ApiError
 	var s store.Store
 	st := viper.GetString(cst.StoreType)
-	if s, err = se.getStore(st); err == nil {
+	if s, err = vcli.Store(st); err == nil {
 		err = s.Wipe(cst.SecretRoot)
 		err = s.Wipe(cst.SecretDescriptionRoot).And(err)
 	}
 	if err == nil {
 		log.Print("Successfully cleared local cache")
 	}
-	outClient := se.outClient
-	if outClient == nil {
-		outClient = format.NewDefaultOutClient()
-	}
 
-	outClient.WriteResponse(nil, err)
+	vcli.Out().WriteResponse(nil, err)
 	return 0
 }
 
-func (se Secret) handleDescribeCmd(args []string) int {
+func handleSecretDescribeCmd(vcli vaultcli.CLI, secretType string, args []string) int {
 	id := viper.GetString(cst.ID)
 	path := viper.GetString(cst.Path)
 	if path == "" {
 		path = viper.GetString(cst.ID)
 		id = ""
 	}
-	if path == "" {
-		path = paths.GetPath(args)
+	if path == "" && len(args) > 0 {
+		path = args[0]
 	}
-	resp, err := se.getSecret(path, id, false, cst.SuffixDescription)
-	outClient := se.outClient
-	if outClient == nil {
-		outClient = format.NewDefaultOutClient()
-	}
+	resp, err := getSecret(vcli, secretType, path, id, false, cst.SuffixDescription)
 
-	outClient.WriteResponse(resp, err)
-
+	vcli.Out().WriteResponse(resp, err)
 	return 0
 }
 
-func (se Secret) handleReadCmd(args []string) int {
+func handleSecretReadCmd(vcli vaultcli.CLI, secretType string, args []string) int {
 	id := viper.GetString(cst.ID)
 	path := viper.GetString(cst.Path)
 	if path == "" {
 		path = viper.GetString(cst.ID)
 		id = ""
 	}
-	if path == "" {
-		path = paths.GetPath(args)
+	if path == "" && len(args) > 0 {
+		path = args[0]
 	}
 	version := viper.GetString(cst.Version)
 	if strings.TrimSpace(version) != "" {
 		path = fmt.Sprint(path, "/", cst.Version, "/", version)
 	}
-	resp, err := se.getSecret(path, id, false, "")
-	if se.outClient == nil {
-		se.outClient = format.NewDefaultOutClient()
-	}
+	resp, err := getSecret(vcli, secretType, path, id, false, "")
 
-	se.outClient.WriteResponse(resp, err)
+	vcli.Out().WriteResponse(resp, err)
 	return utils.GetExecStatus(err)
 }
 
-func (se Secret) handleRestoreCmd(args []string) int {
+func handleSecretRestoreCmd(vcli vaultcli.CLI, secretType string, args []string) int {
 	var err *errors.ApiError
 	var data []byte
-	if se.outClient == nil {
-		se.outClient = format.NewDefaultOutClient()
-	}
-
 	path := viper.GetString(cst.Path)
 	if path == "" {
 		path = viper.GetString(cst.ID)
 	}
-	if path == "" {
-		path = paths.GetPath(args)
+	if path == "" && len(args) > 0 {
+		path = args[0]
 	}
 
-	rc, rerr := getResourceConfig(path, string(se.secretType))
+	rc, rerr := getResourceConfig(path, secretType)
 	if rerr != nil {
-		se.outClient.Fail(rerr)
+		vcli.Out().Fail(rerr)
 		return utils.GetExecStatus(rerr)
 	}
 	path = rc.path
-	uri := paths.CreateResourceURI(rc.resourceType, path, "/restore", true, nil, rc.pluralize)
-	data, err = se.request.DoRequest(http.MethodPut, uri, nil)
+	uri := paths.CreateResourceURI(rc.resourceType, path, "/restore", true, nil)
+	data, err = vcli.HTTPClient().DoRequest(http.MethodPut, uri, nil)
 
-	se.outClient.WriteResponse(data, err)
+	vcli.Out().WriteResponse(data, err)
 	return utils.GetExecStatus(err)
 }
 
-func (se Secret) handleSecretSearchCmd(args []string) int {
-	if se.outClient == nil {
-		se.outClient = format.NewDefaultOutClient()
-	}
-	var err *errors.ApiError
-	var data []byte
+func handleSecretSearchCmd(vcli vaultcli.CLI, secretType string, args []string) int {
 	query := viper.GetString(cst.Query)
 	limit := viper.GetString(cst.Limit)
 	cursor := viper.GetString(cst.Cursor)
@@ -417,43 +369,36 @@ func (se Secret) handleSecretSearchCmd(args []string) int {
 	searchComparison := viper.GetString(cst.SearchComparison)
 	searchField := viper.GetString(cst.SearchField)
 	sort := viper.GetString(cst.Sort)
-	if query == "" && len(args) > 0 {
+	if query == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		query = args[0]
 	}
-	if query == "" {
-		err = errors.NewS("error: must specify " + cst.Query)
-	} else {
-		queryParams := map[string]string{
-			cst.SearchKey:        query,
-			cst.Limit:            limit,
-			cst.Cursor:           cursor,
-			cst.SearchType:       searchType,
-			cst.SearchComparison: searchComparison,
-			cst.SearchField:      searchField,
-			cst.Sort:             sort,
-		}
-		if searchLinks {
-			//flag just needs to be present
-			queryParams[cst.SearchLinks] = strconv.FormatBool(searchLinks)
-		}
-		rc, rerr := getResourceConfig("", string(se.secretType))
-		if rerr != nil {
-			se.outClient.Fail(rerr)
-			return utils.GetExecStatus(err)
-		}
-		uri := paths.CreateResourceURI(rc.resourceType, "", "", false, queryParams, rc.pluralize)
-		data, err = se.request.DoRequest(http.MethodGet, uri, nil)
-	}
 
-	se.outClient.WriteResponse(data, err)
+	queryParams := map[string]string{
+		cst.SearchKey:        query,
+		cst.Limit:            limit,
+		cst.Cursor:           cursor,
+		cst.SearchType:       searchType,
+		cst.SearchComparison: searchComparison,
+		cst.SearchField:      searchField,
+		cst.Sort:             sort,
+	}
+	if searchLinks {
+		//flag just needs to be present
+		queryParams[cst.SearchLinks] = strconv.FormatBool(searchLinks)
+	}
+	rc, rerr := getResourceConfig("", secretType)
+	if rerr != nil {
+		vcli.Out().Fail(rerr)
+		return utils.GetExecStatus(rerr)
+	}
+	uri := paths.CreateResourceURI(rc.resourceType, "", "", false, queryParams)
+	data, err := vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
+
+	vcli.Out().WriteResponse(data, err)
 	return utils.GetExecStatus(err)
 }
 
-func (se Secret) handleDeleteCmd(args []string) int {
-	outClient := se.outClient
-	if outClient == nil {
-		outClient = format.NewDefaultOutClient()
-	}
+func handleSecretDeleteCmd(vcli vaultcli.CLI, secretType string, args []string) int {
 	var err *errors.ApiError
 	var resp []byte
 	id := viper.GetString(cst.ID)
@@ -463,42 +408,39 @@ func (se Secret) handleDeleteCmd(args []string) int {
 		path = viper.GetString(cst.ID)
 		id = ""
 	}
-	if path == "" {
-		path = paths.GetPath(args)
+	if path == "" && len(args) > 0 {
+		path = args[0]
 	}
 
 	query := map[string]string{"force": strconv.FormatBool(force)}
-	rc, rerr := getResourceConfig(path, string(se.secretType))
+	rc, rerr := getResourceConfig(path, secretType)
 	if rerr != nil {
-		outClient.Fail(err)
+		vcli.Out().Fail(err)
 		return utils.GetExecStatus(err)
 	}
 	path = rc.path
-	uri, err := paths.GetResourceURIFromResourcePath(rc.resourceType, path, id, "", query, rc.pluralize)
-	resp, err = se.request.DoRequest(http.MethodDelete, uri, nil)
+	uri, err := paths.GetResourceURIFromResourcePath(rc.resourceType, path, id, "", query)
+	resp, err = vcli.HTTPClient().DoRequest(http.MethodDelete, uri, nil)
 
-	outClient.WriteResponse(resp, err)
+	vcli.Out().WriteResponse(resp, err)
 	return utils.GetExecStatus(err)
 }
 
-func (se Secret) handleRollbackCmd(args []string) int {
+func handleSecretRollbackCmd(vcli vaultcli.CLI, secretType string, args []string) int {
 	var apiError *errors.ApiError
 	var resp []byte
-	if se.outClient == nil {
-		se.outClient = format.NewDefaultOutClient()
-	}
 
 	path := viper.GetString(cst.Path)
 	if path == "" {
 		path = viper.GetString(cst.ID)
 	}
-	if path == "" {
-		path = paths.GetPath(args)
+	if path == "" && len(args) > 0 {
+		path = args[0]
 	}
 	version := viper.GetString(cst.Version)
-	rc, err := getResourceConfig(path, string(se.secretType))
+	rc, err := getResourceConfig(path, secretType)
 	if err != nil {
-		se.outClient.Fail(err)
+		vcli.Out().Fail(err)
 		return utils.GetExecStatus(err)
 	}
 
@@ -508,15 +450,15 @@ func (se Secret) handleRollbackCmd(args []string) int {
 	// Submit a request for a version that's previous relative to the one found.
 	if version == "" {
 		id := viper.GetString(cst.ID)
-		resp, apiError = se.getSecret(path, id, false, cst.SuffixDescription)
+		resp, apiError = getSecret(vcli, secretType, path, id, false, cst.SuffixDescription)
 		if apiError != nil {
-			se.outClient.WriteResponse(resp, apiError)
+			vcli.Out().WriteResponse(resp, apiError)
 			return utils.GetExecStatus(apiError)
 		}
 
 		v, err := utils.GetPreviousVersion(resp)
 		if err != nil {
-			se.outClient.Fail(err)
+			vcli.Out().Fail(err)
 			return 1
 		}
 		version = v
@@ -524,37 +466,28 @@ func (se Secret) handleRollbackCmd(args []string) int {
 	if strings.TrimSpace(version) != "" {
 		path = fmt.Sprint(path, "/rollback/", version)
 	}
-	uri := paths.CreateResourceURI(rc.resourceType, path, "", true, nil, rc.pluralize)
-	resp, apiError = se.request.DoRequest(http.MethodPut, uri, nil)
+	uri := paths.CreateResourceURI(rc.resourceType, path, "", true, nil)
+	resp, apiError = vcli.HTTPClient().DoRequest(http.MethodPut, uri, nil)
 
-	se.outClient.WriteResponse(resp, apiError)
+	vcli.Out().WriteResponse(resp, apiError)
 	return utils.GetExecStatus(apiError)
 }
 
-func (se Secret) handleUpsertCmd(args []string) int {
-	if se.outClient == nil {
-		se.outClient = format.NewDefaultOutClient()
-	}
-
+func handleSecretUpsertCmd(vcli vaultcli.CLI, secretType string, args []string) int {
 	action := strings.ToLower(viper.GetString(cst.LastCommandKey))
 
 	if OnlyGlobalArgs(args) {
-		ui := &cli.BasicUi{
-			Writer:      os.Stdout,
-			Reader:      os.Stdin,
-			ErrorWriter: os.Stderr,
-		}
 		var (
 			resp []byte
 			err  *errors.ApiError
 		)
 		switch action {
 		case cst.Create:
-			resp, err = se.handleCreateWorkflow(ui)
+			resp, err = handleCreateWorkflow(vcli, secretType)
 		case cst.Update:
-			resp, err = se.handleUpdateWorkflow(ui)
+			resp, err = handleUpdateWorkflow(vcli, secretType)
 		}
-		se.outClient.WriteResponse(resp, err)
+		vcli.Out().WriteResponse(resp, err)
 		return utils.GetExecStatus(err)
 	}
 
@@ -573,20 +506,20 @@ func (se Secret) handleUpsertCmd(args []string) int {
 		path = args[0]
 	}
 
-	rc, rerr := getResourceConfig(path, string(se.secretType))
+	rc, rerr := getResourceConfig(path, secretType)
 	if rerr != nil {
-		se.outClient.Fail(rerr)
+		vcli.Out().Fail(rerr)
 		return utils.GetExecStatus(rerr)
 	}
 	path = rc.path
-	uri, err := paths.GetResourceURIFromResourcePath(rc.resourceType, path, id, "", nil, rc.pluralize)
+	uri, err := paths.GetResourceURIFromResourcePath(rc.resourceType, path, id, "", nil)
 	if err != nil {
-		se.outClient.FailE(err)
+		vcli.Out().FailE(err)
 		return utils.GetExecStatus(err)
 	}
 
 	if data == "" && desc == "" && len(attributes) == 0 {
-		se.outClient.FailF("Please provide a properly formed value for at least --%s, or --%s, or --%s.",
+		vcli.Out().FailF("Please provide a properly formed value for at least --%s, or --%s, or --%s.",
 			cst.Data, cst.DataDescription, cst.DataAttributes)
 		return 1
 	}
@@ -595,7 +528,7 @@ func (se Secret) handleUpsertCmd(args []string) int {
 	if data != "" {
 		parseErr := json.Unmarshal([]byte(data), &dataMap)
 		if parseErr != nil {
-			se.outClient.FailF("Failed to parse passed in secret data: %v", parseErr)
+			vcli.Out().FailF("Failed to parse passed in secret data: %v", parseErr)
 			return 1
 		}
 	}
@@ -612,150 +545,129 @@ func (se Secret) handleUpsertCmd(args []string) int {
 	} else {
 		reqMethod = http.MethodPut
 	}
-	resp, err := se.request.DoRequest(reqMethod, uri, &postData)
+	resp, err := vcli.HTTPClient().DoRequest(reqMethod, uri, &postData)
 
-	se.outClient.WriteResponse(resp, err)
+	vcli.Out().WriteResponse(resp, err)
 	return utils.GetExecStatus(err)
 }
 
-func (se Secret) handleCreateWorkflow(ui cli.Ui) ([]byte, *errors.ApiError) {
+func handleCreateWorkflow(vcli vaultcli.CLI, secretType string) ([]byte, *errors.ApiError) {
 	dataMap := make(map[string]interface{})
 	attrMap := make(map[string]interface{})
 
-	path, err := prompt.Ask(ui, "Path:")
-	if err != nil {
-		return nil, errors.New(err)
-	}
-	desc, err := prompt.AskDefault(ui, "Description:", "")
-	if err != nil {
-		return nil, errors.New(err)
-	}
-	attrAction, err := prompt.Choose(
-		ui, "Add Attributes?:",
-		prompt.Option{"skip", "Skip"},
-		prompt.Option{"kv", "Add key/value pairs"},
-		prompt.Option{"json", "Define as a json string"},
-	)
-	if err != nil {
-		return nil, errors.New(err)
-	}
-
-	switch attrAction {
-	case "kv":
-		for {
-			attrKey, err := prompt.Ask(ui, "Key:")
-			if err != nil {
-				return nil, errors.New(err)
-			}
-			attrVal, err := prompt.Ask(ui, "Value:")
-			if err != nil {
-				return nil, errors.New(err)
-			}
-			attrMap[attrKey] = attrVal
-
-			yes, err := prompt.YesNo(ui, "Add more?", false)
-			if err != nil {
-				return nil, errors.New(err)
-			}
-			if !yes {
-				break
-			}
-		}
-	case "json":
-		for {
-			attr, err := prompt.Ask(ui, "Attributes:")
-			if err != nil {
-				return nil, errors.New(err)
-			}
-			if len(attr) > 0 {
-				err := json.Unmarshal([]byte(attr), &attrMap)
-				if err != nil {
-					ui.Output(fmt.Sprintf("Invalid JSON: %v", err))
-					continue
+	qs := []*survey.Question{
+		{
+			Name:   "Path",
+			Prompt: &survey.Input{Message: "Path:"},
+			Validate: func(ans interface{}) error {
+				answer := strings.TrimSpace(ans.(string))
+				if len(answer) == 0 {
+					return errors.NewS("Value is required")
 				}
-			}
-			break
-		}
+				return nil
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				return strings.TrimSpace(ans.(string))
+			},
+		},
+		{
+			Name:   "Description",
+			Prompt: &survey.Input{Message: "Description:"},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				return strings.TrimSpace(ans.(string))
+			},
+		},
+	}
+	answers := struct {
+		Path        string
+		Description string
+	}{}
+	survErr := survey.Ask(qs, &answers)
+	if survErr != nil {
+		return nil, errors.New(survErr)
 	}
 
-	dataAction, err := prompt.Choose(
-		ui, "Add Data?:",
-		prompt.Option{"skip", "Skip"},
-		prompt.Option{"kv", "Add key/value pairs"},
-		prompt.Option{"json", "Define as a json string"},
-	)
-	if err != nil {
-		return nil, errors.New(err)
+	var actionID int
+	actionPrompt := &survey.Select{
+		Message: "Add Attributes?",
+		Options: []string{"Skip", "Add key/value pairs", "Define as a json string"},
 	}
-	switch dataAction {
-	case "kv":
-		for {
-			dataKey, err := prompt.Ask(ui, "Key:")
-			if err != nil {
-				return nil, errors.New(err)
-			}
-			dataVal, err := prompt.Ask(ui, "Value:")
-			if err != nil {
-				return nil, errors.New(err)
-			}
-			dataMap[dataKey] = dataVal
-
-			yes, err := prompt.YesNo(ui, "Add more?", false)
-			if err != nil {
-				return nil, errors.New(err)
-			}
-			if !yes {
-				break
-			}
-		}
-	case "json":
-		for {
-			data, err := prompt.Ask(ui, "Data:")
-			if err != nil {
-				return nil, errors.New(err)
-			}
-			if len(data) > 0 {
-				err := json.Unmarshal([]byte(data), &dataMap)
-				if err != nil {
-					ui.Output(fmt.Sprintf("Invalid JSON: %v", err))
-					continue
-				}
-			}
-			break
-		}
+	survErr = survey.AskOne(actionPrompt, &actionID)
+	if survErr != nil {
+		return nil, errors.New(survErr)
 	}
 
-	rc, err := getResourceConfig(path, string(se.secretType))
+	var wizErr *errors.ApiError
+	switch actionID {
+	case 1:
+		attrMap, wizErr = handleKeyValueWizard()
+	case 2:
+		attrMap, wizErr = handleJSONWizard("Attributes:")
+	}
+	if wizErr != nil {
+		return nil, wizErr
+	}
+
+	actionPrompt = &survey.Select{
+		Message: "Add Data?",
+		Options: []string{"Skip", "Add key/value pairs", "Define as a json string"},
+	}
+	survErr = survey.AskOne(actionPrompt, &actionID)
+	if survErr != nil {
+		return nil, errors.New(survErr)
+	}
+
+	switch actionID {
+	case 1:
+		dataMap, wizErr = handleKeyValueWizard()
+	case 2:
+		dataMap, wizErr = handleJSONWizard("Data:")
+	}
+	if wizErr != nil {
+		return nil, wizErr
+	}
+
+	rc, err := getResourceConfig(answers.Path, secretType)
 	if err != nil {
 		return nil, errors.New(err)
 	}
 
 	postData := secretUpsertBody{
-		Description: desc,
+		Description: answers.Description,
 		Data:        dataMap,
 		Attributes:  attrMap,
 	}
 
-	uri, apiErr := paths.GetResourceURIFromResourcePath(rc.resourceType, path, "", "", nil, rc.pluralize)
+	uri, apiErr := paths.GetResourceURIFromResourcePath(rc.resourceType, answers.Path, "", "", nil)
 	if apiErr != nil {
 		return nil, apiErr
 	}
 
-	return se.request.DoRequest(http.MethodPost, uri, &postData)
+	return vcli.HTTPClient().DoRequest(http.MethodPost, uri, &postData)
 }
 
-func (se Secret) handleUpdateWorkflow(ui cli.Ui) ([]byte, *errors.ApiError) {
-	path, rerr := prompt.Ask(ui, "Path:")
-	if rerr != nil {
-		return nil, errors.New(rerr)
+func handleUpdateWorkflow(vcli vaultcli.CLI, secretType string) ([]byte, *errors.ApiError) {
+	var path string
+	pathPrompt := &survey.Input{Message: "Path:"}
+	pathValidation := func(ans interface{}) error {
+		answer := strings.TrimSpace(ans.(string))
+		if len(answer) == 0 {
+			return errors.NewS("Value is required")
+		}
+		return nil
 	}
+	survErr := survey.AskOne(pathPrompt, &path, survey.WithValidator(pathValidation))
+	if survErr != nil {
+		return nil, errors.New(survErr)
+	}
+	path = strings.TrimSpace(path)
 
-	rc, rerr := getResourceConfig(path, string(se.secretType))
+	rc, rerr := getResourceConfig(path, secretType)
 	if rerr != nil {
 		return nil, errors.New(rerr)
 	}
 	path = rc.path
-	uri, err := paths.GetResourceURIFromResourcePath(rc.resourceType, path, "", "", nil, rc.pluralize)
+	uri, err := paths.GetResourceURIFromResourcePath(rc.resourceType, path, "", "", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -763,7 +675,7 @@ func (se Secret) handleUpdateWorkflow(ui cli.Ui) ([]byte, *errors.ApiError) {
 	isSecretRetrieved := false
 	secretResp := &secretGetResponse{}
 
-	secretBytes, err := se.request.DoRequest(http.MethodGet, uri, nil)
+	secretBytes, err := vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
 	if err != nil {
 		httpResp := err.HttpResponse()
 		if httpResp == nil {
@@ -773,9 +685,14 @@ func (se Secret) handleUpdateWorkflow(ui cli.Ui) ([]byte, *errors.ApiError) {
 		case http.StatusNotFound:
 			return nil, errors.NewS("Secret under that path cannot be found.")
 		case http.StatusForbidden:
-			yes, err := prompt.YesNo(ui, "You are not allowed to read secret under that path. Do you want to continue?", true)
-			if err != nil {
-				return nil, errors.New(err)
+			var yes bool
+			continuePrompt := &survey.Confirm{
+				Message: "You are not allowed to read secret under that path. Do you want to continue?",
+				Default: true,
+			}
+			survErr = survey.AskOne(continuePrompt, &yes)
+			if survErr != nil {
+				return nil, errors.New(survErr)
 			}
 			if !yes {
 				return nil, nil
@@ -794,39 +711,45 @@ func (se Secret) handleUpdateWorkflow(ui cli.Ui) ([]byte, *errors.ApiError) {
 
 	if isSecretRetrieved {
 		if secretResp.Description == "" {
-			ui.Info("Currently description is empty.")
+			vcli.Out().WriteResponse([]byte("Currently description is empty."), nil)
 		} else {
-			ui.Info(fmt.Sprintf("Current description: %q", secretResp.Description))
+			vcli.Out().WriteResponse([]byte(fmt.Sprintf("Current description: %q\n", secretResp.Description)), nil)
 		}
 	}
-	doUpdDescription, rerr := prompt.YesNo(ui, "Update description?", false)
-	if rerr != nil {
-		return nil, errors.New(rerr)
+	var doUpdDescription bool
+	doUpdDescriptionPrompt := &survey.Confirm{Message: "Update description?", Default: false}
+	survErr = survey.AskOne(doUpdDescriptionPrompt, &doUpdDescription)
+	if survErr != nil {
+		return nil, errors.New(survErr)
 	}
 
 	var desc string
 	if doUpdDescription {
-		desc, rerr = prompt.AskDefault(ui, "Description:", "")
-		if rerr != nil {
-			return nil, errors.New(rerr)
+		descriptionPrompt := &survey.Input{Message: "Description:"}
+		survErr = survey.AskOne(descriptionPrompt, &desc)
+		if survErr != nil {
+			return nil, errors.New(survErr)
 		}
+		desc = strings.TrimSpace(desc)
 	}
 
 	if isSecretRetrieved {
-		ui.Info("Attributes and data defined currently for the secret:")
+		vcli.Out().WriteResponse([]byte("Attributes and data defined currently for the secret:"), nil)
 		// Print attributes and data beautifully :)
-		outClient := format.NewDefaultOutClient()
 		relativeData, err := json.Marshal(map[string]interface{}{
 			"attributes": secretResp.Attributes,
 			"data":       secretResp.Data,
 		})
 		if err == nil {
-			outClient.WriteResponse(relativeData, nil)
+			vcli.Out().WriteResponse(relativeData, nil)
 		}
 	}
-	overwrite, rerr := prompt.YesNo(ui, "Overwrite existing attributes and data?", false)
-	if rerr != nil {
-		return nil, errors.New(rerr)
+
+	var overwrite bool
+	overwritePrompt := &survey.Confirm{Message: "Overwrite existing attributes and data?", Default: false}
+	survErr = survey.AskOne(overwritePrompt, &overwrite)
+	if survErr != nil {
+		return nil, errors.New(survErr)
 	}
 
 	dataMap := make(map[string]interface{})
@@ -838,52 +761,27 @@ func (se Secret) handleUpdateWorkflow(ui cli.Ui) ([]byte, *errors.ApiError) {
 	} else {
 		q = "Update attributes?"
 	}
-	attrAction, rerr := prompt.Choose(
-		ui, q,
-		prompt.Option{"skip", "No, skip"},
-		prompt.Option{"kv", "Yes, use key/value pairs"},
-		prompt.Option{"json", "Yes, define as a json string"},
-	)
-	if rerr != nil {
-		return nil, errors.New(rerr)
+
+	var attrActionID int
+	actionPrompt := &survey.Select{
+		Message: q,
+		Options: []string{"No, skip", "Yes, use key/value pairs", "Yes, define as a json string"},
+	}
+	survErr = survey.AskOne(actionPrompt, &attrActionID)
+	if survErr != nil {
+		return nil, errors.New(survErr)
 	}
 
-	switch attrAction {
-	case "kv":
-		for {
-			attrKey, err := prompt.Ask(ui, "Key:")
-			if err != nil {
-				return nil, errors.New(err)
-			}
-			attrVal, err := prompt.Ask(ui, "Value:")
-			if err != nil {
-				return nil, errors.New(err)
-			}
-			attrMap[attrKey] = attrVal
+	var wizErr *errors.ApiError
 
-			yes, err := prompt.YesNo(ui, "Add more?", false)
-			if err != nil {
-				return nil, errors.New(err)
-			}
-			if !yes {
-				break
-			}
-		}
-	case "json":
-		for {
-			attr, err := prompt.Ask(ui, "Attributes:")
-			if err != nil {
-				return nil, errors.New(err)
-			}
-			if len(attr) > 0 {
-				err := json.Unmarshal([]byte(attr), &attrMap)
-				if err != nil {
-					ui.Output(fmt.Sprintf("Invalid JSON: %v", err))
-					continue
-				}
-			}
-			break
-		}
+	switch attrActionID {
+	case 1:
+		attrMap, wizErr = handleKeyValueWizard()
+	case 2:
+		attrMap, wizErr = handleJSONWizard("Attributes:")
+	}
+	if wizErr != nil {
+		return nil, wizErr
 	}
 
 	if overwrite {
@@ -891,55 +789,27 @@ func (se Secret) handleUpdateWorkflow(ui cli.Ui) ([]byte, *errors.ApiError) {
 	} else {
 		q = "Update data?"
 	}
-	dataAction, rerr := prompt.Choose(
-		ui, q,
-		prompt.Option{"skip", "No, skip"},
-		prompt.Option{"kv", "Yes, use key/value pairs"},
-		prompt.Option{"json", "Yes, define as a json string"},
-	)
-	if rerr != nil {
-		return nil, errors.New(rerr)
+	var dataActionID int
+	actionPrompt = &survey.Select{
+		Message: q,
+		Options: []string{"No, skip", "Yes, use key/value pairs", "Yes, define as a json string"},
 	}
-	switch dataAction {
-	case "kv":
-		for {
-			dataKey, err := prompt.Ask(ui, "Key:")
-			if err != nil {
-				return nil, errors.New(err)
-			}
-			dataVal, err := prompt.Ask(ui, "Value:")
-			if err != nil {
-				return nil, errors.New(err)
-			}
-			dataMap[dataKey] = dataVal
-
-			yes, err := prompt.YesNo(ui, "Add more?", false)
-			if err != nil {
-				return nil, errors.New(err)
-			}
-			if !yes {
-				break
-			}
-		}
-	case "json":
-		for {
-			data, err := prompt.Ask(ui, "Data:")
-			if err != nil {
-				return nil, errors.New(err)
-			}
-			if len(data) > 0 {
-				err := json.Unmarshal([]byte(data), &dataMap)
-				if err != nil {
-					ui.Output(fmt.Sprintf("Invalid JSON: %v", err))
-					continue
-				}
-			}
-			break
-		}
+	survErr = survey.AskOne(actionPrompt, &dataActionID)
+	if survErr != nil {
+		return nil, errors.New(survErr)
+	}
+	switch dataActionID {
+	case 1:
+		dataMap, wizErr = handleKeyValueWizard()
+	case 2:
+		dataMap, wizErr = handleJSONWizard("Data:")
+	}
+	if wizErr != nil {
+		return nil, wizErr
 	}
 
-	if !doUpdDescription && attrAction == "skip" && dataAction == "skip" {
-		ui.Output("Nothing to update. Exiting.")
+	if !doUpdDescription && attrActionID == 0 && dataActionID == 0 {
+		vcli.Out().WriteResponse([]byte("Nothing to update. Exiting."), nil)
 		return nil, nil
 	}
 
@@ -950,15 +820,11 @@ func (se Secret) handleUpdateWorkflow(ui cli.Ui) ([]byte, *errors.ApiError) {
 		Overwrite:   overwrite,
 	}
 
-	ui.Output("Sending request...")
-	return se.request.DoRequest(http.MethodPut, uri, &postData)
+	vcli.Out().WriteResponse([]byte("Sending request..."), nil)
+	return vcli.HTTPClient().DoRequest(http.MethodPut, uri, &postData)
 }
 
-func (se Secret) handleEditCmd(args []string) int {
-	if se.outClient == nil {
-		se.outClient = format.NewDefaultOutClient()
-	}
-
+func handleSecretEditCmd(vcli vaultcli.CLI, secretType string, args []string) int {
 	var resp []byte
 	id := viper.GetString(cst.ID)
 	path := viper.GetString(cst.Path)
@@ -966,39 +832,126 @@ func (se Secret) handleEditCmd(args []string) int {
 		path = viper.GetString(cst.ID)
 		id = ""
 	}
-	if path == "" {
-		path = paths.GetPath(args)
+	if path == "" && len(args) > 0 {
+		path = args[0]
 	}
-	rc, rerr := getResourceConfig(path, string(se.secretType))
+	rc, rerr := getResourceConfig(path, secretType)
 	if rerr != nil {
-		se.outClient.Fail(rerr)
+		vcli.Out().Fail(rerr)
 		return utils.GetExecStatus(rerr)
 	}
 	path = rc.path
-	uri, err := paths.GetResourceURIFromResourcePath(rc.resourceType, path, id, "", nil, rc.pluralize)
+	uri, err := paths.GetResourceURIFromResourcePath(rc.resourceType, path, id, "", nil)
 
 	// fetch
-	resp, err = se.getSecret(path, id, true, "")
+	resp, err = getSecret(vcli, secretType, path, id, true, "")
 	if err != nil {
-		se.outClient.WriteResponse(resp, err)
+		vcli.Out().WriteResponse(resp, err)
 		return utils.GetExecStatus(err)
 	}
 
-	saveFunc := dataFunc(func(data []byte) (resp []byte, err *errors.ApiError) {
+	saveFunc := func(data []byte) (resp []byte, err *errors.ApiError) {
 		var model secretUpsertBody
 		if mErr := json.Unmarshal(data, &model); mErr != nil {
 			return nil, errors.New(mErr).Grow("invalid format for secret")
 		}
 		model.Overwrite = true
-		_, err = se.request.DoRequest(http.MethodPut, uri, &model)
+		_, err = vcli.HTTPClient().DoRequest(http.MethodPut, uri, &model)
 		return nil, err
-	})
-	resp, err = se.edit(resp, saveFunc, nil, false)
-	se.outClient.WriteResponse(resp, err)
+	}
+	resp, err = vcli.Edit(resp, saveFunc)
+	vcli.Out().WriteResponse(resp, err)
 	return utils.GetExecStatus(err)
 }
 
-func (se Secret) getSecret(path string, id string, edit bool, requestSuffix string) (respData []byte, err *errors.ApiError) {
+func handleKeyValueWizard() (map[string]interface{}, *errors.ApiError) {
+	data := make(map[string]interface{})
+	for {
+		qs := []*survey.Question{
+			{
+				Name:   "Key",
+				Prompt: &survey.Input{Message: "Key:"},
+				Validate: func(ans interface{}) error {
+					answer := strings.TrimSpace(ans.(string))
+					if len(answer) == 0 {
+						return errors.NewS("Value is required")
+					}
+					return nil
+				},
+				Transform: func(ans interface{}) (newAns interface{}) {
+					return strings.TrimSpace(ans.(string))
+				},
+			},
+			{
+				Name:   "Value",
+				Prompt: &survey.Input{Message: "Value:"},
+				Validate: func(ans interface{}) error {
+					answer := strings.TrimSpace(ans.(string))
+					if len(answer) == 0 {
+						return errors.NewS("Value is required")
+					}
+					return nil
+				},
+				Transform: func(ans interface{}) (newAns interface{}) {
+					return strings.TrimSpace(ans.(string))
+				},
+			},
+			{
+				Name:   "More",
+				Prompt: &survey.Confirm{Message: "Add more?", Default: false},
+			},
+		}
+		answers := struct {
+			Key   string
+			Value string
+			More  bool
+		}{}
+		survErr := survey.Ask(qs, &answers)
+		if survErr != nil {
+			return nil, errors.New(survErr)
+		}
+
+		data[answers.Key] = answers.Value
+
+		if !answers.More {
+			break
+		}
+	}
+	return data, nil
+}
+
+func handleJSONWizard(msg string) (map[string]interface{}, *errors.ApiError) {
+	var result string
+	validation := func(ans interface{}) error {
+		answer := strings.TrimSpace(ans.(string))
+		if len(answer) == 0 {
+			return nil
+		}
+		mock := map[string]interface{}{}
+		err := json.Unmarshal([]byte(answer), &mock)
+		if err != nil {
+			return errors.NewF("Invalid JSON: %v", err)
+		}
+		return nil
+	}
+	survErr := survey.AskOne(&survey.Input{Message: msg}, &result, survey.WithValidator(validation))
+	if survErr != nil {
+		return nil, errors.New(survErr)
+	}
+
+	data := make(map[string]interface{})
+	if len(result) == 0 {
+		return data, nil
+	}
+	err := json.Unmarshal([]byte(result), &data)
+	if err != nil {
+		// Should not happen because validation above would not pass invalid JSON.
+		return nil, errors.NewF("Failed to unmarshal input: %v", err)
+	}
+	return data, nil
+}
+
+func getSecret(vcli vaultcli.CLI, secretType string, path string, id string, edit bool, requestSuffix string) (respData []byte, err *errors.ApiError) {
 	var secretDistinguisher string
 	var secretKey string
 	cacheRoot := cst.SecretRoot
@@ -1020,7 +973,7 @@ func (se Secret) getSecret(path string, id string, edit bool, requestSuffix stri
 	var s store.Store
 	st := viper.GetString(cst.StoreType)
 	if cacheStrategy == store.CacheThenServer || cacheStrategy == store.CacheThenServerThenExpired {
-		cacheData, expired = se.getSecretDataFromCache(secretKey, st)
+		cacheData, expired = getSecretDataFromCache(vcli, secretKey, st)
 		if !expired && len(cacheData) > 0 {
 			return cacheData, nil
 		}
@@ -1028,21 +981,21 @@ func (se Secret) getSecret(path string, id string, edit bool, requestSuffix stri
 
 	queryTerms := map[string]string{"edit": strconv.FormatBool(edit)}
 
-	rc, rerr := getResourceConfig(path, string(se.secretType))
+	rc, rerr := getResourceConfig(path, secretType)
 	if rerr != nil {
 		return nil, errors.New(rerr)
 	}
 	path = rc.path
-	uri, err := paths.GetResourceURIFromResourcePath(rc.resourceType, path, id, requestSuffix, queryTerms, rc.pluralize)
+	uri, err := paths.GetResourceURIFromResourcePath(rc.resourceType, path, id, requestSuffix, queryTerms)
 	if err != nil {
 		return nil, err
 	}
-	respData, err = se.request.DoRequest(http.MethodGet, uri, nil)
+	respData, err = vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
 	if err == nil {
 		if cacheStrategy != store.Never {
 			if s == nil {
 				var errStore *errors.ApiError
-				s, errStore = se.getStore(st)
+				s, errStore = vcli.Store(st)
 				if errStore != nil {
 					log.Printf("Failed to get store to cache secret for store type %s. Error: %s", st, errStore)
 				}
@@ -1058,7 +1011,7 @@ func (se Secret) getSecret(path string, id string, edit bool, requestSuffix stri
 		}
 		return respData, nil
 	} else if cacheStrategy == store.ServerThenCache {
-		cacheData, expired = se.getSecretDataFromCache(secretKey, st)
+		cacheData, expired = getSecretDataFromCache(vcli, secretKey, st)
 		if !expired {
 			return cacheData, nil
 		}
@@ -1071,8 +1024,8 @@ func (se Secret) getSecret(path string, id string, edit bool, requestSuffix stri
 	return nil, err.Or(errors.NewS("run in verbose mode for more information"))
 }
 
-func (se Secret) getSecretDataFromCache(secretKey string, st string) (cacheData []byte, expired bool) {
-	if s, err := se.getStore(st); err != nil {
+func getSecretDataFromCache(vcli vaultcli.CLI, secretKey string, st string) (cacheData []byte, expired bool) {
+	if s, err := vcli.Store(st); err != nil {
 		log.Printf("Failed to get store of type %s. Error: %s", st, err.Error())
 	} else {
 		var data secretData
@@ -1113,7 +1066,6 @@ type secretUpsertBody struct {
 
 type resourceConfig struct {
 	resourceType string
-	pluralize    bool
 	path         string
 }
 
@@ -1125,7 +1077,6 @@ func getResourceConfig(path, resourceType string) (*resourceConfig, error) {
 		}
 		rc := &resourceConfig{
 			resourceType: fmt.Sprintf("%s/%s", cst.NounHome, current),
-			pluralize:    false,
 			path:         path,
 		}
 		if utils.CheckPrefix(path, "users:", "roles:") {
@@ -1138,8 +1089,7 @@ func getResourceConfig(path, resourceType string) (*resourceConfig, error) {
 		return rc, nil
 	} else {
 		rc := &resourceConfig{
-			resourceType: resourceType,
-			pluralize:    true,
+			resourceType: cst.NounSecrets,
 			path:         path,
 		}
 		return rc, nil

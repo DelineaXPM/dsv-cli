@@ -5,50 +5,24 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
 	cst "thy/constants"
 	"thy/errors"
-	"thy/format"
-	"thy/internal/prompt"
+	"thy/internal/predictor"
 	"thy/paths"
-	preds "thy/predictors"
-	"thy/requests"
 	"thy/utils"
+	"thy/vaultcli"
 
-	"github.com/posener/complete"
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/mitchellh/cli"
 	"github.com/spf13/viper"
-	"github.com/thycotic-rd/cli"
 )
-
-type Policy struct {
-	request   requests.Client
-	outClient format.OutClient
-	edit      func([]byte, dataFunc, *errors.ApiError, bool) ([]byte, *errors.ApiError)
-}
-
-func GetNoDataOpPolicyWrappers() cli.PredictorWrappers {
-	return cli.PredictorWrappers{
-		preds.LongFlag(cst.Path):    cli.PredictorWrapper{preds.NewSecretPathPredictorDefault(), preds.NewFlagValue(preds.Params{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s", cst.Path, cst.NounPolicy)}), false},
-		preds.LongFlag(cst.Version): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Version, Shorthand: "", Usage: "List the current and last (n) versions"}), false},
-	}
-}
 
 func GetPolicyCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounPolicy},
-		RunFunc: func(args []string) int {
-			path := viper.GetString(cst.Path)
-			if path == "" {
-				path = paths.GetPath(args)
-			}
-			if path == "" {
-				return cli.RunResultHelp
-			}
-			return Policy{requests.NewHttpClient(), nil, EditData}.handlePolicyReadCmd(args)
-		},
+		Path:         []string{cst.NounPolicy},
 		SynopsisText: "policy (<path> | --path|-r)",
 		HelpText: fmt.Sprintf(`Execute an action on a %[1]s at a path
 
@@ -56,15 +30,27 @@ Usage:
    • %[1]s %[2]s
    • %[1]s --path %[2]s
 		`, cst.NounPolicy, cst.ExamplePolicyPath),
-		FlagsPredictor: GetNoDataOpPolicyWrappers(),
-		MinNumberArgs:  1,
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s", cst.Path, cst.NounPolicy), Predictor: predictor.NewSecretPathPredictorDefault()},
+			{Name: cst.Version, Usage: "List the current and last (n) versions"},
+		},
+		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			path := viper.GetString(cst.Path)
+			if path == "" && len(args) > 0 {
+				path = args[0]
+			}
+			if path == "" {
+				return cli.RunResultHelp
+			}
+			return handlePolicyReadCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetPolicyReadCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounPolicy, cst.Read},
-		RunFunc:      Policy{requests.NewHttpClient(), nil, EditData}.handlePolicyReadCmd,
 		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r)", cst.NounPolicy, cst.Read),
 		HelpText: fmt.Sprintf(`Read a %[1]s
 
@@ -72,19 +58,21 @@ Usage:
    • %[1]s %[3]s %[2]s
    • %[1]s %[3]s --path %[2]s
 		`, cst.NounPolicy, cst.ExamplePolicyPath, cst.Read),
-		FlagsPredictor:    GetNoDataOpPolicyWrappers(),
-		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s", cst.Path, cst.NounPolicy), Predictor: predictor.NewSecretPathPredictorDefault()},
+			{Name: cst.Version, Usage: "List the current and last (n) versions"},
+		},
+		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
 		MinNumberArgs:     1,
+		RunFunc: func(args []string) int {
+			return handlePolicyReadCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetPolicyEditCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounPolicy, cst.Edit},
-		RunFunc: Policy{
-			requests.NewHttpClient(),
-			nil,
-			EditData}.handlePolicyEditCmd,
+		Path:         []string{cst.NounPolicy, cst.Edit},
 		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r)", cst.NounPolicy, cst.Edit),
 		HelpText: fmt.Sprintf(`Edit a %[1]s
 
@@ -92,19 +80,20 @@ Usage:
    • %[1]s %[3]s %[2]s
    • %[1]s %[3]s --path %[2]s
 		`, cst.NounPolicy, cst.ExamplePolicyPath, cst.Edit),
-		FlagsPredictor:    GetNoDataOpPolicyWrappers(),
-		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s", cst.Path, cst.NounPolicy), Predictor: predictor.NewSecretPathPredictorDefault()},
+		},
+		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
 		MinNumberArgs:     1,
+		RunFunc: func(args []string) int {
+			return handlePolicyEditCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetPolicyDeleteCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounPolicy, cst.Delete},
-		RunFunc: Policy{
-			requests.NewHttpClient(),
-			nil,
-			EditData}.handlePolicyDeleteCmd,
+		Path:         []string{cst.NounPolicy, cst.Delete},
 		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r)", cst.NounPolicy, cst.Delete),
 		HelpText: fmt.Sprintf(`Delete %[1]s
 
@@ -112,38 +101,41 @@ Usage:
    • %[1]s %[3]s %[2]s
    • %[1]s %[3]s --path %[2]s --force
 		`, cst.NounPolicy, cst.ExamplePolicyPath, cst.Delete),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.Path):  cli.PredictorWrapper{preds.NewSecretPathPredictorDefault(), preds.NewFlagValue(preds.Params{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s (required)", cst.Path)}), false},
-			preds.LongFlag(cst.Force): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Force, Shorthand: "", Usage: fmt.Sprintf("Immediately delete %s", cst.NounPolicy), Global: false, ValueType: "bool"}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s (required)", cst.Path), Predictor: predictor.NewSecretPathPredictorDefault()},
+			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s", cst.NounPolicy), ValueType: "bool"},
 		},
-		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
+		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
 		MinNumberArgs:     1,
+		RunFunc: func(args []string) int {
+			return handlePolicyDeleteCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetPolicyRestoreCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounPolicy, cst.Read},
-		RunFunc: Policy{
-			requests.NewHttpClient(),
-			nil,
-			EditData}.handlePolicyRestoreCmd,
+		Path:         []string{cst.NounPolicy, cst.Read},
 		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r)", cst.NounPolicy, cst.Restore),
 		HelpText: fmt.Sprintf(`Restore a deleted %[2]s from %[3]s
-Usage:
-	• policy %[1]s %[4]s
 
-				`, cst.Restore, cst.NounPolicy, cst.ProductName, cst.ExamplePath),
-		FlagsPredictor:    GetNoDataOpPolicyWrappers(),
-		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
+Usage:
+   • policy %[1]s %[4]s
+		`, cst.Restore, cst.NounPolicy, cst.ProductName, cst.ExamplePath),
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s", cst.Path, cst.NounPolicy), Predictor: predictor.NewSecretPathPredictorDefault()},
+		},
+		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
 		MinNumberArgs:     1,
+		RunFunc: func(args []string) int {
+			return handlePolicyRestoreCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetPolicyCreateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounPolicy, cst.Create},
-		RunFunc:      Policy{requests.NewHttpClient(), nil, EditData}.handlePolicyUpsertCmd,
 		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r) ((--data|-d) | --subjects --actions --effect[default:allow] --desc --cidr  --resources)", cst.NounPolicy, cst.Create),
 		HelpText: fmt.Sprintf(`Add a %[1]s
 
@@ -151,25 +143,29 @@ Usage:
    • %[1]s %[3]s %[2]s --subjects 'users:<kadmin|groups:admin>',users:userA --actions create,update --cidr 192.168.0.15/24
    • %[1]s %[3]s --path %[2]s --data %[4]s
 		`, cst.NounPolicy, cst.ExamplePolicyPath, cst.Create, cst.ExampleDataPath),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.Data):            cli.PredictorWrapper{preds.NewPrefixFilePredictor("*"), preds.NewFlagValue(preds.Params{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in a %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), cst.NounPolicy)}), false},
-			preds.LongFlag(cst.Path):            cli.PredictorWrapper{preds.NewSecretPathPredictorDefault(), preds.NewFlagValue(preds.Params{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounPolicy)}), false},
-			preds.LongFlag(cst.DataAction):      cli.PredictorWrapper{preds.ActionTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.DataAction, Usage: fmt.Sprintf("Policy actions to be stored in a %s (required, regex and list supported)(required)", cst.NounPolicy)}), false},
-			preds.LongFlag(cst.DataEffect):      cli.PredictorWrapper{preds.EffectTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.DataEffect, Usage: fmt.Sprintf("Policy effect to be stored in a %s. Defaults to allow if not specified", cst.NounPolicy), Default: "allow"}), false},
-			preds.LongFlag(cst.DataDescription): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataDescription, Usage: fmt.Sprintf("Policy description to be stored in a %s ", cst.NounPolicy)}), false},
-			preds.LongFlag(cst.DataSubject):     cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataSubject, Usage: fmt.Sprintf("Policy subjects to be stored in a %s (required, regex and list supported)(required)", cst.NounPolicy)}), false},
-			preds.LongFlag(cst.DataCidr):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataCidr, Usage: fmt.Sprintf("Policy CIDR condition remote IP to be stored in a %s ", cst.NounPolicy)}), false},
-			preds.LongFlag(cst.DataResource):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataResource, Usage: fmt.Sprintf("Policy resources to be stored in a %s. Defaults to the path plus all paths below (<.*>) ", cst.NounPolicy)}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in a %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), cst.NounPolicy), Predictor: predictor.NewPrefixFilePredictor("*")},
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounPolicy), Predictor: predictor.NewSecretPathPredictorDefault()},
+			{Name: cst.DataAction, Usage: fmt.Sprintf("Policy actions to be stored in a %s (required, regex and list supported)(required)", cst.NounPolicy), Predictor: predictor.ActionTypePredictor{}},
+			{Name: cst.DataEffect, Usage: fmt.Sprintf("Policy effect to be stored in a %s. Defaults to allow if not specified", cst.NounPolicy), Default: "allow", Predictor: predictor.EffectTypePredictor{}},
+			{Name: cst.DataDescription, Usage: fmt.Sprintf("Policy description to be stored in a %s ", cst.NounPolicy)},
+			{Name: cst.DataSubject, Usage: fmt.Sprintf("Policy subjects to be stored in a %s (required, regex and list supported)(required)", cst.NounPolicy)},
+			{Name: cst.DataCidr, Usage: fmt.Sprintf("Policy CIDR condition remote IP to be stored in a %s ", cst.NounPolicy)},
+			{Name: cst.DataResource, Usage: fmt.Sprintf("Policy resources to be stored in a %s. Defaults to the path plus all paths below (<.*>) ", cst.NounPolicy)},
 		},
-		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
-		MinNumberArgs:     0,
+		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
+		RunFunc: func(args []string) int {
+			if OnlyGlobalArgs(args) {
+				return handlePolicyCreateWizard(vaultcli.New(), args)
+			}
+			return handlePolicyCreateCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetPolicyUpdateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounPolicy, cst.Update},
-		RunFunc:      Policy{requests.NewHttpClient(), nil, EditData}.handlePolicyUpsertCmd,
 		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r )  ((--data|-d) | --subjects --actions --effect[default:allow] --desc --cidr --resources)", cst.NounPolicy, cst.Update),
 		HelpText: fmt.Sprintf(`Update a %[1]s
 
@@ -178,25 +174,29 @@ Usage:
    • %[1]s %[3]s %[2]s --subjects 'users:<kadmin|groups:admin>',users:userA --actions update --cidr 192.168.0.15/24
    • %[1]s %[3]s --path %[2]s --data %[4]s
 		`, cst.NounPolicy, cst.ExamplePolicyPath, cst.Update, cst.ExampleDataPath),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.Data):            cli.PredictorWrapper{preds.NewPrefixFilePredictor("*"), preds.NewFlagValue(preds.Params{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in a %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), cst.NounPolicy)}), false},
-			preds.LongFlag(cst.Path):            cli.PredictorWrapper{preds.NewSecretPathPredictorDefault(), preds.NewFlagValue(preds.Params{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounPolicy)}), false},
-			preds.LongFlag(cst.DataAction):      cli.PredictorWrapper{preds.ActionTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.DataAction, Usage: fmt.Sprintf("Policy actions to be stored in a %s (required, regex and list supported)(required)", cst.NounPolicy)}), false},
-			preds.LongFlag(cst.DataEffect):      cli.PredictorWrapper{preds.EffectTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.DataEffect, Usage: fmt.Sprintf("Policy effect to be stored in a %s. Defaults to allow if not specified", cst.NounPolicy), Default: "allow"}), false},
-			preds.LongFlag(cst.DataDescription): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataDescription, Usage: fmt.Sprintf("Policy description to be stored in a %s ", cst.NounPolicy)}), false},
-			preds.LongFlag(cst.DataSubject):     cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataSubject, Usage: fmt.Sprintf("Policy subjects to be stored in a %s (required, regex and list supported)(required)", cst.NounPolicy)}), false},
-			preds.LongFlag(cst.DataCidr):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataCidr, Usage: fmt.Sprintf("Policy CIDR condition remote IP to be stored in a %s ", cst.NounPolicy)}), false},
-			preds.LongFlag(cst.DataResource):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataResource, Usage: fmt.Sprintf("Policy resources to be stored in a %s. Defaults to the path plus all paths below (<.*>) ", cst.NounPolicy)}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in a %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), cst.NounPolicy), Predictor: predictor.NewPrefixFilePredictor("*")},
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounPolicy), Predictor: predictor.NewSecretPathPredictorDefault()},
+			{Name: cst.DataAction, Usage: fmt.Sprintf("Policy actions to be stored in a %s (required, regex and list supported)(required)", cst.NounPolicy), Predictor: predictor.ActionTypePredictor{}},
+			{Name: cst.DataEffect, Usage: fmt.Sprintf("Policy effect to be stored in a %s. Defaults to allow if not specified", cst.NounPolicy), Default: "allow", Predictor: predictor.EffectTypePredictor{}},
+			{Name: cst.DataDescription, Usage: fmt.Sprintf("Policy description to be stored in a %s ", cst.NounPolicy)},
+			{Name: cst.DataSubject, Usage: fmt.Sprintf("Policy subjects to be stored in a %s (required, regex and list supported)(required)", cst.NounPolicy)},
+			{Name: cst.DataCidr, Usage: fmt.Sprintf("Policy CIDR condition remote IP to be stored in a %s ", cst.NounPolicy)},
+			{Name: cst.DataResource, Usage: fmt.Sprintf("Policy resources to be stored in a %s. Defaults to the path plus all paths below (<.*>) ", cst.NounPolicy)},
 		},
-		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
-		MinNumberArgs:     0,
+		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
+		RunFunc: func(args []string) int {
+			if OnlyGlobalArgs(args) {
+				return handlePolicyUpdateWizard(vaultcli.New(), args)
+			}
+			return handlePolicyUpdateCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetPolicyRollbackCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounPolicy, cst.Rollback},
-		RunFunc:      Policy{requests.NewHttpClient(), nil, EditData}.handlePolicyRollbackCmd,
 		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r)", cst.NounPolicy, cst.Rollback),
 		HelpText: fmt.Sprintf(`Rollback a %[1]s
 
@@ -204,181 +204,205 @@ Usage:
    • %[1]s %[3]s %[2]s --%[4]s 1
    • %[1]s %[3]s --path %[2]s
 		`, cst.NounPolicy, cst.ExamplePolicyPath, cst.Rollback, cst.Version),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.Path):    cli.PredictorWrapper{preds.NewSecretPathPredictorDefault(), preds.NewFlagValue(preds.Params{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret)}), false},
-			preds.LongFlag(cst.Version): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Version, Shorthand: "", Usage: "The version to which to rollback"}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret), Predictor: predictor.NewSecretPathPredictorDefault()},
+			{Name: cst.Version, Usage: "The version to which to rollback"},
 		},
-		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
+		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
 		MinNumberArgs:     1,
+		RunFunc: func(args []string) int {
+			return handlePolicyRollbackCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetPolicySearchCommand() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounPolicy, cst.Search},
-		RunFunc:      Policy{requests.NewHttpClient(), nil, EditData}.handlePolicySearchCommand,
 		SynopsisText: fmt.Sprintf("%s (<query> | --query)", cst.Search),
 		HelpText: fmt.Sprintf(`Search for a %[1]s
 
-		Usage:
-		• %[1]s %[2]s %[3]s
-		• %[1]s %[2]s --query %[3]s
-				`, cst.NounPolicy, cst.Search, cst.ExamplePolicySearch),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.Query):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("Filter %s of items to fetch (required)", strings.Title(cst.Query))}), false},
-			preds.LongFlag(cst.Limit):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Limit, Shorthand: "l", Usage: fmt.Sprint("Maximum number of results per cursor (optional)")}), false},
-			preds.LongFlag(cst.Cursor): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: cst.CursorHelpMessage}), false},
+Usage:
+   • %[1]s %[2]s %[3]s
+   • %[1]s %[2]s --query %[3]s
+		`, cst.NounPolicy, cst.Search, cst.ExamplePolicySearch),
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("Filter %s of items to fetch (required)", strings.Title(cst.Query))},
+			{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
+			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 		},
-		MinNumberArgs: 0,
+		RunFunc: func(args []string) int {
+			return handlePolicySearchCmd(vaultcli.New(), args)
+		},
 	})
 }
 
-func (p Policy) handlePolicyReadCmd(args []string) int {
-	var err *errors.ApiError
-	var data []byte
+func handlePolicyReadCmd(vcli vaultcli.CLI, args []string) int {
 	path, status := getPolicyParams(args)
 	if status != 0 {
 		return status
 	}
+
 	path = paths.ProcessResource(path)
 	version := viper.GetString(cst.Version)
 	if strings.TrimSpace(version) != "" {
 		path = fmt.Sprint(path, "/", cst.Version, "/", version)
 	}
 
-	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
-	uri := paths.CreateResourceURI(baseType, path, "", true, nil, false)
-
-	data, err = p.request.DoRequest(http.MethodGet, uri, nil)
-
-	outClient := p.outClient
-	if outClient == nil {
-		outClient = format.NewDefaultOutClient()
-	}
-	outClient.WriteResponse(data, err)
-	return utils.GetExecStatus(err)
+	data, apiErr := policyRead(vcli, path)
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
 }
 
-func (p Policy) handlePolicyEditCmd(args []string) int {
-	if p.outClient == nil {
-		p.outClient = format.NewDefaultOutClient()
-	}
-
-	var err *errors.ApiError
-	var resp []byte
-
+func handlePolicyEditCmd(vcli vaultcli.CLI, args []string) int {
 	path, status := getPolicyParams(args)
 	if status != 0 {
 		return status
 	}
-	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
-	uri := paths.CreateResourceURI(baseType, paths.ProcessResource(path), "", true, nil, false)
+	path = paths.ProcessResource(path)
 
-	resp, err = p.request.DoRequest(http.MethodGet, uri, nil)
-	if err != nil {
-		p.outClient.WriteResponse(resp, err)
-		return utils.GetExecStatus(err)
+	data, apiErr := policyRead(vcli, path)
+	if apiErr != nil {
+		vcli.Out().WriteResponse(data, apiErr)
+		return utils.GetExecStatus(apiErr)
 	}
 
-	saveFunc := dataFunc(func(data []byte) (resp []byte, err *errors.ApiError) {
-		encoding := viper.GetString(cst.Encoding)
-		model := postPolicyModel{
+	saveFunc := func(data []byte) (resp []byte, err *errors.ApiError) {
+		body := &policyUpdateRequest{
 			Policy:        string(data),
-			Serialization: encoding,
+			Serialization: viper.GetString(cst.Encoding),
 		}
-		_, err = p.request.DoRequest(http.MethodPut, uri, &model)
+		_, err = policyUpdate(vcli, path, body)
 		return nil, err
-	})
-	resp, err = p.edit(resp, saveFunc, nil, false)
-	p.outClient.WriteResponse(resp, err)
+	}
+	resp, err := vcli.Edit(data, saveFunc)
+	vcli.Out().WriteResponse(resp, err)
 	return utils.GetExecStatus(err)
 }
 
-func (p Policy) handlePolicyDeleteCmd(args []string) int {
-	var err *errors.ApiError
-	var resp []byte
+func handlePolicyDeleteCmd(vcli vaultcli.CLI, args []string) int {
 	force := viper.GetBool(cst.Force)
 	path, status := getPolicyParams(args)
 	if status != 0 {
 		return status
 	}
-
-	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
-	query := map[string]string{"force": strconv.FormatBool(force)}
-	uri := paths.CreateResourceURI(baseType, paths.ProcessResource(path), "", true, query, false)
-
-	resp, err = p.request.DoRequest(http.MethodDelete, uri, nil)
-
-	if p.outClient == nil {
-		p.outClient = format.NewDefaultOutClient()
-	}
-	p.outClient.WriteResponse(resp, err)
-	return utils.GetExecStatus(err)
+	data, apiErr := policyDelete(vcli, paths.ProcessResource(path), force)
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
 }
 
-func (p Policy) handlePolicyRestoreCmd(args []string) int {
-	var err *errors.ApiError
-	var data []byte
-	if p.outClient == nil {
-		p.outClient = format.NewDefaultOutClient()
-	}
+func handlePolicyRestoreCmd(vcli vaultcli.CLI, args []string) int {
 	path := viper.GetString(cst.Path)
-	if path == "" {
-		path = paths.GetPath(args)
+	if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		path = args[0]
 	}
-
-	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
-	uri := paths.CreateResourceURI(baseType, paths.ProcessResource(path), "/restore", true, nil, false)
-	data, err = p.request.DoRequest(http.MethodPut, uri, nil)
-
-	p.outClient.WriteResponse(data, err)
-	return utils.GetExecStatus(err)
+	data, apiErr := policyRestore(vcli, paths.ProcessResource(path))
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
 }
 
-func (p Policy) handlePolicyRollbackCmd(args []string) int {
-	var apiError *errors.ApiError
-	var resp []byte
-	if p.outClient == nil {
-		p.outClient = format.NewDefaultOutClient()
-	}
-	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
-
+func handlePolicyRollbackCmd(vcli vaultcli.CLI, args []string) int {
 	path := viper.GetString(cst.Path)
-	if path == "" {
-		path = paths.GetPath(args)
+	if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		path = args[0]
 	}
 	version := viper.GetString(cst.Version)
 
 	// If version is not provided, get the current policy item and parse the version from it.
 	// Submit a request for a version that's previous relative to the one found.
 	if version == "" {
-		uri := paths.CreateResourceURI(baseType, paths.ProcessResource(path), "", true, nil, false)
-		resp, apiError = p.request.DoRequest(http.MethodGet, uri, nil)
-		if apiError != nil {
-			p.outClient.WriteResponse(resp, apiError)
-			return utils.GetExecStatus(apiError)
+		data, apiErr := policyRead(vcli, paths.ProcessResource(path))
+		if apiErr != nil {
+			vcli.Out().WriteResponse(data, apiErr)
+			return utils.GetExecStatus(apiErr)
 		}
 
-		v, err := utils.GetPreviousVersion(resp)
+		v, err := utils.GetPreviousVersion(data)
 		if err != nil {
-			p.outClient.Fail(err)
+			vcli.Out().Fail(err)
 			return 1
 		}
 		version = v
 	}
 
-	if strings.TrimSpace(version) != "" {
-		path = fmt.Sprint(path, "/rollback/", version)
-	}
-
-	uri := paths.CreateResourceURI(baseType, path, "", true, nil, false)
-	resp, apiError = p.request.DoRequest(http.MethodPut, uri, nil)
-
-	p.outClient.WriteResponse(resp, apiError)
-	return utils.GetExecStatus(apiError)
+	data, apiErr := policyRollback(vcli, paths.ProcessResource(path), version)
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
 }
 
-func createPolicy(params map[string]string) (*postPolicyModel, error) {
+func handlePolicyCreateCmd(vcli vaultcli.CLI, args []string) int {
+	path, status := getPolicyParams(args)
+	if status != 0 {
+		return status
+	}
+
+	data := viper.GetString(cst.Data)
+	encoding := viper.GetString(cst.Encoding)
+
+	if data == "" {
+		var err *errors.ApiError
+		data, err = policyBuildFromFlags()
+		if err != nil {
+			vcli.Out().FailE(err)
+			return utils.GetExecStatus(err)
+		}
+		encoding = cst.Json
+	}
+
+	body := &policyCreateRequest{
+		Path:          path,
+		Policy:        data,
+		Serialization: encoding,
+	}
+	resp, apiErr := policyCreate(vcli, body)
+	vcli.Out().WriteResponse(resp, apiErr)
+	return utils.GetExecStatus(apiErr)
+}
+
+func handlePolicyUpdateCmd(vcli vaultcli.CLI, args []string) int {
+	path, status := getPolicyParams(args)
+	if status != 0 {
+		return status
+	}
+
+	data := viper.GetString(cst.Data)
+	encoding := viper.GetString(cst.Encoding)
+
+	if data == "" {
+		var err *errors.ApiError
+		data, err = policyBuildFromFlags()
+		if err != nil {
+			vcli.Out().FailE(err)
+			return utils.GetExecStatus(err)
+		}
+		encoding = cst.Json
+	}
+
+	body := &policyUpdateRequest{
+		Policy:        data,
+		Serialization: encoding,
+	}
+	resp, apiErr := policyUpdate(vcli, path, body)
+	vcli.Out().WriteResponse(resp, apiErr)
+	return utils.GetExecStatus(apiErr)
+}
+
+func handlePolicySearchCmd(vcli vaultcli.CLI, args []string) int {
+	query := viper.GetString(cst.Query)
+	limit := viper.GetString(cst.Limit)
+	cursor := viper.GetString(cst.Cursor)
+	if query == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		query = args[0]
+	}
+
+	data, apiErr := policySearch(vcli, &policySearchParams{query: query, limit: limit, cursor: cursor})
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
+}
+
+// Helpers:
+
+func createPolicy(params map[string]string) (string, error) {
 	policy := defaultPolicy{
 		Description: params[cst.DataDescription],
 		Subjects:    utils.StringToSlice(params[cst.DataSubject]),
@@ -388,13 +412,10 @@ func createPolicy(params map[string]string) (*postPolicyModel, error) {
 	if resources := params[cst.DataResource]; resources != "" {
 		policy.Resources = utils.StringToSlice(params[cst.DataResource])
 	}
-	if id := viper.GetString(cst.ID); id != "" {
-		policy.ID = id
-	}
 
 	if params[cst.DataCidr] != "" {
 		if err := setCidrCondition(&policy, params[cst.DataCidr]); err != nil {
-			return nil, err
+			return "", err
 		}
 	}
 	doc := document{
@@ -404,176 +425,36 @@ func createPolicy(params map[string]string) (*postPolicyModel, error) {
 	}
 	marshalled, err := json.Marshal(doc)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return &postPolicyModel{
-		Policy:        string(marshalled),
-		Path:          params[cst.Path],
-		Serialization: "json",
-	}, nil
+	return string(marshalled), nil
 }
 
-func (p Policy) submitPolicy(policy *postPolicyModel) ([]byte, *errors.ApiError) {
-	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
-	var uri string
-	reqMethod := strings.ToLower(viper.GetString(cst.LastCommandKey))
-	if reqMethod == cst.Create {
-		reqMethod = http.MethodPost
-		uri = paths.CreateResourceURI(baseType, "", "", true, nil, false)
-	} else {
-		reqMethod = http.MethodPut
-		uri = paths.CreateResourceURI(baseType, policy.Path, "", true, nil, false)
-	}
-	return p.request.DoRequest(reqMethod, uri, policy)
-}
-
-func (p Policy) handlePolicyUpsertWorkflow(args []string) int {
-	params := make(map[string]string)
-	var resp []byte
-	var err *errors.ApiError
-	ui := &PasswordUi{
-		cli.BasicUi{
-			Writer:      os.Stdout,
-			Reader:      os.Stdin,
-			ErrorWriter: os.Stderr,
-		},
+func policyBuildFromFlags() (string, *errors.ApiError) {
+	effect := viper.GetString(cst.DataEffect)
+	if effect == "" {
+		effect = "allow"
 	}
 
-	if path, err := prompt.Ask(ui, "Path to policy:"); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.Path] = paths.ProcessResource(path)
+	params := map[string]string{
+		cst.DataDescription: viper.GetString(cst.DataDescription),
+		cst.DataEffect:      effect,
+		cst.DataAction:      viper.GetString(cst.DataAction),
+		cst.DataSubject:     viper.GetString(cst.DataSubject),
+		cst.DataResource:    viper.GetString(cst.DataResource),
+		cst.DataCidr:        viper.GetString(cst.DataCidr),
 	}
 
-	if viper.GetString(cst.LastCommandKey) == cst.Update {
-		code := p.handlePolicyReadCmd([]string{params[cst.Path]})
-		if code != 0 {
-			return code
-		}
+	err := ValidateParams(params, []string{cst.DataAction, cst.DataSubject})
+	if err != nil {
+		return "", err
 	}
 
-	if desc, err := prompt.AskDefault(ui, "Description of policy", ""); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.DataDescription] = desc
-	}
-
-	if action, err := prompt.Ask(ui, "Allowed actions (comma-delimited strings)"); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.DataAction] = action
-	}
-
-	if effect, err := prompt.AskDefault(ui, "Effect of policy", "allow"); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.DataEffect] = effect
-	}
-
-	if resources, err := prompt.AskDefault(ui, "Resources of policy (comma-delimited strings):", ""); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.DataResource] = resources
-	}
-
-	if subjects, err := prompt.Ask(ui, "Subjects of policy (comma-delimited strings):"); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.DataSubject] = subjects
-	}
-
-	if cidr, err := prompt.AskDefault(ui, "CIDR condition remote IP", ""); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.DataCidr] = cidr
-	}
-
-	if p.outClient == nil {
-		p.outClient = format.NewDefaultOutClient()
-	}
-
-	policy, e := createPolicy(params)
+	data, e := createPolicy(params)
 	if e != nil {
-		p.outClient.Fail(e)
-		return utils.GetExecStatus(err)
+		return "", errors.New(e)
 	}
-	resp, err = p.submitPolicy(policy)
-	p.outClient.WriteResponse(resp, err)
-	return utils.GetExecStatus(err)
-}
-
-func (p Policy) handlePolicyUpsertCmd(args []string) int {
-	if OnlyGlobalArgs(args) {
-		return p.handlePolicyUpsertWorkflow(args)
-	}
-	params := map[string]string{}
-	var resp []byte
-	var err *errors.ApiError
-
-	path, status := getPolicyParams(args)
-	if status != 0 {
-		return status
-	}
-	params[cst.Path] = path
-
-	data := viper.GetString(cst.Data)
-	if data == "" {
-		params[cst.DataAction] = viper.GetString(cst.DataAction)
-		params[cst.DataSubject] = viper.GetString(cst.DataSubject)
-		params[cst.DataCidr] = viper.GetString(cst.DataCidr)
-		params[cst.DataDescription] = viper.GetString(cst.DataDescription)
-		params[cst.DataResource] = viper.GetString(cst.DataResource)
-		effect := viper.GetString(cst.DataEffect)
-		if effect == "" {
-			effect = "allow"
-		}
-		params[cst.DataEffect] = effect
-		err = ValidateParams(params, []string{cst.DataAction, cst.DataSubject, cst.DataEffect, cst.Path})
-	}
-	if p.outClient == nil {
-		p.outClient = format.NewDefaultOutClient()
-	}
-	if err == nil {
-		encoding := viper.GetString(cst.Encoding)
-		var postData *postPolicyModel
-		if data != "" {
-			postData = &postPolicyModel{
-				Policy:        data,
-				Serialization: encoding,
-				Path:          params[cst.Path],
-			}
-		} else {
-			data, e := createPolicy(params)
-			if e != nil {
-				p.outClient.Fail(e)
-				return utils.GetExecStatus(err)
-			}
-			postData = data
-		}
-		resp, err = p.submitPolicy(postData)
-		p.outClient.WriteResponse(resp, err)
-		return utils.GetExecStatus(err)
-	}
-	p.outClient.WriteResponse(nil, err)
-	return utils.GetExecStatus(err)
-}
-
-func (p Policy) handlePolicySearchCommand(args []string) int {
-	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
-	data, err := handleSearch(args, baseType, p.request)
-	outClient := p.outClient
-	if outClient == nil {
-		outClient = format.NewDefaultOutClient()
-	}
-	outClient.WriteResponse(data, err)
-	return utils.GetExecStatus(err)
+	return data, nil
 }
 
 func getPolicyParams(args []string) (path string, status int) {
@@ -588,12 +469,6 @@ func getPolicyParams(args []string) (path string, status int) {
 	return path, status
 }
 
-type postPolicyModel struct {
-	Path          string `json:"path"`
-	Policy        string `json:"policy"`
-	Serialization string `json:"serialization"`
-}
-
 type CIDRCondition struct {
 	CIDR string `json:"cidr"`
 }
@@ -605,7 +480,6 @@ type jsonCondition struct {
 
 type document struct {
 	PermissionDocument []*defaultPolicy `json:"permissionDocument"`
-	TenantName         string           `json:"tenantName"`
 }
 
 type defaultPolicy struct {
@@ -616,16 +490,15 @@ type defaultPolicy struct {
 	Resources   []string                 `json:"resources" gorethink:"resources"`
 	Actions     []string                 `json:"actions" gorethink:"actions"`
 	Conditions  map[string]jsonCondition `json:"conditions" gorethink:"conditions"`
-	//Meta        []byte     `json:"meta" gorethink:"meta"`
 }
 
 func setCidrCondition(policy *defaultPolicy, cidr string) *errors.ApiError {
 	if _, _, err := net.ParseCIDR(cidr); err != nil {
-		return errors.New(err).Grow("Invalid cidr")
+		return errors.New(err)
 	}
 	cidrCondition := CIDRCondition{CIDR: cidr}
 	if raw, err := json.Marshal(cidrCondition); err != nil {
-		return errors.New(err).Grow("Failed to serialized cidr condition")
+		return errors.New(err).Grow("Failed to serialize cidr condition")
 	} else {
 		jc := jsonCondition{
 			Type:    "CIDRCondition",
@@ -637,4 +510,304 @@ func setCidrCondition(policy *defaultPolicy, cidr string) *errors.ApiError {
 		policy.Conditions["remoteIP"] = jc
 		return nil
 	}
+}
+
+// Wizards:
+
+func handlePolicyCreateWizard(vcli vaultcli.CLI, args []string) int {
+	pathPrompt := &survey.Input{Message: "Path to policy:"}
+	pathValidation := func(ans interface{}) error {
+		answer := strings.TrimSpace(ans.(string))
+		if len(answer) == 0 {
+			return errors.NewS("Value is required")
+		}
+		answer = paths.ProcessResource(answer)
+		_, apiError := policyRead(vcli, answer)
+		if apiError == nil {
+			return errors.NewS("A policy with this path already exists.")
+		}
+		return nil
+	}
+	var path string
+	survErr := survey.AskOne(pathPrompt, &path, survey.WithValidator(pathValidation))
+	if survErr != nil {
+		vcli.Out().WriteResponse(nil, errors.New(survErr))
+		return utils.GetExecStatus(survErr)
+	}
+	path = paths.ProcessResource(strings.TrimSpace(path))
+
+	policy, e := policyCollectDataWizard()
+	if e != nil {
+		vcli.Out().Fail(e)
+		return utils.GetExecStatus(e)
+	}
+
+	body := &policyCreateRequest{
+		Path:          path,
+		Policy:        policy,
+		Serialization: cst.Json,
+	}
+	resp, apiErr := policyCreate(vcli, body)
+	vcli.Out().WriteResponse(resp, apiErr)
+	return utils.GetExecStatus(apiErr)
+}
+
+func handlePolicyUpdateWizard(vcli vaultcli.CLI, args []string) int {
+	var policyAtPath []byte
+	pathPrompt := &survey.Input{Message: "Path to policy:"}
+	pathValidation := func(ans interface{}) error {
+		answer := strings.TrimSpace(ans.(string))
+		if len(answer) == 0 {
+			return errors.NewS("Value is required")
+		}
+		answer = paths.ProcessResource(answer)
+		var apiError *errors.ApiError
+		policyAtPath, apiError = policyRead(vcli, answer)
+		if apiError != nil &&
+			apiError.HttpResponse() != nil &&
+			apiError.HttpResponse().StatusCode == http.StatusNotFound {
+			return errors.NewS("A policy with this path does not exist.")
+		}
+		return nil
+	}
+	var path string
+	survErr := survey.AskOne(pathPrompt, &path, survey.WithValidator(pathValidation))
+	if survErr != nil {
+		vcli.Out().WriteResponse(nil, errors.New(survErr))
+		return utils.GetExecStatus(survErr)
+	}
+	path = paths.ProcessResource(strings.TrimSpace(path))
+	vcli.Out().WriteResponse(policyAtPath, nil)
+
+	policy, e := policyCollectDataWizard()
+	if e != nil {
+		vcli.Out().Fail(e)
+		return utils.GetExecStatus(e)
+	}
+
+	body := &policyUpdateRequest{
+		Policy:        policy,
+		Serialization: cst.Json,
+	}
+	resp, apiErr := policyUpdate(vcli, path, body)
+	vcli.Out().WriteResponse(resp, apiErr)
+	return utils.GetExecStatus(apiErr)
+}
+
+func policyCollectDataWizard() (string, error) {
+	qs := []*survey.Question{
+		{
+			Name:   "Description",
+			Prompt: &survey.Input{Message: "Description of policy:"},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				return strings.TrimSpace(ans.(string))
+			},
+		},
+		{
+			Name: "Actions",
+			Prompt: &survey.MultiSelect{
+				Message: "Actions:",
+				Options: []string{"read", "update", "delete", "list", "assign"},
+			},
+		},
+		{
+			Name: "Effect",
+			Prompt: &survey.Select{
+				Message: "Effect:",
+				Options: []string{"allow", "deny"},
+			},
+		},
+	}
+
+	answers := struct {
+		Description string
+		Actions     []string
+		Effect      string
+	}{}
+	survErr := survey.Ask(qs, &answers)
+	if survErr != nil {
+		return "", survErr
+	}
+
+	subjects := []string{}
+	for {
+		qs := []*survey.Question{
+			{
+				Name:   "Subject",
+				Prompt: &survey.Input{Message: "Subject:"},
+				Validate: func(ans interface{}) error {
+					answer := strings.TrimSpace(ans.(string))
+					if len(answer) == 0 && len(subjects) == 0 {
+						return errors.NewS("Must include at least one subject.")
+					}
+					return nil
+				},
+				Transform: func(ans interface{}) (newAns interface{}) {
+					return strings.TrimSpace(ans.(string))
+				},
+			},
+			{Name: "addMore", Prompt: &survey.Confirm{Message: "Add more?", Default: true}},
+		}
+		answers := struct {
+			Subject string
+			AddMore bool
+		}{}
+		survErr := survey.Ask(qs, &answers)
+		if survErr != nil {
+			return "", survErr
+		}
+		if answers.Subject != "" {
+			subjects = append(subjects, answers.Subject)
+		}
+		if !answers.AddMore {
+			break
+		}
+	}
+
+	recources := []string{}
+
+	var resource string
+	resourcePrompt := &survey.Input{Message: "Resource:"}
+	survErr = survey.AskOne(resourcePrompt, &resource)
+	if survErr != nil {
+		return "", survErr
+	}
+	if resource != "" {
+		recources = append(recources, resource)
+
+		var confirm bool
+		confirmPrompt := &survey.Confirm{Message: "Add more?:", Default: true}
+		survErr = survey.AskOne(confirmPrompt, &confirm)
+		if survErr != nil {
+			return "", survErr
+		}
+
+		for confirm {
+			qs := []*survey.Question{
+				{
+					Name:   "Resource",
+					Prompt: &survey.Input{Message: "Resource:"},
+					Transform: func(ans interface{}) (newAns interface{}) {
+						return strings.TrimSpace(ans.(string))
+					},
+				},
+				{Name: "addMore", Prompt: &survey.Confirm{Message: "Add more?", Default: true}},
+			}
+			answers := struct {
+				Resource string
+				AddMore  bool
+			}{}
+			survErr := survey.Ask(qs, &answers)
+			if survErr != nil {
+				return "", survErr
+			}
+			if answers.Resource != "" {
+				recources = append(recources, answers.Resource)
+			}
+			if !answers.AddMore {
+				break
+			}
+		}
+	}
+
+	var cidr string
+	cidrPrompt := &survey.Input{Message: "CIDR range to lock down access to a specific IP range:"}
+	cidrValidation := func(ans interface{}) error {
+		answer := strings.TrimSpace(ans.(string))
+		if len(answer) == 0 {
+			return nil
+		}
+		if _, _, err := net.ParseCIDR(answer); err != nil {
+			return err
+		}
+		return nil
+	}
+	survErr = survey.AskOne(cidrPrompt, &cidr, survey.WithValidator(cidrValidation))
+	if survErr != nil {
+		return "", survErr
+	}
+
+	params := map[string]string{
+		cst.DataDescription: answers.Description,
+		cst.DataAction:      strings.Join(answers.Actions, ","),
+		cst.DataEffect:      answers.Effect,
+		cst.DataSubject:     strings.Join(subjects, ","),
+		cst.DataResource:    strings.Join(recources, ","),
+		cst.DataCidr:        strings.TrimSpace(cidr),
+	}
+
+	return createPolicy(params)
+}
+
+// API callers:
+
+type policyCreateRequest struct {
+	Path          string `json:"path"`
+	Policy        string `json:"policy"`
+	Serialization string `json:"serialization"`
+}
+
+func policyCreate(vcli vaultcli.CLI, body *policyCreateRequest) ([]byte, *errors.ApiError) {
+	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
+	uri := paths.CreateResourceURI(baseType, "", "", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodPost, uri, body)
+}
+
+func policyRead(vcli vaultcli.CLI, path string) ([]byte, *errors.ApiError) {
+	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
+	uri := paths.CreateResourceURI(baseType, path, "", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
+}
+
+type policyUpdateRequest struct {
+	Policy        string `json:"policy"`
+	Serialization string `json:"serialization"`
+}
+
+func policyUpdate(vcli vaultcli.CLI, path string, body *policyUpdateRequest) ([]byte, *errors.ApiError) {
+	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
+	uri := paths.CreateResourceURI(baseType, path, "", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodPut, uri, body)
+}
+
+func policyRollback(vcli vaultcli.CLI, path string, version string) ([]byte, *errors.ApiError) {
+	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
+	path = fmt.Sprintf("%s/rollback/%s", path, version)
+	uri := paths.CreateResourceURI(baseType, path, "", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodPut, uri, nil)
+}
+
+func policyDelete(vcli vaultcli.CLI, path string, force bool) ([]byte, *errors.ApiError) {
+	query := map[string]string{"force": strconv.FormatBool(force)}
+	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
+	uri := paths.CreateResourceURI(baseType, path, "", true, query)
+	return vcli.HTTPClient().DoRequest(http.MethodDelete, uri, nil)
+}
+
+func policyRestore(vcli vaultcli.CLI, path string) ([]byte, *errors.ApiError) {
+	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
+	uri := paths.CreateResourceURI(baseType, path, "/restore", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodPut, uri, nil)
+}
+
+type policySearchParams struct {
+	query  string
+	limit  string
+	cursor string
+}
+
+func policySearch(vcli vaultcli.CLI, p *policySearchParams) ([]byte, *errors.ApiError) {
+	queryParams := map[string]string{}
+	if p.query != "" {
+		queryParams[cst.SearchKey] = p.query
+	}
+	if p.limit != "" {
+		queryParams[cst.Limit] = p.limit
+	}
+	if p.cursor != "" {
+		queryParams[cst.Cursor] = p.cursor
+	}
+	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
+	uri := paths.CreateResourceURI(baseType, "", "", false, queryParams)
+	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
 }

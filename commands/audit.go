@@ -1,63 +1,53 @@
 package cmd
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
 	cst "thy/constants"
 	"thy/errors"
-	"thy/format"
+	"thy/internal/predictor"
 	"thy/paths"
-	preds "thy/predictors"
-	"thy/requests"
 	"thy/utils"
+	"thy/vaultcli"
 
-	"github.com/posener/complete"
+	"github.com/mitchellh/cli"
 	"github.com/spf13/viper"
-	"github.com/thycotic-rd/cli"
 )
-
-type audit struct {
-	request   requests.Client
-	outClient format.OutClient
-}
 
 func GetAuditSearchCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounAudit},
-		RunFunc:      audit{requests.NewHttpClient(), nil}.handleAuditSearch,
 		SynopsisText: "audit search",
-		HelpText: fmt.Sprintf(`Search audit records
+		HelpText: `Search audit records
 
 Usage:
-   • %[1]s --%[2]s 2020-01-01 --%[3]s 2020-01-04 --%[4]s 100
-   • %[1]s --%[2]s 2020-01-01
-   `, cst.NounAudit, cst.StartDate, cst.EndDate, cst.Limit),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.StartDate):     cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.StartDate, Shorthand: "s", Usage: "Start date from which to fetch audit data (required)"}), false},
-			preds.LongFlag(cst.EndDate):       cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.EndDate, Usage: "End date to which to fetch audit data (optional)"}), false},
-			preds.LongFlag(cst.Limit):         cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"}), false},
-			preds.LongFlag(cst.Cursor):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: cst.CursorHelpMessage}), false},
-			preds.LongFlag(cst.Path):          cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Path, Usage: "Path (optional)"}), false},
-			preds.LongFlag(cst.NounPrincipal): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounPrincipal, Usage: "Principal name (optional)"}), false},
-			preds.LongFlag(cst.DataAction):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataAction, Usage: cst.ActionHelpMessage}), false},
+   • audit --startdate 2020-01-21
+   • audit --startdate 2020-01-21 --enddate 2020-01-22 --limit 10
+   • audit --startdate 2020-01-21 --actions POST --path secrets
+`,
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.StartDate, Shorthand: "s", Usage: "Start date from which to fetch audit data (required)"},
+			{Name: cst.EndDate, Usage: "End date to which to fetch audit data (optional)"},
+			{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
+			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
+			{Name: cst.Path, Usage: "Path (optional)"},
+			{Name: cst.NounPrincipal, Usage: "Principal name (optional)"},
+			{Name: cst.DataAction, Usage: "Action performed (POST, GET, PUT, PATCH or DELETE) (optional)"},
 		},
 		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			return handleAuditSearch(vaultcli.New(), args)
+		},
 	})
 }
 
-func (a audit) handleAuditSearch(args []string) int {
-	var err *errors.ApiError
-	var data []byte
-	if a.outClient == nil {
-		a.outClient = format.NewDefaultOutClient()
-	}
+func handleAuditSearch(vcli vaultcli.CLI, args []string) int {
 	s := viper.GetString(cst.StartDate)
 	e := viper.GetString(cst.EndDate)
 	if s == "" {
-		err = errors.NewS("error: must specify " + cst.StartDate)
-		a.outClient.WriteResponse(data, err)
+		err := errors.NewS("error: must specify " + cst.StartDate)
+		vcli.Out().WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
 
@@ -65,8 +55,8 @@ func (a audit) handleAuditSearch(args []string) int {
 
 	startDate, parsingErr := time.Parse(layout, s)
 	if parsingErr != nil {
-		err = errors.NewS("error: must correctly specify " + cst.StartDate)
-		a.outClient.WriteResponse(data, err)
+		err := errors.NewS("error: must correctly specify " + cst.StartDate)
+		vcli.Out().WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
 
@@ -78,22 +68,21 @@ func (a audit) handleAuditSearch(args []string) int {
 	} else {
 		endDate, parsingErr = time.Parse(layout, e)
 		if parsingErr != nil {
-			err = errors.NewS("error: must correctly specify " + cst.EndDate)
-			a.outClient.WriteResponse(data, err)
+			err := errors.NewS("error: must correctly specify " + cst.EndDate)
+			vcli.Out().WriteResponse(nil, err)
 			return utils.GetExecStatus(err)
 		}
-
 	}
 
 	if time.Now().Before(startDate) {
-		err = errors.NewS("error: start date cannot be in the future")
-		a.outClient.WriteResponse(data, err)
+		err := errors.NewS("error: start date cannot be in the future")
+		vcli.Out().WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
 
 	if endDate.Before(startDate) {
-		err = errors.NewS("error: start date cannot be after end date")
-		a.outClient.WriteResponse(data, err)
+		err := errors.NewS("error: start date cannot be after end date")
+		vcli.Out().WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
 
@@ -109,8 +98,8 @@ func (a audit) handleAuditSearch(args []string) int {
 		cst.Cursor:         viper.GetString(cst.Cursor),
 	}
 	uri := paths.CreateURI("audit", queryParams)
-	data, err = a.request.DoRequest(http.MethodGet, uri, nil)
+	data, err := vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
 
-	a.outClient.WriteResponse(data, err)
+	vcli.Out().WriteResponse(data, err)
 	return utils.GetExecStatus(err)
 }

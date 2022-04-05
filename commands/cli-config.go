@@ -15,18 +15,16 @@ import (
 	config "thy/cli-config"
 	cst "thy/constants"
 	"thy/errors"
-	"thy/format"
+	"thy/internal/predictor"
 	"thy/internal/prompt"
 	"thy/paths"
-	preds "thy/predictors"
-	"thy/requests"
 	"thy/store"
+	"thy/vaultcli"
 
 	"thy/utils"
 
-	"github.com/posener/complete"
+	"github.com/mitchellh/cli"
 	"github.com/spf13/viper"
-	"github.com/thycotic-rd/cli"
 	"gopkg.in/yaml.v2"
 )
 
@@ -34,24 +32,26 @@ const ProfileNameContainsRestrictedCharacters = "Profile name contains restricte
 
 func GetCliConfigCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounCliConfig},
+		Path:      []string{cst.NounCliConfig},
+		HelpText:  "Execute an action on the cli config for " + cst.ProductName,
+		NoPreAuth: true,
 		RunFunc: func(args []string) int {
 			return cli.RunResultHelp
 		},
-		HelpText:  "Execute an action on the cli config for " + cst.ProductName,
-		NoPreAuth: true,
 	})
 }
 
 func GetCliConfigInitCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounCliConfig, cst.Init},
-		RunFunc:      handleCliConfigInitCmd,
 		SynopsisText: strings.Join([]string{cst.NounCliConfig, cst.Init}, " "),
 		HelpText:     "Initialize the cli config for " + cst.ProductName,
 		NoPreAuth:    true,
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.Dev): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Dev, Global: false, Hidden: true, Usage: "Specify dev domain upon initialization"}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Dev, Hidden: true, Usage: "Specify dev domain upon initialization"},
+		},
+		RunFunc: func(args []string) int {
+			return handleCliConfigInitCmd(vaultcli.New(), args)
 		},
 	})
 }
@@ -59,7 +59,6 @@ func GetCliConfigInitCmd() (cli.Command, error) {
 func GetCliConfigUpdateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounCliConfig, cst.Update},
-		RunFunc:      handleCliConfigUpdateCmd,
 		SynopsisText: fmt.Sprintf("%s %s (<key> <value> | --key --value)", cst.NounCliConfig, cst.Update),
 		HelpText: `Update a cli config setting for the specified profile. The key specifies the path to that setting.
 
@@ -68,47 +67,54 @@ Usage:
    • cli-config update profile2.auth.type clientcred --profile profile2
 		`,
 		NoPreAuth: true,
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.Key):   cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Key, Shorthand: "", Usage: "Key of setting to be updated (required)"}), false},
-			preds.LongFlag(cst.Value): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Value, Shorthand: "", Usage: "Value of setting to be udpated (required)"}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Key, Usage: "Key of setting to be updated (required)"},
+			{Name: cst.Value, Usage: "Value of setting to be udpated (required)"},
 		},
 		MinNumberArgs: 2,
+		RunFunc: func(args []string) int {
+			return handleCliConfigUpdateCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetCliConfigClearCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounCliConfig, cst.Clear},
-		RunFunc:      handleCliConfigClearCmd,
 		SynopsisText: strings.Join([]string{cst.NounCliConfig, cst.Clear}, " "),
 		HelpText:     "Clear the cli config for " + cst.ProductName,
 		NoPreAuth:    true,
+		RunFunc: func(args []string) int {
+			return handleCliConfigClearCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetCliConfigReadCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounCliConfig, cst.Read},
-		RunFunc:      handleCliConfigReadCmd,
 		SynopsisText: strings.Join([]string{cst.NounCliConfig, cst.Read}, " "),
 		HelpText:     "Read the cli config for " + cst.ProductName,
 		NoPreAuth:    true,
+		RunFunc: func(args []string) int {
+			return handleCliConfigReadCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetCliConfigEditCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounCliConfig, cst.Edit},
-		RunFunc:      handleCliConfigEditCmd,
 		SynopsisText: strings.Join([]string{cst.NounCliConfig, cst.Edit}, " "),
 		HelpText:     "Edit the cli config for " + cst.ProductName,
 		NoPreAuth:    true,
+		RunFunc: func(args []string) int {
+			return handleCliConfigEditCmd(vaultcli.New(), args)
+		},
 	})
 }
 
-func handleCliConfigUpdateCmd(args []string) int {
-	out := format.NewDefaultOutClient()
-
+func handleCliConfigUpdateCmd(vcli vaultcli.CLI, args []string) int {
 	key := strings.TrimSpace(viper.GetString(cst.Key))
 	val := strings.TrimSpace(viper.GetString(cst.Value))
 	if key == "" && len(args) > 0 {
@@ -158,27 +164,27 @@ func handleCliConfigUpdateCmd(args []string) int {
 
 	if !storeKeySecure {
 		if cfgPath == "" {
-			out.FailS("CLI config path could not be resolved. Exiting.")
+			vcli.Out().FailS("CLI config path could not be resolved. Exiting.")
 			return 1
 		}
 
 		cfgContent, err := ioutil.ReadFile(cfgPath)
 		if err != nil {
-			out.FailS("Failed to load CLI config from file. Exiting. Error: " + err.Error())
+			vcli.Out().FailS("Failed to load CLI config from file. Exiting. Error: " + err.Error())
 			return 1
 		}
 
 		var cfgMap interfaceMap
 		err = yaml.Unmarshal(cfgContent, &cfgMap)
 		if err != nil || cfgMap == nil {
-			out.FailS("Failed to unmarshal CLI config. Exiting. Error: " + err.Error())
+			vcli.Out().FailS("Failed to unmarshal CLI config. Exiting. Error: " + err.Error())
 			return 1
 		}
 
 		cfg := jsonish{}
 		err = MapToJsonish(cfgMap, &cfg, nil)
 		if err != nil {
-			out.FailS("Failed to convert CLI config to expected format. Exiting. Error: " + err.Error())
+			vcli.Out().FailS("Failed to convert CLI config to expected format. Exiting. Error: " + err.Error())
 			return 1
 		}
 
@@ -186,7 +192,7 @@ func handleCliConfigUpdateCmd(args []string) int {
 
 		secure := "auth.securePassword"
 		if strings.HasSuffix(key, secure) {
-			out.FailF("Cannot manually change the value of %q.", secure)
+			vcli.Out().FailF("Cannot manually change the value of %q.", secure)
 			return 1
 		}
 		if strings.HasSuffix(key, "auth.password") {
@@ -194,15 +200,15 @@ func handleCliConfigUpdateCmd(args []string) int {
 			keys = strings.Split(key, ".")
 			cipherText, err := auth.EncipherPassword(val)
 			if err != nil {
-				out.FailF("Error encrypting password: %v.", err)
+				vcli.Out().FailF("Error encrypting password: %v.", err)
 				return 1
 			}
 			valInterface = cipherText
 			// Set in-memory value of plaintext password, so that the CLI can use it to try to authenticate before writing the config.
 			viper.Set(cst.Password, val)
 			if authError := tryAuthenticate(); authError != nil {
-				out.FailS("Failed to authenticate, restoring previous config.")
-				out.FailS("Please check your credentials and try again.")
+				vcli.Out().FailS("Failed to authenticate, restoring previous config.")
+				vcli.Out().FailS("Please check your credentials and try again.")
 				return 1
 			}
 		}
@@ -212,19 +218,17 @@ func handleCliConfigUpdateCmd(args []string) int {
 			AddNode(&cfg, jsonish{keys[len(keys)-1]: valInterface}, keys[:len(keys)-1]...)
 		}
 		if err := WriteCliConfig(cfgPath, cfg, false); err != nil {
-			out.FailS(err.Error())
+			vcli.Out().FailS(err.Error())
 			return 1
 		}
 	} else if err := store.StoreSecureSetting(key, val, storeType); err != nil {
-		out.FailF("Error updating setting in store of type '%s'", string(storeType))
+		vcli.Out().FailF("Error updating setting in store of type '%s'", string(storeType))
 		return 1
 	}
 	return 0
 }
 
-func handleCliConfigReadCmd(args []string) int {
-	out := format.NewDefaultOutClient()
-
+func handleCliConfigReadCmd(vcli vaultcli.CLI, args []string) int {
 	cfgPath := config.GetFlagBeforeParse(cst.Config, args)
 	if cfgPath == "" {
 		cfgPath = config.GetCliConfigPath()
@@ -233,10 +237,10 @@ func handleCliConfigReadCmd(args []string) int {
 	var didError int
 	dataOut := []byte(fmt.Sprintf("CLI config (%s):\n", cfgPath))
 	if cfgPath == "" {
-		out.FailS("CLI config path could not be resolved. Exiting.")
+		vcli.Out().FailS("CLI config path could not be resolved. Exiting.")
 		didError = 1
 	} else if b, err := ioutil.ReadFile(cfgPath); err != nil {
-		out.FailS("Failed to read CLI config: " + err.Error())
+		vcli.Out().FailS("Failed to read CLI config: " + err.Error())
 		didError = 1
 	} else {
 		dataOut = append(dataOut, b...)
@@ -246,10 +250,10 @@ func handleCliConfigReadCmd(args []string) int {
 	if storeType == store.PassLinux || storeType == store.WinCred {
 		dataOut = append(dataOut, fmt.Sprintf("\nSecure Store Settings (store type: %s):\n", storeType)...)
 		if s, err := store.GetStore(string(storeType)); err != nil {
-			out.FailF("Error: failed to get store of type '%s'\n", string(storeType))
+			vcli.Out().FailF("Error: failed to get store of type '%s'\n", string(storeType))
 			didError = 1
 		} else if keys, err := s.List(cst.CliConfigRoot); err != nil {
-			out.FailF("Error: failed to get store of type '%s'\n", string(storeType))
+			vcli.Out().FailF("Error: failed to get store of type '%s'\n", string(storeType))
 			didError = 1
 		} else {
 			if len(keys) > 0 {
@@ -259,39 +263,38 @@ func handleCliConfigReadCmd(args []string) int {
 		}
 	}
 
-	out.WriteResponse(dataOut, nil)
+	vcli.Out().WriteResponse(dataOut, nil)
 	return didError
 }
 
-func handleCliConfigEditCmd(args []string) int {
+func handleCliConfigEditCmd(vcli vaultcli.CLI, args []string) int {
 	var dataOut []byte
-	out := format.NewDefaultOutClient()
 	cfgPath := config.GetFlagBeforeParse(cst.Config, args)
 	if cfgPath == "" {
 		cfgPath = config.GetCliConfigPath()
 	}
 	if cfgPath == "" {
-		out.FailS("CLI config path could not be resolved. Exiting.")
+		vcli.Out().FailS("CLI config path could not be resolved. Exiting.")
 		return 1
 	} else if b, err := ioutil.ReadFile(cfgPath); err != nil {
-		out.FailS("Failed to read CLI config: " + err.Error())
+		vcli.Out().FailS("Failed to read CLI config: " + err.Error())
 		return 1
 	} else {
 		dataOut = append(dataOut, b...)
 	}
 
-	saveFunc := dataFunc(func(data []byte) (resp []byte, err *errors.ApiError) {
+	saveFunc := func(data []byte) (resp []byte, err *errors.ApiError) {
 		writeErr := ioutil.WriteFile(cfgPath, data, 0600)
 		return nil, errors.New(writeErr)
-	})
+	}
 
-	_, err := EditData(dataOut, saveFunc, nil, false)
+	_, err := vcli.Edit(dataOut, saveFunc)
 
-	out.WriteResponse(nil, err)
+	vcli.Out().WriteResponse(nil, err)
 	return utils.GetExecStatus(err)
 }
 
-func handleCliConfigClearCmd(args []string) int {
+func handleCliConfigClearCmd(vcli vaultcli.CLI, args []string) int {
 	var ui cli.Ui = &cli.BasicUi{
 		Writer:      os.Stdout,
 		Reader:      os.Stdin,
@@ -330,7 +333,7 @@ func IsValidProfile(profile string) bool {
 	return !strings.Contains(profile, " ")
 }
 
-func handleCliConfigInitCmd(args []string) int {
+func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 	ui := &PasswordUi{
 		cli.BasicUi{
 			Writer:      os.Stdout,
@@ -464,7 +467,7 @@ func handleCliConfigInitCmd(args []string) int {
 	viper.Set(cst.DomainKey, domain)
 	var setupRequired bool
 	heartbeatURI := paths.CreateURI("heartbeat", nil)
-	if respData, err := requests.NewHttpClient().DoRequest(http.MethodGet, heartbeatURI, nil); err != nil {
+	if respData, err := vcli.HTTPClient().DoRequest(http.MethodGet, heartbeatURI, nil); err != nil {
 		ui.Error(fmt.Sprintf("Failed to contact %s to determine if initial admin setup is required.", cst.ProductName))
 		return 1
 	} else {
@@ -519,7 +522,7 @@ func handleCliConfigInitCmd(args []string) int {
 				if ageString, err := prompt.Ask(ui, "Please enter cache age (minutes until expiration):"); err != nil {
 					return 1
 				} else if age, err := strconv.Atoi(ageString); err != nil || age <= 0 {
-					format.NewDefaultOutClient().FailS("Error. Unable to parse age. Must be strictly positive int: " + ageString)
+					vcli.Out().FailS("Error. Unable to parse age. Must be strictly positive int: " + ageString)
 				} else {
 					AddNode(&cfg, jsonish{cst.Age: age}, profile, cst.Cache)
 				}
@@ -670,14 +673,14 @@ func handleCliConfigInitCmd(args []string) int {
 	}
 
 	if setupRequired {
-		heartbeatURI := paths.CreateURI("initialize", nil)
+		initializeURI := paths.CreateURI("initialize", nil)
 		body := initializeRequest{
 			UserName: user,
 			Password: password,
 		}
-		if _, err := requests.NewHttpClient().DoRequest(http.MethodPost, heartbeatURI, body); err != nil {
+		if _, err := vcli.HTTPClient().DoRequest(http.MethodPost, initializeURI, body); err != nil {
 			ui.Error(fmt.Sprintf("Failed to initialize tenant with %s. Please try again. Error:", cst.ProductName))
-			format.NewDefaultOutClient().FailE(err)
+			vcli.Out().FailE(err)
 			return 1
 		}
 	}

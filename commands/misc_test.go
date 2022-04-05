@@ -5,6 +5,7 @@ import (
 	cst "thy/constants"
 	"thy/errors"
 	"thy/fake"
+	"thy/vaultcli"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -49,8 +50,14 @@ func TestHandleEvaluateFlag(t *testing.T) {
 
 			viper.Set("arg1", "test")
 
-			u := Misc{writer}
-			_ = u.handleEvaluateFlag([]string{tt.args})
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithOutClient(writer),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
+			}
+
+			_ = handleEvaluateFlag(vcli, []string{tt.args})
 			if tt.expectedErr == nil {
 				assert.Equal(t, data, tt.out)
 			} else {

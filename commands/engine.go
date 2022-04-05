@@ -3,31 +3,26 @@ package cmd
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
+	"strings"
 
 	cst "thy/constants"
 	"thy/errors"
-	"thy/format"
-	"thy/internal/prompt"
+	"thy/internal/predictor"
 	"thy/paths"
-	preds "thy/predictors"
-	"thy/requests"
 	"thy/utils"
+	"thy/vaultcli"
 
-	"github.com/posener/complete"
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/mitchellh/cli"
 	"github.com/spf13/viper"
-	"github.com/thycotic-rd/cli"
 )
-
-type engineHandler struct {
-	request   requests.Client
-	outClient format.OutClient
-}
 
 func GetEngineCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounEngine},
+		Path:         []string{cst.NounEngine},
+		SynopsisText: "engine (<action>)",
+		HelpText:     "Work with engines",
 		RunFunc: func(args []string) int {
 			path := viper.GetString(cst.Path)
 			if path == "" && len(args) > 0 {
@@ -36,223 +31,242 @@ func GetEngineCmd() (cli.Command, error) {
 			if path == "" {
 				return cli.RunResultHelp
 			}
-			return engineHandler{requests.NewHttpClient(), nil}.handleRead(args)
+			return handleEngineReadCmd(vaultcli.New(), args)
 		},
-		SynopsisText:  "engine (<action>)",
-		HelpText:      "Work with engines",
-		MinNumberArgs: 0,
 	})
 }
 
 func GetEngineReadCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounEngine, cst.Read},
-		RunFunc:      engineHandler{requests.NewHttpClient(), nil}.handleRead,
 		SynopsisText: "Get information on an existing engine",
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s --%[3]s myengine`, cst.NounEngine, cst.Read, cst.DataName),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.DataName): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounEngine)}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounEngine)},
 		},
 		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			return handleEngineReadCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetEngineListCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounEngine, cst.List},
-		RunFunc:      engineHandler{requests.NewHttpClient(), nil}.handleList,
 		SynopsisText: "List the names of all existing engines and their appropriate pool names",
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s`, cst.NounEngine, cst.List),
+		RunFunc: func(args []string) int {
+			return handleEngineListCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetEngineDeleteCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounEngine, cst.Delete},
-		RunFunc:      engineHandler{requests.NewHttpClient(), nil}.handleDelete,
 		SynopsisText: "Delete an existing engine",
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s --%[3]s myengine`, cst.NounEngine, cst.Delete, cst.DataName),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.DataName): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounEngine)}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounEngine)},
 		},
 		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			return handleEngineDeleteCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetEngineCreateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounEngine, cst.Create},
-		RunFunc:      engineHandler{requests.NewHttpClient(), nil}.handleCreate,
 		SynopsisText: "Create a new engine",
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s --%[3]s myengine --pool-name mypool`, cst.NounEngine, cst.Create, cst.DataName),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.DataName):     cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounEngine)}), false},
-			preds.LongFlag(cst.DataPoolName): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataPoolName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounPool)}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounEngine)},
+			{Name: cst.DataPoolName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounPool)},
 		},
-		MinNumberArgs: 0,
+		RunFunc: func(args []string) int {
+			return handleEngineCreateCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetEnginePingCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounEngine, cst.Ping},
-		RunFunc:      engineHandler{requests.NewHttpClient(), nil}.handlePing,
 		SynopsisText: "Ping a running engine",
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s --%[3]s myengine`, cst.NounEngine, cst.Ping, cst.DataName),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.DataName): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounEngine)}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounEngine)},
 		},
 		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			return handleEnginePingCmd(vaultcli.New(), args)
+		},
 	})
 }
 
-func (e engineHandler) handleRead(args []string) int {
-	if e.outClient == nil {
-		e.outClient = format.NewDefaultOutClient()
-	}
-	var err *errors.ApiError
-	var data []byte
-	name := viper.GetString(cst.DataName)
-	if name == "" && len(args) > 0 {
-		name = args[0]
-	}
-	if name == "" {
-		err = errors.NewS("error: must specify " + cst.DataName)
-	} else {
-		uri := paths.CreateResourceURI(cst.NounEngine, paths.ProcessResource(name), "", true, nil, true)
-		data, err = e.request.DoRequest(http.MethodGet, uri, nil)
-	}
-
-	e.outClient.WriteResponse(data, err)
-	return utils.GetExecStatus(err)
-}
-
-func (e engineHandler) handleList(args []string) int {
-	if e.outClient == nil {
-		e.outClient = format.NewDefaultOutClient()
-	}
-	var err *errors.ApiError
-	var data []byte
-	uri := paths.CreateResourceURI(cst.NounEngine, "", "", false, nil, true)
-	data, err = e.request.DoRequest(http.MethodGet, uri, nil)
-
-	e.outClient.WriteResponse(data, err)
-	return utils.GetExecStatus(err)
-}
-
-func (e engineHandler) handleDelete(args []string) int {
-	if e.outClient == nil {
-		e.outClient = format.NewDefaultOutClient()
-	}
+func handleEngineReadCmd(vcli vaultcli.CLI, args []string) int {
 	name := viper.GetString(cst.DataName)
 	if name == "" && len(args) > 0 {
 		name = args[0]
 	}
 	if name == "" {
 		err := errors.NewS("error: must specify " + cst.DataName)
-		e.outClient.WriteResponse(nil, err)
+		vcli.Out().WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
 
-	query := map[string]string{"force": strconv.FormatBool(true)}
-	uri := paths.CreateResourceURI(cst.NounEngine, paths.ProcessResource(name), "", true, query, true)
-
-	data, err := e.request.DoRequest(http.MethodDelete, uri, nil)
-	e.outClient.WriteResponse(data, err)
-	return utils.GetExecStatus(err)
+	data, apiErr := engineRead(vcli, paths.ProcessResource(name))
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
 }
 
-func (e engineHandler) handlePing(args []string) int {
-	if e.outClient == nil {
-		e.outClient = format.NewDefaultOutClient()
-	}
+func handleEngineListCmd(vcli vaultcli.CLI, args []string) int {
+	data, apiErr := engineList(vcli)
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
+}
+
+func handleEngineDeleteCmd(vcli vaultcli.CLI, args []string) int {
 	name := viper.GetString(cst.DataName)
 	if name == "" && len(args) > 0 {
 		name = args[0]
 	}
 	if name == "" {
 		err := errors.NewS("error: must specify " + cst.DataName)
-		e.outClient.WriteResponse(nil, err)
+		vcli.Out().WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
 
-	uri := paths.CreateResourceURI(cst.NounEngine, paths.ProcessResource(name), "/ping", true, nil, true)
-	data, err := e.request.DoRequest(http.MethodPost, uri, nil)
-	e.outClient.WriteResponse(data, err)
-	return utils.GetExecStatus(err)
+	data, apiErr := engineDelete(vcli, paths.ProcessResource(name))
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
 }
 
-func (e engineHandler) handleCreate(args []string) int {
+func handleEnginePingCmd(vcli vaultcli.CLI, args []string) int {
+	name := viper.GetString(cst.DataName)
+	if name == "" && len(args) > 0 {
+		name = args[0]
+	}
+	if name == "" {
+		err := errors.NewS("error: must specify " + cst.DataName)
+		vcli.Out().WriteResponse(nil, err)
+		return utils.GetExecStatus(err)
+	}
+
+	data, apiErr := enginePing(vcli, paths.ProcessResource(name))
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
+}
+
+func handleEngineCreateCmd(vcli vaultcli.CLI, args []string) int {
 	if OnlyGlobalArgs(args) {
-		return e.handleCreateWizard(args)
+		return handleEngineCreateWizard(vcli, args)
 	}
-	if e.outClient == nil {
-		e.outClient = format.NewDefaultOutClient()
-	}
+
 	engineName := viper.GetString(cst.DataName)
 	poolName := viper.GetString(cst.DataPoolName)
 	if engineName == "" || poolName == "" {
 		err := errors.NewS("error: must specify engine name and pool name")
-		e.outClient.WriteResponse(nil, err)
+		vcli.Out().WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
-	engine := engineCreate{
-		Name:     engineName,
-		PoolName: poolName,
-	}
 
-	data, err := e.submitEngine(engine)
-	e.outClient.WriteResponse(data, err)
-	return utils.GetExecStatus(err)
+	data, apiErr := engineCreate(vcli, engineName, poolName)
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
 }
 
-func (e engineHandler) handleCreateWizard(args []string) int {
-	ui := &cli.BasicUi{
-		Writer:      os.Stdout,
-		Reader:      os.Stdin,
-		ErrorWriter: os.Stderr,
-	}
-	if e.outClient == nil {
-		e.outClient = format.NewDefaultOutClient()
+// Wizards:
+
+func handleEngineCreateWizard(vcli vaultcli.CLI, args []string) int {
+	qs := []*survey.Question{
+		{
+			Name:   "EngineName",
+			Prompt: &survey.Input{Message: "Engine name:"},
+			Validate: func(ans interface{}) error {
+				answer := strings.TrimSpace(ans.(string))
+				_, apiError := engineRead(vcli, answer)
+				if apiError == nil {
+					return errors.NewS("An engine with this name already exists.")
+				}
+				return nil
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				return strings.TrimSpace(ans.(string))
+			},
+		},
+		{
+			Name:   "PoolName",
+			Prompt: &survey.Input{Message: "Pool name:"},
+			Validate: func(ans interface{}) error {
+				answer := strings.TrimSpace(ans.(string))
+				_, apiError := poolRead(vcli, answer)
+				if apiError != nil &&
+					apiError.HttpResponse() != nil &&
+					apiError.HttpResponse().StatusCode == http.StatusNotFound {
+					return errors.NewS("A pool with this name does not exist.")
+				}
+				return nil
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				return strings.TrimSpace(ans.(string))
+			},
+		},
 	}
 
-	var engine engineCreate
-
-	if resp, err := prompt.Ask(ui, "Engine name:"); err != nil {
-		ui.Error(err.Error())
-		return 1
-	} else {
-		engine.Name = resp
+	answers := struct {
+		EngineName string
+		PoolName   string
+	}{}
+	survErr := survey.Ask(qs, &answers)
+	if survErr != nil {
+		vcli.Out().WriteResponse(nil, errors.New(survErr))
+		return utils.GetExecStatus(survErr)
 	}
 
-	if resp, err := prompt.Ask(ui, "Pool name:"); err != nil {
-		ui.Error(err.Error())
-		return 1
-	} else {
-		engine.PoolName = resp
-	}
-
-	data, err := e.submitEngine(engine)
-	e.outClient.WriteResponse(data, err)
-	return utils.GetExecStatus(err)
+	data, apiErr := engineCreate(vcli, answers.EngineName, answers.PoolName)
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
 }
 
-func (e engineHandler) submitEngine(engine engineCreate) ([]byte, *errors.ApiError) {
-	uri := paths.CreateResourceURI(cst.NounEngine, "", "", true, nil, true)
-	return e.request.DoRequest(http.MethodPost, uri, &engine)
+// API callers:
+
+func engineCreate(vcli vaultcli.CLI, engineName string, poolName string) ([]byte, *errors.ApiError) {
+	body := map[string]string{"name": engineName, "poolName": poolName}
+	uri := paths.CreateResourceURI(cst.NounEngines, "", "", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodPost, uri, &body)
 }
 
-type engineCreate struct {
-	Name     string
-	PoolName string
+func engineRead(vcli vaultcli.CLI, engineName string) ([]byte, *errors.ApiError) {
+	uri := paths.CreateResourceURI(cst.NounEngines, engineName, "", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
+}
+
+func enginePing(vcli vaultcli.CLI, engineName string) ([]byte, *errors.ApiError) {
+	uri := paths.CreateResourceURI(cst.NounEngines, engineName, "/ping", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodPost, uri, nil)
+}
+
+func engineDelete(vcli vaultcli.CLI, engineName string) ([]byte, *errors.ApiError) {
+	query := map[string]string{"force": strconv.FormatBool(true)}
+	uri := paths.CreateResourceURI(cst.NounEngines, engineName, "", true, query)
+	return vcli.HTTPClient().DoRequest(http.MethodDelete, uri, nil)
+}
+
+func engineList(vcli vaultcli.CLI) ([]byte, *errors.ApiError) {
+	uri := paths.CreateResourceURI(cst.NounEngines, "", "", false, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
 }

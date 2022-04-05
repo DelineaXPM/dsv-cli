@@ -115,11 +115,11 @@ func prettifyWindows(data []byte) ([]byte, *errors.ApiError) {
 
 func toYaml(data []byte) ([]byte, *errors.ApiError) {
 	var obj interface{}
-	if err := errors.New(json.Unmarshal(data, &obj)).GrowIf("Failed marshalling data as json prior to conversion to yaml"); err != nil {
-		return nil, err
-	} else {
-		return errors.Convert(yaml.Marshal(obj))
+	err := json.Unmarshal(data, &obj)
+	if err != nil {
+		return nil, errors.New(err).Grow("Failed marshalling data as json prior to conversion to yaml")
 	}
+	return errors.Convert(yaml.Marshal(obj))
 }
 
 func encodingIsJson() bool {
@@ -193,7 +193,7 @@ func FilterResponse(data []byte) ([]byte, *errors.ApiError) {
 		return nil, errors.New(err).Grow(fmt.Sprintf("Invalid filter (%s) on data:\n%s", filter, string(data)))
 	}
 	data, err = op.Apply(data)
-	return data, errors.New(err).GrowIf("Failed to apply the filter to the data")
+	return data, errors.New(err).Grow("Failed to apply the filter to the data")
 }
 
 func FormatResponse(data []byte, err *errors.ApiError, isBeautify bool) (dataStr string, errStr string) {

@@ -1,17 +1,37 @@
 package cmd
 
 import (
-	e "errors"
 	"testing"
+
 	"thy/auth"
 	cst "thy/constants"
 	"thy/errors"
 	"thy/fake"
-	"thy/store"
+	"thy/vaultcli"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestGetAuthCmd(t *testing.T) {
+	_, err := GetAuthCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetAuthClearCmd(t *testing.T) {
+	_, err := GetAuthClearCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetAuthListCmd(t *testing.T) {
+	_, err := GetAuthListCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetAuthChangePasswordCmd(t *testing.T) {
+	_, err := GetAuthChangePasswordCmd()
+	assert.Nil(t, err)
+}
 
 func TestHandleAuth(t *testing.T) {
 	testCase := []struct {
@@ -22,54 +42,53 @@ func TestHandleAuth(t *testing.T) {
 		expectedErr *errors.ApiError
 	}{
 		{
-			"Happy Path",
-			[]string{},
-			&auth.TokenResponse{Token: "token", RefreshToken: "refresh token"},
-			[]byte(`{"accessToken":"token","tokenType":"","expiresIn":0,"refreshToken":"refresh token","granted":"0001-01-01T00:00:00Z"}`),
-			nil,
+			name:        "Happy Path",
+			arg:         []string{},
+			in:          &auth.TokenResponse{Token: "token", RefreshToken: "refresh token"},
+			out:         []byte(`{"accessToken":"token","tokenType":"","expiresIn":0,"refreshToken":"refresh token","granted":"0001-01-01T00:00:00Z"}`),
+			expectedErr: nil,
 		},
 		{
-			"Error",
-			[]string{},
-			&auth.TokenResponse{Token: "token", RefreshToken: "refresh token"},
-			nil,
-			errors.New(e.New("error")),
+			name:        "Error",
+			arg:         []string{},
+			in:          &auth.TokenResponse{Token: "token", RefreshToken: "refresh token"},
+			out:         nil,
+			expectedErr: errors.NewS("error"),
 		},
 	}
 
-	cmd, err := GetAuthCmd()
-	help := cmd.Help()
-	assert.Contains(t, help, "Authenticate with")
-	assert.Nil(t, err)
-	viper.Set(cst.Version, "v1")
-
 	for _, tt := range testCase {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			acmd := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			acmd.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
-			tok := &fake.FakeAuthenticator{}
-			tok.GetTokenStub = func() (response *auth.TokenResponse, apiError *errors.ApiError) {
+			httpClient := &fake.FakeAuthenticator{}
+			httpClient.GetTokenStub = func() (response *auth.TokenResponse, apiError *errors.ApiError) {
 				return tt.in, tt.expectedErr
 			}
-			newAuthenticatorFunc := func() auth.Authenticator {
-				return tok
-			}
-			authCmd := &AuthCommand{acmd, newAuthenticatorFunc, store.GetStore, nil}
-			_ = authCmd.handleAuth(tt.arg)
-			if tt.expectedErr == nil {
-				assert.Equal(t, data, tt.out)
-			} else {
-				assert.Equal(t, err, tt.expectedErr)
+
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithOutClient(outClient),
+				vaultcli.WithAuthenticator(httpClient),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
 			}
 
+			viper.Reset()
+
+			_ = handleAuth(vcli, tt.arg)
+			if tt.expectedErr == nil {
+				assert.Equal(t, tt.out, data)
+			} else {
+				assert.Equal(t, tt.expectedErr, err)
+			}
 		})
 	}
 }
@@ -83,31 +102,28 @@ func TestHandleAuthClear(t *testing.T) {
 		expectedErr *errors.ApiError
 	}{
 		{
-			"Happy Path",
-			[]string{},
-			nil,
-			"",
-			nil,
+			name:        "Happy Path",
+			arg:         []string{},
+			out:         nil,
+			storeType:   "",
+			expectedErr: nil,
 		},
 		{
-			"Error",
-			[]string{},
-			nil,
-			"",
-			errors.New(e.New("error")),
+			name:        "Error",
+			arg:         []string{},
+			out:         nil,
+			storeType:   "",
+			expectedErr: errors.NewS("error"),
 		},
 	}
 
-	_, err := GetAuthClearCmd()
-	assert.Nil(t, err)
-
 	for _, tt := range testCase {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			acmd := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			acmd.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
@@ -118,18 +134,23 @@ func TestHandleAuthClear(t *testing.T) {
 				return tt.expectedErr
 			}
 
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithOutClient(outClient),
+				vaultcli.WithStore(st),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
+			}
+
+			viper.Reset()
 			viper.Set(cst.StoreType, tt.storeType)
-			authCmd := &AuthCommand{acmd, nil, store.GetStore, nil}
-			authCmd.getStore = func(stString string) (i store.Store, apiError *errors.ApiError) {
-				return st, nil
-			}
-			_ = authCmd.handleAuthClear(tt.arg)
+
+			_ = handleAuthClear(vcli, tt.arg)
 			if tt.expectedErr == nil {
-				assert.Equal(t, data, tt.out)
+				assert.Equal(t, tt.out, data)
 			} else {
-				assert.Equal(t, err, tt.expectedErr)
+				assert.Equal(t, tt.expectedErr, err)
 			}
-			viper.Set(cst.StoreType, "")
 		})
 	}
 }
@@ -144,53 +165,55 @@ func TestHandleAuthList(t *testing.T) {
 		expectedErr *errors.ApiError
 	}{
 		{
-			"Happy Path",
-			[]string{},
-			[]byte(`key1`),
-			"",
-			[]string{"key1"},
-			nil,
+			name:        "Happy Path",
+			arg:         []string{},
+			out:         []byte(`key1`),
+			storeType:   "",
+			list:        []string{"key1"},
+			expectedErr: nil,
 		},
 		{
-			"Error",
-			[]string{},
-			nil,
-			"",
-			nil,
-			errors.New(e.New("error")),
+			name:        "Error",
+			arg:         []string{},
+			out:         nil,
+			storeType:   "",
+			list:        nil,
+			expectedErr: errors.NewS("error"),
 		},
 	}
 
-	_, err := GetAuthListCmd()
-	assert.Nil(t, err)
-
 	for _, tt := range testCase {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			acmd := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			acmd.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
 			st := &fake.FakeStore{}
-
 			st.ListStub = func(s string) (strings []string, apiError *errors.ApiError) {
 				return tt.list, tt.expectedErr
 			}
 
-			viper.Set(cst.StoreType, tt.storeType)
-			authCmd := &AuthCommand{acmd, nil, store.GetStore, nil}
-			authCmd.getStore = func(stString string) (i store.Store, apiError *errors.ApiError) {
-				return st, nil
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithOutClient(outClient),
+				vaultcli.WithStore(st),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
 			}
-			_ = authCmd.handleAuthList(tt.arg)
+
+			viper.Reset()
+			viper.Set(cst.StoreType, tt.storeType)
+
+			_ = handleAuthList(vcli, tt.arg)
 			if tt.expectedErr == nil {
-				assert.Equal(t, data, tt.out)
+				assert.Equal(t, tt.out, data)
 			} else {
-				assert.Equal(t, err, tt.expectedErr)
+				assert.Equal(t, tt.expectedErr, err)
 			}
 
 			viper.Set(cst.StoreType, "")

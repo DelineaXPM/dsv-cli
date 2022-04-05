@@ -6,6 +6,7 @@ import (
 	cst "thy/constants"
 	"thy/errors"
 	"thy/fake"
+	"thy/vaultcli"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -87,8 +88,15 @@ func TestHandleSecretReport(t *testing.T) {
 			viper.Set(cst.NounGroup, tt.group)
 			viper.Set(cst.NounRole, tt.role)
 
-			r := report{req, acmd}
-			_ = r.handleSecretReport([]string{})
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithGraphQLClient(req),
+				vaultcli.WithOutClient(acmd),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
+			}
+
+			_ = handleSecretReport(vcli, []string{})
 			if tt.expectedErr == nil {
 				assert.Equal(t, tt.out, data)
 			} else {
@@ -167,8 +175,15 @@ func TestHandleGroupReport(t *testing.T) {
 			viper.Set(cst.NounUser, tt.user)
 			viper.Set(cst.NounRole, tt.role)
 
-			r := report{req, acmd}
-			_ = r.handleSecretReport([]string{})
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithGraphQLClient(req),
+				vaultcli.WithOutClient(acmd),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
+			}
+
+			_ = handleSecretReport(vcli, []string{})
 			if tt.expectedErr == nil {
 				assert.Equal(t, tt.out, data)
 			} else {

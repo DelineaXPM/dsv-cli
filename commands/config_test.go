@@ -2,10 +2,12 @@ package cmd
 
 import (
 	e "errors"
+	"net/http"
 	"testing"
 	cst "thy/constants"
 	"thy/errors"
 	"thy/fake"
+	"thy/vaultcli"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -74,8 +76,15 @@ func TestHandleConfigUpdateCmd(t *testing.T) {
 				return tt.out, tt.expectedErr
 			}
 
-			r := Config{req, writer, nil, nil}
-			_ = r.handleConfigUpdateCmd(tt.args)
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(req),
+				vaultcli.WithOutClient(writer),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
+			}
+
+			_ = handleConfigUpdateCmd(vcli, tt.args)
 			if tt.expectedErr == nil {
 				assert.Equal(t, data, tt.out)
 			} else {
@@ -131,8 +140,15 @@ func TestHandleConfigReadCmd(t *testing.T) {
 				return tt.out, tt.expectedErr
 			}
 
-			c := Config{req, writer, nil, nil}
-			_ = c.handleConfigReadCmd([]string{tt.args})
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(req),
+				vaultcli.WithOutClient(writer),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
+			}
+
+			_ = handleConfigReadCmd(vcli, []string{tt.args})
 			if tt.expectedErr == nil {
 				assert.Equal(t, data, tt.out)
 			} else {
@@ -184,26 +200,41 @@ func TestHandleConfigEditCmd(t *testing.T) {
 			var data []byte
 			var err *errors.ApiError
 			writer.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
-				data = bytes
+				if bytes != nil {
+					data = bytes
+				}
 				err = apiError
 			}
 
 			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
-				return tt.out, tt.apiError
+			req.DoRequestStub = func(method string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+				if method == http.MethodGet {
+					return tt.out, tt.apiError
+				}
+
+				model := i.(*PostConfigModel)
+				data = []byte(model.Config)
+				return nil, nil
 			}
 
-			c := Config{req, writer, nil, nil}
-			c.edit = func(bytes2 []byte, d dataFunc, apiError *errors.ApiError, retry bool) (bytes []byte, apiError2 *errors.ApiError) {
-				_, _ = d([]byte(`config`))
-				return tt.editResponse, tt.editError
+			editFunc := func(data []byte, save vaultcli.SaveFunc) (edited []byte, err *errors.ApiError) {
+				return save(data)
 			}
 
-			_ = c.handleConfigEditCmd(tt.arg)
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(req),
+				vaultcli.WithOutClient(writer),
+				vaultcli.WithEditFunc(editFunc),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
+			}
+
+			_ = handleConfigEditCmd(vcli, tt.arg)
 			if tt.expectedErr == nil {
-				assert.Equal(t, data, tt.out)
+				assert.Equal(t, tt.out, data)
 			} else {
-				assert.Equal(t, err, tt.expectedErr)
+				assert.Equal(t, tt.expectedErr, err)
 			}
 		})
 	}

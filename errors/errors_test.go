@@ -1,53 +1,98 @@
-package errors_test
+package errors
 
 import (
 	serrors "errors"
 	"testing"
-	"thy/errors"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewS(t *testing.T) {
-	err := errors.NewS("test string")
-	assert.Equal(t, "test string", err.String())
+func TestNew(t *testing.T) {
+	apiErr := New(nil)
+	assert.Nil(t, apiErr)
+
+	stdErr := serrors.New("")
+	apiErr = New(stdErr)
+	assert.Equal(t, "", apiErr.String())
+	assert.Equal(t, "", apiErr.Error())
+
+	stdErr = serrors.New("test string")
+	apiErr = New(stdErr)
+	assert.Equal(t, "test string", apiErr.String())
+	assert.Equal(t, "test string", apiErr.Error())
 }
 
 func TestNewF(t *testing.T) {
-	err := errors.NewF("test %s %d", "hi", 5)
-	assert.Equal(t, "test hi 5", err.String())
+	apiErr := NewF("test %s %d", "hi", 5)
+	assert.Equal(t, "test hi 5", apiErr.String())
+	assert.Equal(t, "test hi 5", apiErr.Error())
+}
+
+func TestNewS(t *testing.T) {
+	apiErr := NewS("")
+	assert.Nil(t, apiErr)
+
+	apiErr = NewS("test string")
+	assert.Equal(t, "test string", apiErr.String())
+	assert.Equal(t, "test string", apiErr.Error())
+}
+
+func TestAdd(t *testing.T) {
+	apiErr := NewS("A")
+
+	apiErr.add("B")
+	assert.Equal(t, "B\nA", apiErr.String())
+	assert.Equal(t, "B\nA", apiErr.Error())
+
+	apiErr.add("")
+	assert.Equal(t, "B\nA", apiErr.String())
+	assert.Equal(t, "B\nA", apiErr.Error())
 }
 
 func TestGrow(t *testing.T) {
-	serr := serrors.New("A")
-	err := errors.New(serr).Grow("B").Grow("C").Grow("D")
-	assert.Equal(t, "D\nC\nB\nA", err.Error())
-}
+	var apiErr *ApiError
+	apiErr = apiErr.Grow("A").Grow("B").Grow("C")
+	assert.Equal(t, "", apiErr.String())
+	assert.Equal(t, "", apiErr.Error())
 
-func TestAnd(t *testing.T) {
-	serr := serrors.New("A")
-	err := errors.New(serr).Grow("B")
-	err2 := errors.NewS("C").Grow("D").And(err)
-	assert.Equal(t, "D\nC\nand\nB\nA", err2.Error())
+	apiErr = NewS("A").Grow("B").Grow("C")
+	assert.Equal(t, "C\nB\nA", apiErr.String())
+	assert.Equal(t, "C\nB\nA", apiErr.Error())
 }
 
 func TestOr(t *testing.T) {
-	var err1 *errors.ApiError
-	err2 := errors.NewS("error2")
-	err3 := err1.Or(err2)
-	assert.Equal(t, err2, err3)
+	var apiErr1 *ApiError
+	apiErr2 := NewS("error2")
+	apiErr3 := apiErr1.Or(apiErr2)
+	assert.Equal(t, apiErr2, apiErr3)
 
-	err1 = errors.NewS("error1")
-	err2 = errors.NewS("error2")
-	err3 = err1.Or(err2)
-	assert.Equal(t, err1, err3)
+	apiErr1 = NewS("error1")
+	apiErr2 = NewS("error2")
+	apiErr3 = apiErr1.Or(apiErr2)
+	assert.Equal(t, apiErr1, apiErr3)
+}
 
+func TestAnd(t *testing.T) {
+	var apiErr, apiErr2 *ApiError
+	apiErr2 = apiErr.And(apiErr2)
+	assert.Equal(t, "", apiErr2.String())
+	assert.Equal(t, "", apiErr2.Error())
+
+	apiErr2 = NewS("A").Grow("B")
+	apiErr2 = apiErr.And(apiErr2)
+	assert.Equal(t, "B\nA", apiErr2.String())
+	assert.Equal(t, "B\nA", apiErr2.Error())
+
+	apiErr = NewS("A").Grow("B")
+	apiErr2 = NewS("C").Grow("D").And(apiErr)
+	assert.Equal(t, "D\nC\nand\nB\nA", apiErr2.String())
+	assert.Equal(t, "D\nC\nand\nB\nA", apiErr2.Error())
 }
 
 func TestConvert(t *testing.T) {
 	serr := serrors.New("An error")
 	b := []byte{1, 2, 3}
-	b2, err := errors.Convert(b, serr)
+	b2, err := Convert(b, serr)
 	assert.Equal(t, b, b2)
 	assert.Equal(t, serr.Error(), err.Error())
 }

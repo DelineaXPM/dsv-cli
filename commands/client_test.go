@@ -1,19 +1,47 @@
 package cmd
 
 import (
-	e "errors"
 	"testing"
 
 	cst "thy/constants"
 	"thy/errors"
 	"thy/fake"
+	"thy/vaultcli"
 
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestHandleClientReadCmd(t *testing.T) {
+func TestGetClientCmd(t *testing.T) {
+	_, err := GetClientCmd()
+	assert.Nil(t, err)
+}
 
+func TestGetClientReadCmd(t *testing.T) {
+	_, err := GetClientReadCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetClientDeleteCmd(t *testing.T) {
+	_, err := GetClientDeleteCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetClientRestoreCmd(t *testing.T) {
+	_, err := GetClientRestoreCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetClientCreateCmd(t *testing.T) {
+	_, err := GetClientCreateCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetClientSearchCmd(t *testing.T) {
+	_, err := GetClientSearchCmd()
+	assert.Nil(t, err)
+}
+
+func TestHandleClientReadCmd(t *testing.T) {
 	testCase := []struct {
 		name        string
 		args        string
@@ -26,45 +54,49 @@ func TestHandleClientReadCmd(t *testing.T) {
 			"client1",
 			[]byte(`test`),
 			[]byte(`test`),
-			nil},
+			nil,
+		},
 		{
 			"api Error",
 			"client1",
 			[]byte(`test`),
 			[]byte(`test`),
-			errors.New(e.New("error")),
+			errors.NewS("error"),
 		},
 		{
 			"No clientID",
 			"",
 			[]byte(`test`),
 			[]byte(`test`),
-			errors.New(e.New("error: must specify " + cst.ClientID)),
+			errors.NewS("error: must specify " + cst.ClientID),
 		},
 	}
 
-	_, err := GetClientReadCmd()
-	assert.Nil(t, err)
-
-	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {
-
 		t.Run(tt.name, func(t *testing.T) {
-			acmd := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			acmd.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
 				return tt.out, tt.expectedErr
 			}
 
-			c := client{req, acmd}
-			_ = c.handleClientReadCmd([]string{tt.args})
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
+			}
+
+			_ = handleClientReadCmd(vcli, []string{tt.args})
 			if tt.expectedErr == nil {
 				assert.Equal(t, data, tt.out)
 			} else {
@@ -88,45 +120,49 @@ func TestHandleClientDeleteCmd(t *testing.T) {
 			"user1",
 			[]byte(`test`),
 			[]byte(`test`),
-			nil},
+			nil,
+		},
 		{
 			"api Error",
 			"user1",
 			[]byte(`test`),
 			[]byte(`test`),
-			errors.New(e.New("error")),
+			errors.NewS("error"),
 		},
 		{
 			"No clientID",
 			"",
 			[]byte(`test`),
 			[]byte(`test`),
-			errors.New(e.New("error: must specify " + cst.ClientID)),
+			errors.NewS("error: must specify " + cst.ClientID),
 		},
 	}
 
-	_, err := GetClientDeleteCmd()
-	assert.Nil(t, err)
-
-	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {
-
 		t.Run(tt.name, func(t *testing.T) {
-			acmd := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			acmd.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
 				return tt.out, tt.expectedErr
 			}
 
-			r := client{req, acmd}
-			_ = r.handleClientDeleteCmd([]string{tt.args})
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
+			}
+
+			_ = handleClientDeleteCmd(vcli, []string{tt.args})
 			if tt.expectedErr == nil {
 				assert.Equal(t, data, tt.out)
 			} else {
@@ -137,7 +173,7 @@ func TestHandleClientDeleteCmd(t *testing.T) {
 	}
 }
 
-func TestHandleClientUpsertCmd(t *testing.T) {
+func TestHandleClientCreateCmd(t *testing.T) {
 	testCases := []struct {
 		name        string
 		args        []string
@@ -154,31 +190,31 @@ func TestHandleClientUpsertCmd(t *testing.T) {
 		},
 	}
 
-	_, err := GetClientCreateCmd()
-	assert.Nil(t, err)
-
-	_, err = GetRoleUpdateCmd()
-	assert.Nil(t, err)
-
-	viper.Set(cst.Version, "v1")
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			writer := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			writer.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
 				return tt.out, tt.expectedErr
 			}
 
-			r := &client{req, writer}
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
+			}
 
-			_ = r.handleClientUpsertCmd(tt.args)
+			_ = handleClientCreateCmd(vcli, tt.args)
 
 			if tt.expectedErr == nil {
 				assert.Equal(t, data, tt.out)
@@ -186,12 +222,10 @@ func TestHandleClientUpsertCmd(t *testing.T) {
 				assert.Equal(t, err, tt.expectedErr)
 			}
 		})
-
 	}
 }
 
 func TestHandleClientSearchCmd(t *testing.T) {
-
 	testCase := []struct {
 		name        string
 		args        string
@@ -204,57 +238,54 @@ func TestHandleClientSearchCmd(t *testing.T) {
 			"user1",
 			[]byte(`test`),
 			[]byte(`test`),
-			nil},
+			nil,
+		},
 		{
 			"api Error",
 			"user1",
 			[]byte(`test`),
 			[]byte(`test`),
-			errors.New(e.New("error")),
+			errors.NewS("error"),
 		},
 		{
 			"No Search query",
 			"",
 			[]byte(`test`),
 			[]byte(`test`),
-			errors.New(e.New("error: must specify " + cst.NounRole)),
+			errors.NewS("error: must specify " + cst.NounRole),
 		},
 	}
 
-	_, err := GetClientSearchCmd()
-	assert.Nil(t, err)
-
-	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {
-
 		t.Run(tt.name, func(t *testing.T) {
-			acmd := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			acmd.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
 				return tt.out, tt.expectedErr
 			}
 
-			c := client{req, acmd}
-			_ = c.handleClientSearchCmd([]string{tt.args})
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
+			}
+
+			_ = handleClientSearchCmd(vcli, []string{tt.args})
 			if tt.expectedErr == nil {
 				assert.Equal(t, data, tt.out)
 			} else {
 				assert.Equal(t, err, tt.expectedErr)
 			}
 		})
-
 	}
-}
-
-func TestGetClientCmd(t *testing.T) {
-	_, err := GetClientCmd()
-	assert.Nil(t, err)
-	//cmd.Run([]string{"test"})
 }

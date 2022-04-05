@@ -1,16 +1,42 @@
 package cmd
 
 import (
-	e "errors"
 	"testing"
 
 	cst "thy/constants"
 	"thy/errors"
 	"thy/fake"
+	"thy/vaultcli"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestGetEngineCmd(t *testing.T) {
+	_, err := GetEngineCmd()
+	assert.Nil(t, err)
+}
+func TestGetEngineReadCmd(t *testing.T) {
+	_, err := GetEngineReadCmd()
+	assert.Nil(t, err)
+}
+func TestGetEngineListCmd(t *testing.T) {
+	_, err := GetEngineListCmd()
+	assert.Nil(t, err)
+}
+func TestGetEngineDeleteCmd(t *testing.T) {
+	_, err := GetEngineDeleteCmd()
+	assert.Nil(t, err)
+}
+func TestGetEngineCreateCmd(t *testing.T) {
+	_, err := GetEngineCreateCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetEnginePingCmd(t *testing.T) {
+	_, err := GetEnginePingCmd()
+	assert.Nil(t, err)
+}
 
 func TestHandleEngineReadCmd(t *testing.T) {
 	testCases := []struct {
@@ -32,32 +58,38 @@ func TestHandleEngineReadCmd(t *testing.T) {
 			"",
 			[]byte(`test`),
 			[]byte(`test`),
-			errors.New(e.New("error: must specify " + cst.DataName)),
+			errors.NewS("error: must specify " + cst.DataName),
 		},
 	}
 
-	_, err := GetPoolReadCmd()
-	assert.Nil(t, err)
-
-	viper.Set(cst.Version, "v1")
 	for _, tt := range testCases {
-		viper.Set(cst.DataName, tt.engineName)
 		t.Run(tt.name, func(t *testing.T) {
-			client := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			client.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
 				return tt.out, tt.expectedErr
 			}
 
-			eh := engineHandler{req, client}
-			_ = eh.handleRead(nil)
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
+			}
+
+			viper.Reset()
+			viper.Set(cst.DataName, tt.engineName)
+
+			_ = handleEngineReadCmd(vcli, nil)
 			if tt.expectedErr == nil {
 				assert.Equal(t, tt.out, data)
 			} else {
@@ -93,7 +125,7 @@ func TestHandleEngineCreateCmd(t *testing.T) {
 			"pool1",
 			[]byte(`test`),
 			[]byte(`test`),
-			errors.New(e.New("error: must specify engine name and pool name")),
+			errors.NewS("error: must specify engine name and pool name"),
 		},
 		{
 			"No pool name passed",
@@ -102,33 +134,39 @@ func TestHandleEngineCreateCmd(t *testing.T) {
 			"",
 			[]byte(`test`),
 			[]byte(`test`),
-			errors.New(e.New("error: must specify engine name and pool name")),
+			errors.NewS("error: must specify engine name and pool name"),
 		},
 	}
 
-	_, err := GetEngineCreateCmd()
-	assert.Nil(t, err)
-
-	viper.Set(cst.Version, "v1")
 	for _, tt := range testCases {
-		viper.Set(cst.DataName, tt.engineName)
-		viper.Set(cst.DataPoolName, tt.poolName)
 		t.Run(tt.name, func(t *testing.T) {
-			client := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			client.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
 				return tt.out, tt.expectedErr
 			}
 
-			eh := engineHandler{req, client}
-			_ = eh.handleCreate(tt.args)
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
+			}
+
+			viper.Reset()
+			viper.Set(cst.DataName, tt.engineName)
+			viper.Set(cst.DataPoolName, tt.poolName)
+
+			_ = handleEngineCreateCmd(vcli, tt.args)
 			if tt.expectedErr == nil {
 				assert.Equal(t, tt.out, data)
 			} else {
@@ -157,32 +195,38 @@ func TestHandleEngineDeleteCmd(t *testing.T) {
 			"",
 			[]byte(`test`),
 			[]byte(`test`),
-			errors.New(e.New("error: must specify " + cst.DataName)),
+			errors.NewS("error: must specify " + cst.DataName),
 		},
 	}
 
-	_, err := GetEngineDeleteCmd()
-	assert.Nil(t, err)
-
-	viper.Set(cst.Version, "v1")
 	for _, tt := range testCases {
-		viper.Set(cst.DataName, tt.engineName)
 		t.Run(tt.name, func(t *testing.T) {
-			client := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			client.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
 				return tt.out, tt.expectedErr
 			}
 
-			eh := engineHandler{req, client}
-			_ = eh.handleDelete(nil)
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
+			}
+
+			viper.Reset()
+			viper.Set(cst.DataName, tt.engineName)
+
+			_ = handleEngineDeleteCmd(vcli, nil)
 			if tt.expectedErr == nil {
 				assert.Equal(t, tt.out, data)
 			} else {

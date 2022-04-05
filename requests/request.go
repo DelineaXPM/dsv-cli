@@ -4,58 +4,24 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
+	"log"
 	"net/http"
 	"runtime"
+	"time"
 
 	cst "thy/constants"
 	"thy/errors"
-	"thy/format"
 	"thy/version"
 
 	"github.com/spf13/viper"
 )
 
-var (
-	MarshalingError   = errors.NewS("Failed to marshal response")
-	UnmarshalingError = errors.NewS("Failed to unmarshal response")
-)
-
-type Header interface {
-	Set(key, value string)
-}
-
-type clientMock struct {
-	doRequestFunc    func(method string, uri string, body interface{}) ([]byte, *errors.ApiError)
-	doRequestOutFunc func(method string, uri string, body interface{}, dataOut interface{}) *errors.ApiError
-	setCredsFunc     func(rh Header)
-}
-
-func NewMockedClient(doRequestFunc func(method string, uri string, body interface{}) ([]byte, *errors.ApiError),
-	doRequestOutFunc func(method string, uri string, body interface{}, dataOut interface{}) *errors.ApiError,
-	setCredsFunc func(rh Header)) Client {
-	return &clientMock{
-		doRequestFunc:    doRequestFunc,
-		doRequestOutFunc: doRequestOutFunc,
-		setCredsFunc:     setCredsFunc,
-	}
-}
-func (c *clientMock) DoRequest(method string, uri string, body interface{}) ([]byte, *errors.ApiError) {
-	return c.doRequestFunc(method, uri, body)
-}
-
-func (c *clientMock) DoRequestOut(method string, uri string, body interface{}, dataOut interface{}) *errors.ApiError {
-	return c.doRequestOutFunc(method, uri, body, dataOut)
-}
-
-func (c *clientMock) SetCreds(rh Header) {
-	c.setCredsFunc(rh)
-}
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -o ../fake/fake_client.go . Client
 
 type Client interface {
 	DoRequest(method string, uri string, body interface{}) ([]byte, *errors.ApiError)
 	DoRequestOut(method string, uri string, body interface{}, dataOut interface{}) *errors.ApiError
-	SetCreds(rh Header)
 }
 
 type httpClient struct{}
@@ -64,104 +30,82 @@ func NewHttpClient() Client {
 	return &httpClient{}
 }
 
-func (c *httpClient) SetCreds(rh Header) {
-	rh.Set("Authorization", viper.GetString(cst.NounToken))
-}
-
 func (c *httpClient) DoRequest(method string, uri string, body interface{}) ([]byte, *errors.ApiError) {
-	resp, err := c.sendRequest(method, uri, body)
+	req, err := c.buildRequest(method, uri, body)
 	if err != nil {
-		return nil, errors.NewS("failed to send API request")
+		return nil, err
 	}
-	defer resp.Body.Close()
-	b, err := ioutil.ReadAll(resp.Body)
-
+	respBytes, err := c.do(req)
 	if err != nil {
-		return nil, errors.NewS("malformed api response")
+		return nil, err
 	}
-	return getResponse(b, resp)
+	return respBytes, nil
 }
 
 func (c *httpClient) DoRequestOut(method string, uri string, body interface{}, dataOut interface{}) *errors.ApiError {
-	resp, err := c.sendRequest(method, uri, body)
+	respBytes, err := c.DoRequest(method, uri, body)
 	if err != nil {
-		return errors.NewS("failed to send API request")
+		return err
 	}
-	defer resp.Body.Close()
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
-
-	if success := statusCodeIsSuccess(resp.StatusCode); !success {
-		return errors.NewS(string(bodyBytes))
-	}
-	if len(bodyBytes) == 0 {
+	if len(respBytes) == 0 {
 		return nil
 	}
-	if err := json.Unmarshal(bodyBytes, &dataOut); err != nil {
-		return UnmarshalingError
+	if err := json.Unmarshal(respBytes, &dataOut); err != nil {
+		return errors.New(err).Grow("Failed to unmarshal response")
 	}
 	return nil
 }
 
-func (c *httpClient) sendRequest(method string, uri string, body interface{}) (*http.Response, error) {
-	var req *http.Request
-	var err error
-
+func (c *httpClient) buildRequest(method string, uri string, body interface{}) (*http.Request, *errors.ApiError) {
+	var reqBody io.Reader
 	if body == nil {
-		req, err = http.NewRequest(method, uri, nil)
+		reqBody = nil
 	} else if d, ok := body.([]byte); ok {
-		req, err = http.NewRequest(method, uri, bytes.NewReader(d))
+		reqBody = bytes.NewReader(d)
 	} else {
 		serialized, serr := json.Marshal(body)
 		if serr != nil {
-			return nil, errors.NewS("error serializing request body")
+			return nil, errors.New(serr).Grow("Error serializing request body")
 		}
-		req, err = http.NewRequest(method, uri, bytes.NewReader(serialized))
+		reqBody = bytes.NewReader(serialized)
 	}
+
+	req, err := http.NewRequest(method, uri, reqBody)
 	if err != nil {
-		return nil, errors.NewS("error creating api request")
+		return nil, errors.New(err).Grow("Error creating API request")
 	}
-	c.SetCreds(&req.Header)
+
+	agent := fmt.Sprintf("%s-%s-%s-%s", cst.CmdRoot, version.Version, runtime.GOOS, runtime.GOARCH)
+
 	req.Header.Set("Content-Type", "application/json")
-	if version.Version != "undefined" {
-		agent := fmt.Sprintf("%s-%s-%s-%s", cst.CmdRoot, version.Version, runtime.GOOS, runtime.GOARCH)
-		req.Header.Set("User-Agent", agent)
+	req.Header.Set("Authorization", viper.GetString(cst.NounToken))
+	req.Header.Set("User-Agent", agent)
+
+	return req, nil
+}
+
+func (c *httpClient) do(req *http.Request) ([]byte, *errors.ApiError) {
+	log.Printf("-> %s %s", req.Method, req.URL)
+
+	startTime := time.Now()
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, errors.New(err).Grow("Failed to send API request")
 	}
-	return http.DefaultClient.Do(req)
-}
 
-func statusCodeIsSuccess(statusCode int) bool {
-	return statusCode >= 200 && statusCode < 300
-}
+	log.Printf("<- %s %s | %s (took: %s)", req.Method, req.URL, resp.Status, time.Since(startTime))
+	defer resp.Body.Close()
 
-func getResponse(bodyBytes []byte, resp *http.Response) ([]byte, *errors.ApiError) {
-	if !statusCodeIsSuccess(resp.StatusCode) {
+	bodyBytes, rerr := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errors.New(rerr).Grow("Malformed API response")
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		if len(bodyBytes) == 0 {
-			return nil, errors.NewS("error processing API response")
+			return nil, errors.NewS("Error processing API response")
 		}
 		return nil, errors.NewS(string(bodyBytes)).WithResponse(resp)
 	}
 
-	if len(bodyBytes) == 0 {
-		return bodyBytes, nil
-	}
-
-	var unmarshalled map[string]interface{}
-	err := json.Unmarshal(bodyBytes, &unmarshalled)
-	if err != nil {
-		return nil, UnmarshalingError
-	}
-
-	data := unmarshalled["data"]
-
-	// If there is more than just `data`, marshal and return everything.
-	var res []byte
-	if len(unmarshalled) > 1 || data == nil {
-		res, err = format.JsonMarshal(unmarshalled)
-	} else {
-		res, err = format.JsonMarshal(data)
-	}
-	if err != nil {
-		return nil, MarshalingError
-	}
-	return res, nil
+	return bodyBytes, nil
 }

@@ -3,139 +3,49 @@ package paths
 import (
 	"testing"
 
+	cst "thy/constants"
+
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
-	cst "thy/constants"
 )
 
+func TestGetDomain(t *testing.T) {
+	f := func(domain interface{}, expected string) {
+		t.Helper()
+		viper.Set(cst.DomainKey, domain)
+
+		actual := GetDomain()
+		assert.Equal(t, expected, actual)
+	}
+	f(nil, "secretsvaultcloud.com")
+	f("test.com", "test.com")
+	f(9192, "9192")
+}
+
 func TestGetAPIVersion(t *testing.T) {
-	tests := []struct {
-		name           string
-		mockAPIVersion interface{}
-		expected       string
-	}{
-		{
-			name:     "Default_Path",
-			expected: "v1",
-		},
-		{
-			name:           "Happy_Path",
-			mockAPIVersion: "v2",
-			expected:       "v2",
-		},
-		{
-			name:           "Happy_Path#01",
-			mockAPIVersion: 12313,
-			expected:       "12313",
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	f := func(version interface{}, expected string) {
+		t.Helper()
+		viper.Set(cst.APIVersionKey, version)
 
-			viper.Set(cst.APIVersionKey, test.mockAPIVersion)
-
-			actual := GetAPIVersion()
-			assert.Equal(t, test.expected, actual)
-		})
+		actual := GetAPIVersion()
+		assert.Equal(t, expected, actual)
 	}
+	f(nil, "v1")
+	f("v2", "v2")
+	f(123, "123")
 }
 
 func TestGetPort(t *testing.T) {
-	tests := []struct {
-		name           string
-		mockAPIVersion interface{}
-		expected       string
-	}{
-		{
-			name:     "Default_Path",
-			expected: "",
-		},
-		{
-			name:           "Happy_Path",
-			mockAPIVersion: "8089",
-			expected:       ":8089",
-		},
-		{
-			name:           "Happy_Path#01",
-			mockAPIVersion: 9192,
-			expected:       ":9192",
-		},
+	f := func(port interface{}, expected string) {
+		t.Helper()
+		viper.Set(cst.PortKey, port)
+
+		actual := GetPort()
+		assert.Equal(t, expected, actual)
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-
-			viper.Set(cst.PortKey, test.mockAPIVersion)
-
-			actual := GetPort()
-			assert.Equal(t, test.expected, actual)
-		})
-	}
-}
-
-func TestGetDomain(t *testing.T) {
-	tests := []struct {
-		name           string
-		mockAPIVersion interface{}
-		expected       string
-	}{
-		{
-			name:     "Default_Path",
-			expected: "secretsvaultcloud.com",
-		},
-		{
-			name:           "Happy_Path",
-			mockAPIVersion: "test.com",
-			expected:       "test.com",
-		},
-		{
-			name:           "Happy_Path#01",
-			mockAPIVersion: 9192,
-			expected:       "9192",
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-
-			viper.Set(cst.DomainKey, test.mockAPIVersion)
-
-			actual := GetDomain()
-			assert.Equal(t, test.expected, actual)
-		})
-	}
-}
-
-func TestGetPath(t *testing.T) {
-	tests := []struct {
-		name           string
-		input          []string
-		mockAPIVersion interface{}
-		expected       string
-	}{
-		{
-			name:     "Default_Path",
-			expected: "",
-		},
-		{
-			name:           "Happy_Path",
-			mockAPIVersion: "test",
-			expected:       "test",
-		},
-		{
-			name:           "Happy_Path#01",
-			input:          []string{"com"},
-			mockAPIVersion: "test",
-			expected:       "com",
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-
-			viper.Set(cst.Path, test.mockAPIVersion)
-
-			actual := GetPath(test.input)
-			assert.Equal(t, test.expected, actual)
-		})
-	}
+	f(nil, "")
+	f("8089", ":8089")
+	f(9192, ":9192")
 }
 
 func TestCreateURI(t *testing.T) {
@@ -234,4 +144,53 @@ func TestCreateURI(t *testing.T) {
 			assert.Equal(t, test.expected, actual)
 		})
 	}
+}
+
+func TestGetURIPathFromInternalPath(t *testing.T) {
+	tests := []struct {
+		internalPath string
+		expected     string
+	}{
+		{"", ""},
+		{"a", "a"},
+		{"a:a", "a/a"},
+		{":a:a", "a/a"},
+		{"/a:a", "a/a"},
+		{"secrets:a:a", "a/a"},
+		{":secrets:a:a", "a/a"},
+		{"/secrets:a:a", "a/a"},
+		{"/secrets/a:a", "a/a"},
+	}
+	for _, test := range tests {
+		t.Run(test.internalPath, func(t *testing.T) {
+			actual := GetURIPathFromInternalPath(test.internalPath)
+			assert.Equal(t, test.expected, actual)
+		})
+	}
+}
+
+func TestGetFilenameFromArgs(t *testing.T) {
+	f := func(args []string, expected string) {
+		t.Helper()
+		actual := GetFilenameFromArgs(args)
+		assert.Equal(t, expected, actual)
+	}
+
+	// No match.
+	f([]string{}, "")
+	f([]string{"--path", "pth1"}, "")
+	f([]string{"--data", "str1"}, "")
+	f([]string{"--data"}, "")
+	f([]string{"-d", "str1"}, "")
+	f([]string{"-d"}, "")
+
+	// Long flag used.
+	f([]string{"--data", "@file1"}, "file1")
+	f([]string{"--data", "@file1", "--path", "pth1"}, "file1")
+	f([]string{"--path", "pth1", "--data", "@file1"}, "file1")
+
+	// Short flag used.
+	f([]string{"-d", "@file1"}, "file1")
+	f([]string{"-d", "@file1", "--path", "pth1"}, "file1")
+	f([]string{"--path", "pth1", "-d", "@file1"}, "file1")
 }

@@ -3,7 +3,7 @@ package prompt
 import (
 	"testing"
 
-	"github.com/thycotic-rd/cli"
+	"github.com/mitchellh/cli"
 )
 
 type cliUiMock struct {

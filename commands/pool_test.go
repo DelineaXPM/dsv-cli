@@ -1,16 +1,41 @@
 package cmd
 
 import (
-	e "errors"
 	"testing"
 
 	cst "thy/constants"
 	"thy/errors"
 	"thy/fake"
+	"thy/vaultcli"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestGetPoolCmd(t *testing.T) {
+	_, err := GetPoolCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetPoolCreateCmd(t *testing.T) {
+	_, err := GetPoolCreateCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetPoolReadCmd(t *testing.T) {
+	_, err := GetPoolReadCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetPoolListCmd(t *testing.T) {
+	_, err := GetPoolListCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetPoolDeleteCmd(t *testing.T) {
+	_, err := GetPoolDeleteCmd()
+	assert.Nil(t, err)
+}
 
 func TestHandlePoolReadCmd(t *testing.T) {
 	testCases := []struct {
@@ -25,38 +50,45 @@ func TestHandlePoolReadCmd(t *testing.T) {
 			"pool1",
 			[]byte(`test`),
 			[]byte(`test`),
-			nil},
+			nil,
+		},
 		{
 			"No pool name passed",
 			"",
 			[]byte(`test`),
 			[]byte(`test`),
-			errors.New(e.New("error: must specify " + cst.DataName)),
+			errors.NewS("error: must specify " + cst.DataName),
 		},
 	}
 
-	_, err := GetPoolReadCmd()
-	assert.Nil(t, err)
-
-	viper.Set(cst.Version, "v1")
 	for _, tt := range testCases {
-		viper.Set(cst.DataName, tt.poolName)
 		t.Run(tt.name, func(t *testing.T) {
-			client := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			client.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
 				return tt.out, tt.expectedErr
 			}
 
-			p := poolHandler{req, client}
-			_ = p.handleRead(nil)
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
+			}
+
+			viper.Reset()
+			viper.Set(cst.DataName, tt.poolName)
+
+			_ = handlePoolRead(vcli, nil)
 			if tt.expectedErr == nil {
 				assert.Equal(t, tt.out, data)
 			} else {
@@ -85,28 +117,34 @@ func TestHandlePoolCreateCmd(t *testing.T) {
 		},
 	}
 
-	_, err := GetPoolCreateCmd()
-	assert.Nil(t, err)
-
-	viper.Set(cst.Version, "v1")
 	for _, tt := range testCases {
-		viper.Set(cst.DataName, tt.poolName)
 		t.Run(tt.name, func(t *testing.T) {
-			client := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			client.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
 				return tt.out, tt.expectedErr
 			}
 
-			p := poolHandler{req, client}
-			_ = p.handleCreate(tt.args)
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
+			}
+
+			viper.Reset()
+			viper.Set(cst.DataName, tt.poolName)
+
+			_ = handlePoolCreate(vcli, tt.args)
 			if tt.expectedErr == nil {
 				assert.Equal(t, tt.out, data)
 			} else {
@@ -129,38 +167,45 @@ func TestHandlePoolDeleteCmd(t *testing.T) {
 			"pool1",
 			[]byte(`test`),
 			[]byte(`test`),
-			nil},
+			nil,
+		},
 		{
 			"No pool name passed",
 			"",
 			[]byte(`test`),
 			[]byte(`test`),
-			errors.New(e.New("error: must specify " + cst.DataName)),
+			errors.NewS("error: must specify " + cst.DataName),
 		},
 	}
 
-	_, err := GetPoolDeleteCmd()
-	assert.Nil(t, err)
-
-	viper.Set(cst.Version, "v1")
 	for _, tt := range testCases {
-		viper.Set(cst.DataName, tt.poolName)
 		t.Run(tt.name, func(t *testing.T) {
-			client := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			client.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
 				return tt.out, tt.expectedErr
 			}
 
-			p := poolHandler{req, client}
-			_ = p.handleDelete(nil)
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
+			}
+
+			viper.Reset()
+			viper.Set(cst.DataName, tt.poolName)
+
+			_ = handlePoolDelete(vcli, nil)
 			if tt.expectedErr == nil {
 				assert.Equal(t, tt.out, data)
 			} else {

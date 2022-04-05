@@ -3,32 +3,26 @@ package cmd
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
 	cst "thy/constants"
-	apperrors "thy/errors"
-	"thy/format"
-	"thy/internal/prompt"
+	"thy/errors"
+	"thy/internal/predictor"
 	"thy/paths"
-	preds "thy/predictors"
-	"thy/requests"
 	"thy/utils"
+	"thy/vaultcli"
 
-	"github.com/posener/complete"
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/mitchellh/cli"
 	"github.com/spf13/viper"
-	"github.com/thycotic-rd/cli"
 )
-
-type siem struct {
-	request   requests.Client
-	outClient format.OutClient
-}
 
 func GetSiemCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounSiem},
+		Path:         []string{cst.NounSiem},
+		SynopsisText: "siem (<action>)",
+		HelpText:     "Work with SIEM endpoints",
 		RunFunc: func(args []string) int {
 			path := viper.GetString(cst.Path)
 			if path == "" && len(args) > 0 {
@@ -37,323 +31,462 @@ func GetSiemCmd() (cli.Command, error) {
 			if path == "" {
 				return cli.RunResultHelp
 			}
-			return siem{requests.NewHttpClient(), nil}.handleRead(args)
+			return handleSiemRead(vaultcli.New(), args)
 		},
-		SynopsisText:  "siem (<action>)",
-		HelpText:      "Work with SIEM endpoints",
-		MinNumberArgs: 0,
 	})
 }
 
 func GetSiemCreateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounSiem, cst.Create},
-		RunFunc:      siem{requests.NewHttpClient(), nil}.handleCreate,
 		SynopsisText: "Create a new SIEM endpoint",
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s`, cst.NounSiem, cst.Create),
+		RunFunc: func(args []string) int {
+			return handleSiemCreate(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetSiemUpdateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounSiem, cst.Update},
-		RunFunc:      siem{requests.NewHttpClient(), nil}.handleUpdate,
 		SynopsisText: "Update an existing SIEM endpoint",
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s %[4]s
    • %[1]s %[2]s --%[3]s %[4]s`, cst.NounSiem, cst.Update, cst.Path, cst.ExampleSIEM),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.Path): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Path, Usage: "Path to existing SIEM"}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Path, Usage: "Path to existing SIEM"},
 		},
 		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			return handleSiemUpdate(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetSiemReadCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounSiem, cst.Read},
-		RunFunc:      siem{requests.NewHttpClient(), nil}.handleRead,
 		SynopsisText: "Read an existing SIEM endpoint",
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s %[4]s
    • %[1]s %[2]s --%[3]s %[4]s`, cst.NounSiem, cst.Read, cst.Path, cst.ExampleSIEM),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.Path): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Path, Usage: "Path to existing SIEM"}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Path, Usage: "Path to existing SIEM"},
 		},
 		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			return handleSiemRead(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetSiemDeleteCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounSiem, cst.Delete},
-		RunFunc:      siem{requests.NewHttpClient(), nil}.handleDelete,
 		SynopsisText: "Delete an existing SIEM endpoint",
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s %[4]s
    • %[1]s %[2]s --%[3]s %[4]s`, cst.NounSiem, cst.Delete, cst.Path, cst.ExampleSIEM),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.Path): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Path, Usage: "Path to existing SIEM"}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Path, Usage: "Path to existing SIEM"},
 		},
 		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			return handleSiemDelete(vaultcli.New(), args)
+		},
 	})
 }
 
-func (s siem) handleCreate([]string) int {
-	var apiError *apperrors.ApiError
-	var data []byte
-	if s.outClient == nil {
-		s.outClient = format.NewDefaultOutClient()
-	}
-	ui := &PasswordUi{
-		cli.BasicUi{
-			Writer:      os.Stdout,
-			Reader:      os.Stdin,
-			ErrorWriter: os.Stderr,
+func handleSiemCreate(vcli vaultcli.CLI, args []string) int {
+	qs := []*survey.Question{
+		{
+			Name:   "SIEMType",
+			Prompt: &survey.Input{Message: "Type of SIEM endpoint:", Default: "syslog"},
+			Validate: func(ans interface{}) error {
+				answer := strings.TrimSpace(ans.(string))
+				if len(answer) == 0 {
+					return errors.NewS("Value is required.")
+				}
+				return nil
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				return strings.TrimSpace(ans.(string))
+			},
+		},
+		{
+			Name:   "Name",
+			Prompt: &survey.Input{Message: "Name of SIEM endpoint:"},
+			Validate: func(ans interface{}) error {
+				answer := strings.TrimSpace(ans.(string))
+				if len(answer) == 0 {
+					return errors.NewS("Value is required.")
+				}
+				return nil
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				return strings.TrimSpace(ans.(string))
+			},
+		},
+		{
+			Name:   "Host",
+			Prompt: &survey.Input{Message: "Host:"},
+			Validate: func(ans interface{}) error {
+				answer := strings.TrimSpace(ans.(string))
+				if len(answer) == 0 {
+					return errors.NewS("Value is required.")
+				}
+				return nil
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				return strings.TrimSpace(ans.(string))
+			},
+		},
+		{
+			Name:   "Port",
+			Prompt: &survey.Input{Message: "Port:"},
+			Validate: func(ans interface{}) error {
+				answer := strings.TrimSpace(ans.(string))
+				if len(answer) == 0 {
+					return errors.NewS("Value is required.")
+				}
+				_, err := strconv.Atoi(answer)
+				if err != nil {
+					return errors.NewS("Value must be a number.")
+				}
+				return nil
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				answer := strings.TrimSpace(ans.(string))
+				_, val := strconv.Atoi(answer)
+				return val
+			},
+		},
+		{
+			Name:   "Protocol",
+			Prompt: &survey.Input{Message: "Protocol:"},
+			Validate: func(ans interface{}) error {
+				answer := strings.TrimSpace(ans.(string))
+				if len(answer) == 0 {
+					return errors.NewS("Value is required.")
+				}
+				return nil
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				return strings.TrimSpace(ans.(string))
+			},
+		},
+		{
+			Name:   "LoggingFormat",
+			Prompt: &survey.Input{Message: "Logging Format:", Default: "rfc5424"},
+			Validate: func(ans interface{}) error {
+				answer := strings.TrimSpace(ans.(string))
+				if len(answer) == 0 {
+					return errors.NewS("Value is required.")
+				}
+				return nil
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				return strings.TrimSpace(ans.(string))
+			},
+		},
+		{
+			Name:   "AuthMethod",
+			Prompt: &survey.Input{Message: "Authentication Method:", Default: "token"},
+			Validate: func(ans interface{}) error {
+				answer := strings.TrimSpace(ans.(string))
+				if len(answer) == 0 {
+					return errors.NewS("Value is required.")
+				}
+				return nil
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				return strings.TrimSpace(ans.(string))
+			},
+		},
+		{
+			Name:   "Auth",
+			Prompt: &survey.Password{Message: "Authentication:"},
+			Validate: func(ans interface{}) error {
+				answer := strings.TrimSpace(ans.(string))
+				if len(answer) == 0 {
+					return errors.NewS("Value is required.")
+				}
+				return nil
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				return strings.TrimSpace(ans.(string))
+			},
+		},
+		{
+			Name:   "SendToEngine",
+			Prompt: &survey.Confirm{Message: "Route Through DSV Engine:", Default: false},
 		},
 	}
 
-	params := make(map[string]interface{})
-
-	if resp, err := prompt.AskDefault(ui, "Type of SIEM endpoint", "syslog"); err != nil {
-		ui.Error(err.Error())
-		return 1
-	} else {
-		params["siemType"] = resp
+	answers := siemCreateRequest{}
+	survErr := survey.Ask(qs, &answers)
+	if survErr != nil {
+		vcli.Out().WriteResponse(nil, errors.New(survErr))
+		return utils.GetExecStatus(survErr)
 	}
 
-	if resp, err := prompt.Ask(ui, "Name of SIEM endpoint:"); err != nil {
-		ui.Error(err.Error())
-		return 1
-	} else {
-		params["name"] = resp
-	}
-
-	if resp, err := prompt.Ask(ui, "Host:"); err != nil {
-		ui.Error(err.Error())
-		return 1
-	} else {
-		params["host"] = resp
-	}
-
-	if resp, err := prompt.Ask(ui, "Port:"); err != nil {
-		ui.Error(err.Error())
-		return 1
-	} else {
-		if port, err := strconv.Atoi(resp); err != nil {
-			ui.Error("Error: port must be a number.")
-			return 1
-		} else {
-			params["port"] = port
+	if answers.SendToEngine {
+		poolPrompt := &survey.Input{Message: "Engine Pool:"}
+		poolValidation := func(ans interface{}) error {
+			answer := strings.TrimSpace(ans.(string))
+			if len(answer) == 0 {
+				return errors.NewS("Value is required.")
+			}
+			return nil
+		}
+		survErr := survey.AskOne(poolPrompt, &answers.Pool, survey.WithValidator(poolValidation))
+		if survErr != nil {
+			vcli.Out().WriteResponse(nil, errors.New(survErr))
+			return utils.GetExecStatus(survErr)
 		}
 	}
 
-	if resp, err := prompt.Ask(ui, "Protocol:"); err != nil {
-		ui.Error(err.Error())
-		return 1
-	} else {
-		params["protocol"] = resp
-	}
+	data, apiError := siemCreate(vcli, &answers)
+	vcli.Out().WriteResponse(data, apiError)
+	return utils.GetExecStatus(apiError)
+}
 
-	if resp, err := prompt.AskDefault(ui, "Logging Format", "rfc5424"); err != nil {
-		ui.Error(err.Error())
-		return 1
-	} else {
-		params["loggingFormat"] = resp
+func handleSiemUpdate(vcli vaultcli.CLI, args []string) int {
+	name := viper.GetString(cst.Path)
+	if name == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		name = args[0]
 	}
-
-	if resp, err := prompt.AskDefault(ui, "Authentication Method", "token"); err != nil {
-		ui.Error(err.Error())
-		return 1
-	} else {
-		params["authMethod"] = resp
-	}
-	if resp, err := prompt.AskSecureConfirm(ui, "Authentication:"); err != nil {
-		ui.Error(err.Error())
-		return 1
-	} else {
-		params["auth"] = resp
-	}
-
-	yes, err := prompt.YesNo(ui, "Route Through DSV Engine", false)
-	if err != nil {
-		ui.Error(err.Error())
+	if name == "" {
+		vcli.Out().FailF("error: must specify %s", cst.Path)
 		return 1
 	}
 
-	if yes {
-		params["sendToEngine"] = true
-		if resp, err := prompt.Ask(ui, "Engine Pool:"); err != nil {
-			ui.Error(err.Error())
-			return 1
-		} else {
-			params["pool"] = resp
+	_, apiErr := siemRead(vcli, name)
+	if apiErr != nil {
+		vcli.Out().WriteResponse(nil, apiErr)
+		return utils.GetExecStatus(apiErr)
+	}
+
+	qs := []*survey.Question{
+		{
+			Name:   "SIEMType",
+			Prompt: &survey.Input{Message: "Type of SIEM endpoint:", Default: "syslog"},
+			Validate: func(ans interface{}) error {
+				answer := strings.TrimSpace(ans.(string))
+				if len(answer) == 0 {
+					return errors.NewS("Value is required.")
+				}
+				return nil
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				return strings.TrimSpace(ans.(string))
+			},
+		},
+		{
+			Name:   "Host",
+			Prompt: &survey.Input{Message: "Host:"},
+			Validate: func(ans interface{}) error {
+				answer := strings.TrimSpace(ans.(string))
+				if len(answer) == 0 {
+					return errors.NewS("Value is required.")
+				}
+				return nil
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				return strings.TrimSpace(ans.(string))
+			},
+		},
+		{
+			Name:   "Port",
+			Prompt: &survey.Input{Message: "Port:"},
+			Validate: func(ans interface{}) error {
+				answer := strings.TrimSpace(ans.(string))
+				if len(answer) == 0 {
+					return errors.NewS("Value is required.")
+				}
+				_, err := strconv.Atoi(answer)
+				if err != nil {
+					return errors.NewS("Value must be a number.")
+				}
+				return nil
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				answer := strings.TrimSpace(ans.(string))
+				_, val := strconv.Atoi(answer)
+				return val
+			},
+		},
+		{
+			Name:   "Protocol",
+			Prompt: &survey.Input{Message: "Protocol:"},
+			Validate: func(ans interface{}) error {
+				answer := strings.TrimSpace(ans.(string))
+				if len(answer) == 0 {
+					return errors.NewS("Value is required.")
+				}
+				return nil
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				return strings.TrimSpace(ans.(string))
+			},
+		},
+		{
+			Name:   "LoggingFormat",
+			Prompt: &survey.Input{Message: "Logging Format:", Default: "rfc5424"},
+			Validate: func(ans interface{}) error {
+				answer := strings.TrimSpace(ans.(string))
+				if len(answer) == 0 {
+					return errors.NewS("Value is required.")
+				}
+				return nil
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				return strings.TrimSpace(ans.(string))
+			},
+		},
+		{
+			Name:   "AuthMethod",
+			Prompt: &survey.Input{Message: "Authentication Method:", Default: "token"},
+			Validate: func(ans interface{}) error {
+				answer := strings.TrimSpace(ans.(string))
+				if len(answer) == 0 {
+					return errors.NewS("Value is required.")
+				}
+				return nil
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				return strings.TrimSpace(ans.(string))
+			},
+		},
+		{
+			Name:   "Auth",
+			Prompt: &survey.Password{Message: "Authentication:"},
+			Validate: func(ans interface{}) error {
+				answer := strings.TrimSpace(ans.(string))
+				if len(answer) == 0 {
+					return errors.NewS("Value is required.")
+				}
+				return nil
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				return strings.TrimSpace(ans.(string))
+			},
+		},
+		{
+			Name:   "SendToEngine",
+			Prompt: &survey.Confirm{Message: "Route Through DSV Engine:", Default: false},
+		},
+	}
+
+	answers := siemUpdateRequest{}
+	survErr := survey.Ask(qs, &answers)
+	if survErr != nil {
+		vcli.Out().WriteResponse(nil, errors.New(survErr))
+		return utils.GetExecStatus(survErr)
+	}
+
+	if answers.SendToEngine {
+		poolPrompt := &survey.Input{Message: "Engine Pool:"}
+		poolValidation := func(ans interface{}) error {
+			answer := strings.TrimSpace(ans.(string))
+			if len(answer) == 0 {
+				return errors.NewS("Value is required.")
+			}
+			return nil
 		}
-	} else {
-		params["sendToEngine"] = false
-		params["pool"] = ""
+		survErr := survey.AskOne(poolPrompt, &answers.Pool, survey.WithValidator(poolValidation))
+		if survErr != nil {
+			vcli.Out().WriteResponse(nil, errors.New(survErr))
+			return utils.GetExecStatus(survErr)
+		}
 	}
 
+	data, apiErr := siemUpdate(vcli, name, &answers)
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
+}
+
+func handleSiemRead(vcli vaultcli.CLI, args []string) int {
+	name := viper.GetString(cst.Path)
+	if name == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		name = args[0]
+	}
+	if name == "" {
+		vcli.Out().FailF("error: must specify %s", cst.Path)
+		return 1
+	}
+	data, apiErr := siemRead(vcli, name)
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
+}
+
+func handleSiemDelete(vcli vaultcli.CLI, args []string) int {
+	name := viper.GetString(cst.Path)
+	if name == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		name = args[0]
+	}
+	if name == "" {
+		vcli.Out().FailF("error: must specify %s", cst.Path)
+		return 1
+	}
+	data, apiErr := siemDelete(vcli, name)
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
+}
+
+// API callers:
+
+type siemCreateRequest struct {
+	SIEMType      string `json:"siemType"`
+	Name          string `json:"name"`
+	Host          string `json:"host"`
+	Port          int    `json:"port"`
+	Protocol      string `json:"protocol"`
+	LoggingFormat string `json:"loggingFormat"`
+	AuthMethod    string `json:"authMethod"`
+	Auth          string `json:"auth"`
+	SendToEngine  bool   `json:"sendToEngine"`
+	Pool          string `json:"pool"`
+}
+
+func siemCreate(vcli vaultcli.CLI, body *siemCreateRequest) ([]byte, *errors.ApiError) {
 	basePath := strings.Join([]string{cst.Config, cst.NounSiem}, "/")
 	uri := paths.CreateURI(basePath, nil)
-	data, apiError = s.request.DoRequest(http.MethodPost, uri, params)
-	s.outClient.WriteResponse(data, apiError)
-	return utils.GetExecStatus(apiError)
+	return vcli.HTTPClient().DoRequest(http.MethodPost, uri, body)
 }
 
-func (s siem) handleUpdate(args []string) int {
-	var apiError *apperrors.ApiError
-	var data []byte
-	if s.outClient == nil {
-		s.outClient = format.NewDefaultOutClient()
-	}
-	name := viper.GetString(cst.Path)
-	if name == "" && len(args) > 0 {
-		name = args[0]
-	}
-	if name == "" {
-		s.outClient.FailF("error: must specify %s", cst.Path)
-		return 1
-	}
-
-	// Check if an endpoint with a given name exists.
-	if code := s.handleRead(args); code != 0 {
-		return 1
-	}
-
-	ui := &PasswordUi{
-		cli.BasicUi{
-			Writer:      os.Stdout,
-			Reader:      os.Stdin,
-			ErrorWriter: os.Stderr,
-		},
-	}
-
-	params := make(map[string]interface{})
-
-	if resp, err := prompt.AskDefault(
-		ui, "Type of SIEM endpoint", "syslog"); err != nil {
-		ui.Error(err.Error())
-		return 1
-	} else {
-		params["siemType"] = resp
-	}
-
-	if resp, err := prompt.Ask(ui, "Host:"); err != nil {
-		ui.Error(err.Error())
-		return 1
-	} else {
-		params["host"] = resp
-	}
-
-	if resp, err := prompt.Ask(ui, "Port:"); err != nil {
-		ui.Error(err.Error())
-		return 1
-	} else {
-		if port, err := strconv.Atoi(resp); err != nil {
-			ui.Error("Error: port must be a number.")
-			return 1
-		} else {
-			params["port"] = port
-		}
-	}
-
-	if resp, err := prompt.Ask(ui, "Protocol:"); err != nil {
-		ui.Error(err.Error())
-		return 1
-	} else {
-		params["protocol"] = resp
-	}
-
-	if resp, err := prompt.AskDefault(ui, "Logging Format", "rfc5424"); err != nil {
-		ui.Error(err.Error())
-		return 1
-	} else {
-		params["loggingFormat"] = resp
-	}
-
-	if resp, err := prompt.AskDefault(ui, "Authentication Method", "token"); err != nil {
-		ui.Error(err.Error())
-		return 1
-	} else {
-		params["authMethod"] = resp
-	}
-	if resp, err := prompt.AskSecureConfirm(ui, "Authentication:"); err != nil {
-		ui.Error(err.Error())
-		return 1
-	} else {
-		params["auth"] = resp
-	}
-
-	yes, err := prompt.YesNo(ui, "Route Through DSV Engine", false)
-	if err != nil {
-		ui.Error(err.Error())
-		return 1
-	}
-
-	if yes {
-		params["sendToEngine"] = true
-		if resp, err := prompt.Ask(ui, "Engine Pool:"); err != nil {
-			ui.Error(err.Error())
-			return 1
-		} else {
-			params["pool"] = resp
-		}
-	} else {
-		params["sendToEngine"] = false
-		params["pool"] = ""
-	}
-
-	basePath := strings.Join([]string{cst.Config, cst.NounSiem}, "/")
-	uri := paths.CreateResourceURI(basePath, name, "", true, nil, false)
-	data, apiError = s.request.DoRequest(http.MethodPut, uri, params)
-	s.outClient.WriteResponse(data, apiError)
-	return utils.GetExecStatus(apiError)
+type siemUpdateRequest struct {
+	SIEMType      string `json:"siemType"`
+	Host          string `json:"host"`
+	Port          int    `json:"port"`
+	Protocol      string `json:"protocol"`
+	LoggingFormat string `json:"loggingFormat"`
+	AuthMethod    string `json:"authMethod"`
+	Auth          string `json:"auth"`
+	SendToEngine  bool   `json:"sendToEngine"`
+	Pool          string `json:"pool"`
 }
 
-func (s siem) handleRead(args []string) int {
-	var apiError *apperrors.ApiError
-	var data []byte
-	if s.outClient == nil {
-		s.outClient = format.NewDefaultOutClient()
-	}
-	name := viper.GetString(cst.Path)
-	if name == "" && len(args) > 0 {
-		name = args[0]
-	}
-	if name == "" {
-		s.outClient.FailF("error: must specify %s", cst.Path)
-		return 1
-	}
+func siemUpdate(vcli vaultcli.CLI, name string, body *siemUpdateRequest) ([]byte, *errors.ApiError) {
 	basePath := strings.Join([]string{cst.Config, cst.NounSiem}, "/")
-	uri := paths.CreateResourceURI(basePath, name, "", true, nil, false)
-	data, apiError = s.request.DoRequest(http.MethodGet, uri, nil)
-	s.outClient.WriteResponse(data, apiError)
-	return utils.GetExecStatus(apiError)
+	uri := paths.CreateResourceURI(basePath, name, "", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodPut, uri, body)
 }
 
-func (s siem) handleDelete(args []string) int {
-	var apiError *apperrors.ApiError
-	var data []byte
-	if s.outClient == nil {
-		s.outClient = format.NewDefaultOutClient()
-	}
-	name := viper.GetString(cst.Path)
-	if name == "" && len(args) > 0 {
-		name = args[0]
-	}
-	if name == "" {
-		s.outClient.FailF("error: must specify %s", cst.Path)
-		return 1
-	}
+func siemRead(vcli vaultcli.CLI, name string) ([]byte, *errors.ApiError) {
 	basePath := strings.Join([]string{cst.Config, cst.NounSiem}, "/")
-	uri := paths.CreateResourceURI(basePath, name, "", true, nil, false)
-	data, apiError = s.request.DoRequest(http.MethodDelete, uri, nil)
-	s.outClient.WriteResponse(data, apiError)
-	return utils.GetExecStatus(apiError)
+	uri := paths.CreateResourceURI(basePath, name, "", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
+}
+
+func siemDelete(vcli vaultcli.CLI, name string) ([]byte, *errors.ApiError) {
+	basePath := strings.Join([]string{cst.Config, cst.NounSiem}, "/")
+	uri := paths.CreateResourceURI(basePath, name, "", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodDelete, uri, nil)
 }

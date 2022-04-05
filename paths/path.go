@@ -2,7 +2,6 @@ package paths
 
 import (
 	"fmt"
-	"log"
 	"net/url"
 	"strings"
 	cst "thy/constants"
@@ -11,20 +10,14 @@ import (
 	"github.com/spf13/viper"
 )
 
-type SecretType string
-
 func GetURIPathFromInternalPath(internalPath string) string {
-	path := strings.Replace(internalPath, ":", "/", -1)
-	if strings.Index(path, "/") == 0 {
-		path = path[1:]
-	}
-	if strings.Index(path, cst.PrefixEntity) == 0 {
-		path = path[len(cst.PrefixEntity):]
-	}
+	path := strings.ReplaceAll(internalPath, ":", "/")
+	path = strings.TrimPrefix(path, "/")
+	path = strings.TrimPrefix(path, cst.PrefixEntity)
 	return path
 }
 
-func GetResourceURIFromResourcePath(resourceType string, path string, id string, suffix string, queryTerms map[string]string, pluralize bool) (string, *errors.ApiError) {
+func GetResourceURIFromResourcePath(resourceType string, path string, id string, suffix string, queryTerms map[string]string) (string, *errors.ApiError) {
 	if id != "" && path != "" {
 		return "", errors.NewS("error: only one of --id and --path (or [path]) may be set")
 	}
@@ -38,22 +31,17 @@ func GetResourceURIFromResourcePath(resourceType string, path string, id string,
 	if id != "" {
 		queryTerms["id"] = id
 	}
-	requestURI := CreateResourceURI(resourceType, resourcePath, suffix, true, queryTerms, pluralize)
+	requestURI := CreateResourceURI(resourceType, resourcePath, suffix, true, queryTerms)
 	return requestURI, nil
 }
 
-func CreateResourceURI(resourceType string, path string, suffix string, trailingSlash bool, queryTerms map[string]string, pluralize bool) string {
+func CreateResourceURI(resourceType string, path string, suffix string, trailingSlash bool, queryTerms map[string]string) string {
 	var completePath string
-	plural := "s"
-	if !pluralize {
-		plural = ""
-	}
 	if trailingSlash {
-		completePath = fmt.Sprintf("%s%s/%s%s", resourceType, plural, path, suffix)
+		completePath = fmt.Sprintf("%s/%s%s", resourceType, path, suffix)
 	} else {
-		completePath = fmt.Sprintf("%s%s%s%s", resourceType, plural, path, suffix)
+		completePath = fmt.Sprintf("%s%s%s", resourceType, path, suffix)
 	}
-
 	return CreateURI(completePath, queryTerms)
 }
 
@@ -81,16 +69,7 @@ func CreateURI(path string, queryTerms map[string]string) string {
 			uri = uri + fmt.Sprintf("%s=%s", k, val)
 		}
 	}
-	log.Printf("Request URI is %s\n", uri)
 	return uri
-}
-
-func GetPath(args []string) string {
-	path := viper.GetString(cst.Path)
-	if len(args) > 0 {
-		path = args[0]
-	}
-	return path
 }
 
 // ProcessResource converts a slash-delimited resource path into a colon-delimited resource path.
@@ -129,8 +108,11 @@ func GetFilenameFromArgs(args []string) string {
 	var fileName string
 	for i := range args {
 		if args[i] == "--data" || args[i] == "-d" {
+			if i+1 == len(args) {
+				break
+			}
 			value := args[i+1]
-			if strings.HasPrefix(value, "@") {
+			if strings.HasPrefix(value, cst.CmdFilePrefix) {
 				fileName = value[1:]
 			}
 			break

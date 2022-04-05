@@ -3,38 +3,35 @@ package cmd
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
 	cst "thy/constants"
 	"thy/errors"
-	"thy/format"
-	"thy/internal/prompt"
+	"thy/internal/predictor"
 	"thy/paths"
-	preds "thy/predictors"
-	"thy/requests"
 	"thy/utils"
+	"thy/vaultcli"
 
-	"github.com/posener/complete"
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/mitchellh/cli"
 	"github.com/spf13/viper"
-	"github.com/thycotic-rd/cli"
 )
-
-type client struct {
-	request   requests.Client
-	outClient format.OutClient
-}
-
-func GetNoDataOpClientWrappers(targetEntity string) cli.PredictorWrappers {
-	return cli.PredictorWrappers{
-		preds.LongFlag(cst.ClientID): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ClientID, Usage: fmt.Sprintf("ID of the %s ", targetEntity)}), false},
-	}
-}
 
 func GetClientCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounClient},
+		Path:         []string{cst.NounClient},
+		SynopsisText: "client (<client-id> | --client-id)",
+		HelpText: fmt.Sprintf(`Execute an action on a %[1]s in %[2]s
+
+Usage:
+   • %[1]s %[3]s
+   • %[1]s --client-id %[3]s
+		`, cst.NounClient, cst.ProductName, cst.ExampleClientID),
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.ClientID, Usage: fmt.Sprintf("ID of the %s ", cst.NounClient)},
+		},
+		MinNumberArgs: 1,
 		RunFunc: func(args []string) int {
 			name := viper.GetString(cst.DataName)
 			if name == "" && len(args) > 0 {
@@ -43,24 +40,14 @@ func GetClientCmd() (cli.Command, error) {
 			if name == "" {
 				return cli.RunResultHelp
 			}
-			return client{requests.NewHttpClient(), nil}.handleClientReadCmd(args)
+			return handleClientReadCmd(vaultcli.New(), args)
 		},
-		SynopsisText: "client (<client-id> | --client-id)",
-		HelpText: fmt.Sprintf(`Execute an action on a %[1]s in %[2]s
-
-Usage:
-   • %[1]s %[3]s
-   • %[1]s --client-id %[3]s
-		`, cst.NounClient, cst.ProductName, cst.ExampleClientID),
-		FlagsPredictor: GetNoDataOpClientWrappers(cst.NounClient),
-		MinNumberArgs:  1,
 	})
 }
 
 func GetClientReadCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounClient, cst.Read},
-		RunFunc:      client{requests.NewHttpClient(), nil}.handleClientReadCmd,
 		SynopsisText: fmt.Sprintf("%s %s (<client-id> | --client-id)", cst.NounClient, cst.Read),
 		HelpText: fmt.Sprintf(`Execute an action on a %[1]s in %[2]s
 
@@ -68,15 +55,19 @@ Usage:
    • %[1]s %[4]s %[3]s
    • %[1]s %[4]s --client-id %[3]s
 		`, cst.NounClient, cst.ProductName, cst.ExampleClientID, cst.Read),
-		FlagsPredictor: GetNoDataOpClientWrappers(cst.NounClient),
-		MinNumberArgs:  1,
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.ClientID, Usage: fmt.Sprintf("ID of the %s ", cst.NounClient)},
+		},
+		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			return handleClientReadCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetClientDeleteCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounClient, cst.Delete},
-		RunFunc:      client{requests.NewHttpClient(), nil}.handleClientDeleteCmd,
 		SynopsisText: fmt.Sprintf("%s %s (<client-id> | --client-id)", cst.NounClient, cst.Delete),
 		HelpText: fmt.Sprintf(`Delete a %[1]s from %[2]s
 
@@ -84,33 +75,39 @@ Usage:
    • %[1]s %[4]s %[3]s
    • %[1]s %[4]s --client-id %[3]s --force
 		`, cst.NounClient, cst.ProductName, cst.ExampleClientID, cst.Delete),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.ClientID): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ClientID, Usage: fmt.Sprintf("ID of the %s ", cst.NounClient)}), false},
-			preds.LongFlag(cst.Force):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Force, Shorthand: "", Usage: fmt.Sprintf("Immediately delete %s", cst.NounClient), Global: false, ValueType: "bool"}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.ClientID, Usage: fmt.Sprintf("ID of the %s ", cst.NounClient)},
+			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s", cst.NounClient), ValueType: "bool"},
 		},
 		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			return handleClientDeleteCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetClientRestoreCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounClient, cst.Restore},
-		RunFunc:      client{requests.NewHttpClient(), nil}.handleClientRestoreCmd,
 		SynopsisText: fmt.Sprintf("%s %s (<client-id> | --client-id)", cst.NounClient, cst.Restore),
 		HelpText: fmt.Sprintf(`Restore a deleted %[1]s in %[2]s
 
 Usage:
    • %[1]s %[4]s %[3]s
 		`, cst.NounClient, cst.ProductName, cst.ExampleClientID, cst.Restore),
-		FlagsPredictor: GetNoDataOpClientWrappers(cst.NounClient),
-		MinNumberArgs:  1,
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.ClientID, Usage: fmt.Sprintf("ID of the %s ", cst.NounClient)},
+		},
+		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			return handleClientRestoreCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetClientCreateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounClient, cst.Create},
-		RunFunc:      client{requests.NewHttpClient(), nil}.handleClientUpsertCmd,
 		SynopsisText: fmt.Sprintf("%s %s (<role> | --role) |(<uses> | --uses)|(<desc> | --desc)|(<ttl> | --ttl)| (<url> | --url) | ( <urlTTL> | --urlTTL)", cst.NounClient, cst.Create),
 		HelpText: fmt.Sprintf(`%[4]s a %[1]s in %[2]s
 
@@ -118,22 +115,26 @@ Usage:
    • %[1]s %[4]s %[3]s
    • %[1]s %[4]s --role %[3]s
 		`, cst.NounClient, cst.ProductName, cst.ExampleRoleName, cst.Create),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.NounRole):            cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounRole, Usage: fmt.Sprintf("Name of the %s ", cst.NounRole)}), false},
-			preds.LongFlag(cst.NounBootstrapUrl):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounBootstrapUrl, Usage: "Whether to generate a one-time use URL instead of secret (optional)", ValueType: "bool"}), false},
-			preds.LongFlag(cst.NounBootstrapUrlTTL): cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.NounBootstrapUrlTTL, Usage: "TTL for the generated URL (optional)"}), false},
-			preds.LongFlag(cst.NounClientUses):      cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.NounClientUses, Usage: "The number of times the client credential can be read. If set to 0, it can be used infinitely. Default is 0 (optional)"}), false},
-			preds.LongFlag(cst.NounClientDesc):      cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.NounClientDesc, Usage: "Client credential description (optional)"}), false},
-			preds.LongFlag(cst.NounClientTTL):       cli.PredictorWrapper{complete.PredictNothing, preds.NewFlagValue(preds.Params{Name: cst.NounClientTTL, Usage: "How long until the client credential expires. If set to 0, it can be used indefinitely. Default is 0 (optional)"}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.NounRole, Usage: fmt.Sprintf("Name of the %s ", cst.NounRole)},
+			{Name: cst.NounBootstrapUrl, Usage: "Whether to generate a one-time use URL instead of secret (optional)", ValueType: "bool"},
+			{Name: cst.NounBootstrapUrlTTL, Usage: "TTL for the generated URL (optional)"},
+			{Name: cst.NounClientUses, Usage: "The number of times the client credential can be read. If set to 0, it can be used infinitely. Default is 0 (optional)"},
+			{Name: cst.NounClientDesc, Usage: "Client credential description (optional)"},
+			{Name: cst.NounClientTTL, Usage: "How long until the client credential expires. If set to 0, it can be used indefinitely. Default is 0 (optional)"},
 		},
-		MinNumberArgs: 0,
+		RunFunc: func(args []string) int {
+			if OnlyGlobalArgs(args) {
+				return handleClientCreateWizard(vaultcli.New(), args)
+			}
+			return handleClientCreateCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetClientSearchCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounClient, cst.Search},
-		RunFunc:      client{requests.NewHttpClient(), nil}.handleClientSearchCmd,
 		SynopsisText: fmt.Sprintf("%s (<role> | --role)", cst.Search),
 		HelpText: fmt.Sprintf(`Search for %[1]ss attached to a given %[5]s in %[2]s
 
@@ -141,119 +142,90 @@ Usage:
    • %[1]s %[4]s %[3]s
    • %[1]s %[4]s --role %[3]s
 		`, cst.NounClient, cst.ProductName, cst.ExampleRoleName, cst.Search, cst.NounRole),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.NounRole): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.NounRole, Usage: "Role that has attached clients (required)"}), false},
-			preds.LongFlag(cst.Limit):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Limit, Shorthand: "l", Usage: fmt.Sprint("Maximum number of results per cursor (optional)")}), false},
-			preds.LongFlag(cst.Cursor):   cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: cst.CursorHelpMessage}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.NounRole, Usage: "Role that has attached clients (required)"},
+			{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
+			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 		},
 		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			return handleClientSearchCmd(vaultcli.New(), args)
+		},
 	})
 }
 
-func (c client) handleClientReadCmd(args []string) int {
-	var err *errors.ApiError
-	var data []byte
+func handleClientReadCmd(vcli vaultcli.CLI, args []string) int {
 	clientID := viper.GetString(cst.ClientID)
 	if clientID == "" && len(args) > 0 {
 		clientID = args[0]
 	}
 	if clientID == "" {
-		err = errors.NewS("error: must specify " + cst.ClientID)
-	} else {
-		uri := paths.CreateResourceURI(cst.NounClient, clientID, "", true, nil, true)
-		data, err = c.request.DoRequest(http.MethodGet, uri, nil)
+		err := errors.NewS("error: must specify " + cst.ClientID)
+		vcli.Out().WriteResponse(nil, err)
+		return utils.GetExecStatus(err)
 	}
 
-	outClient := c.outClient
-	if outClient == nil {
-		outClient = format.NewDefaultOutClient()
-	}
-	outClient.WriteResponse(data, err)
-	return utils.GetExecStatus(err)
+	data, apiErr := clientRead(vcli, clientID)
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
 }
 
-func (c client) handleClientDeleteCmd(args []string) int {
-	var err *errors.ApiError
-	var data []byte
+func handleClientDeleteCmd(vcli vaultcli.CLI, args []string) int {
 	force := viper.GetBool(cst.Force)
 	clientID := viper.GetString(cst.ClientID)
 	if clientID == "" && len(args) > 0 {
 		clientID = args[0]
 	}
 	if clientID == "" {
-		err = errors.NewS("error: must specify " + cst.ClientID)
-	} else {
-		query := map[string]string{"force": strconv.FormatBool(force)}
-		uri := paths.CreateResourceURI(cst.NounClient, clientID, "", true, query, true)
-		data, err = c.request.DoRequest(http.MethodDelete, uri, nil)
-	}
-	if c.outClient == nil {
-		c.outClient = format.NewDefaultOutClient()
+		err := errors.NewS("error: must specify " + cst.ClientID)
+		vcli.Out().WriteResponse(nil, err)
+		return utils.GetExecStatus(err)
 	}
 
-	c.outClient.WriteResponse(data, err)
-	return utils.GetExecStatus(err)
+	data, apiErr := clientDelete(vcli, clientID, force)
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
 }
 
-func (c client) handleClientRestoreCmd(args []string) int {
-	var err *errors.ApiError
-	var data []byte
-	if c.outClient == nil {
-		c.outClient = format.NewDefaultOutClient()
-	}
+func handleClientRestoreCmd(vcli vaultcli.CLI, args []string) int {
 	clientID := viper.GetString(cst.ClientID)
 	if clientID == "" && len(args) > 0 {
 		clientID = args[0]
 	}
 	if clientID == "" {
-		err = errors.NewS("error: must specify " + cst.ClientID)
-	} else {
-		uri := paths.CreateResourceURI(cst.NounClient, clientID, "/restore", true, nil, true)
-		data, err = c.request.DoRequest(http.MethodPut, uri, nil)
+		err := errors.NewS("error: must specify " + cst.ClientID)
+		vcli.Out().WriteResponse(nil, err)
+		return utils.GetExecStatus(err)
 	}
-	c.outClient.WriteResponse(data, err)
-	return utils.GetExecStatus(err)
+
+	data, apiErr := clientRestore(vcli, clientID)
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
 }
 
-func (c client) handleClientUpsertCmd(args []string) int {
-	if OnlyGlobalArgs(args) {
-		return c.handleClientCreateWizard(args)
-	}
-
-	if c.outClient == nil {
-		c.outClient = format.NewDefaultOutClient()
-	}
-	var err *errors.ApiError
-	var data []byte
+func handleClientCreateCmd(vcli vaultcli.CLI, args []string) int {
 	roleName := viper.GetString(cst.NounRole)
-	url := viper.GetBool(cst.NounBootstrapUrl)
-	urlTTL := viper.GetInt64(cst.NounBootstrapUrlTTL)
-	ttl := viper.GetInt64(cst.NounClientTTL)
-	desc := viper.GetString(cst.NounClientDesc)
-	uses := viper.GetInt(cst.NounClientUses)
 	if roleName == "" && len(args) > 0 {
 		roleName = args[0]
 	}
 	if roleName == "" {
 		return cli.RunResultHelp
 	}
-	client := Client{
+	client := &clientCreateRequest{
 		Role:         roleName,
-		UrlRequested: url,
-		UrlTTL:       urlTTL,
-		Uses:         uses,
-		Description:  desc,
-		TTL:          ttl,
+		UrlRequested: viper.GetBool(cst.NounBootstrapUrl),
+		UrlTTL:       viper.GetInt64(cst.NounBootstrapUrlTTL),
+		Uses:         viper.GetInt(cst.NounClientUses),
+		Description:  viper.GetString(cst.NounClientDesc),
+		TTL:          viper.GetInt64(cst.NounClientTTL),
 	}
 
-	data, err = c.submitClient(client)
-	c.outClient.WriteResponse(data, err)
-	return utils.GetExecStatus(err)
+	data, apiErr := clientCreate(vcli, client)
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
 }
 
-func (c client) handleClientSearchCmd(args []string) int {
-	var err *errors.ApiError
-	var data []byte
+func handleClientSearchCmd(vcli vaultcli.CLI, args []string) int {
 	role := viper.GetString(cst.NounRole)
 	limit := viper.GetString(cst.Limit)
 	cursor := viper.GetString(cst.Cursor)
@@ -261,118 +233,167 @@ func (c client) handleClientSearchCmd(args []string) int {
 		role = args[0]
 	}
 	if role == "" {
-		err = errors.NewS("error: must specify " + cst.NounRole)
-	} else {
-		queryParams := map[string]string{
-			cst.NounRole: role,
-			cst.Limit:    limit,
-			cst.Cursor:   cursor,
-		}
-		uri := paths.CreateResourceURI(cst.NounClient, "", "", false, queryParams, true)
-		data, err = c.request.DoRequest(http.MethodGet, uri, nil)
+		err := errors.NewS("error: must specify " + cst.NounRole)
+		vcli.Out().WriteResponse(nil, err)
+		return utils.GetExecStatus(err)
 	}
 
-	outClient := c.outClient
-	if outClient == nil {
-		outClient = format.NewDefaultOutClient()
-	}
-	outClient.WriteResponse(data, err)
-	return utils.GetExecStatus(err)
+	data, apiErr := clientSearch(vcli, &clientSearchParams{role: role, limit: limit, cursor: cursor})
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
 }
 
-func (c client) handleClientCreateWizard(args []string) int {
-	ui := &cli.BasicUi{
-		Writer:      os.Stdout,
-		Reader:      os.Stdin,
-		ErrorWriter: os.Stderr,
-	}
-	if c.outClient == nil {
-		c.outClient = format.NewDefaultOutClient()
+// Wizards:
+
+func handleClientCreateWizard(vcli vaultcli.CLI, args []string) int {
+	qs := []*survey.Question{
+		{
+			Name:   "Role",
+			Prompt: &survey.Input{Message: "Role name:"},
+			Validate: func(ans interface{}) error {
+				answer := strings.TrimSpace(ans.(string))
+				_, apiError := roleRead(vcli, answer)
+				if apiError != nil &&
+					apiError.HttpResponse() != nil &&
+					apiError.HttpResponse().StatusCode == http.StatusNotFound {
+					return errors.NewS("A role with this name does not exist.")
+				}
+				return nil
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				return strings.TrimSpace(ans.(string))
+			},
+		},
+		{
+			Name:   "Description",
+			Prompt: &survey.Input{Message: "Client description:"},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				return strings.TrimSpace(ans.(string))
+			},
+		},
+		{
+			Name:   "TTL",
+			Prompt: &survey.Input{Message: "Client TTL (in seconds):", Default: "0"},
+			Validate: func(ans interface{}) error {
+				answer := strings.TrimSpace(ans.(string))
+				_, err := strconv.Atoi(answer)
+				if err != nil {
+					return errors.NewS("Please enter a valid integer.")
+				}
+				return nil
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				return strings.TrimSpace(ans.(string))
+			},
+		},
+		{
+			Name:   "UrlRequested",
+			Prompt: &survey.Confirm{Message: "Request Bootstrap URL?", Default: false},
+		},
 	}
 
-	var client Client
-
-	if resp, err := prompt.Ask(ui, "Role name:"); err != nil {
-		ui.Error(err.Error())
-		return 1
-	} else {
-		client.Role = resp
+	client := clientCreateRequest{}
+	survErr := survey.Ask(qs, &client)
+	if survErr != nil {
+		vcli.Out().WriteResponse(nil, errors.New(survErr))
+		return utils.GetExecStatus(survErr)
 	}
 
-	if resp, err := prompt.AskDefault(ui, "Client description", ""); err != nil {
-		ui.Error(err.Error())
-		return 1
-	} else {
-		client.Description = resp
-	}
-
-	if resp, err := prompt.AskDefault(ui, "Client TTL (in seconds):", "0"); err != nil {
-		ui.Error(err.Error())
-		return 1
-	} else {
-		clientTTL, err := strconv.Atoi(resp)
-		if err != nil {
-			ui.Error("Invalid input. Please enter a valid integer.")
-			return 1
+	if client.UrlRequested {
+		qs = []*survey.Question{
+			{
+				Name:   "UrlTTL",
+				Prompt: &survey.Input{Message: "Bootstrap URL TTL (in seconds):"},
+				Validate: func(ans interface{}) error {
+					answer := strings.TrimSpace(ans.(string))
+					_, err := strconv.Atoi(answer)
+					if err != nil {
+						return errors.NewS("Please enter a valid integer.")
+					}
+					return nil
+				},
+				Transform: func(ans interface{}) (newAns interface{}) {
+					return strings.TrimSpace(ans.(string))
+				},
+			},
+			{
+				Name:   "Uses",
+				Prompt: &survey.Input{Message: "Number of client uses:", Default: "0"},
+				Validate: func(ans interface{}) error {
+					answer := strings.TrimSpace(ans.(string))
+					_, err := strconv.Atoi(answer)
+					if err != nil {
+						return errors.NewS("Please enter a valid integer.")
+					}
+					return nil
+				},
+				Transform: func(ans interface{}) (newAns interface{}) {
+					return strings.TrimSpace(ans.(string))
+				},
+			},
 		}
-		client.TTL = int64(clientTTL)
-	}
 
-	if yes, err := prompt.YesNo(ui, "Request Bootstrap URL?", false); err != nil {
-		ui.Error(err.Error())
-		return 1
-	} else if yes {
-		client.UrlRequested = true
-
-		if resp, err := prompt.Ask(ui, "Bootstrap URL TTL (in seconds):"); err != nil {
-			ui.Error(err.Error())
-			return 1
-		} else {
-			urlTTL, err := strconv.Atoi(resp)
-			if err != nil {
-				ui.Error("Invalid input. Please enter a valid integer.")
-				return 1
-			}
-			client.UrlTTL = int64(urlTTL)
-		}
-
-		if resp, err := prompt.AskDefault(ui, "Number of client uses:", "0"); err != nil {
-			ui.Error(err.Error())
-			return 1
-		} else {
-			uses, err := strconv.Atoi(resp)
-			if err != nil {
-				ui.Error("Invalid input. Please enter a valid integer.")
-				return 1
-			}
-			client.Uses = uses
+		survErr := survey.Ask(qs, &client)
+		if survErr != nil {
+			vcli.Out().WriteResponse(nil, errors.New(survErr))
+			return utils.GetExecStatus(survErr)
 		}
 	}
 
-	data, err := c.submitClient(client)
-	c.outClient.WriteResponse(data, err)
-	return utils.GetExecStatus(err)
+	data, apiErr := clientCreate(vcli, &client)
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
 }
 
-func (c client) submitClient(client Client) ([]byte, *errors.ApiError) {
-	reqMethod := strings.ToLower(viper.GetString(cst.LastCommandKey))
-	var uri string
-	if reqMethod == cst.Create {
-		reqMethod = http.MethodPost
-		uri = paths.CreateResourceURI(cst.NounClient, "", "", true, nil, true)
-	} else {
-		reqMethod = http.MethodPut
-		uri = paths.CreateResourceURI(cst.NounClient, viper.GetString(cst.ClientID), "", true, nil, true)
-	}
-	data, err := c.request.DoRequest(reqMethod, uri, &client)
-	return data, err
-}
+// API callers:
 
-type Client struct {
+type clientCreateRequest struct {
 	Role         string `json:"role"`
 	UrlRequested bool   `json:"url,omitempty"`
 	UrlTTL       int64  `json:"urlTTL,omitempty"`
 	TTL          int64  `json:"ttl,omitempty"`
 	Uses         int    `json:"usesLimit,omitempty"`
 	Description  string `json:"description,omitempty"`
+}
+
+func clientCreate(vcli vaultcli.CLI, client *clientCreateRequest) ([]byte, *errors.ApiError) {
+	uri := paths.CreateResourceURI(cst.NounClients, "", "", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodPost, uri, client)
+}
+
+func clientRead(vcli vaultcli.CLI, clientID string) ([]byte, *errors.ApiError) {
+	uri := paths.CreateResourceURI(cst.NounClients, clientID, "", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
+}
+
+func clientDelete(vcli vaultcli.CLI, clientID string, force bool) ([]byte, *errors.ApiError) {
+	query := map[string]string{"force": strconv.FormatBool(force)}
+	uri := paths.CreateResourceURI(cst.NounClients, clientID, "", true, query)
+	return vcli.HTTPClient().DoRequest(http.MethodDelete, uri, nil)
+}
+
+func clientRestore(vcli vaultcli.CLI, clientID string) ([]byte, *errors.ApiError) {
+	uri := paths.CreateResourceURI(cst.NounClients, clientID, "/restore", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodPut, uri, nil)
+}
+
+type clientSearchParams struct {
+	role   string
+	limit  string
+	cursor string
+}
+
+func clientSearch(vcli vaultcli.CLI, p *clientSearchParams) ([]byte, *errors.ApiError) {
+	queryParams := map[string]string{}
+	if p.role != "" {
+		queryParams[cst.NounRole] = p.role
+	}
+	if p.limit != "" {
+		queryParams[cst.Limit] = p.limit
+	}
+	if p.cursor != "" {
+		queryParams[cst.Cursor] = p.cursor
+	}
+	uri := paths.CreateResourceURI(cst.NounClients, "", "", false, queryParams)
+	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
 }

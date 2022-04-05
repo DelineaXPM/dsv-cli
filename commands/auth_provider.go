@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -10,36 +11,26 @@ import (
 
 	cst "thy/constants"
 	"thy/errors"
-	"thy/format"
-	"thy/internal/prompt"
+	"thy/internal/predictor"
 	"thy/paths"
-	preds "thy/predictors"
-	"thy/requests"
-	"thy/store"
 	"thy/utils"
+	"thy/vaultcli"
 
-	"github.com/mitchellh/mapstructure"
-	"github.com/posener/complete"
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/mitchellh/cli"
 	"github.com/spf13/viper"
-	"github.com/thycotic-rd/cli"
 )
-
-type AuthProvider struct {
-	request   requests.Client
-	outClient format.OutClient
-	edit      func([]byte, dataFunc, *errors.ApiError, bool) ([]byte, *errors.ApiError)
-}
-
-func GetNoDataOpAuthProviderWrappers() cli.PredictorWrappers {
-	return cli.PredictorWrappers{
-		preds.LongFlag(cst.DataName): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataName, Shorthand: "n", Usage: fmt.Sprintf("Target %s to an %s", cst.Path, cst.NounAuthProvider)}), false},
-		preds.LongFlag(cst.Version):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Version, Shorthand: "", Usage: "List the current and last (n) versions"}), false},
-	}
-}
 
 func GetAuthProviderCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounConfig, cst.NounAuthProvider},
+		Path:         []string{cst.NounConfig, cst.NounAuthProvider},
+		SynopsisText: "manage 3rd party authentication providers",
+		HelpText:     fmt.Sprintf("Execute an action on an %s from %s", cst.NounAuthProvider, cst.ProductName),
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.DataName, Shorthand: "n", Usage: fmt.Sprintf("Target %s to an %s", cst.Path, cst.NounAuthProvider)},
+			{Name: cst.Version, Usage: "List the current and last (n) versions"},
+		},
+		MinNumberArgs: 1,
 		RunFunc: func(args []string) int {
 			name := viper.GetString(cst.DataName)
 			if name == "" && len(args) > 0 {
@@ -48,23 +39,14 @@ func GetAuthProviderCmd() (cli.Command, error) {
 			if name == "" {
 				return cli.RunResultHelp
 			}
-			return AuthProvider{requests.NewHttpClient(), nil, nil}.handleAuthProviderReadCmd(args)
+			return handleAuthProviderReadCmd(vaultcli.New(), args)
 		},
-		SynopsisText:   "manage 3rd party authentication providers",
-		HelpText:       fmt.Sprintf("Execute an action on an %s from %s", cst.NounAuthProvider, cst.ProductName),
-		FlagsPredictor: GetNoDataOpAuthProviderWrappers(),
-		MinNumberArgs:  1,
 	})
 }
 
 func GetAuthProviderReadCmd() (cli.Command, error) {
-	forcePlain := viper.GetBool(cst.Plain)
-	if !forcePlain {
-		viper.Set(cst.Beautify, true)
-	}
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.Config, cst.NounAuthProvider, cst.Read},
-		RunFunc:      AuthProvider{request: requests.NewHttpClient(), outClient: nil}.handleAuthProviderReadCmd,
 		SynopsisText: fmt.Sprintf("%s %s %s (<name> | --name|-n)", cst.NounConfig, cst.NounAuthProvider, cst.Read),
 		HelpText: fmt.Sprintf(`Read a %[1]s
 
@@ -72,110 +54,129 @@ Usage:
    • %[1]s %[2]s %[4]s %[3]s
    • %[1]s %[2]s %[4]s --name %[3]s
 		`, cst.NounConfig, cst.NounAuthProvider, cst.ExampleAuthProviderName, cst.Read),
-		FlagsPredictor: GetNoDataOpAuthProviderWrappers(),
-		MinNumberArgs:  1,
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.DataName, Shorthand: "n", Usage: fmt.Sprintf("Target %s to an %s", cst.Path, cst.NounAuthProvider)},
+			{Name: cst.Version, Usage: "List the current and last (n) versions"},
+		},
+		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			return handleAuthProviderReadCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetAuthProviderDeleteCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.Config, cst.NounAuthProvider, cst.Delete},
-		RunFunc:      AuthProvider{request: requests.NewHttpClient(), outClient: nil}.handleAuthProviderDeleteCmd,
 		SynopsisText: fmt.Sprintf("%s %s %s (<name> | --name|-n)", cst.Config, cst.NounAuthProvider, cst.Delete),
 		HelpText: fmt.Sprintf(`Delete %[1]s
 
 Usage:
-  • %[1]s %[2]s %[3]s %[4]s --all
-  • %[1]s %[2]s %[3]s --name %[4]s --force
+   • %[1]s %[2]s %[3]s %[4]s --all
+   • %[1]s %[2]s %[3]s --name %[4]s --force
 		`, cst.NounConfig, cst.NounAuthProvider, cst.Delete, cst.ExampleAuthProviderName),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.DataName): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataName, Shorthand: "n", Usage: fmt.Sprintf("Target %s to an %s", cst.Path, cst.NounAuthProvider)}), false},
-			preds.LongFlag(cst.Force):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Force, Shorthand: "", Usage: fmt.Sprintf("Immediately delete %s", cst.NounAuthProvider), Global: false, ValueType: "bool"}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.DataName, Shorthand: "n", Usage: fmt.Sprintf("Target %s to an %s", cst.Path, cst.NounAuthProvider)},
+			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s", cst.NounAuthProvider), ValueType: "bool"},
 		},
 		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			return handleAuthProviderDeleteCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetAuthProviderRestoreCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.Config, cst.NounAuthProvider, cst.Restore},
-		RunFunc:      AuthProvider{request: requests.NewHttpClient(), outClient: nil}.handleAuthProviderRestoreCmd,
 		SynopsisText: fmt.Sprintf("%s %s %s (<name> | --name|-n)", cst.Config, cst.NounAuthProvider, cst.Restore),
 		HelpText: fmt.Sprintf(`Restore %[1]s
 
 Usage:
-  • %[1]s %[2]s %[3]s %[4]s --all
-  • %[1]s %[2]s %[3]s --name %[4]s
+   • %[1]s %[2]s %[3]s %[4]s
+   • %[1]s %[2]s %[3]s --name %[4]s
 		`, cst.NounConfig, cst.NounAuthProvider, cst.Restore, cst.ExampleAuthProviderName),
-		FlagsPredictor: GetNoDataOpAuthProviderWrappers(),
-		MinNumberArgs:  1,
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.DataName, Shorthand: "n", Usage: fmt.Sprintf("Target %s to an %s", cst.Path, cst.NounAuthProvider)},
+		},
+		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			return handleAuthProviderRestoreCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetAuthProviderCreateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounAuthProvider, cst.Create},
-		RunFunc:      AuthProvider{request: requests.NewHttpClient(), outClient: nil}.handleAuthProviderUpsert,
 		SynopsisText: fmt.Sprintf("%s %s %s (<name> | --name|-n) (--type) ((--data|-d) | --aws-account-id | --azure-tenant-id | --gcp-project-id | --root-ca-path | --assumed-role)", cst.NounConfig, cst.NounAuthProvider, cst.Create),
 		HelpText: fmt.Sprintf(`Add %[1]s provider
 
 Usage:
-  • %[1]s %[2]s %[4]s %[3]s --aws-account-id 11652944433808  --type aws
-  • %[1]s %[2]s %[4]s --name azure-prod --azure-tenant-id 164543 --type azure
-  • %[1]s %[2]s %[4]s --name GCP-prod --gcp-project-id test-proj --type gcp
-  • %[1]s %[2]s %[4]s --data %[5]s
+   • %[1]s %[2]s %[4]s %[3]s --aws-account-id 11652944433808  --type aws
+   • %[1]s %[2]s %[4]s --name azure-prod --azure-tenant-id 164543 --type azure
+   • %[1]s %[2]s %[4]s --name GCP-prod --gcp-project-id test-proj --type gcp
+   • %[1]s %[2]s %[4]s --data %[5]s
 
  %[6]s
 		`, cst.NounConfig, cst.NounAuthProvider, cst.ExampleAuthProviderName, cst.Create, cst.ExampleDataPath, cst.GCPNote),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.Data):          cli.PredictorWrapper{preds.NewPrefixFilePredictor("*"), preds.NewFlagValue(preds.Params{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in an auth provider. Prefix with '@' to denote filepath", strings.Title(cst.Data))}), false},
-			preds.LongFlag(cst.DataType):      cli.PredictorWrapper{preds.AuthTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.DataType, Usage: fmt.Sprintf("Auth provider type (azure,aws,gcp,thycoticone)")}), false},
-			preds.LongFlag(cst.DataName):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataName, Shorthand: "n", Usage: fmt.Sprintf("Auth provider friendly name")}), false},
-			preds.LongFlag(cst.DataTenantID):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataTenantID, Usage: fmt.Sprintf("Azure Tenant ID")}), false},
-			preds.LongFlag(cst.DataAccountID): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataAccountID, Usage: fmt.Sprintf("AWS Account ID")}), false}, preds.LongFlag(cst.DataAccountID): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataAccountID, Usage: fmt.Sprintf("AWS Account ID")}), false},
-			preds.LongFlag(cst.DataProjectID):           cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataProjectID, Usage: fmt.Sprintf("GCP Project ID")}), false},
-			preds.LongFlag(cst.ThyOneAuthClientBaseUri): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientBaseUri, Usage: fmt.Sprintf("Thycotic One base URI")}), false},
-			preds.LongFlag(cst.ThyOneAuthClientID):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientID, Usage: fmt.Sprintf("Thycotic One client ID")}), false},
-			preds.LongFlag(cst.ThyOneAuthClientSecret):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientSecret, Usage: fmt.Sprintf("Thycotic One client secret")}), false},
-			preds.LongFlag(cst.SendWelcomeEmail):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.SendWelcomeEmail, Usage: fmt.Sprintf("Whether to send welcome email for thycotic-one users linked to the auth provider (true or false)")}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in an auth provider. Prefix with '@' to denote filepath", strings.Title(cst.Data)), Predictor: predictor.NewPrefixFilePredictor("*")},
+			{Name: cst.DataType, Usage: "Auth provider type (azure,aws,gcp,thycoticone)", Predictor: predictor.AuthTypePredictor{}},
+			{Name: cst.DataName, Shorthand: "n", Usage: "Auth provider friendly name"},
+			{Name: cst.DataTenantID, Usage: "Azure Tenant ID"},
+			{Name: cst.DataAccountID, Usage: "AWS Account ID"},
+			{Name: cst.DataProjectID, Usage: "GCP Project ID"},
+			{Name: cst.ThyOneAuthClientBaseUri, Usage: "Thycotic One base URI"},
+			{Name: cst.ThyOneAuthClientID, Usage: "Thycotic One client ID"},
+			{Name: cst.ThyOneAuthClientSecret, Usage: "Thycotic One client secret"},
+			{Name: cst.SendWelcomeEmail, Usage: "Whether to send welcome email for thycotic-one users linked to the auth provider (true or false)"},
 		},
-		MinNumberArgs: 0,
+		RunFunc: func(args []string) int {
+			if OnlyGlobalArgs(args) {
+				return handleAuthProviderCreateWizard(vaultcli.New())
+			}
+			return handleAuthProviderCreate(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetAuthProviderUpdateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.Config, cst.NounAuthProvider, cst.Update},
-		RunFunc:      AuthProvider{request: requests.NewHttpClient(), outClient: nil}.handleAuthProviderUpsert,
 		SynopsisText: fmt.Sprintf("%s %s %s (<name> | --name|-n) (--type) ((--data|-d) | --aws-account-id | --azure-tenant-id | --gcp-project-id | --root-ca-path | --assumed-role)", cst.NounConfig, cst.NounAuthProvider, cst.Update),
 		HelpText: fmt.Sprintf(`Update %[1]s properties
 
 Usage:
-  • %[1]s %[2]s %[4]s %[3]s --aws-account-id 11652944433808  --type aws
-  • %[1]s %[2]s %[4]s --name azure-prod --azure-tenant-id 164543 --type azure
-  • %[1]s %[2]s %[4]s --name GCP-prod --gcp-project-id test-proj --type gcp
-  • %[1]s %[2]s %[4]s --data %[5]s
+   • %[1]s %[2]s %[4]s %[3]s --aws-account-id 11652944433808  --type aws
+   • %[1]s %[2]s %[4]s --name azure-prod --azure-tenant-id 164543 --type azure
+   • %[1]s %[2]s %[4]s --name GCP-prod --gcp-project-id test-proj --type gcp
+   • %[1]s %[2]s %[4]s --data %[5]s
 		`, cst.NounConfig, cst.NounAuthProvider, cst.ExampleAuthProviderName, cst.Update, cst.ExampleDataPath),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.Data):                    cli.PredictorWrapper{preds.NewPrefixFilePredictor("*"), preds.NewFlagValue(preds.Params{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in an auth provider. Prefix with '@' to denote filepath", strings.Title(cst.Data))}), false},
-			preds.LongFlag(cst.DataType):                cli.PredictorWrapper{preds.AuthTypePredictor{}, preds.NewFlagValue(preds.Params{Name: cst.DataType, Usage: fmt.Sprintf("Auth provider type (azure,aws,gcp,thycoticone)")}), false},
-			preds.LongFlag(cst.DataName):                cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataName, Shorthand: "n", Usage: fmt.Sprintf("Auth provider friendly name")}), false},
-			preds.LongFlag(cst.DataTenantID):            cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataTenantID, Usage: fmt.Sprintf("Azure Tenant ID")}), false},
-			preds.LongFlag(cst.DataAccountID):           cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataAccountID, Usage: fmt.Sprintf("AWS Account ID")}), false},
-			preds.LongFlag(cst.DataProjectID):           cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataProjectID, Usage: fmt.Sprintf("GCP Project ID")}), false},
-			preds.LongFlag(cst.ThyOneAuthClientBaseUri): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientBaseUri, Usage: fmt.Sprintf("Thycotic One base URI")}), false},
-			preds.LongFlag(cst.ThyOneAuthClientID):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientID, Usage: fmt.Sprintf("Thycotic One client ID")}), false},
-			preds.LongFlag(cst.ThyOneAuthClientSecret):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.ThyOneAuthClientSecret, Usage: fmt.Sprintf("Thycotic One client secret")}), false},
-			preds.LongFlag(cst.SendWelcomeEmail):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.SendWelcomeEmail, Usage: fmt.Sprintf("Whether to send welcome email for thycotic-one users linked to the auth provider (true or false)")}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in an auth provider. Prefix with '@' to denote filepath", strings.Title(cst.Data)), Predictor: predictor.NewPrefixFilePredictor("*")},
+			{Name: cst.DataType, Usage: "Auth provider type (azure,aws,gcp,thycoticone)", Predictor: predictor.AuthTypePredictor{}},
+			{Name: cst.DataName, Shorthand: "n", Usage: "Auth provider friendly name"},
+			{Name: cst.DataTenantID, Usage: "Azure Tenant ID"},
+			{Name: cst.DataAccountID, Usage: "AWS Account ID"},
+			{Name: cst.DataProjectID, Usage: "GCP Project ID"},
+			{Name: cst.ThyOneAuthClientBaseUri, Usage: "Thycotic One base URI"},
+			{Name: cst.ThyOneAuthClientID, Usage: "Thycotic One client ID"},
+			{Name: cst.ThyOneAuthClientSecret, Usage: "Thycotic One client secret"},
+			{Name: cst.SendWelcomeEmail, Usage: "Whether to send welcome email for thycotic-one users linked to the auth provider (true or false)"},
 		},
-		MinNumberArgs: 0,
+		RunFunc: func(args []string) int {
+			if OnlyGlobalArgs(args) {
+				return handleAuthProviderUpdateWizard(vaultcli.New())
+			}
+			return handleAuthProviderUpdate(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetAuthProviderEditCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.Config, cst.NounAuthProvider, cst.Edit},
-		RunFunc:      AuthProvider{request: requests.NewHttpClient(), outClient: nil, edit: EditData}.handleAuthProviderEdit,
 		SynopsisText: fmt.Sprintf("%s %s %s (<name> | --name|-n)", cst.NounConfig, cst.NounAuthProvider, cst.Edit),
 		HelpText: fmt.Sprintf(`Edit an auth provider
 
@@ -183,55 +184,60 @@ Usage:
    • %[1]s %[2]s %[4]s %[3]s
    • %[1]s %[2]s %[4]s --name %[3]s
 		`, cst.NounConfig, cst.NounAuthProvider, cst.ExampleAuthProviderName, cst.Edit),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.DataName): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataName, Shorthand: "n", Usage: fmt.Sprintf("Target %s to an %s", cst.Path, cst.NounAuthProvider)}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.DataName, Shorthand: "n", Usage: fmt.Sprintf("Target %s to an %s", cst.Path, cst.NounAuthProvider)},
 		},
 		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			return handleAuthProviderEdit(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetAuthProviderRollbackCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.Config, cst.NounAuthProvider, cst.Rollback},
-		RunFunc:      AuthProvider{request: requests.NewHttpClient(), outClient: nil}.handleAuthProviderRollbackCmd,
 		SynopsisText: fmt.Sprintf("%s %s %s (<name> | --name|-n)", cst.NounConfig, cst.NounAuthProvider, cst.Rollback),
 		HelpText: fmt.Sprintf(`Rollback %[1]s properties
 
 Usage:
-  • %[1]s %[2]s %[4]s %[3]s
-  • %[1]s %[2]s %[4]s --version %[5]s 1
+   • %[1]s %[2]s %[4]s %[3]s
+   • %[1]s %[2]s %[4]s --version %[5]s 1
 		`, cst.NounConfig, cst.NounAuthProvider, cst.ExampleAuthProviderName, cst.Rollback, cst.Version),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.DataName): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataName, Shorthand: "n", Usage: fmt.Sprintf("Target %s to an %s", cst.Path, cst.NounAuthProvider)}), false},
-			preds.LongFlag(cst.Version):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Version, Shorthand: "", Usage: "The version to which to rollback"}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.DataName, Shorthand: "n", Usage: fmt.Sprintf("Target %s to an %s", cst.Path, cst.NounAuthProvider)},
+			{Name: cst.Version, Usage: "The version to which to rollback"},
 		},
 		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			return handleAuthProviderRollbackCmd(vaultcli.New(), args)
+		},
 	})
 }
 
-func GetAuthProviderSearchCommand() (cli.Command, error) {
+func GetAuthProviderSearchCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.Config, cst.NounAuthProvider, cst.Search},
-		RunFunc:      AuthProvider{request: requests.NewHttpClient(), outClient: nil}.handleAuthProviderSearchCommand,
 		SynopsisText: fmt.Sprintf("%s %s %s (<query> | --query)", cst.NounConfig, cst.NounAuthProvider, cst.Search),
 		HelpText: fmt.Sprintf(`Search for a %[1]s
 
-		Usage:
-		• %[1]s %[2]s %[3]s %[4]s
-		• %[1]s %[2]s %[3]s --query %[4]s
-				`, cst.NounConfig, cst.NounAuthProvider, cst.Search, cst.ExampleAuthProviderName),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.Query):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("Filter %s of items to fetch (required)", strings.Title(cst.Query))}), false},
-			preds.LongFlag(cst.Limit):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"}), false},
-			preds.LongFlag(cst.Cursor): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: cst.CursorHelpMessage}), false},
+Usage:
+   • %[1]s %[2]s %[3]s %[4]s
+   • %[1]s %[2]s %[3]s --query %[4]s
+		`, cst.NounConfig, cst.NounAuthProvider, cst.Search, cst.ExampleAuthProviderName),
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("Filter %s of items to fetch (required)", strings.Title(cst.Query))},
+			{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
+			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 		},
 		MinNumberArgs: 0,
+		RunFunc: func(args []string) int {
+			return handleAuthProviderSearchCmd(vaultcli.New(), args)
+		},
 	})
 }
 
-func (p AuthProvider) handleAuthProviderReadCmd(args []string) int {
-	var err *errors.ApiError
-	var data []byte
+func handleAuthProviderReadCmd(vcli vaultcli.CLI, args []string) int {
 	path, status := getAuthProviderParams(args)
 	if status != 0 {
 		return status
@@ -242,214 +248,49 @@ func (p AuthProvider) handleAuthProviderReadCmd(args []string) int {
 		path = fmt.Sprint(path, "/", cst.Version, "/", ver)
 	}
 
-	uri := p.makeReadUrl(path)
-	data, err = p.request.DoRequest(http.MethodGet, uri, nil)
-
-	if p.outClient == nil {
-		p.outClient = format.NewDefaultOutClient()
-	}
-	p.outClient.WriteResponse(data, err)
-	return utils.GetExecStatus(err)
-}
-
-func (p AuthProvider) handleAuthProviderDeleteCmd(args []string) int {
-	var err *errors.ApiError
-	var resp []byte
-	path, status := getAuthProviderParams(args)
-	if status != 0 {
-		return status
-	}
-	force := viper.GetBool(cst.Force)
-
-	baseType := strings.Join([]string{cst.Config, cst.NounAuth}, "/")
-	query := map[string]string{"force": strconv.FormatBool(force)}
-	uri := paths.CreateResourceURI(baseType, path, "", true, query, false)
-
-	resp, err = p.request.DoRequest(http.MethodDelete, uri, nil)
-
-	outClient := p.outClient
-	if outClient == nil {
-		outClient = format.NewDefaultOutClient()
-	}
-	outClient.WriteResponse(resp, err)
-	return utils.GetExecStatus(err)
-}
-
-func (p AuthProvider) handleAuthProviderRestoreCmd(args []string) int {
-	var err *errors.ApiError
-	var resp []byte
-	path, status := getAuthProviderParams(args)
-	if status != 0 {
-		return status
-	}
-
-	baseType := strings.Join([]string{cst.Config, cst.NounAuth}, "/")
-	uri := paths.CreateResourceURI(baseType, path, "/restore", true, nil, false)
-
-	resp, err = p.request.DoRequest(http.MethodPut, uri, nil)
-
-	if p.outClient == nil {
-		p.outClient = format.NewDefaultOutClient()
-	}
-	p.outClient.WriteResponse(resp, err)
-	return utils.GetExecStatus(err)
-}
-
-func (p AuthProvider) handleAuthProviderUpsertWorkflow(args []string) int {
-	isUpdate := viper.GetString(cst.LastCommandKey) == cst.Update
-	var params authProvider
-	ui := &PasswordUi{
-		cli.BasicUi{
-			Writer:      os.Stdout,
-			Reader:      os.Stdin,
-			ErrorWriter: os.Stderr,
-		},
-	}
-
-	name, err := prompt.Ask(ui, "Auth provider name:")
-	if err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params.Name = paths.ProcessResource(name)
-	}
-
-	if isUpdate {
-		model, err := p.readAuthProvider(name)
-		if err != nil {
-			ui.Error(err.Error())
-			return utils.GetExecStatus(err)
-		} else {
-			params.Type = model.Type
-		}
-	} else {
-		if providerType, err := prompt.Choose(
-			ui, "Auth provider type:",
-			prompt.Option{"aws", "AWS"},
-			prompt.Option{"azure", "Azure"},
-			prompt.Option{"gcp", "GCP"},
-			prompt.Option{cst.ThyOne, "Thycotic One"}); err != nil {
-			ui.Error(err.Error())
-			return utils.GetExecStatus(err)
-		} else {
-			params.Type = providerType
-		}
-	}
-
-	switch params.Type {
-	case "aws":
-		if awsAccountId, err := prompt.Ask(ui, "AWS account ID:"); err != nil {
-			ui.Error(err.Error())
-			return utils.GetExecStatus(err)
-		} else {
-			params.Properties.AccountID = awsAccountId
-		}
-	case "azure":
-		if azureTenantId, err := prompt.Ask(ui, "Azure tenant ID:"); err != nil {
-			ui.Error(err.Error())
-			return utils.GetExecStatus(err)
-		} else {
-			params.Properties.TenantID = azureTenantId
-		}
-	case "gcp":
-		if gcpProjectID, err := prompt.Ask(ui, "GCP project ID:"); err == nil && gcpProjectID != "" {
-			params.Properties.ProjectID = gcpProjectID
-		} else if dataPath, err := prompt.Ask(ui, "Path to data file with provider properties:"); err != nil {
-			ui.Error(err.Error())
-			return utils.GetExecStatus(err)
-		} else {
-			data, err := store.ReadFile(dataPath)
-			if err != nil {
-				ui.Error(err.Error())
-				return utils.GetExecStatus(err)
-			}
-			var dataMap map[string]interface{}
-			err = json.Unmarshal([]byte(data), &dataMap)
-			if err != nil {
-				ui.Error("Failed to parse properties file.")
-				return utils.GetExecStatus(err)
-			}
-			var props Properties
-			if properties, ok := dataMap["properties"]; !ok {
-				ui.Error("No properties in data file.")
-				return utils.GetExecStatus(err)
-			} else {
-				mapstructure.Decode(properties, &props)
-			}
-			params.Properties = props
-		}
-	case cst.ThyOne:
-		if url, err := prompt.Ask(ui, "Base URL:"); err != nil {
-			ui.Error(err.Error())
-			return utils.GetExecStatus(err)
-		} else {
-			params.Properties.BaseURI = url
-		}
-		if clientId, err := prompt.Ask(ui, "Client ID:"); err != nil {
-			ui.Error(err.Error())
-			return utils.GetExecStatus(err)
-		} else {
-			params.Properties.ClientID = clientId
-		}
-		if clientSecret, err := prompt.Ask(ui, "Client secret:"); err != nil {
-			ui.Error(err.Error())
-			return utils.GetExecStatus(err)
-		} else {
-			params.Properties.ClientSecret = clientSecret
-		}
-		if sendWelcomeEmail, err := prompt.AskDefault(ui, "Send welcome email:", "false"); err != nil {
-			ui.Error(err.Error())
-			return utils.GetExecStatus(err)
-		} else {
-			sendWelcomeEmail, parseErr := strconv.ParseBool(sendWelcomeEmail)
-			if parseErr == nil {
-				params.Properties.SendWelcomeEmail = &sendWelcomeEmail
-			}
-		}
-
-	default:
-		ui.Error("Unsupported auth provider type.")
-		return 1
-	}
-
-	if p.outClient == nil {
-		p.outClient = format.NewDefaultOutClient()
-	}
-
-	resp, apiErr := p.submitAuthProvider(params)
-	p.outClient.WriteResponse(resp, apiErr)
+	data, apiErr := authProviderRead(vcli, path)
+	vcli.Out().WriteResponse(data, apiErr)
 	return utils.GetExecStatus(apiErr)
 }
 
-func (p AuthProvider) handleAuthProviderUpsert(args []string) int {
-	if OnlyGlobalArgs(args) {
-		return p.handleAuthProviderUpsertWorkflow(args)
+func handleAuthProviderDeleteCmd(vcli vaultcli.CLI, args []string) int {
+	path, status := getAuthProviderParams(args)
+	if status != 0 {
+		return status
 	}
-	if p.outClient == nil {
-		p.outClient = format.NewDefaultOutClient()
-	}
-	params := map[string]string{}
-	var resp []byte
-	var err *errors.ApiError
+	data, apiErr := authProviderDelete(vcli, path, viper.GetBool(cst.Force))
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
+}
 
+func handleAuthProviderRestoreCmd(vcli vaultcli.CLI, args []string) int {
+	path, status := getAuthProviderParams(args)
+	if status != 0 {
+		return status
+	}
+	data, apiErr := authProviderRestore(vcli, path)
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
+}
+
+func handleAuthProviderCreate(vcli vaultcli.CLI, args []string) int {
 	name, status := getAuthProviderParams(args)
 	if status != 0 {
 		return status
 	}
-	params[cst.DataName] = name
+
+	var model authProviderCreateRequest
 
 	data := viper.GetString(cst.Data)
-	var model authProvider
 	if data != "" {
 		if err := json.Unmarshal([]byte(data), &model); err != nil {
-			p.outClient.Fail(err)
+			vcli.Out().Fail(err)
 			return utils.GetExecStatus(err)
 		}
 	} else {
-		model = authProvider{
-			Name: params[cst.DataName],
+		model = authProviderCreateRequest{
 			Type: viper.GetString(cst.DataType),
-			Properties: Properties{
+			Properties: AuthProviderProperties{
 				AccountID:    viper.GetString(cst.DataAccountID),
 				TenantID:     viper.GetString(cst.DataTenantID),
 				ProjectID:    viper.GetString(cst.DataProjectID),
@@ -459,38 +300,61 @@ func (p AuthProvider) handleAuthProviderUpsert(args []string) int {
 			},
 		}
 	}
-	sendWelcomeEmail, parseErr := strconv.ParseBool(viper.GetString(cst.SendWelcomeEmail))
-	if parseErr == nil && model.Type == cst.ThyOne {
-		model.Properties.SendWelcomeEmail = &sendWelcomeEmail
+	model.Name = name
+
+	if model.Type == cst.ThyOne {
+		sendWelcomeEmail, err := strconv.ParseBool(viper.GetString(cst.SendWelcomeEmail))
+		if err == nil {
+			model.Properties.SendWelcomeEmail = &sendWelcomeEmail
+		}
 	}
 
-	resp, apiErr := p.submitAuthProvider(model)
-	p.outClient.WriteResponse(resp, apiErr)
-	return utils.GetExecStatus(err)
+	resp, apiErr := authProviderCreate(vcli, &model)
+	vcli.Out().WriteResponse(resp, apiErr)
+	return utils.GetExecStatus(apiErr)
 }
 
-func (p AuthProvider) submitAuthProvider(model authProvider) ([]byte, *errors.ApiError) {
-	baseType := strings.Join([]string{cst.Config, cst.NounAuth}, "/")
-	var uri string
-	reqMethod := strings.ToLower(viper.GetString(cst.LastCommandKey))
-	if reqMethod == cst.Create {
-		reqMethod = http.MethodPost
-		uri = paths.CreateResourceURI(baseType, "", "", true, nil, false)
+func handleAuthProviderUpdate(vcli vaultcli.CLI, args []string) int {
+	name, status := getAuthProviderParams(args)
+	if status != 0 {
+		return status
+	}
+
+	var model authProviderUpdateRequest
+
+	data := viper.GetString(cst.Data)
+	if data != "" {
+		if err := json.Unmarshal([]byte(data), &model); err != nil {
+			vcli.Out().Fail(err)
+			return utils.GetExecStatus(err)
+		}
 	} else {
-		reqMethod = http.MethodPut
-		uri = paths.CreateResourceURI(baseType, model.Name, "", true, nil, false)
+		model = authProviderUpdateRequest{
+			Type: viper.GetString(cst.DataType),
+			Properties: AuthProviderProperties{
+				AccountID:    viper.GetString(cst.DataAccountID),
+				TenantID:     viper.GetString(cst.DataTenantID),
+				ProjectID:    viper.GetString(cst.DataProjectID),
+				BaseURI:      viper.GetString(cst.ThyOneAuthClientBaseUri),
+				ClientID:     viper.GetString(cst.ThyOneAuthClientID),
+				ClientSecret: viper.GetString(cst.ThyOneAuthClientSecret),
+			},
+		}
 	}
-	return p.request.DoRequest(reqMethod, uri, model)
+
+	if model.Type == cst.ThyOne {
+		sendWelcomeEmail, parseErr := strconv.ParseBool(viper.GetString(cst.SendWelcomeEmail))
+		if parseErr == nil {
+			model.Properties.SendWelcomeEmail = &sendWelcomeEmail
+		}
+	}
+
+	resp, apiErr := authProviderUpdate(vcli, name, &model)
+	vcli.Out().WriteResponse(resp, apiErr)
+	return utils.GetExecStatus(apiErr)
 }
 
-func (p AuthProvider) handleAuthProviderRollbackCmd(args []string) int {
-	var apiError *errors.ApiError
-	var resp []byte
-	if p.outClient == nil {
-		p.outClient = format.NewDefaultOutClient()
-	}
-	baseType := strings.Join([]string{cst.Config, cst.NounAuth}, "/")
-
+func handleAuthProviderRollbackCmd(vcli vaultcli.CLI, args []string) int {
 	path, status := getAuthProviderParams(args)
 	if status != 0 {
 		return status
@@ -500,79 +364,311 @@ func (p AuthProvider) handleAuthProviderRollbackCmd(args []string) int {
 	// If version is not provided, get the current auth-provider item and parse the version from it.
 	// Submit a request for a version that's previous relative to the one found.
 	if version == "" {
-		uri := paths.CreateResourceURI(baseType, path, "", true, nil, false)
-		resp, apiError = p.request.DoRequest(http.MethodGet, uri, nil)
-		if apiError != nil {
-			p.outClient.WriteResponse(resp, apiError)
-			return utils.GetExecStatus(apiError)
+		data, apiErr := authProviderRead(vcli, path)
+		if apiErr != nil {
+			vcli.Out().WriteResponse(data, apiErr)
+			return utils.GetExecStatus(apiErr)
 		}
 
-		v, err := utils.GetPreviousVersion(resp)
+		v, err := utils.GetPreviousVersion(data)
 		if err != nil {
-			p.outClient.Fail(err)
+			vcli.Out().Fail(err)
 			return 1
 		}
 		version = v
 	}
 
-	if strings.TrimSpace(version) != "" {
-		path = fmt.Sprint(path, "/rollback/", version)
-	}
-	uri := paths.CreateResourceURI(baseType, path, "", true, nil, false)
-	resp, apiError = p.request.DoRequest(http.MethodPut, uri, nil)
-
-	p.outClient.WriteResponse(resp, apiError)
-	return utils.GetExecStatus(apiError)
+	data, apiErr := authProviderRollback(vcli, path, version)
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
 }
 
-func (p AuthProvider) handleAuthProviderSearchCommand(args []string) int {
-	baseType := strings.Join([]string{cst.Config, cst.NounAuth}, "/")
-	data, err := handleSearch(args, baseType, p.request)
-	outClient := p.outClient
-	if outClient == nil {
-		outClient = format.NewDefaultOutClient()
+func handleAuthProviderSearchCmd(vcli vaultcli.CLI, args []string) int {
+	query := viper.GetString(cst.Query)
+	limit := viper.GetString(cst.Limit)
+	cursor := viper.GetString(cst.Cursor)
+	if query == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		query = args[0]
 	}
-	outClient.WriteResponse(data, err)
-	return utils.GetExecStatus(err)
+
+	data, apiErr := authProviderSearch(vcli,
+		&authProviderSearchParams{query: query, limit: limit, cursor: cursor})
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
 }
 
-func (p AuthProvider) handleAuthProviderEdit(args []string) int {
-	if p.outClient == nil {
-		p.outClient = format.NewDefaultOutClient()
-	}
-
-	var err *errors.ApiError
-	var resp []byte
-
+func handleAuthProviderEdit(vcli vaultcli.CLI, args []string) int {
 	path, status := getAuthProviderParams(args)
 	if status != 0 {
 		return status
 	}
-	baseType := strings.Join([]string{cst.Config, cst.NounAuth}, "/")
-	uri := paths.CreateResourceURI(baseType, paths.ProcessResource(path), "", true, nil, false)
 
-	resp, err = p.request.DoRequest(http.MethodGet, uri, nil)
-	if err != nil {
-		p.outClient.WriteResponse(resp, err)
-		return utils.GetExecStatus(err)
+	data, apiErr := authProviderRead(vcli, paths.ProcessResource(path))
+	if apiErr != nil {
+		vcli.Out().WriteResponse(data, apiErr)
+		return utils.GetExecStatus(apiErr)
 	}
 
-	saveFunc := dataFunc(func(data []byte) (resp []byte, err *errors.ApiError) {
-		var model authProvider
+	saveFunc := func(data []byte) (resp []byte, err *errors.ApiError) {
+		var model authProviderUpdateRequest
 		if mErr := json.Unmarshal(data, &model); mErr != nil {
 			return nil, errors.New(mErr).Grow("invalid format for auth provider")
 		}
-		_, err = p.request.DoRequest(http.MethodPut, uri, &model)
-		return nil, err
-	})
-	resp, err = p.edit(resp, saveFunc, nil, false)
-	p.outClient.WriteResponse(resp, err)
-	return utils.GetExecStatus(err)
+		_, apiErr := authProviderUpdate(vcli, paths.ProcessResource(path), &model)
+		return nil, apiErr
+	}
+
+	data, apiErr = vcli.Edit(data, saveFunc)
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
 }
+
+// Wizards:
+
+func handleAuthProviderCreateWizard(vcli vaultcli.CLI) int {
+	qs := []*survey.Question{
+		{
+			Name:   "Name",
+			Prompt: &survey.Input{Message: "Auth provider name:"},
+			Validate: func(ans interface{}) error {
+				answer := strings.TrimSpace(ans.(string))
+				if len(answer) == 0 {
+					return errors.NewS("Value is required")
+				}
+				_, apiError := authProviderRead(vcli, answer)
+				if apiError == nil {
+					return errors.NewS("An authentication provider with this name already exists.")
+				}
+				return nil
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				return strings.TrimSpace(ans.(string))
+			},
+		},
+		{
+			Name: "Type",
+			Prompt: &survey.Select{
+				Message: "Auth provider type:",
+				Options: []string{"AWS", "Azure", "GCP", "Thycotic One"},
+			},
+		},
+	}
+	provider := &authProviderCreateRequest{}
+	survErr := survey.Ask(qs, provider)
+	if survErr != nil {
+		vcli.Out().WriteResponse(nil, errors.New(survErr))
+		return utils.GetExecStatus(survErr)
+	}
+
+	var props *AuthProviderProperties
+	var err error
+	switch provider.Type {
+	case "AWS":
+		props, err = authProviderAWSWizard()
+	case "Azure":
+		props, err = authProviderAzureWizard()
+	case "GCP":
+		props, err = authProviderGCPWizard()
+	case "Thycotic One":
+		props, err = authProviderThycoticOneWizard()
+	default:
+		return 1 // Unsupported auth provider type. Should be unreachable.
+	}
+
+	if err != nil {
+		vcli.Out().WriteResponse(nil, errors.New(err))
+		return utils.GetExecStatus(err)
+	}
+
+	if provider.Type == "Thycotic One" {
+		provider.Type = cst.ThyOne
+	}
+	provider.Properties = *props
+
+	resp, apiErr := authProviderCreate(vcli, provider)
+	vcli.Out().WriteResponse(resp, apiErr)
+	return utils.GetExecStatus(apiErr)
+}
+
+func handleAuthProviderUpdateWizard(vcli vaultcli.CLI) int {
+	var name string
+	namePrompt := &survey.Input{Message: "Auth provider name:"}
+	survErr := survey.AskOne(namePrompt, &name, survey.WithValidator(survey.Required))
+	if survErr != nil {
+		vcli.Out().WriteResponse(nil, errors.New(survErr))
+		return utils.GetExecStatus(survErr)
+	}
+	name = strings.TrimSpace(name)
+
+	resp, apiErr := authProviderRead(vcli, name)
+	if apiErr != nil {
+		vcli.Out().WriteResponse(resp, apiErr)
+		return utils.GetExecStatus(apiErr)
+	}
+	respData := struct {
+		Type string `json:"type"`
+	}{}
+	jsonErr := json.Unmarshal(resp, &respData)
+	if apiErr != nil {
+		err := errors.New(jsonErr).Grow("Failed to determine type of the provider")
+		vcli.Out().WriteResponse(nil, err)
+		return utils.GetExecStatus(err)
+	} else if respData.Type == "" {
+		err := errors.NewS("Failed to determine type of the provider")
+		vcli.Out().WriteResponse(nil, err)
+		return utils.GetExecStatus(err)
+	}
+
+	var props *AuthProviderProperties
+	var err error
+	switch respData.Type {
+	case "aws":
+		props, err = authProviderAWSWizard()
+	case "azure":
+		props, err = authProviderAzureWizard()
+	case "gcp":
+		props, err = authProviderGCPWizard()
+	case cst.ThyOne:
+		props, err = authProviderThycoticOneWizard()
+	default:
+		err = fmt.Errorf("Unsupported auth provider type: %s", respData.Type)
+	}
+
+	if err != nil {
+		vcli.Out().WriteResponse(nil, errors.New(err))
+		return utils.GetExecStatus(err)
+	}
+
+	provider := &authProviderUpdateRequest{
+		Type:       respData.Type,
+		Properties: *props,
+	}
+
+	resp, apiErr = authProviderUpdate(vcli, name, provider)
+	vcli.Out().WriteResponse(resp, apiErr)
+	return utils.GetExecStatus(apiErr)
+}
+
+func authProviderAWSWizard() (*AuthProviderProperties, error) {
+	var accountID string
+	accIDPrompt := &survey.Input{Message: "AWS account ID:"}
+	survErr := survey.AskOne(accIDPrompt, &accountID, survey.WithValidator(survey.Required))
+	if survErr != nil {
+		return nil, survErr
+	}
+	return &AuthProviderProperties{AccountID: strings.TrimSpace(accountID)}, nil
+}
+
+func authProviderAzureWizard() (*AuthProviderProperties, error) {
+	var tenantID string
+	tenantIDPrompt := &survey.Input{Message: "Azure tenant ID:"}
+	survErr := survey.AskOne(tenantIDPrompt, &tenantID, survey.WithValidator(survey.Required))
+	if survErr != nil {
+		return nil, survErr
+	}
+	return &AuthProviderProperties{TenantID: strings.TrimSpace(tenantID)}, nil
+}
+
+func authProviderGCPWizard() (*AuthProviderProperties, error) {
+	var dataFilePath string
+	pathPrompt := &survey.Input{Message: "Path to data file with provider properties:"}
+	survErr := survey.AskOne(pathPrompt, &dataFilePath, survey.WithValidator(survey.Required))
+	if survErr != nil {
+		return nil, survErr
+	}
+	dataFilePath = strings.TrimSpace(dataFilePath)
+	dataBytes, err := os.ReadFile(dataFilePath)
+	if err != nil {
+		return nil, err
+	}
+	dataMap := struct {
+		Properties *AuthProviderProperties `json:"properties"`
+	}{}
+	err = json.Unmarshal([]byte(dataBytes), &dataMap)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to parse properties file: %v", err)
+	}
+	if dataMap.Properties == nil {
+		return nil, fmt.Errorf("Missing properties field in the %s file", dataFilePath)
+	}
+
+	return dataMap.Properties, nil
+}
+
+func authProviderThycoticOneWizard() (*AuthProviderProperties, error) {
+	qs := []*survey.Question{
+		{
+			Name:   "BaseURL",
+			Prompt: &survey.Input{Message: "Base URL:"},
+			Validate: func(ans interface{}) error {
+				answer := strings.TrimSpace(ans.(string))
+				if len(answer) == 0 {
+					return errors.NewS("Value is required")
+				}
+				return nil
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				return strings.TrimSpace(ans.(string))
+			},
+		},
+		{
+			Name:   "ClientID",
+			Prompt: &survey.Input{Message: "Client ID:"},
+			Validate: func(ans interface{}) error {
+				answer := strings.TrimSpace(ans.(string))
+				if len(answer) == 0 {
+					return errors.NewS("Value is required")
+				}
+				return nil
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				return strings.TrimSpace(ans.(string))
+			},
+		},
+		{
+			Name:   "ClientSecret",
+			Prompt: &survey.Input{Message: "Client secret:"},
+			Validate: func(ans interface{}) error {
+				answer := strings.TrimSpace(ans.(string))
+				if len(answer) == 0 {
+					return errors.NewS("Value is required")
+				}
+				return nil
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				return strings.TrimSpace(ans.(string))
+			},
+		},
+		{
+			Name:   "WelcomeEmail",
+			Prompt: &survey.Confirm{Message: "Send welcome email:", Default: false},
+		},
+	}
+	answers := struct {
+		BaseURL      string
+		ClientID     string
+		ClientSecret string
+		WelcomeEmail bool
+	}{}
+	survErr := survey.Ask(qs, &answers)
+	if survErr != nil {
+		return nil, survErr
+	}
+
+	return &AuthProviderProperties{
+		BaseURI:          answers.BaseURL,
+		ClientID:         answers.ClientID,
+		ClientSecret:     answers.ClientSecret,
+		SendWelcomeEmail: &answers.WelcomeEmail,
+	}, nil
+}
+
+// Helpers:
+
 func getAuthProviderParams(args []string) (name string, status int) {
 	status = 0
 	name = viper.GetString(cst.DataName)
-	if name == "" && len(args) > 0 {
+	if name == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		name = args[0]
 	}
 	if name == "" {
@@ -581,32 +677,33 @@ func getAuthProviderParams(args []string) (name string, status int) {
 	return name, status
 }
 
-func (p AuthProvider) readAuthProvider(name string) (*authProvider, error) {
-	uri := p.makeReadUrl(name)
-	data, apiError := p.request.DoRequest(http.MethodGet, uri, nil)
-	if apiError != nil {
-		return nil, apiError
-	}
-	var m authProvider
-	err := json.Unmarshal(data, &m)
+type authProvider struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+}
+
+func listAuthProviders(vcli vaultcli.CLI) ([]*authProvider, *errors.ApiError) {
+	data, err := authProviderSearch(vcli, &authProviderSearchParams{limit: "500"})
 	if err != nil {
 		return nil, err
 	}
-	return &m, nil
+	resp := struct {
+		Data   []*authProvider `json:"data"`
+		Cursor string          `json:"cursor"`
+	}{}
+	jsonErr := json.Unmarshal(data, &resp)
+	if jsonErr != nil {
+		return nil, errors.New(jsonErr)
+	}
+	if resp.Cursor != "" {
+		log.Printf("[warning] Not all authentication providers were retrieved.")
+	}
+	return resp.Data, nil
 }
 
-func (p AuthProvider) makeReadUrl(name string) string {
-	baseType := strings.Join([]string{cst.Config, cst.NounAuth}, "/")
-	return paths.CreateResourceURI(baseType, name, "", true, nil, false)
-}
+// API callers:
 
-type authProvider struct {
-	Name       string     `json:"name"`
-	Type       string     `json:"type"`
-	Properties Properties `json:"properties"`
-}
-
-type Properties struct {
+type AuthProviderProperties struct {
 	AccountID        string `json:"accountId,omitempty"`
 	TenantID         string `json:"tenantId,omitempty"`
 	ProjectID        string `json:"projectId,omitempty"`
@@ -621,4 +718,75 @@ type Properties struct {
 	BaseURI          string `json:"baseUri,omitempty"`
 	UsernameClaim    string `json:"usernameClaim,omitempty"`
 	SendWelcomeEmail *bool  `json:"sendWelcomeEmail,omitempty"`
+}
+
+type authProviderCreateRequest struct {
+	Name       string                 `json:"name"`
+	Type       string                 `json:"type"`
+	Properties AuthProviderProperties `json:"properties"`
+}
+
+func authProviderCreate(vcli vaultcli.CLI, body *authProviderCreateRequest) ([]byte, *errors.ApiError) {
+	baseType := strings.Join([]string{cst.Config, cst.NounAuth}, "/")
+	uri := paths.CreateResourceURI(baseType, "", "", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodPost, uri, body)
+}
+
+type authProviderUpdateRequest struct {
+	Type       string                 `json:"type"`
+	Properties AuthProviderProperties `json:"properties"`
+}
+
+func authProviderUpdate(vcli vaultcli.CLI, name string, body *authProviderUpdateRequest) ([]byte, *errors.ApiError) {
+	baseType := strings.Join([]string{cst.Config, cst.NounAuth}, "/")
+	uri := paths.CreateResourceURI(baseType, name, "", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodPut, uri, body)
+}
+
+func authProviderRead(vcli vaultcli.CLI, name string) ([]byte, *errors.ApiError) {
+	baseType := strings.Join([]string{cst.Config, cst.NounAuth}, "/")
+	uri := paths.CreateResourceURI(baseType, name, "", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
+}
+
+func authProviderRollback(vcli vaultcli.CLI, name string, version string) ([]byte, *errors.ApiError) {
+	baseType := strings.Join([]string{cst.Config, cst.NounAuth}, "/")
+	path := fmt.Sprintf("%s/rollback/%s", name, version)
+	uri := paths.CreateResourceURI(baseType, path, "", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodPut, uri, nil)
+}
+
+func authProviderDelete(vcli vaultcli.CLI, name string, force bool) ([]byte, *errors.ApiError) {
+	query := map[string]string{"force": strconv.FormatBool(force)}
+	baseType := strings.Join([]string{cst.Config, cst.NounAuth}, "/")
+	uri := paths.CreateResourceURI(baseType, name, "", true, query)
+	return vcli.HTTPClient().DoRequest(http.MethodDelete, uri, nil)
+}
+
+func authProviderRestore(vcli vaultcli.CLI, name string) ([]byte, *errors.ApiError) {
+	baseType := strings.Join([]string{cst.Config, cst.NounAuth}, "/")
+	uri := paths.CreateResourceURI(baseType, name, "/restore", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodPut, uri, nil)
+}
+
+type authProviderSearchParams struct {
+	query  string
+	limit  string
+	cursor string
+}
+
+func authProviderSearch(vcli vaultcli.CLI, p *authProviderSearchParams) ([]byte, *errors.ApiError) {
+	queryParams := map[string]string{}
+	if p.query != "" {
+		queryParams[cst.SearchKey] = p.query
+	}
+	if p.limit != "" {
+		queryParams[cst.Limit] = p.limit
+	}
+	if p.cursor != "" {
+		queryParams[cst.Cursor] = p.cursor
+	}
+	baseType := strings.Join([]string{cst.Config, cst.NounAuth}, "/")
+	uri := paths.CreateResourceURI(baseType, "", "", false, queryParams)
+	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
 }

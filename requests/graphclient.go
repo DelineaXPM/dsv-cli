@@ -12,9 +12,8 @@ import (
 	"github.com/shurcooL/graphql"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -o ../fake/fake_graph_client.go . GraphClient
 
-//counterfeiter:generate . GraphClient
 type GraphClient interface {
 	DoRequest(uri string, query interface{}, variables map[string]interface{}) ([]byte, *errors.ApiError)
 }
@@ -39,7 +38,7 @@ func (c *graphClient) DoRequest(uri string, query interface{}, variables map[str
 	}
 	resp, err := format.JsonMarshal(&query)
 	if err != nil {
-		return nil, MarshalingError
+		return nil, errors.New(err).Grow("Failed to marshal response")
 	}
 
 	return resp, nil

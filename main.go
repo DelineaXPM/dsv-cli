@@ -14,8 +14,8 @@ import (
 	"thy/utils"
 	"thy/version"
 
+	"github.com/mitchellh/cli"
 	"github.com/spf13/viper"
-	"github.com/thycotic-rd/cli"
 )
 
 func main() {
@@ -93,7 +93,7 @@ func runCLI(args []string) (exitStatus int, err error) {
 		"config edit":                   cmd.GetConfigEditCmd,
 		"config auth-provider":          cmd.GetAuthProviderCmd,
 		"config auth-provider read":     cmd.GetAuthProviderReadCmd,
-		"config auth-provider search":   cmd.GetAuthProviderSearchCommand,
+		"config auth-provider search":   cmd.GetAuthProviderSearchCmd,
 		"config auth-provider delete":   cmd.GetAuthProviderDeleteCmd,
 		"config auth-provider restore":  cmd.GetAuthProviderRestoreCmd,
 		"config auth-provider create":   cmd.GetAuthProviderCreateCmd,

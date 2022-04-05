@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/thycotic-rd/cli"
+	"github.com/mitchellh/cli"
 )
 
 type Option struct {

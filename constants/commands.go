@@ -30,21 +30,26 @@ const (
 // Nouns
 const (
 	NounSecret          = "secret"
+	NounSecrets         = "secrets"
 	NounPolicy          = "policy"
 	NounPolicies        = "policies"
 	NounAuth            = "auth"
 	NounToken           = "token"
 	NounUser            = "user"
+	NounUsers           = "users"
 	NounWhoAmI          = "whoami"
 	EvaluateFlag        = "eval"
 	Init                = "init"
 	NounClient          = "client"
+	NounClients         = "clients"
 	NounAwsProfile      = "awsprofile"
 	NounCliConfig       = "cli-config"
 	NounConfig          = "config"
 	NounRole            = "role"
+	NounRoles           = "roles"
 	NounUsage           = "usage"
 	NounGroup           = "group"
+	NounGroups          = "groups"
 	NounAuthProvider    = "auth-provider"
 	NounLogs            = "logs"
 	NounAudit           = "audit"
@@ -53,7 +58,9 @@ const (
 	NounSiem            = "siem"
 	NounHome            = "home"
 	NounPool            = "pool"
+	NounPools           = "pools"
 	NounEngine          = "engine"
+	NounEngines         = "engines"
 	NounBootstrapUrl    = "url"
 	NounBootstrapUrlTTL = "url-ttl"
 	NounClientUses      = "uses"
@@ -177,10 +184,9 @@ const (
 	Members       = "members"
 )
 
-// Help Messages
+// Common Help Messages
 const (
 	CursorHelpMessage = "Next cursor for additional results. The cursor is provided at the end of each body response (\"cursor\": \"MQ==\") (optional)"
-	ActionHelpMessage = "Action performed (POST, GET, PUT, PATCH or DELETE) (optional)"
 )
 
 // Security

@@ -1,12 +1,12 @@
 package cmd
 
 import (
-	e "errors"
 	"testing"
 
 	cst "thy/constants"
 	"thy/errors"
 	"thy/fake"
+	"thy/vaultcli"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -55,43 +55,51 @@ func TestHandleUserReadCmd(t *testing.T) {
 		expectedErr *errors.ApiError
 	}{
 		{
-			"Happy path",
-			"user1",
-			[]byte(`test`),
-			nil,
+			name:        "Happy path",
+			args:        "user1",
+			out:         []byte(`test`),
+			expectedErr: nil,
 		},
 		{
-			"api Error",
-			"user1",
-			[]byte(`test`),
-			errors.New(e.New("error")),
+			name:        "api Error",
+			args:        "user1",
+			out:         []byte(`test`),
+			expectedErr: errors.NewS("error"),
 		},
 		{
-			"No user passed",
-			"",
-			[]byte(`test`),
-			errors.New(e.New("error: must specify " + cst.DataUsername)),
+			name:        "No user passed",
+			args:        "",
+			out:         []byte(`test`),
+			expectedErr: errors.NewS("error: must specify " + cst.DataUsername),
 		},
 	}
 
 	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {
 		t.Run(tt.name, func(t *testing.T) {
-			acmd := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			acmd.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
 				return tt.out, tt.expectedErr
 			}
 
-			u := User{req, acmd}
-			_ = u.handleUserReadCmd([]string{tt.args})
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", rerr)
+			}
+
+			_ = handleUserReadCmd(vcli, []string{tt.args})
 			if tt.expectedErr == nil {
 				assert.Equal(t, tt.out, data)
 			} else {
@@ -118,34 +126,42 @@ func TestHandleUserDeleteCmd(t *testing.T) {
 			"api Error",
 			"user1",
 			[]byte(`test`),
-			errors.New(e.New("error")),
+			errors.NewS("error"),
 		},
 		{
 			"No DataUsername",
 			"",
 			[]byte(`test`),
-			errors.New(e.New("error: must specify " + cst.DataUsername)),
+			errors.NewS("error: must specify " + cst.DataUsername),
 		},
 	}
 
 	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {
 		t.Run(tt.name, func(t *testing.T) {
-			acmd := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			acmd.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
 				return tt.out, tt.expectedErr
 			}
 
-			u := User{req, acmd}
-			_ = u.handleUserDeleteCmd([]string{tt.args})
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", rerr)
+			}
+
+			_ = handleUserDeleteCmd(vcli, []string{tt.args})
 			if tt.expectedErr == nil {
 				assert.Equal(t, tt.out, data)
 			} else {
@@ -172,34 +188,42 @@ func TestHandleUserSearchCmd(t *testing.T) {
 			"api Error",
 			"user1",
 			[]byte(`test`),
-			errors.New(e.New("error")),
+			errors.NewS("error"),
 		},
 		{
 			"No Search query",
 			"",
 			[]byte(`test`),
-			errors.New(e.New("error: must specify " + cst.Query)),
+			errors.NewS("error: must specify " + cst.Query),
 		},
 	}
 
 	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {
 		t.Run(tt.name, func(t *testing.T) {
-			acmd := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			acmd.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
 				return tt.out, tt.expectedErr
 			}
 
-			u := User{req, acmd}
-			_ = u.handleUserSearchCmd([]string{tt.args})
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", rerr)
+			}
+
+			_ = handleUserSearchCmd(vcli, []string{tt.args})
 			if tt.expectedErr == nil {
 				assert.Equal(t, tt.out, data)
 			} else {
@@ -235,27 +259,27 @@ func TestHandleUserCreateCmd(t *testing.T) {
 			name:        "Create fails no username",
 			args:        []string{"--password", "password"},
 			password:    "password",
-			expectedErr: errors.New(e.New("error: must specify " + cst.DataUsername)),
+			expectedErr: errors.NewS("error: must specify " + cst.DataUsername),
 		},
 		{
 			name:        "Create fails no password",
 			args:        []string{"--username", "user"},
 			userName:    "user1",
-			expectedErr: errors.New(e.New("error: must specify password for local users")),
+			expectedErr: errors.NewS("error: must specify password for local users"),
 		},
 		{
 			name:        "3rd party provider missing",
 			args:        []string{"--username", "user", "--external-id", "1234"},
 			userName:    "user1",
 			externalID:  "1234",
-			expectedErr: errors.New(e.New("error: must specify both provider and external ID for third-party users")),
+			expectedErr: errors.NewS("error: must specify both provider and external ID for third-party users"),
 		},
 		{
 			name:        "3rd party external ID missing",
 			args:        []string{"--username", "user", "--provider", "aws-dev"},
 			userName:    "user1",
 			provider:    "aws-dev",
-			expectedErr: errors.New(e.New("error: must specify both provider and external ID for third-party users")),
+			expectedErr: errors.NewS("error: must specify both provider and external ID for third-party users"),
 		},
 		{
 			name:       "Successful 3rd party user create",
@@ -274,21 +298,29 @@ func TestHandleUserCreateCmd(t *testing.T) {
 		viper.Set(cst.DataProvider, tt.provider)
 		viper.Set(cst.DataExternalID, tt.externalID)
 		t.Run(tt.name, func(t *testing.T) {
-			acmd := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			acmd.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
 				return tt.out, tt.expectedErr
 			}
 
-			u := User{req, acmd}
-			_ = u.handleUserCreateCmd(tt.args)
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", rerr)
+			}
+
+			_ = handleUserCreateCmd(vcli, tt.args)
 			if tt.expectedErr == nil {
 				assert.Equal(t, tt.out, data)
 			} else {
@@ -320,7 +352,7 @@ func TestHandleUserUpdateCmd(t *testing.T) {
 			args:        []string{"--password", "password"},
 			password:    "password",
 			out:         []byte(`test`),
-			expectedErr: errors.New(e.New("error: must specify " + cst.DataUsername)),
+			expectedErr: errors.NewS("error: must specify " + cst.DataUsername),
 		},
 		{
 			name:        "no password and no display name",
@@ -369,21 +401,29 @@ func TestHandleUserUpdateCmd(t *testing.T) {
 		viper.Set(cst.DataPassword, tt.password)
 		viper.Set(cst.DataDisplayname, tt.displayName)
 		t.Run(tt.name, func(t *testing.T) {
-			acmd := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			acmd.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
 				return tt.out, tt.expectedErr
 			}
 
-			u := User{req, acmd}
-			_ = u.handleUserUpdateCmd(tt.args)
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", rerr)
+			}
+
+			_ = handleUserUpdateCmd(vcli, tt.args)
 			if tt.expectedErr == nil {
 				assert.Equal(t, tt.out, data)
 			} else {

@@ -4,62 +4,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
 	cst "thy/constants"
 	"thy/errors"
-	"thy/format"
-	"thy/internal/prompt"
+	"thy/internal/predictor"
 	"thy/paths"
-	preds "thy/predictors"
-	"thy/requests"
 	"thy/utils"
+	"thy/vaultcli"
 
-	"github.com/posener/complete"
-
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/mitchellh/cli"
 	"github.com/spf13/viper"
-	"github.com/thycotic-rd/cli"
 )
-
-type Group struct {
-	request   requests.Client
-	outClient format.OutClient
-}
-
-func GetNoDataOpGroupWrappers() cli.PredictorWrappers {
-	return cli.PredictorWrappers{
-		preds.LongFlag(cst.DataGroupName): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataGroupName, Usage: fmt.Sprintf("%s of %s (required)", strings.Title(cst.DataName), cst.NounGroup)}), false},
-	}
-}
-func GetNoDataOpGroupUserWrappers() cli.PredictorWrappers {
-	return cli.PredictorWrappers{
-		preds.LongFlag(cst.DataUsername): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s (required)", strings.Title(cst.DataUsername), cst.NounUser)}), false},
-	}
-}
-
-func GetOpDataGroupWrappers(targetEntity string) cli.PredictorWrappers {
-	return cli.PredictorWrappers{
-		preds.LongFlag(cst.Data):          cli.PredictorWrapper{preds.NewPrefixFilePredictor("*"), preds.NewFlagValue(preds.Params{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("Group name and members to add to or delete from the %s. Prefix with '@' to denote filepath (subsumes other arguments)", targetEntity)}), false},
-		preds.LongFlag(cst.DataGroupName): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataGroupName, Usage: fmt.Sprintf("%s of %s (required)", strings.Title(cst.DataName), cst.NounGroup)}), false},
-		preds.LongFlag(cst.Members):       cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Members, Usage: "Group members (comma-separated, optional)"}), false},
-	}
-}
 
 func GetGroupCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounGroup},
-		RunFunc: func(args []string) int {
-			groupData := viper.GetString(cst.DataGroupName)
-			if groupData == "" && len(args) > 0 {
-				groupData = args[0]
-			}
-			if groupData == "" {
-				return cli.RunResultHelp
-			}
-			return Group{requests.NewHttpClient(), nil}.handleGroupReadCmd(args)
-		},
+		Path:         []string{cst.NounGroup},
 		SynopsisText: "group (<group-name> | --group-name)",
 		HelpText: fmt.Sprintf(`Execute an action on a %s from %s
 
@@ -67,14 +29,10 @@ Usage:
    • group %[3]s
    • group --group-name %[3]s
 		`, cst.NounGroup, cst.ProductName, cst.ExampleGroup),
-		FlagsPredictor: GetNoDataOpGroupWrappers(),
-		MinNumberArgs:  1,
-	})
-}
-
-func GetGroupReadCmd() (cli.Command, error) {
-	return NewCommand(CommandArgs{
-		Path: []string{cst.NounGroup},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.DataGroupName, Usage: fmt.Sprintf("%s of %s (required)", strings.Title(cst.DataName), cst.NounGroup)},
+		},
+		MinNumberArgs: 1,
 		RunFunc: func(args []string) int {
 			groupData := viper.GetString(cst.DataGroupName)
 			if groupData == "" && len(args) > 0 {
@@ -83,8 +41,14 @@ func GetGroupReadCmd() (cli.Command, error) {
 			if groupData == "" {
 				return cli.RunResultHelp
 			}
-			return Group{requests.NewHttpClient(), nil}.handleGroupReadCmd(args)
+			return handleGroupReadCmd(vaultcli.New(), args)
 		},
+	})
+}
+
+func GetGroupReadCmd() (cli.Command, error) {
+	return NewCommand(CommandArgs{
+		Path:         []string{cst.NounGroup},
 		SynopsisText: "read <group-name> | --group-name)",
 		HelpText: fmt.Sprintf(`Get %[2]s details
 
@@ -92,32 +56,51 @@ Usage:
    • group %[1]s %[4]s
    • group %[1]s --group-name %[4]s
 		`, cst.Read, cst.NounGroup, cst.ProductName, cst.ExampleGroup),
-		FlagsPredictor: GetNoDataOpGroupWrappers(),
-		MinNumberArgs:  1,
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.DataGroupName, Usage: fmt.Sprintf("%s of %s (required)", strings.Title(cst.DataName), cst.NounGroup)},
+		},
+		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			groupData := viper.GetString(cst.DataGroupName)
+			if groupData == "" && len(args) > 0 {
+				groupData = args[0]
+			}
+			if groupData == "" {
+				return cli.RunResultHelp
+			}
+			return handleGroupReadCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetGroupCreateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounGroup, cst.Create},
-		RunFunc:      Group{requests.NewHttpClient(), nil}.handleCreateCmd,
 		SynopsisText: fmt.Sprintf("%s (<group-name> | --group-name)", cst.Create),
 		HelpText: fmt.Sprintf(`Create a %[2]s in %[3]s
 
 Usage:
-	• group %[1]s --group-name %[6]s --members user1,user2
-	• group %[1]s --data %[4]s
-	• group %[1]s --data %[5]s
-				`, cst.Create, cst.NounGroup, cst.ProductName, cst.ExampleGroupCreate, cst.ExampleDataPath, cst.ExampleGroup),
-		FlagsPredictor: GetOpDataGroupWrappers(cst.NounGroup),
-		MinNumberArgs:  0,
+   • group %[1]s --group-name %[6]s --members user1,user2
+   • group %[1]s --data %[4]s
+   • group %[1]s --data %[5]s
+		`, cst.Create, cst.NounGroup, cst.ProductName, cst.ExampleGroupCreate, cst.ExampleDataPath, cst.ExampleGroup),
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("Group name and members to add to or delete from the %s. Prefix with '@' to denote filepath (subsumes other arguments)", cst.NounGroup), Predictor: predictor.NewPrefixFilePredictor("*")},
+			{Name: cst.DataGroupName, Usage: fmt.Sprintf("%s of %s (required)", strings.Title(cst.DataName), cst.NounGroup)},
+			{Name: cst.Members, Usage: "Group members (comma-separated, optional)"},
+		},
+		RunFunc: func(args []string) int {
+			if OnlyGlobalArgs(args) {
+				return handleGroupCreateWizard(vaultcli.New(), args)
+			}
+			return handleGroupCreateCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetGroupDeleteCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounGroup, cst.Delete},
-		RunFunc:      Group{requests.NewHttpClient(), nil}.handleGroupDeleteCmd,
 		SynopsisText: fmt.Sprintf("%s (<group-name> | --group-name)", cst.Delete),
 		HelpText: fmt.Sprintf(`Delete a %[2]s from %[3]s
 
@@ -125,18 +108,20 @@ Usage:
    • group %[1]s %[4]s
    • group %[1]s --group-name %[4]s --force
 		`, cst.Delete, cst.NounGroup, cst.ProductName, cst.ExampleGroup),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.DataGroupName): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataGroupName, Usage: fmt.Sprintf("%s of %s (required)", strings.Title(cst.DataName), cst.NounGroup)}), false},
-			preds.LongFlag(cst.Force):         cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Force, Shorthand: "", Usage: fmt.Sprintf("Immediately delete %s", cst.NounGroup), Global: false, ValueType: "bool"}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.DataGroupName, Usage: fmt.Sprintf("%s of %s (required)", strings.Title(cst.DataName), cst.NounGroup)},
+			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s", cst.NounGroup), ValueType: "bool"},
 		},
 		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			return handleGroupDeleteCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetGroupRestoreCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounGroup, cst.Restore},
-		RunFunc:      Group{requests.NewHttpClient(), nil}.handleGroupRestoreCmd,
 		SynopsisText: fmt.Sprintf("%s (<group-name> | --group-name)", cst.Restore),
 		HelpText: fmt.Sprintf(`Restore a deleted %[2]s in %[3]s
 
@@ -144,347 +129,462 @@ Usage:
    • group %[1]s %[4]s
    • group %[1]s --group-name %[4]s
 		`, cst.Restore, cst.NounGroup, cst.ProductName, cst.ExampleGroup),
-		FlagsPredictor: GetNoDataOpGroupWrappers(),
-		MinNumberArgs:  1,
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.DataGroupName, Usage: fmt.Sprintf("%s of %s (required)", strings.Title(cst.DataName), cst.NounGroup)},
+		},
+		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			return handleGroupRestoreCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetAddMembersCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounGroup, cst.AddMember},
-		RunFunc:      Group{requests.NewHttpClient(), nil}.handleAddMembersCmd,
 		SynopsisText: fmt.Sprintf("%s (<data> | (--data|-d))", cst.AddMember),
 		HelpText: fmt.Sprintf(`Add Members to a %[2]s in %[3]s
 
 Usage:
-	• group %[1]s --group-name %[6]s --members user3,user4
-	• group %[1]s --group-name %[6]s --data %[4]s
-	• group %[1]s --group-name %[6]s --data %[5]s
-				`, cst.AddMember, cst.NounGroup, cst.ProductName, cst.ExampleGroupAddMembers, cst.ExampleDataPath, cst.ExampleGroup),
-		FlagsPredictor: GetOpDataGroupWrappers(cst.NounGroup),
-		MinNumberArgs:  2,
+   • group %[1]s --group-name %[6]s --members user3,user4
+   • group %[1]s --group-name %[6]s --data %[4]s
+   • group %[1]s --group-name %[6]s --data %[5]s
+		`, cst.AddMember, cst.NounGroup, cst.ProductName, cst.ExampleGroupAddMembers, cst.ExampleDataPath, cst.ExampleGroup),
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Data, Shorthand: "d", Usage: "Group name and members to add to or delete from the group. Prefix with '@' to denote filepath (subsumes other arguments)", Predictor: predictor.NewPrefixFilePredictor("*")},
+			{Name: cst.DataGroupName, Usage: fmt.Sprintf("%s of %s (required)", strings.Title(cst.DataName), cst.NounGroup)},
+			{Name: cst.Members, Usage: "Group members (comma-separated, optional)"},
+		},
+		MinNumberArgs: 2,
+		RunFunc: func(args []string) int {
+			return handleAddMembersCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetDeleteMembersCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounGroup, cst.DeleteMember},
-		RunFunc:      Group{requests.NewHttpClient(), nil}.handleDeleteMemberCmd,
 		SynopsisText: fmt.Sprintf("%s (<data> | (--data|-d))", cst.DeleteMember),
 		HelpText: fmt.Sprintf(`Delete members in a %[2]s in %[3]s
 
 Usage:
-	• group %[1]s --group-name %[6]s --members member1,member2
-	• group %[1]s --group-name %[6]s --data %[4]s
-	• group %[1]s --group-name %[6]s --data %[5]s
-				`, cst.DeleteMember, cst.NounGroup, cst.ProductName, cst.ExampleGroupAddMembers, cst.ExampleDataPath, cst.ExampleGroup),
-		FlagsPredictor: GetOpDataGroupWrappers(cst.NounGroup),
-		MinNumberArgs:  2,
+   • group %[1]s --group-name %[6]s --members member1,member2
+   • group %[1]s --group-name %[6]s --data %[4]s
+   • group %[1]s --group-name %[6]s --data %[5]s
+		`, cst.DeleteMember, cst.NounGroup, cst.ProductName, cst.ExampleGroupAddMembers, cst.ExampleDataPath, cst.ExampleGroup),
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("Group name and members to add to or delete from the %s. Prefix with '@' to denote filepath (subsumes other arguments)", cst.NounGroup), Predictor: predictor.NewPrefixFilePredictor("*")},
+			{Name: cst.DataGroupName, Usage: fmt.Sprintf("%s of %s (required)", strings.Title(cst.DataName), cst.NounGroup)},
+			{Name: cst.Members, Usage: "Group members (comma-separated, optional)"},
+		},
+		MinNumberArgs: 2,
+		RunFunc: func(args []string) int {
+			return handleDeleteMembersCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetMemberGroupsCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounUser},
-		RunFunc:      Group{requests.NewHttpClient(), nil}.handleUsersGroupReadCmd,
-		SynopsisText: fmt.Sprintf("(<username> | --username)"),
+		SynopsisText: "groups (<username> | --username)",
 		HelpText: fmt.Sprintf(`Read a %[2]s's %[1]ss from %[3]s
 
 Usage:
    • user %[1]ss --username %[4]s
 		`, cst.NounGroup, cst.NounUser, cst.ProductName, cst.ExampleUser),
-		FlagsPredictor: GetNoDataOpGroupUserWrappers(),
-		MinNumberArgs:  1,
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s (required)", strings.Title(cst.DataUsername), cst.NounUser)},
+		},
+		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			return handleUsersGroupReadCmd(vaultcli.New(), args)
+		},
 	})
 }
+
 func GetGroupSearchCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounGroup, cst.Search},
-		RunFunc:      Group{requests.NewHttpClient(), nil}.handleGroupSearchCmd,
 		SynopsisText: fmt.Sprintf("%s (<query> | --query)", cst.Search),
 		HelpText: fmt.Sprintf(`Search for a %[2]s from %[3]s
 
-		Usage:
-		• group %[1]s %[4]s
-		• group %[1]s --query %[4]s
-				`, cst.Search, cst.NounGroup, cst.ProductName, cst.ExampleUserSearch),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.Query):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("%s of %ss to fetch (required)", strings.Title(cst.Query), cst.NounGroup)}), false},
-			preds.LongFlag(cst.Limit):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Limit, Shorthand: "l", Usage: fmt.Sprint("Maximum number of results per cursor (optional)")}), false},
-			preds.LongFlag(cst.Cursor): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: cst.CursorHelpMessage}), false},
+Usage:
+   • group %[1]s %[4]s
+   • group %[1]s --query %[4]s
+		`, cst.Search, cst.NounGroup, cst.ProductName, cst.ExampleUserSearch),
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("%s of %ss to fetch (optional)", strings.Title(cst.Query), cst.NounGroup)},
+			{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
+			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 		},
-		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			return handleGroupSearchCmd(vaultcli.New(), args)
+		},
 	})
 }
-func (g Group) handleGroupReadCmd(args []string) int {
-	var err *errors.ApiError
-	var data []byte
+
+func handleGroupReadCmd(vcli vaultcli.CLI, args []string) int {
 	groupName := viper.GetString(cst.DataGroupName)
-	if groupName == "" && len(args) > 0 {
+	if groupName == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		groupName = args[0]
 	}
+
 	if groupName == "" {
-		err = errors.NewS("error: must specify " + cst.DataGroupName)
-	} else {
-		uri := paths.CreateResourceURI(cst.NounGroup, paths.ProcessResource(groupName), "", true, nil, true)
-		data, err = g.request.DoRequest(http.MethodGet, uri, nil)
+		err := errors.NewS("error: must specify " + cst.DataGroupName)
+		vcli.Out().WriteResponse(nil, err)
+		return utils.GetExecStatus(err)
 	}
 
-	outClient := g.outClient
-	if outClient == nil {
-		outClient = format.NewDefaultOutClient()
-	}
-
-	outClient.WriteResponse(data, err)
-	return utils.GetExecStatus(err)
+	data, apiError := groupRead(vcli, paths.ProcessResource(groupName))
+	vcli.Out().WriteResponse(data, apiError)
+	return utils.GetExecStatus(apiError)
 }
 
-func (g Group) handleCreateCmd(args []string) int {
-	if OnlyGlobalArgs(args) {
-		return g.handleGroupWorkflow(args)
-	}
-	var err *errors.ApiError
-	var resp []byte
-	outClient := g.outClient
-	if outClient == nil {
-		outClient = format.NewDefaultOutClient()
-	}
-	uri := paths.CreateResourceURI(cst.NounGroup, "", "", true, nil, true)
+func handleGroupCreateCmd(vcli vaultcli.CLI, args []string) int {
 	data := viper.GetString(cst.Data)
+
+	var (
+		groupName string
+		members   []string
+	)
 	if data == "" {
-		groupName := viper.GetString(cst.DataGroupName)
+		groupName = viper.GetString(cst.DataGroupName)
 		if groupName == "" {
 			err := errors.NewS("error: must specify " + cst.DataGroupName)
-			outClient.WriteResponse(nil, err)
+			vcli.Out().WriteResponse(nil, err)
 			return utils.GetExecStatus(err)
 		}
-		members := viper.GetString(cst.Members)
-		params := make(map[string]interface{})
-		params["groupName"] = groupName
-		// For backward API compatibility, on group create, members are passed in as "members".
-		params["members"] = utils.StringToSlice(members)
-		resp, err = g.request.DoRequest(http.MethodPost, uri, &params)
-		outClient.WriteResponse(resp, err)
-		return utils.GetExecStatus(err)
+		membersString := viper.GetString(cst.Members)
+		members = utils.StringToSlice(membersString)
+	} else {
+		dataModel := struct {
+			GroupName   string   `json:"groupName"`
+			Members     []string `json:"members"`
+			MemberNames []string `json:"memberNames"`
+		}{}
+		if dataErr := json.Unmarshal([]byte(data), &dataModel); dataErr != nil {
+			vcli.Out().WriteResponse(nil, errors.New(dataErr))
+			return utils.GetExecStatus(dataErr)
+		}
+		if dataModel.GroupName == "" {
+			err := errors.NewS("error: missing group name (\"groupName\") field in data")
+			vcli.Out().WriteResponse(nil, err)
+			return utils.GetExecStatus(err)
+		}
+		groupName = dataModel.GroupName
+		if len(dataModel.Members) > 0 {
+			members = dataModel.Members
+		} else if len(dataModel.MemberNames) > 0 {
+			members = dataModel.MemberNames
+		}
 	}
 
-	params := make(map[string]interface{})
-	if dataErr := json.Unmarshal([]byte(data), &params); dataErr != nil {
-		outClient.WriteResponse(resp, errors.New(dataErr))
-		return utils.GetExecStatus(dataErr)
-	}
-	if _, ok := params["members"]; !ok {
-		params["members"] = params["memberNames"]
-		delete(params, "memberNames")
-	}
-	resp, err = g.request.DoRequest(http.MethodPost, uri, &params)
-	outClient.WriteResponse(resp, err)
-	return utils.GetExecStatus(err)
+	resp, apiError := groupCreate(vcli, groupName, members)
+	vcli.Out().WriteResponse(resp, apiError)
+	return utils.GetExecStatus(apiError)
 }
 
-func (g Group) handleGroupDeleteCmd(args []string) int {
-	var err *errors.ApiError
-	var data []byte
+func handleGroupDeleteCmd(vcli vaultcli.CLI, args []string) int {
 	force := viper.GetBool(cst.Force)
 	groupName := viper.GetString(cst.DataGroupName)
-	if groupName == "" && len(args) > 0 {
+	if groupName == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		groupName = args[0]
 	}
 	if groupName == "" {
-		err = errors.NewS("error: must specify " + cst.DataGroupName)
-	} else {
-		query := map[string]string{"force": strconv.FormatBool(force)}
-		uri := paths.CreateResourceURI(cst.NounGroup, paths.ProcessResource(groupName), "", true, query, true)
-		data, err = g.request.DoRequest(http.MethodDelete, uri, nil)
-	}
-
-	if g.outClient == nil {
-		g.outClient = format.NewDefaultOutClient()
-	}
-
-	g.outClient.WriteResponse(data, err)
-	return utils.GetExecStatus(err)
-}
-
-func (g Group) handleGroupRestoreCmd(args []string) int {
-	var err *errors.ApiError
-	var data []byte
-	if g.outClient == nil {
-		g.outClient = format.NewDefaultOutClient()
-	}
-	groupName := viper.GetString(cst.DataGroupName)
-	if groupName == "" && len(args) > 0 {
-		groupName = args[0]
-	}
-
-	if groupName == "" {
-		err = errors.NewS("error: must specify " + cst.DataGroupName)
-	} else {
-		uri := paths.CreateResourceURI(cst.NounGroup, paths.ProcessResource(groupName), "/restore", true, nil, true)
-		data, err = g.request.DoRequest(http.MethodPut, uri, nil)
-	}
-
-	g.outClient.WriteResponse(data, err)
-	return utils.GetExecStatus(err)
-}
-
-func (g Group) handleAddMembersCmd(args []string) int {
-	var err *errors.ApiError
-	var resp []byte
-	groupName := viper.GetString(cst.DataGroupName)
-	if g.outClient == nil {
-		g.outClient = format.NewDefaultOutClient()
-	}
-	if groupName == "" {
-		g.outClient.WriteResponse(nil, errors.NewS("--group-name required"))
+		err := errors.NewS("error: must specify " + cst.DataGroupName)
+		vcli.Out().WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
-	uri := paths.CreateResourceURI(cst.NounGroup, paths.ProcessResource(groupName), "/members", true, nil, true)
-	members := viper.GetString(cst.Members)
-	data := viper.GetString(cst.Data)
-	if data == "" {
-		if members == "" {
-			err = errors.NewS("error: must specify group name and members")
-			g.outClient.WriteResponse(resp, err)
-			return utils.GetExecStatus(err)
-		}
-		params := make(map[string]interface{})
-		params["memberNames"] = utils.StringToSlice(members)
-		// For backward API compatibility, on adding members, members are passed in as "memberNames".
-		resp, err = g.request.DoRequest(http.MethodPost, uri, &params)
-	} else {
-		params := make(map[string]interface{})
-		if dataErr := json.Unmarshal([]byte(data), &params); dataErr != nil {
-			g.outClient.WriteResponse(resp, errors.New(dataErr))
-			return utils.GetExecStatus(dataErr)
-		}
-		if _, ok := params["memberNames"]; !ok {
-			params["memberNames"] = params["members"]
-			delete(params, "members")
-		}
-		resp, err = g.request.DoRequest(http.MethodPost, uri, &params)
-	}
-	g.outClient.WriteResponse(resp, err)
-	return utils.GetExecStatus(err)
+
+	data, apiError := groupDelete(vcli, paths.ProcessResource(groupName), force)
+	vcli.Out().WriteResponse(data, apiError)
+	return utils.GetExecStatus(apiError)
 }
 
-func (g Group) handleUsersGroupReadCmd(args []string) int {
-	var err *errors.ApiError
-	var data []byte
-	userData := viper.GetString(cst.DataUsername)
-	if userData == "" && len(args) > 0 {
-		userData = args[0]
-	}
-	if userData == "" {
-		err = errors.NewS("error: must specify " + cst.DataUsername)
-	} else {
-		uri := paths.CreateResourceURI(cst.NounUser, userData, "/groups", true, nil, true)
-		data, err = g.request.DoRequest(http.MethodGet, uri, nil)
-	}
-
-	outClient := g.outClient
-	if outClient == nil {
-		outClient = format.NewDefaultOutClient()
-	}
-
-	outClient.WriteResponse(data, err)
-	return utils.GetExecStatus(err)
-}
-
-func (g Group) handleDeleteMemberCmd(args []string) int {
-	var err *errors.ApiError
-	var resp []byte
+func handleGroupRestoreCmd(vcli vaultcli.CLI, args []string) int {
 	groupName := viper.GetString(cst.DataGroupName)
+	if groupName == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		groupName = args[0]
+	}
 
-	uri := paths.CreateResourceURI(cst.NounGroup, paths.ProcessResource(groupName), "/members", true, nil, true)
-	data := viper.GetString(cst.Data)
-	if g.outClient == nil {
-		g.outClient = format.NewDefaultOutClient()
+	if groupName == "" {
+		err := errors.NewS("error: must specify " + cst.DataGroupName)
+		vcli.Out().WriteResponse(nil, err)
+		return utils.GetExecStatus(err)
 	}
-	if data != "" {
-		params := make(map[string]interface{})
-		if dataErr := json.Unmarshal([]byte(data), &params); dataErr != nil {
-			g.outClient.WriteResponse(resp, errors.New(dataErr))
-			return utils.GetExecStatus(dataErr)
-		}
-		if _, ok := params["memberNames"]; !ok {
-			params["memberNames"] = params["members"]
-			delete(params, "members")
-		}
-		resp, err = g.request.DoRequest(http.MethodDelete, uri, &params)
-	} else {
-		members := viper.GetString(cst.Members)
-		if groupName == "" || members == "" {
-			err = errors.NewS("error: must specify group name and members")
-			g.outClient.WriteResponse(resp, err)
-			return utils.GetExecStatus(err)
-		}
-		params := make(map[string]interface{})
-		params["memberNames"] = utils.StringToSlice(members)
-		// For backward API compatibility, on deleting members, members are passed in as "memberNames".
-		resp, err = g.request.DoRequest(http.MethodDelete, uri, &params)
-	}
-	g.outClient.WriteResponse(resp, err)
-	return utils.GetExecStatus(err)
+
+	data, apiError := groupRestore(vcli, paths.ProcessResource(groupName))
+	vcli.Out().WriteResponse(data, apiError)
+	return utils.GetExecStatus(apiError)
 }
 
-func (g Group) handleGroupSearchCmd(args []string) int {
-	var err *errors.ApiError
-	var data []byte
+func handleAddMembersCmd(vcli vaultcli.CLI, args []string) int {
+	groupName := viper.GetString(cst.DataGroupName)
+	if groupName == "" {
+		err := errors.NewS("error: flag --group-name is required")
+		vcli.Out().WriteResponse(nil, err)
+		return utils.GetExecStatus(err)
+	}
+
+	data := viper.GetString(cst.Data)
+
+	members := []string{}
+
+	if data == "" {
+		membersString := viper.GetString(cst.Members)
+		if membersString == "" {
+			err := errors.NewS("error: must specify members")
+			vcli.Out().WriteResponse(nil, err)
+			return utils.GetExecStatus(err)
+		}
+		members = utils.StringToSlice(membersString)
+	} else {
+		dataModel := struct {
+			MemberNames []string `json:"memberNames"`
+			Members     []string `json:"members"`
+		}{}
+		if dataErr := json.Unmarshal([]byte(data), &dataModel); dataErr != nil {
+			vcli.Out().WriteResponse(nil, errors.New(dataErr))
+			return utils.GetExecStatus(dataErr)
+		}
+		if len(dataModel.MemberNames) > 0 {
+			members = dataModel.MemberNames
+		} else if len(dataModel.Members) > 0 {
+			members = dataModel.Members
+		}
+	}
+
+	if len(members) == 0 {
+		err := errors.NewS("error: missing list of members to add")
+		vcli.Out().WriteResponse(nil, err)
+		return utils.GetExecStatus(err)
+	}
+
+	resp, apiErr := groupAddMembers(vcli, paths.ProcessResource(groupName), members)
+	vcli.Out().WriteResponse(resp, apiErr)
+	return utils.GetExecStatus(apiErr)
+}
+
+func handleUsersGroupReadCmd(vcli vaultcli.CLI, args []string) int {
+	username := viper.GetString(cst.DataUsername)
+	if username == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		username = args[0]
+	}
+
+	if username == "" {
+		err := errors.NewS("error: must specify " + cst.DataUsername)
+		vcli.Out().WriteResponse(nil, err)
+		return utils.GetExecStatus(err)
+	}
+
+	data, apiErr := userGroupsRead(vcli, username)
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
+}
+
+func handleDeleteMembersCmd(vcli vaultcli.CLI, args []string) int {
+	groupName := viper.GetString(cst.DataGroupName)
+	if groupName == "" {
+		err := errors.NewS("error: flag --group-name is required")
+		vcli.Out().WriteResponse(nil, err)
+		return utils.GetExecStatus(err)
+	}
+
+	data := viper.GetString(cst.Data)
+
+	members := []string{}
+
+	if data == "" {
+		membersString := viper.GetString(cst.Members)
+		if membersString == "" {
+			err := errors.NewS("error: must specify members")
+			vcli.Out().WriteResponse(nil, err)
+			return utils.GetExecStatus(err)
+		}
+		members = utils.StringToSlice(membersString)
+	} else {
+		dataModel := struct {
+			MemberNames []string `json:"memberNames"`
+			Members     []string `json:"members"`
+		}{}
+		if dataErr := json.Unmarshal([]byte(data), &dataModel); dataErr != nil {
+			vcli.Out().WriteResponse(nil, errors.New(dataErr))
+			return utils.GetExecStatus(dataErr)
+		}
+		if len(dataModel.MemberNames) > 0 {
+			members = dataModel.MemberNames
+		} else if len(dataModel.Members) > 0 {
+			members = dataModel.Members
+		}
+	}
+
+	if len(members) == 0 {
+		err := errors.NewS("error: missing list of members to delete")
+		vcli.Out().WriteResponse(nil, err)
+		return utils.GetExecStatus(err)
+	}
+
+	resp, apiErr := groupDelMembers(vcli, paths.ProcessResource(groupName), members)
+	vcli.Out().WriteResponse(resp, apiErr)
+	return utils.GetExecStatus(apiErr)
+}
+
+func handleGroupSearchCmd(vcli vaultcli.CLI, args []string) int {
 	query := viper.GetString(cst.Query)
 	limit := viper.GetString(cst.Limit)
 	cursor := viper.GetString(cst.Cursor)
-	if query == "" && len(args) > 0 {
+
+	if query == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		query = args[0]
 	}
-	if query == "" {
-		err = errors.NewS("error: must specify " + cst.Query)
-	} else {
-		queryParams := map[string]string{
-			cst.SearchKey: query,
-			cst.Limit:     limit,
-			cst.Cursor:    cursor,
-		}
-		uri := paths.CreateResourceURI(cst.NounGroup, "", "", false, queryParams, true)
-		data, err = g.request.DoRequest(http.MethodGet, uri, nil)
-	}
-	outClient := g.outClient
-	if outClient == nil {
-		outClient = format.NewDefaultOutClient()
-	}
-	outClient.WriteResponse(data, err)
-	return utils.GetExecStatus(err)
+
+	data, apiErr := groupSearch(vcli, &groupSearchParams{query: query, limit: limit, cursor: cursor})
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
 }
 
-func (g Group) handleGroupWorkflow(args []string) int {
-	ui := &PasswordUi{
-		cli.BasicUi{
-			Writer:      os.Stdout,
-			Reader:      os.Stdin,
-			ErrorWriter: os.Stderr,
-		},
+// Wizards:
+
+func handleGroupCreateWizard(vcli vaultcli.CLI, args []string) int {
+	var groupName string
+	groupNamePrompt := &survey.Input{Message: "Group name:"}
+	groupNameValidation := func(ans interface{}) error {
+		answer := ans.(string)
+		if answer == "" {
+			return errors.NewS("A group name is required.")
+		}
+		_, apiError := groupRead(vcli, answer)
+		if apiError == nil {
+			return errors.NewS("A group with this name already exists.")
+		}
+		return nil
 	}
-	if g.outClient == nil {
-		g.outClient = format.NewDefaultOutClient()
-	}
-	params := make(map[string]interface{})
-	if resp, err := prompt.Ask(ui, "Group name:"); err != nil {
-		ui.Error(err.Error())
-		return 1
-	} else {
-		params["groupName"] = resp
+	survErr := survey.AskOne(groupNamePrompt, &groupName, survey.WithValidator(groupNameValidation))
+	if survErr != nil {
+		vcli.Out().WriteResponse(nil, errors.New(survErr))
+		return utils.GetExecStatus(survErr)
 	}
 
-	if resp, err := prompt.AskDefault(ui, "Members (comma-separated):", ""); err != nil {
-		ui.Error(err.Error())
-		return 1
-	} else {
-		// For backward API compatibility, on group create, members are passed in as "members".
-		params["members"] = utils.StringToSlice(resp)
+	members := []string{}
+	for {
+		qs := []*survey.Question{
+			{
+				Name:   "member",
+				Prompt: &survey.Input{Message: "Username to add to the group:"},
+				Validate: func(ans interface{}) error {
+					answer := strings.TrimSpace(ans.(string))
+
+					// Empty answer is allowed and will be ignored.
+					// Group can be created without members.
+					if answer == "" {
+						return nil
+					}
+					_, apiError := userRead(vcli, answer)
+					if apiError == nil {
+						return nil
+					}
+					httpResp := apiError.HttpResponse()
+					if httpResp == nil || httpResp.StatusCode != http.StatusNotFound {
+						return nil
+					}
+					return errors.NewS("A user with this username does not exist.")
+				},
+				Transform: func(ans interface{}) (newAns interface{}) {
+					return strings.TrimSpace(ans.(string))
+				},
+			},
+			{Name: "addMore", Prompt: &survey.Confirm{Message: "Add more?", Default: true}},
+		}
+
+		answers := struct {
+			Member  string
+			AddMore bool
+		}{}
+		survErr := survey.Ask(qs, &answers)
+		if survErr != nil {
+			vcli.Out().WriteResponse(nil, errors.New(survErr))
+			return utils.GetExecStatus(survErr)
+		}
+		if answers.Member != "" {
+			members = append(members, answers.Member)
+		}
+		if !answers.AddMore {
+			break
+		}
 	}
 
-	uri := paths.CreateResourceURI(cst.NounGroup, "", "", true, nil, true)
-	resp, err := g.request.DoRequest(http.MethodPost, uri, &params)
-	g.outClient.WriteResponse(resp, err)
-	return utils.GetExecStatus(err)
+	resp, apiError := groupCreate(vcli, groupName, members)
+	vcli.Out().WriteResponse(resp, apiError)
+	return utils.GetExecStatus(apiError)
+}
+
+// API callers:
+
+func groupCreate(vcli vaultcli.CLI, name string, members []string) ([]byte, *errors.ApiError) {
+	params := map[string]interface{}{
+		"groupName": name,
+		"members":   members,
+	}
+	uri := paths.CreateResourceURI(cst.NounGroups, "", "", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodPost, uri, &params)
+}
+
+func groupAddMembers(vcli vaultcli.CLI, name string, members []string) ([]byte, *errors.ApiError) {
+	params := map[string]interface{}{
+		"memberNames": members,
+	}
+	uri := paths.CreateResourceURI(cst.NounGroups, name, "/members", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodPost, uri, &params)
+}
+
+func groupDelMembers(vcli vaultcli.CLI, name string, members []string) ([]byte, *errors.ApiError) {
+	params := map[string]interface{}{
+		"memberNames": members,
+	}
+	uri := paths.CreateResourceURI(cst.NounGroups, name, "/members", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodDelete, uri, &params)
+}
+
+func groupRead(vcli vaultcli.CLI, name string) ([]byte, *errors.ApiError) {
+	uri := paths.CreateResourceURI(cst.NounGroups, name, "", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
+}
+
+func userGroupsRead(vcli vaultcli.CLI, username string) ([]byte, *errors.ApiError) {
+	uri := paths.CreateResourceURI(cst.NounUsers, username, "/groups", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
+}
+
+func groupDelete(vcli vaultcli.CLI, name string, force bool) ([]byte, *errors.ApiError) {
+	query := map[string]string{"force": strconv.FormatBool(force)}
+	uri := paths.CreateResourceURI(cst.NounGroups, name, "", true, query)
+	return vcli.HTTPClient().DoRequest(http.MethodDelete, uri, nil)
+}
+
+func groupRestore(vcli vaultcli.CLI, name string) ([]byte, *errors.ApiError) {
+	uri := paths.CreateResourceURI(cst.NounGroups, name, "/restore", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodPut, uri, nil)
+}
+
+type groupSearchParams struct {
+	query  string
+	limit  string
+	cursor string
+}
+
+func groupSearch(vcli vaultcli.CLI, p *groupSearchParams) ([]byte, *errors.ApiError) {
+	queryParams := map[string]string{}
+	if p.query != "" {
+		queryParams[cst.SearchKey] = p.query
+	}
+	if p.limit != "" {
+		queryParams[cst.Limit] = p.limit
+	}
+	if p.cursor != "" {
+		queryParams[cst.Cursor] = p.cursor
+	}
+	uri := paths.CreateURI(cst.NounGroups, queryParams)
+	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
 }

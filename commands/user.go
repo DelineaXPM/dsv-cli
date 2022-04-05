@@ -4,23 +4,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
 	cst "thy/constants"
 	"thy/errors"
-	"thy/format"
-	"thy/internal/prompt"
+	"thy/internal/predictor"
 	"thy/paths"
-	preds "thy/predictors"
-	"thy/requests"
 	"thy/utils"
+	"thy/vaultcli"
 
-	"github.com/mitchellh/mapstructure"
-	"github.com/posener/complete"
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/mitchellh/cli"
 	"github.com/spf13/viper"
-	"github.com/thycotic-rd/cli"
 )
 
 var (
@@ -28,30 +24,21 @@ var (
 	errWrongDisplayName                 = errors.NewS("error: displayname field must be between 3 and 100 characters")
 )
 
-type User struct {
-	request   requests.Client
-	outClient format.OutClient
-}
-
-func GetDataOpUserWrappers(targetEntity string) cli.PredictorWrappers {
-	return cli.PredictorWrappers{
-		preds.LongFlag(cst.DataUsername):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to be updated (required)", strings.Title(cst.DataUsername), targetEntity)}), false},
-		preds.LongFlag(cst.DataDisplayname): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataDisplayname, Usage: fmt.Sprintf("%s of %s to be updated", strings.Title(cst.DataDisplayname), targetEntity)}), false},
-		preds.LongFlag(cst.DataPassword):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataPassword, Usage: fmt.Sprintf("%s of %s to be updated (required)", strings.Title(cst.Password), targetEntity)}), false},
-		preds.LongFlag(cst.DataExternalID):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataExternalID, Usage: fmt.Sprintf("%s of %s to be updated", strings.Title(strings.Replace(cst.DataExternalID, ".", " ", -1)), targetEntity)}), false},
-		preds.LongFlag(cst.DataProvider):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataProvider, Usage: fmt.Sprintf("External %s of %s to be updated", strings.Title(cst.DataProvider), targetEntity)}), false},
-	}
-}
-func GetNoDataOpUserWrappers(targetEntity string) cli.PredictorWrappers {
-	return cli.PredictorWrappers{
-		preds.LongFlag(cst.DataUsername): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to fetch (required)", strings.Title(cst.DataUsername), targetEntity)}), false},
-		preds.LongFlag(cst.Version):      cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Version, Shorthand: "", Usage: "List the current and last (n) versions"}), false},
-	}
-}
-
 func GetUserCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path: []string{cst.NounUser},
+		Path:         []string{cst.NounUser},
+		SynopsisText: "user (<username> | --username)",
+		HelpText: fmt.Sprintf(`Execute an action on a %s from %s
+
+Usage:
+   • user %[3]s
+   • user --username %[3]s
+		`, cst.NounUser, cst.ProductName, cst.ExampleUser),
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to fetch (required)", strings.Title(cst.DataUsername), cst.NounUser)},
+			{Name: cst.Version, Usage: "List the current and last (n) versions"},
+		},
+		MinNumberArgs: 1,
 		RunFunc: func(args []string) int {
 			userData := viper.GetString(cst.DataUsername)
 			if userData == "" && len(args) > 0 {
@@ -60,24 +47,14 @@ func GetUserCmd() (cli.Command, error) {
 			if userData == "" {
 				return cli.RunResultHelp
 			}
-			return User{requests.NewHttpClient(), nil}.handleUserReadCmd(args)
+			return handleUserReadCmd(vaultcli.New(), args)
 		},
-		SynopsisText: "user (<username> | --username)",
-		HelpText: fmt.Sprintf(`Execute an action on a %s from %s
-
-Usage:
-   • user %[3]s
-   • user --username %[3]s
-		`, cst.NounUser, cst.ProductName, cst.ExampleUser),
-		FlagsPredictor: GetNoDataOpUserWrappers(cst.NounUser),
-		MinNumberArgs:  1,
 	})
 }
 
 func GetUserReadCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounUser, cst.Read},
-		RunFunc:      User{requests.NewHttpClient(), nil}.handleUserReadCmd,
 		SynopsisText: fmt.Sprintf("%s (<username> | --username)", cst.Read),
 		HelpText: fmt.Sprintf(`Read a %[2]s from %[3]s
 
@@ -85,15 +62,20 @@ Usage:
    • user %[1]s %[4]s
    • user %[1]s --username %[4]s
 		`, cst.Read, cst.NounUser, cst.ProductName, cst.ExampleUser),
-		FlagsPredictor: GetNoDataOpUserWrappers(cst.NounUser),
-		MinNumberArgs:  1,
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to fetch (required)", strings.Title(cst.DataUsername), cst.NounUser)},
+			{Name: cst.Version, Usage: "List the current and last (n) versions"},
+		},
+		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			return handleUserReadCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetUserSearchCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounUser, cst.Search},
-		RunFunc:      User{requests.NewHttpClient(), nil}.handleUserSearchCmd,
 		SynopsisText: fmt.Sprintf("%s (<query> | --query)", cst.Search),
 		HelpText: fmt.Sprintf(`Search for a %[2]s from %[3]s
 
@@ -101,19 +83,20 @@ Usage:
    • user %[1]s %[4]s
    • user %[1]s --query %[4]s
 		`, cst.Search, cst.NounUser, cst.ProductName, cst.ExampleUserSearch),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.Query):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("%s of %ss to fetch (required)", strings.Title(cst.Query), cst.NounUser)}), false},
-			preds.LongFlag(cst.Limit):  cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Limit, Shorthand: "l", Usage: fmt.Sprint("Maximum number of results per cursor (optional)")}), false},
-			preds.LongFlag(cst.Cursor): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Cursor, Usage: cst.CursorHelpMessage}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("%s of %ss to fetch (optional)", strings.Title(cst.Query), cst.NounUser)},
+			{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
+			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 		},
-		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			return handleUserSearchCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetUserDeleteCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounUser, cst.Delete},
-		RunFunc:      User{requests.NewHttpClient(), nil}.handleUserDeleteCmd,
 		SynopsisText: fmt.Sprintf("%s (<username> | --username)", cst.Delete),
 		HelpText: fmt.Sprintf(`Delete a %[2]s from %[3]s
 
@@ -121,36 +104,40 @@ Usage:
    • user %[1]s %[4]s
    • user %[1]s --username %[4]s --force
 		`, cst.Delete, cst.NounUser, cst.ProductName, cst.ExampleUser),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.DataUsername): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to fetch (required)", strings.Title(cst.DataUsername), cst.NounUser)}), false},
-			preds.LongFlag(cst.Force):        cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.Force, Shorthand: "", Usage: fmt.Sprintf("Immediately delete %s", cst.NounUser), Global: false, ValueType: "bool"}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to fetch (required)", strings.Title(cst.DataUsername), cst.NounUser)},
+			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s", cst.NounUser), ValueType: "bool"},
 		},
 		MinNumberArgs: 1,
+		RunFunc: func(args []string) int {
+			return handleUserDeleteCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetUserRestoreCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounUser, cst.Read},
-		RunFunc:      User{requests.NewHttpClient(), nil}.handleUserRestoreCmd,
 		SynopsisText: fmt.Sprintf("%s %s (<username> | --username)", cst.NounUser, cst.Restore),
 		HelpText: fmt.Sprintf(`Restore a deleted %[2]s in %[3]s
 Usage:
    • user %[1]s %[4]s
    • user %[1]s --username %[4]s
 		`, cst.Restore, cst.NounUser, cst.ProductName, cst.ExamplePath),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.DataUsername): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to fetch (required)", strings.Title(cst.DataUsername), cst.NounUser)}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to fetch (required)", strings.Title(cst.DataUsername), cst.NounUser)},
 		},
-		ArgsPredictorFunc: preds.NewSecretPathPredictorDefault().Predict,
+		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
 		MinNumberArgs:     1,
+		RunFunc: func(args []string) int {
+			return handleUserRestoreCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetUserCreateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounUser, cst.Create},
-		RunFunc:      User{requests.NewHttpClient(), nil}.handleUserCreateCmd,
 		SynopsisText: fmt.Sprintf("%s (<username> <password> | --username --password)", cst.Create),
 		HelpText: fmt.Sprintf(`Create a %[2]s in %[3]s
 
@@ -158,184 +145,156 @@ Usage:
    • user %[1]s --username %[4]s --password %[5]s
    • user %[1]s --username %[4]s --external-id svc1@project1.iam.gserviceaccount.com --provider project1.gcloud --password %[5]s
 		`, cst.Create, cst.NounUser, cst.ProductName, cst.ExampleUser, cst.ExamplePassword),
-		FlagsPredictor: GetDataOpUserWrappers(cst.NounUser),
-		MinNumberArgs:  0,
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to be updated (required)", strings.Title(cst.DataUsername), cst.NounUser)},
+			{Name: cst.DataDisplayname, Usage: fmt.Sprintf("%s of %s to be updated", strings.Title(cst.DataDisplayname), cst.NounUser)},
+			{Name: cst.DataPassword, Usage: fmt.Sprintf("%s of %s to be updated (required)", strings.Title(cst.Password), cst.NounUser)},
+			{Name: cst.DataExternalID, Usage: fmt.Sprintf("%s of %s to be updated", strings.Title(strings.Replace(cst.DataExternalID, ".", " ", -1)), cst.NounUser)},
+			{Name: cst.DataProvider, Usage: fmt.Sprintf("External %s of %s to be updated", strings.Title(cst.DataProvider), cst.NounUser)},
+		},
+		RunFunc: func(args []string) int {
+			if OnlyGlobalArgs(args) {
+				return handleUserCreateWorkflow(vaultcli.New(), args)
+			}
+			return handleUserCreateCmd(vaultcli.New(), args)
+		},
 	})
 }
 
 func GetUserUpdateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounUser, cst.Update},
-		RunFunc:      User{requests.NewHttpClient(), nil}.handleUserUpdateCmd,
 		SynopsisText: fmt.Sprintf("%s (<username> <password> | (--username) --password)", cst.Update),
 		HelpText: fmt.Sprintf(`Update a %[2]s's password in %[3]s
 
 Usage:
    • user %[1]s --username %[4]s --password %[5]s
 		`, cst.Update, cst.NounUser, cst.ProductName, cst.ExampleUser, cst.ExamplePassword),
-		FlagsPredictor: cli.PredictorWrappers{
-			preds.LongFlag(cst.DataPassword):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataPassword, Usage: fmt.Sprintf("%s of %s to be updated (required)", strings.Title(cst.Password), cst.NounUser)}), false},
-			preds.LongFlag(cst.DataUsername):    cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to be updated (required)", strings.Title(cst.DataUsername), cst.NounUser)}), false},
-			preds.LongFlag(cst.DataDisplayname): cli.PredictorWrapper{complete.PredictAnything, preds.NewFlagValue(preds.Params{Name: cst.DataDisplayname, Usage: fmt.Sprintf("%s of %s to be updated", strings.Title(cst.DataDisplayname), cst.NounUser)}), false},
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.DataPassword, Usage: fmt.Sprintf("%s of %s to be updated (required)", strings.Title(cst.Password), cst.NounUser)},
+			{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to be updated (required)", strings.Title(cst.DataUsername), cst.NounUser)},
+			{Name: cst.DataDisplayname, Usage: fmt.Sprintf("%s of %s to be updated", strings.Title(cst.DataDisplayname), cst.NounUser)},
 		},
-		MinNumberArgs: 0,
+		RunFunc: func(args []string) int {
+			if OnlyGlobalArgs(args) {
+				return handleUserUpdateWorkflow(vaultcli.New(), args)
+			}
+			return handleUserUpdateCmd(vaultcli.New(), args)
+		},
 	})
 }
 
-func (u User) handleUserReadCmd(args []string) int {
-	var err *errors.ApiError
-	var data []byte
+func handleUserReadCmd(vcli vaultcli.CLI, args []string) int {
 	userName := viper.GetString(cst.DataUsername)
 	if userName == "" && len(args) > 0 {
 		userName = args[0]
 	}
 	if userName == "" {
-		err = errors.NewS("error: must specify " + cst.DataUsername)
-	} else {
-		userName = paths.ProcessResource(userName)
-		version := viper.GetString(cst.Version)
-		if strings.TrimSpace(version) != "" {
-			userName = fmt.Sprint(userName, "/", cst.Version, "/", version)
-		}
-		uri := paths.CreateResourceURI(cst.NounUser, userName, "", true, nil, true)
-		data, err = u.request.DoRequest(http.MethodGet, uri, nil)
+		err := errors.NewS("error: must specify " + cst.DataUsername)
+		vcli.Out().WriteResponse(nil, err)
+		return utils.GetExecStatus(err)
 	}
 
-	outClient := u.outClient
-	if outClient == nil {
-		outClient = format.NewDefaultOutClient()
+	userName = paths.ProcessResource(userName)
+	version := viper.GetString(cst.Version)
+	if strings.TrimSpace(version) != "" {
+		userName = fmt.Sprint(userName, "/", cst.Version, "/", version)
 	}
 
-	outClient.WriteResponse(data, err)
+	data, err := userRead(vcli, userName)
+	vcli.Out().WriteResponse(data, err)
 	return utils.GetExecStatus(err)
 }
 
-func (u User) handleUserSearchCmd(args []string) int {
-	var err *errors.ApiError
-	var data []byte
+func handleUserSearchCmd(vcli vaultcli.CLI, args []string) int {
 	query := viper.GetString(cst.Query)
 	limit := viper.GetString(cst.Limit)
 	cursor := viper.GetString(cst.Cursor)
-	if query == "" && len(args) > 0 {
+
+	if query == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		query = args[0]
 	}
-	if query == "" {
-		err = errors.NewS("error: must specify " + cst.Query)
-	} else {
-		queryParams := map[string]string{
-			cst.SearchKey: query,
-			cst.Limit:     limit,
-			cst.Cursor:    cursor,
-		}
-		uri := paths.CreateResourceURI(cst.NounUser, "", "", false, queryParams, true)
-		data, err = u.request.DoRequest(http.MethodGet, uri, nil)
-	}
-	outClient := u.outClient
-	if outClient == nil {
-		outClient = format.NewDefaultOutClient()
-	}
-	outClient.WriteResponse(data, err)
-	return utils.GetExecStatus(err)
+
+	data, apiErr := userSearch(vcli, &userSearchParams{query: query, limit: limit, cursor: cursor})
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
 }
 
-func (u User) handleUserDeleteCmd(args []string) int {
-	var err *errors.ApiError
-	var data []byte
+func handleUserDeleteCmd(vcli vaultcli.CLI, args []string) int {
 	userName := viper.GetString(cst.DataUsername)
 	force := viper.GetBool(cst.Force)
 	if userName == "" && len(args) > 0 {
 		userName = args[0]
 	}
 	if userName == "" {
-		err = errors.NewS("error: must specify " + cst.DataUsername)
-	} else {
-		query := map[string]string{"force": strconv.FormatBool(force)}
-		uri := paths.CreateResourceURI(cst.NounUser, paths.ProcessResource(userName), "", true, query, true)
-		data, err = u.request.DoRequest(http.MethodDelete, uri, nil)
-	}
-	if u.outClient == nil {
-		u.outClient = format.NewDefaultOutClient()
+		err := errors.NewS("error: must specify " + cst.DataUsername)
+		vcli.Out().WriteResponse(nil, err)
+		return utils.GetExecStatus(err)
 	}
 
-	u.outClient.WriteResponse(data, err)
-	return utils.GetExecStatus(err)
+	data, apiErr := userDelete(vcli, paths.ProcessResource(userName), force)
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
 }
 
-func (u User) handleUserRestoreCmd(args []string) int {
-	var err *errors.ApiError
-	var data []byte
-	if u.outClient == nil {
-		u.outClient = format.NewDefaultOutClient()
-	}
+func handleUserRestoreCmd(vcli vaultcli.CLI, args []string) int {
 	userName := viper.GetString(cst.DataUsername)
 	if userName == "" && len(args) > 0 {
 		userName = args[0]
 	}
 	if userName == "" {
-		err = errors.NewS("error: must specify " + cst.DataUsername)
-	} else {
-		uri := paths.CreateResourceURI(cst.NounUser, paths.ProcessResource(userName), "/restore", true, nil, true)
-		data, err = u.request.DoRequest(http.MethodPut, uri, nil)
-	}
-
-	u.outClient.WriteResponse(data, err)
-	return utils.GetExecStatus(err)
-}
-
-func (u User) handleUserCreateCmd(args []string) int {
-	if OnlyGlobalArgs(args) {
-		return u.handleUserCreateWorkflow(args)
-	}
-	if u.outClient == nil {
-		u.outClient = format.NewDefaultOutClient()
-	}
-	userName := viper.GetString(cst.DataUsername)
-	if userName == "" {
 		err := errors.NewS("error: must specify " + cst.DataUsername)
-		u.outClient.WriteResponse(nil, err)
+		vcli.Out().WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
+
+	data, apiErr := userRestore(vcli, paths.ProcessResource(userName))
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
+}
+
+func handleUserCreateCmd(vcli vaultcli.CLI, args []string) int {
+	userName := viper.GetString(cst.DataUsername)
+	password := viper.GetString(cst.DataPassword)
 	provider := viper.GetString(cst.DataProvider)
 	externalID := viper.GetString(cst.DataExternalID)
 
-	isUserLocal := provider == "" && externalID == ""
-	password := viper.GetString(cst.DataPassword)
-	if password == "" && isUserLocal {
-		err := errors.NewS("error: must specify password for local users")
-		u.outClient.WriteResponse(nil, err)
+	if userName == "" {
+		err := errors.NewS("error: must specify " + cst.DataUsername)
+		vcli.Out().WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
 
+	isUserLocal := provider == "" && externalID == ""
+	if password == "" && isUserLocal {
+		err := errors.NewS("error: must specify password for local users")
+		vcli.Out().WriteResponse(nil, err)
+		return utils.GetExecStatus(err)
+	}
+
+	if !isUserLocal {
+		password = ""
+	}
+
 	displayName := viper.GetString(cst.DataDisplayname)
-	data := map[string]string{
-		"name":        userName,
-		"username":    userName,
-		"displayName": displayName,
-	}
 
-	if password != "" && isUserLocal {
-		data["password"] = password
-	} else {
-		data["provider"] = provider
-		data["externalId"] = externalID
+	body := &userCreateRequest{
+		Username:    userName,
+		Password:    password,
+		DisplayName: displayName,
+		Provider:    provider,
+		ExternalID:  externalID,
 	}
-
-	resp, apiError := u.createUser(data)
-	u.outClient.WriteResponse(resp, apiError)
+	resp, apiError := userCreate(vcli, body)
+	vcli.Out().WriteResponse(resp, apiError)
 	return utils.GetExecStatus(apiError)
 }
 
-func (u User) handleUserUpdateCmd(args []string) int {
-	if OnlyGlobalArgs(args) {
-		return u.handleUserUpdateWorkflow(args)
-	}
-	if u.outClient == nil {
-		u.outClient = format.NewDefaultOutClient()
-	}
-	userName := viper.GetString(cst.DataUsername)
-	if userName == "" {
+func handleUserUpdateCmd(vcli vaultcli.CLI, args []string) int {
+	username := viper.GetString(cst.DataUsername)
+	if username == "" {
 		err := errors.NewS("error: must specify " + cst.DataUsername)
-		u.outClient.WriteResponse(nil, err)
+		vcli.Out().WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
 
@@ -344,231 +303,285 @@ func (u User) handleUserUpdateCmd(args []string) int {
 	displayName := viper.GetString(cst.DataDisplayname)
 	if passData == "" && !displayNameExists {
 		err := errMustSpecifyPasswordOrDisplayname
-		u.outClient.WriteResponse(nil, err)
+		vcli.Out().WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
 
 	displayNameLen := len(displayName)
 	if displayNameExists && (displayNameLen < 3 || displayNameLen > 100) {
 		err := errWrongDisplayName
-		u.outClient.WriteResponse(nil, err)
+		vcli.Out().WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
 
-	data := map[string]string{}
-	if passData != "" {
-		data["password"] = passData
-	}
-
-	if displayNameExists {
-		data["displayName"] = displayName
-	}
-
-	resp, apiError := u.updateUser(userName, data)
-	u.outClient.WriteResponse(resp, apiError)
+	body := &userUpdateRequest{Password: passData, DisplayName: displayName}
+	resp, apiError := userUpdate(vcli, username, body)
+	vcli.Out().WriteResponse(resp, apiError)
 	return utils.GetExecStatus(apiError)
 }
 
-func (u User) readUser(name string) (*userModel, error) {
-	uri := paths.CreateResourceURI(cst.NounUser, name, "", true, nil, true)
-	data, apiError := u.request.DoRequest(http.MethodGet, uri, nil)
+// Wizards:
+
+func handleUserCreateWorkflow(vcli vaultcli.CLI, args []string) int {
+	providers, apiError := listAuthProviders(vcli)
 	if apiError != nil {
-		return nil, apiError
+		httpResp := apiError.HttpResponse()
+		// If API returns "403 Forbidden" still allow to try to create a local user.
+		if httpResp == nil || httpResp.StatusCode != http.StatusForbidden {
+			vcli.Out().FailS("Failed to get available auth providers.")
+			return utils.GetExecStatus(apiError)
+		}
 	}
-	var um userModel
-	err := json.Unmarshal(data, &um)
-	if err != nil {
-		return nil, err
-	}
-	return &um, nil
-}
 
-func (u User) handleUserCreateWorkflow(args []string) int {
-	ui := &PasswordUi{
-		cli.BasicUi{
-			Writer:      os.Stdout,
-			Reader:      os.Stdin,
-			ErrorWriter: os.Stderr,
+	qs := []*survey.Question{
+		{
+			Name:   "Username",
+			Prompt: &survey.Input{Message: "Username:"},
+			Validate: func(ans interface{}) error {
+				answer := ans.(string)
+				answer = strings.TrimSpace(answer)
+				if len(answer) == 0 {
+					return errors.NewS("Value is required")
+				}
+				_, apiError := userRead(vcli, answer)
+				if apiError == nil {
+					return errors.NewS("A user with this username already exists.")
+				}
+				return nil
+			},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				answer := ans.(string)
+				answer = strings.TrimSpace(answer)
+				return answer
+			},
+		},
+		{
+			Name:   "DisplayName",
+			Prompt: &survey.Input{Message: "Display name:"},
+			Transform: func(ans interface{}) (newAns interface{}) {
+				answer := ans.(string)
+				answer = strings.TrimSpace(answer)
+				return answer
+			},
 		},
 	}
-	if u.outClient == nil {
-		u.outClient = format.NewDefaultOutClient()
-	}
-	params := make(map[string]string)
 
-	if resp, err := prompt.Ask(ui, "Username:"); err != nil {
-		ui.Error(err.Error())
-		return 1
-	} else {
-		params["username"] = resp
-	}
-
-	if resp, err := prompt.AskDefault(ui, "Display name:", ""); err != nil {
-		ui.Error(err.Error())
-		return 1
-	} else {
-		params[cst.DataDisplayname] = resp
-	}
-
-	baseType := strings.Join([]string{cst.Config, cst.NounAuth}, "/")
-	data, err := handleSearch(nil, baseType, u.request)
-	if err != nil {
-		u.outClient.Fail(err)
-		return utils.GetExecStatus(err)
-	}
-	providers, parseErr := parseAuthProviders(data)
-	if parseErr != nil {
-		u.outClient.FailS("Failed to parse out available auth providers.")
-		return utils.GetExecStatus(parseErr)
-	}
-
-	if len(providers) == 0 {
-		if resp, err := prompt.AskSecureConfirm(ui, "New password for the user:"); err != nil {
-			ui.Error(err.Error())
-			return 1
-		} else {
-			params["password"] = resp
-		}
-	} else {
-		options := []prompt.Option{}
+	if len(providers) != 0 {
+		providersOpts := []string{"local"}
 		for _, p := range providers {
-			v := fmt.Sprintf("%s:%s", p.Name, p.Type)
-			options = append(options, prompt.Option{v, strings.Replace(v, ":", " - ", 1)})
+			providersOpts = append(providersOpts, fmt.Sprintf("%s [type: %s]", p.Name, p.Type))
 		}
+		qs = append(qs, &survey.Question{
+			Name: "provider",
+			Prompt: &survey.Select{
+				Message: "Select provider:",
+				Options: providersOpts,
+			},
+		})
+	}
 
-		providerName, err := prompt.Choose(ui, "Provider:", prompt.Option{"local", "local"}, options...)
-		if err != nil {
-			ui.Error(err.Error())
-			return 1
+	answers := struct {
+		Username    string
+		DisplayName string
+		Provider    string
+	}{}
+	survErr := survey.Ask(qs, &answers)
+	if survErr != nil {
+		vcli.Out().WriteResponse(nil, errors.New(survErr))
+		return utils.GetExecStatus(survErr)
+	}
+
+	var password, provider, externalID string
+
+	if answers.Provider == "" || answers.Provider == "local" {
+		passwordPrompt := &survey.Password{Message: "New password for the user:"}
+		survErr := survey.AskOne(passwordPrompt, &password, survey.WithValidator(survey.Required))
+		if survErr != nil {
+			vcli.Out().WriteResponse(nil, errors.New(survErr))
+			return utils.GetExecStatus(survErr)
 		}
+	} else {
+		provider = strings.Split(answers.Provider, " [type: ")[0]
 
-		if p := strings.Split(providerName, ":"); p[0] == "local" {
-			if resp, err := prompt.AskSecureConfirm(ui, "New password for the user:"); err != nil {
-				ui.Error(err.Error())
-				return 1
-			} else {
-				params["password"] = resp
-			}
-		} else if p[1] == cst.ThyOne {
-			params["provider"] = strings.Split(providerName, ":")[0]
-		} else {
-			if resp, err := prompt.Ask(ui, "External ID:"); err != nil {
-				ui.Error(err.Error())
-				return 1
-			} else {
-				params["provider"] = strings.Split(providerName, ":")[0]
-				params["externalId"] = resp
+		if !strings.HasSuffix(answers.Provider, fmt.Sprintf("[type: %s]", cst.ThyOne)) {
+			externalIDPrompt := &survey.Password{Message: "External ID:"}
+			survErr := survey.AskOne(externalIDPrompt, &externalID, survey.WithValidator(survey.Required))
+			if survErr != nil {
+				vcli.Out().WriteResponse(nil, errors.New(survErr))
+				return utils.GetExecStatus(survErr)
 			}
 		}
 	}
 
-	resp, apiError := u.createUser(params)
-	u.outClient.WriteResponse(resp, apiError)
+	body := &userCreateRequest{
+		Username:    answers.Username,
+		Password:    password,
+		DisplayName: answers.DisplayName,
+		Provider:    provider,
+		ExternalID:  externalID,
+	}
+	resp, apiError := userCreate(vcli, body)
+	vcli.Out().WriteResponse(resp, apiError)
 	return utils.GetExecStatus(apiError)
 }
 
-func (u User) handleUserUpdateWorkflow(args []string) int {
-	ui := &PasswordUi{
-		cli.BasicUi{
-			Writer:      os.Stdout,
-			Reader:      os.Stdin,
-			ErrorWriter: os.Stderr,
-		},
+func handleUserUpdateWorkflow(vcli vaultcli.CLI, args []string) int {
+	var username string
+	usernamePrompt := &survey.Input{Message: "Username:"}
+	survErr := survey.AskOne(usernamePrompt, &username)
+	if survErr != nil {
+		vcli.Out().WriteResponse(nil, errors.New(survErr))
+		return utils.GetExecStatus(survErr)
 	}
-	if u.outClient == nil {
-		u.outClient = format.NewDefaultOutClient()
-	}
-	params := make(map[string]string)
 
-	if resp, err := prompt.Ask(ui, "Username:"); err != nil {
-		ui.Error(err.Error())
-		return 1
+	var provider string
+	providerFetched := false
+	data, apiError := userRead(vcli, username)
+	if apiError != nil {
+		httpResp := apiError.HttpResponse()
+		if httpResp == nil || httpResp.StatusCode != http.StatusForbidden {
+			vcli.Out().Fail(apiError)
+			return utils.GetExecStatus(apiError)
+		}
+
+		var confirm bool
+		confirmPrompt := &survey.Confirm{
+			Message: "You are not allowed to read user with that username. Do you want to continue?",
+			Default: true,
+		}
+		survErr := survey.AskOne(confirmPrompt, &confirm)
+		if survErr != nil {
+			vcli.Out().WriteResponse(nil, errors.New(survErr))
+			return utils.GetExecStatus(survErr)
+		}
+		if !confirm {
+			return 0
+		}
 	} else {
-		params["username"] = resp
+		existingUser := struct {
+			Provider string `json:"provider"`
+		}{}
+		err := json.Unmarshal(data, &existingUser)
+		if err != nil {
+			vcli.Out().Fail(err)
+			return utils.GetExecStatus(err)
+		}
+		provider = existingUser.Provider
+		providerFetched = true
 	}
 
-	existingUser, err := u.readUser(params["username"])
-	if err != nil {
-		u.outClient.Fail(err)
-		return utils.GetExecStatus(err)
-	}
+	var password, displayName string
 
-	passwordResp, err := prompt.YesNo(ui, "Would you like to update the password", false)
-	if err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	}
-
-	if passwordResp {
-		if existingUser.Provider != "" {
-			u.outClient.FailS("User has a third-party auth provider, so there is nothing to update.")
-			return 1
+	if !providerFetched || (providerFetched && provider == "") {
+		var confirm bool
+		confirmPrompt := &survey.Confirm{
+			Message: "Would you like to update the password?",
+			Default: false,
+		}
+		survErr := survey.AskOne(confirmPrompt, &confirm)
+		if survErr != nil {
+			vcli.Out().WriteResponse(nil, errors.New(survErr))
+			return utils.GetExecStatus(survErr)
 		}
 
-		if resp, err := prompt.AskSecureConfirm(ui, "New password for the user:"); err != nil {
-			ui.Error(err.Error())
-			return 1
-		} else {
-			params["password"] = resp
-		}
-	}
-
-	displayNameResp, err := prompt.YesNo(ui, "Would you like to update the display name", false)
-	if err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	}
-
-	if displayNameResp {
-		if resp, err := prompt.Ask(ui, "Display name:"); err != nil {
-			ui.Error(err.Error())
-			return 1
-		} else {
-			params[cst.DataDisplayname] = resp
+		if confirm {
+			passwordPrompt := &survey.Password{Message: "New password for the user:"}
+			survErr := survey.AskOne(passwordPrompt, &password, survey.WithValidator(survey.Required))
+			if survErr != nil {
+				vcli.Out().WriteResponse(nil, errors.New(survErr))
+				return utils.GetExecStatus(survErr)
+			}
 		}
 	}
 
-	if !passwordResp && !displayNameResp {
+	var confirm bool
+	confirmPrompt := &survey.Confirm{
+		Message: "Would you like to update the display name?",
+		Default: false,
+	}
+	survErr = survey.AskOne(confirmPrompt, &confirm)
+	if survErr != nil {
+		vcli.Out().WriteResponse(nil, errors.New(survErr))
+		return utils.GetExecStatus(survErr)
+	}
+
+	if confirm {
+		displayPrompt := &survey.Input{Message: "Display name:"}
+		survErr := survey.AskOne(displayPrompt, &displayName, survey.WithValidator(survey.Required))
+		if survErr != nil {
+			vcli.Out().WriteResponse(nil, errors.New(survErr))
+			return utils.GetExecStatus(survErr)
+		}
+	}
+
+	if password == "" && displayName == "" {
 		return 0
 	}
 
-	resp, apiError := u.updateUser(params["username"], params)
-	u.outClient.WriteResponse(resp, apiError)
+	body := &userUpdateRequest{Password: password, DisplayName: displayName}
+	resp, apiError := userUpdate(vcli, username, body)
+	vcli.Out().WriteResponse(resp, apiError)
 	return utils.GetExecStatus(apiError)
 }
 
-func (u User) createUser(data map[string]string) ([]byte, *errors.ApiError) {
-	uri := paths.CreateResourceURI(cst.NounUser, "", "", true, nil, true)
-	return u.request.DoRequest(http.MethodPost, uri, &data)
+// API callers:
+
+type userCreateRequest struct {
+	Username    string `json:"userName"`
+	Password    string `json:"password,omitempty"`
+	DisplayName string `json:"displayName,omitempty"`
+	Provider    string `json:"provider,omitempty"`
+	ExternalID  string `json:"externalId,omitempty"`
 }
 
-func (u User) updateUser(path string, data map[string]string) ([]byte, *errors.ApiError) {
-	uri := paths.CreateResourceURI(cst.NounUser, path, "", true, nil, true)
-	return u.request.DoRequest(http.MethodPut, uri, &data)
+func userCreate(vcli vaultcli.CLI, body *userCreateRequest) ([]byte, *errors.ApiError) {
+	uri := paths.CreateResourceURI(cst.NounUsers, "", "", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodPost, uri, &body)
 }
 
-func parseAuthProviders(data []byte) ([]authProvider, error) {
-	var resp map[string]interface{}
-	err := json.Unmarshal(data, &resp)
-	if err != nil {
-		return nil, err
-	}
-
-	d, ok := resp["data"].([]interface{})
-	if !ok {
-		return nil, nil
-	}
-
-	var providers []authProvider
-	err = mapstructure.Decode(d, &providers)
-	if err != nil {
-		return nil, err
-	}
-	return providers, nil
+func userRead(vcli vaultcli.CLI, username string) ([]byte, *errors.ApiError) {
+	uri := paths.CreateResourceURI(cst.NounUsers, username, "", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
 }
 
-type userModel struct {
-	UserName   string `json:"userName"`
-	ExternalID string `json:"externalId"`
-	Provider   string `json:"provider"`
+type userUpdateRequest struct {
+	Password    string `json:"password,omitempty"`
+	DisplayName string `json:"displayname,omitempty"`
+}
+
+func userUpdate(vcli vaultcli.CLI, username string, body *userUpdateRequest) ([]byte, *errors.ApiError) {
+	uri := paths.CreateResourceURI(cst.NounUsers, username, "", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodPut, uri, body)
+}
+
+func userDelete(vcli vaultcli.CLI, username string, force bool) ([]byte, *errors.ApiError) {
+	query := map[string]string{"force": strconv.FormatBool(force)}
+	uri := paths.CreateResourceURI(cst.NounUsers, username, "", true, query)
+	return vcli.HTTPClient().DoRequest(http.MethodDelete, uri, nil)
+}
+
+func userRestore(vcli vaultcli.CLI, username string) ([]byte, *errors.ApiError) {
+	uri := paths.CreateResourceURI(cst.NounUsers, username, "/restore", true, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodPut, uri, nil)
+}
+
+type userSearchParams struct {
+	query  string
+	limit  string
+	cursor string
+}
+
+func userSearch(vcli vaultcli.CLI, p *userSearchParams) ([]byte, *errors.ApiError) {
+	queryParams := map[string]string{}
+	if p.query != "" {
+		queryParams[cst.SearchKey] = p.query
+	}
+	if p.limit != "" {
+		queryParams[cst.Limit] = p.limit
+	}
+	if p.cursor != "" {
+		queryParams[cst.Cursor] = p.cursor
+	}
+	uri := paths.CreateURI(cst.NounUsers, queryParams)
+	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
 }

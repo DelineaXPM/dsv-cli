@@ -1,0 +1,1 @@
+## Pipeline for building Vault-Cli
