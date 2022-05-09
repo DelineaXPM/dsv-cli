@@ -311,16 +311,12 @@ func handleRoleWorkflow(vcli vaultcli.CLI, args []string) int {
 				}
 				return nil
 			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
-			Name:   "Description",
-			Prompt: &survey.Input{Message: "Description of the role:"},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Name:      "Description",
+			Prompt:    &survey.Input{Message: "Description of the role:"},
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 	}
 
@@ -361,7 +357,7 @@ func handleRoleWorkflow(vcli vaultcli.CLI, args []string) int {
 		provider = strings.Split(answers.Provider, " [type: ")[0]
 
 		externalIDPrompt := &survey.Input{Message: "External ID:"}
-		survErr := survey.AskOne(externalIDPrompt, &externalID, survey.WithValidator(survey.Required))
+		survErr := survey.AskOne(externalIDPrompt, &externalID, survey.WithValidator(vaultcli.SurveyRequired))
 		if survErr != nil {
 			vcli.Out().WriteResponse(nil, errors.New(survErr))
 			return utils.GetExecStatus(survErr)
@@ -372,7 +368,7 @@ func handleRoleWorkflow(vcli vaultcli.CLI, args []string) int {
 		Name:        answers.Name,
 		Description: answers.Description,
 		Provider:    provider,
-		ExternalID:  externalID,
+		ExternalID:  strings.TrimSpace(externalID),
 	}
 	data, apiErr := roleCreate(vcli, role)
 	vcli.Out().WriteResponse(data, apiErr)
@@ -382,7 +378,7 @@ func handleRoleWorkflow(vcli vaultcli.CLI, args []string) int {
 func handleRoleUpdateWizard(vcli vaultcli.CLI, args []string) int {
 	var roleName string
 	namePrompt := &survey.Input{Message: "Role name:"}
-	survErr := survey.AskOne(namePrompt, &roleName)
+	survErr := survey.AskOne(namePrompt, &roleName, survey.WithValidator(vaultcli.SurveyRequired))
 	if survErr != nil {
 		vcli.Out().WriteResponse(nil, errors.New(survErr))
 		return utils.GetExecStatus(survErr)

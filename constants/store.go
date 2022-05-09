@@ -18,3 +18,11 @@ const (
 	Age           = "age"
 	Strategy      = "strategy"
 )
+
+// Supported cache strategies.
+const (
+	CacheStrategyNever                      = "server"
+	CacheStrategyServerThenCache            = "server.cache"
+	CacheStrategyCacheThenServer            = "cache.server"
+	CacheStrategyCacheThenServerThenExpired = "cache.server.expired"
+)

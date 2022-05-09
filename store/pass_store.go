@@ -5,6 +5,6 @@ import (
 	ch "thy/store/credential-helpers"
 )
 
-func (f *StoreFactory) NewPassStore() Store {
-	return f.NewSecureStore(&ch.Pass{})
+func NewPassStore() Store {
+	return NewSecureStore(&ch.Pass{})
 }

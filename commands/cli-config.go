@@ -134,13 +134,12 @@ func handleCliConfigUpdateCmd(vcli vaultcli.CLI, args []string) int {
 		}
 	}
 
-	storeKeySecure := false
-	var storeType store.StoreType
-	if key == cst.Password || key == cst.AuthClientSecret {
-		storeKeySecure = true
-	}
+	var storeType string
+
+	storeKeySecure := key == cst.Password || key == cst.AuthClientSecret
+
 	if storeKeySecure {
-		storeType = store.StoreType(viper.GetString(cst.StoreType))
+		storeType = viper.GetString(cst.StoreType)
 		if storeType == store.Unset {
 			storeType = store.File
 		}
@@ -168,7 +167,7 @@ func handleCliConfigUpdateCmd(vcli vaultcli.CLI, args []string) int {
 			return 1
 		}
 
-		cfgContent, err := ioutil.ReadFile(cfgPath)
+		cfgContent, err := os.ReadFile(cfgPath)
 		if err != nil {
 			vcli.Out().FailS("Failed to load CLI config from file. Exiting. Error: " + err.Error())
 			return 1
@@ -239,14 +238,14 @@ func handleCliConfigReadCmd(vcli vaultcli.CLI, args []string) int {
 	if cfgPath == "" {
 		vcli.Out().FailS("CLI config path could not be resolved. Exiting.")
 		didError = 1
-	} else if b, err := ioutil.ReadFile(cfgPath); err != nil {
+	} else if b, err := os.ReadFile(cfgPath); err != nil {
 		vcli.Out().FailS("Failed to read CLI config: " + err.Error())
 		didError = 1
 	} else {
 		dataOut = append(dataOut, b...)
 	}
 
-	storeType := store.StoreType(viper.GetString(cst.StoreType))
+	storeType := viper.GetString(cst.StoreType)
 	if storeType == store.PassLinux || storeType == store.WinCred {
 		dataOut = append(dataOut, fmt.Sprintf("\nSecure Store Settings (store type: %s):\n", storeType)...)
 		if s, err := store.GetStore(string(storeType)); err != nil {
@@ -276,7 +275,7 @@ func handleCliConfigEditCmd(vcli vaultcli.CLI, args []string) int {
 	if cfgPath == "" {
 		vcli.Out().FailS("CLI config path could not be resolved. Exiting.")
 		return 1
-	} else if b, err := ioutil.ReadFile(cfgPath); err != nil {
+	} else if b, err := os.ReadFile(cfgPath); err != nil {
 		vcli.Out().FailS("Failed to read CLI config: " + err.Error())
 		return 1
 	} else {
@@ -342,7 +341,7 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 		},
 	}
 	cfg := jsonish{}
-	var storeType store.StoreType
+
 	var isSecureStore bool
 	var addProfile bool
 	cfgPath := config.GetFlagBeforeParse(cst.Config, args)
@@ -481,23 +480,24 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 	}
 
 	// store
+	var storeType string
 	if st, err := prompt.Choose(ui, "Please enter store type:",
-		prompt.Option{string(store.File), "File store"},
-		prompt.Option{string(store.None), "None (no caching)"},
-		prompt.Option{string(store.PassLinux), "Pass (Linux only)"},
-		prompt.Option{string(store.WinCred), "Windows Credential Manager (Windows only)"}); err != nil {
+		prompt.Option{store.File, "File store"},
+		prompt.Option{store.None, "None (no caching)"},
+		prompt.Option{store.PassLinux, "Pass (Linux only)"},
+		prompt.Option{store.WinCred, "Windows Credential Manager (Windows only)"}); err != nil {
 		return 1
 	} else {
-		if err := store.ValidateCredentialStore(st); err != nil {
+		storeType = st
+		if err := store.ValidateCredentialStore(storeType); err != nil {
 			ui.Error(fmt.Sprintf("Failed to get store: %v.", err))
 			return 1
 		}
-		storeType = store.StoreType(st)
 		if storeType == store.PassLinux || storeType == store.WinCred {
 			isSecureStore = true
 		}
-		AddNode(&cfg, jsonish{cst.Type: st}, profile, cst.Store)
-		if store.StoreType(st) == store.File {
+		AddNode(&cfg, jsonish{cst.Type: storeType}, profile, cst.Store)
+		if storeType == store.File {
 			def := filepath.Join(utils.NewEnvProvider().GetHomeDir(), ".thy")
 			sp, _ := prompt.AskDefault(ui, "Please enter directory for file store", def)
 			if sp != def {
@@ -505,20 +505,20 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 				viper.Set(cst.StorePath, sp)
 			}
 		}
-		viper.Set(cst.StoreType, st)
+		viper.Set(cst.StoreType, storeType)
 	}
 
 	//cache
 	if storeType != store.None {
 		if strategy, err := prompt.Choose(ui, "Please enter cache strategy for secrets:",
-			prompt.Option{string(store.Never), "Never"},
-			prompt.Option{string(store.ServerThenCache), "Server then cache"},
-			prompt.Option{string(store.CacheThenServer), "Cache then server"},
-			prompt.Option{string(store.CacheThenServerThenExpired), "Cache then server, but allow expired cache if server unreachable"}); err != nil {
+			prompt.Option{cst.CacheStrategyNever, "Never"},
+			prompt.Option{cst.CacheStrategyServerThenCache, "Server then cache"},
+			prompt.Option{cst.CacheStrategyCacheThenServer, "Cache then server"},
+			prompt.Option{cst.CacheStrategyCacheThenServerThenExpired, "Cache then server, but allow expired cache if server unreachable"}); err != nil {
 			return 1
 		} else {
 			AddNode(&cfg, jsonish{cst.Strategy: strategy}, profile, cst.Cache)
-			if store.CacheStrategy(strategy) != store.Never {
+			if strategy != cst.CacheStrategyNever {
 				if ageString, err := prompt.Ask(ui, "Please enter cache age (minutes until expiration):"); err != nil {
 					return 1
 				} else if age, err := strconv.Atoi(ageString); err != nil || age <= 0 {
@@ -700,7 +700,7 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 
 		// Store encryption key file (for auth type password).
 		if auth.AuthType(authType) == auth.Password {
-			st, apiError := store.GetStore(string(storeType))
+			st, apiError := store.GetStore(storeType)
 			if apiError != nil {
 				ui.Error(apiError.Error())
 				return 1

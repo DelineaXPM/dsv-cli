@@ -441,9 +441,7 @@ func handleAuthProviderCreateWizard(vcli vaultcli.CLI) int {
 				}
 				return nil
 			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
 			Name: "Type",
@@ -493,7 +491,7 @@ func handleAuthProviderCreateWizard(vcli vaultcli.CLI) int {
 func handleAuthProviderUpdateWizard(vcli vaultcli.CLI) int {
 	var name string
 	namePrompt := &survey.Input{Message: "Auth provider name:"}
-	survErr := survey.AskOne(namePrompt, &name, survey.WithValidator(survey.Required))
+	survErr := survey.AskOne(namePrompt, &name, survey.WithValidator(vaultcli.SurveyRequired))
 	if survErr != nil {
 		vcli.Out().WriteResponse(nil, errors.New(survErr))
 		return utils.GetExecStatus(survErr)
@@ -552,7 +550,7 @@ func handleAuthProviderUpdateWizard(vcli vaultcli.CLI) int {
 func authProviderAWSWizard() (*AuthProviderProperties, error) {
 	var accountID string
 	accIDPrompt := &survey.Input{Message: "AWS account ID:"}
-	survErr := survey.AskOne(accIDPrompt, &accountID, survey.WithValidator(survey.Required))
+	survErr := survey.AskOne(accIDPrompt, &accountID, survey.WithValidator(vaultcli.SurveyRequired))
 	if survErr != nil {
 		return nil, survErr
 	}
@@ -562,7 +560,7 @@ func authProviderAWSWizard() (*AuthProviderProperties, error) {
 func authProviderAzureWizard() (*AuthProviderProperties, error) {
 	var tenantID string
 	tenantIDPrompt := &survey.Input{Message: "Azure tenant ID:"}
-	survErr := survey.AskOne(tenantIDPrompt, &tenantID, survey.WithValidator(survey.Required))
+	survErr := survey.AskOne(tenantIDPrompt, &tenantID, survey.WithValidator(vaultcli.SurveyRequired))
 	if survErr != nil {
 		return nil, survErr
 	}
@@ -572,7 +570,7 @@ func authProviderAzureWizard() (*AuthProviderProperties, error) {
 func authProviderGCPWizard() (*AuthProviderProperties, error) {
 	var dataFilePath string
 	pathPrompt := &survey.Input{Message: "Path to data file with provider properties:"}
-	survErr := survey.AskOne(pathPrompt, &dataFilePath, survey.WithValidator(survey.Required))
+	survErr := survey.AskOne(pathPrompt, &dataFilePath, survey.WithValidator(vaultcli.SurveyRequired))
 	if survErr != nil {
 		return nil, survErr
 	}
@@ -598,46 +596,22 @@ func authProviderGCPWizard() (*AuthProviderProperties, error) {
 func authProviderThycoticOneWizard() (*AuthProviderProperties, error) {
 	qs := []*survey.Question{
 		{
-			Name:   "BaseURL",
-			Prompt: &survey.Input{Message: "Base URL:"},
-			Validate: func(ans interface{}) error {
-				answer := strings.TrimSpace(ans.(string))
-				if len(answer) == 0 {
-					return errors.NewS("Value is required")
-				}
-				return nil
-			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Name:      "BaseURL",
+			Prompt:    &survey.Input{Message: "Base URL:"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
-			Name:   "ClientID",
-			Prompt: &survey.Input{Message: "Client ID:"},
-			Validate: func(ans interface{}) error {
-				answer := strings.TrimSpace(ans.(string))
-				if len(answer) == 0 {
-					return errors.NewS("Value is required")
-				}
-				return nil
-			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Name:      "ClientID",
+			Prompt:    &survey.Input{Message: "Client ID:"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
-			Name:   "ClientSecret",
-			Prompt: &survey.Input{Message: "Client secret:"},
-			Validate: func(ans interface{}) error {
-				answer := strings.TrimSpace(ans.(string))
-				if len(answer) == 0 {
-					return errors.NewS("Value is required")
-				}
-				return nil
-			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Name:      "ClientSecret",
+			Prompt:    &survey.Input{Message: "Client secret:"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
 			Name:   "WelcomeEmail",

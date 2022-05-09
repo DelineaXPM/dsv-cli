@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	cst "thy/constants"
 	"thy/internal/predictor"
@@ -21,8 +22,11 @@ Usage:
    • home %[3]s
    • home --path %[3]s
 		`, cst.NounHome, cst.ProductName, cst.ExamplePath),
-		FlagsPredictor: GetNoDataOpWrappers(cst.NounSecret),
-		MinNumberArgs:  1,
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret), Predictor: predictor.NewSecretPathPredictorDefault()},
+			{Name: cst.Version, Usage: "List the current and last (n) versions"},
+		},
+		MinNumberArgs: 1,
 		RunFunc: func(args []string) int {
 			path := viper.GetString(cst.Path)
 			if path == "" && len(args) > 0 {
@@ -44,7 +48,10 @@ func GetHomeReadCmd() (cli.Command, error) {
 Usage:
    • home %[1]s %[4]s 
    • home %[1]s --path %[4]s`, cst.Read, cst.NounHome, cst.ProductName, cst.ExamplePath),
-		FlagsPredictor:    GetNoDataOpWrappers(cst.NounSecret),
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret), Predictor: predictor.NewSecretPathPredictorDefault()},
+			{Name: cst.Version, Usage: "List the current and last (n) versions"},
+		},
 		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
 		MinNumberArgs:     1,
 		RunFunc: func(args []string) int {
@@ -63,8 +70,13 @@ Usage:
    • %[2]s %[1]s --path %[4]s --data %[5]s
    • %[2]s %[1]s --path %[4]s --data %[6]s
 		`, cst.Create, cst.NounHome, cst.ProductName, cst.ExamplePath, cst.ExampleDataJSON, cst.ExampleDataPath),
-		FlagsPredictor: GetDataOpWrappers(cst.NounSecret),
-		MinNumberArgs:  2,
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in a %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), cst.NounSecret), Predictor: predictor.NewPrefixFilePredictor("*")},
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret), Predictor: predictor.NewSecretPathPredictorDefault()},
+			{Name: cst.DataDescription, Usage: fmt.Sprintf("Description of a %s", cst.NounSecret)},
+			{Name: cst.DataAttributes, Usage: fmt.Sprintf("Attributes of a %s", cst.NounSecret)},
+		},
+		MinNumberArgs: 2,
 		RunFunc: func(args []string) int {
 			return handleHomeCreate(vaultcli.New(), args)
 		},
@@ -118,9 +130,15 @@ Usage:
    • %[2]s %[1]s %[4]s %[5]s
    • %[2]s %[1]s --path %[4]s --data %[5]s
    • %[2]s %[1]s --path %[4]s --data %[6]s
-		`, cst.Create, cst.NounHome, cst.ProductName, cst.ExamplePath, cst.ExampleDataJSON, cst.ExampleDataPath),
-		FlagsPredictor: GetDataOpWrappers(cst.NounSecret),
-		MinNumberArgs:  1,
+`, cst.Update, cst.NounHome, cst.ProductName, cst.ExamplePath, cst.ExampleDataJSON, cst.ExampleDataPath),
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in a %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), cst.NounSecret), Predictor: predictor.NewPrefixFilePredictor("*")},
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret), Predictor: predictor.NewSecretPathPredictorDefault()},
+			{Name: cst.DataDescription, Usage: fmt.Sprintf("Description of a %s", cst.NounSecret)},
+			{Name: cst.DataAttributes, Usage: fmt.Sprintf("Attributes of a %s", cst.NounSecret)},
+			{Name: cst.Overwrite, Usage: fmt.Sprintf("Overwrite all the contents of %s data", cst.NounSecret), ValueType: "bool"},
+		},
+		MinNumberArgs: 1,
 		RunFunc: func(args []string) int {
 			return handleHomeUpdate(vaultcli.New(), args)
 		},
@@ -211,7 +229,7 @@ func handleHomeRead(vcli vaultcli.CLI, args []string) int {
 }
 
 func handleHomeCreate(vcli vaultcli.CLI, args []string) int {
-	return handleSecretUpsertCmd(vcli, cst.NounHome, args)
+	return handleSecretUpsertCmd(vcli, cst.NounHome, cst.Create, args)
 }
 
 func handleHomeDelete(vcli vaultcli.CLI, args []string) int {
@@ -227,7 +245,7 @@ func handleHomeSearch(vcli vaultcli.CLI, args []string) int {
 }
 
 func handleHomeUpdate(vcli vaultcli.CLI, args []string) int {
-	return handleSecretUpsertCmd(vcli, cst.NounHome, args)
+	return handleSecretUpsertCmd(vcli, cst.NounHome, cst.Update, args)
 }
 
 func handleHomeRollback(vcli vaultcli.CLI, args []string) int {

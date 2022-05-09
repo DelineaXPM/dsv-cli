@@ -85,7 +85,7 @@ func doEditData(data []byte, startErr *errors.ApiError) (edited []byte, runErr *
 	if err != nil {
 		return nil, errors.New(err).Grow(fmt.Sprintf("Command failed to return: '%s %s'", editorCmd, tmpFile.Name()))
 	}
-	edited, err = ioutil.ReadFile(tmpFile.Name())
+	edited, err = os.ReadFile(tmpFile.Name())
 	if err != nil {
 		return nil, errors.New(err).Grow(fmt.Sprintf("Failed to read edited file: %q", tmpFile.Name()))
 	}

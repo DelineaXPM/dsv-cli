@@ -16,6 +16,5 @@ const (
 
 // Cmd metadata
 const (
-	LastCommandKey = "lastCommand"
-	MainCommand    = "mainCommand"
+	MainCommand = "mainCommand"
 )

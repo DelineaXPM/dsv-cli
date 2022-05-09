@@ -2,12 +2,14 @@ package store_test
 
 import (
 	"fmt"
-	"math/rand"
+	"os"
 	"runtime"
 	"testing"
-	"thy/store"
-	"time"
 
+	cst "thy/constants"
+	"thy/store"
+
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,11 +18,9 @@ type tokenData struct {
 	Password []byte `json:"password"`
 }
 
-var storeTypes []store.StoreType = []store.StoreType{
-	store.File,
-}
-
 func TestStores(t *testing.T) {
+	storeTypes := []string{store.File}
+
 	isWindows := runtime.GOOS == "windows"
 	if isWindows {
 		storeTypes = append(storeTypes, store.WinCred)
@@ -39,20 +39,24 @@ func TestStores(t *testing.T) {
 	}
 }
 
-func testStore(t *testing.T, st store.StoreType) {
-	// arrange
-	rand.Seed(time.Now().UTC().UnixNano())
-	sf := store.StoreFactory{}
-	s := sf.CreateStore(st)
-	token := make([]byte, 4)
-	rand.Read(token)
-	password := make([]byte, 4)
-	rand.Read(password)
-	obj := tokenData{
-		token,
-		password,
+func testStore(t *testing.T, storeType string) {
+	t.Helper()
+
+	if storeType == store.File {
+		// Setup for file store to not use local user default path.
+		viper.Set(cst.StorePath, "./testing-store-asb5a23afs3")
+		defer os.Remove("./testing-store-asb5a23afs3")
 	}
-	err := s.Store("token", obj)
+
+	// arrange
+	s, err := store.GetStore(storeType)
+	assert.Nil(t, err)
+
+	obj := tokenData{
+		Token:    []byte("GIyZDY5O"),
+		Password: []byte("CIsImF0d"),
+	}
+	err = s.Store("token", obj)
 	assert.Nil(t, err)
 
 	// act

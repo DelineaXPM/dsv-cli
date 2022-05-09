@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	versionsURL          = "https://dsv.thycotic.com/cli-version.json"
+	versionsURL          = "https://dsv.secretsvaultcloud.com/cli-version.json"
 	checkFrequencyDays   = 3
 	cacheFileName        = ".update"
 	dateLayout           = "2006-Jan-02"
@@ -76,14 +76,14 @@ func readCache(updateFilePath string) *latestInfo {
 		return nil
 	}
 
-	fileContent, err := ioutil.ReadFile(updateFilePath)
+	fileContent, err := os.ReadFile(updateFilePath)
 	if err != nil {
 		log.Printf("Failed to read content from file %s (%s) ", updateFilePath, err.Error())
 		return nil
 	}
 
 	contents := strings.Split(string(fileContent), "\n")
-	if len(contents) != 3 {
+	if len(contents) < 2 {
 		log.Printf("Wrong file %s format", updateFilePath)
 		return nil
 	}
@@ -112,7 +112,7 @@ func readCache(updateFilePath string) *latestInfo {
 // updateCache updates content in the cache file
 func updateCache(cacheFilePath string, content []byte) {
 	fileContent := fmt.Sprintf("%s\n%s", time.Now().Format(dateLayout), string(content))
-	err := ioutil.WriteFile(cacheFilePath, []byte(fileContent), os.FileMode(0644))
+	err := os.WriteFile(cacheFilePath, []byte(fileContent), os.FileMode(0644))
 	if err != nil {
 		// Only log error and continue
 		log.Printf("Unsuccessfully update of the cache file %s (%s) ", cacheFilePath, err)
@@ -126,7 +126,7 @@ func fetchContent(urlToFetch string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	pageContent, err := ioutil.ReadAll(resp.Body)
+	pageContent, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}

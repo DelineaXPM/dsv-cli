@@ -15,18 +15,14 @@ import (
 	"net/http"
 	"os"
 	"reflect"
-	"runtime"
 	"strings"
 	"text/template"
 	"time"
 
-	"thy/paths"
-
-	"github.com/mitchellh/cli"
-
 	config "thy/cli-config"
 	cst "thy/constants"
 	"thy/errors"
+	"thy/paths"
 	"thy/requests"
 	"thy/store"
 	"thy/utils"
@@ -36,9 +32,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/mitchellh/cli"
 	"github.com/pkg/browser"
 	"github.com/spf13/viper"
 )
+
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -o ../fake/fake_authenticator.go . Authenticator
 
 const (
 	leewaySecondsTokenExp   = 10
@@ -66,47 +65,32 @@ const (
 )
 
 // GetTokenKey gets the key for the auth type
-func (a AuthType) GetTokenKey(keySuffix string) string {
-	// Refresh and Password are stored the same
-
-	keySuffix = strings.Replace(keySuffix, "-", "%2D", -1)
-
+func (a AuthType) GetTokenKey(tenant string, keySuffix string) string {
 	if a == Implicit {
 		panic("implicit is invalid auth type")
 	}
+
 	key := cst.TokenRoot + "-"
 	if a == Refresh {
+		// Refresh and Password are stored the same
 		key = key + string(Password)
 	} else {
 		key = key + string(a)
 	}
 
-	key += "-" + viper.GetString(cst.Tenant)
+	key += "-" + tenant
 
 	if keySuffix != "" {
+		keySuffix = strings.ReplaceAll(keySuffix, "-", "%2D")
 		key = key + "-" + keySuffix
 	}
 	return key
 }
 
-// GetTokenFunc is an arbitrary function for testing
-type GetTokenFunc func() (*TokenResponse, *errors.ApiError)
-
-// GetToken invokes the func defined on GetTokenFunc
-func (f GetTokenFunc) GetToken() (*TokenResponse, *errors.ApiError) {
-	return f()
-}
-
-// GetTokenCacheOverride invokes the func defined on GetTokenFunc with a bypass for cache for tests.
-// Adding this to satisfy interface, but this function is a convenience feature for tests
-func (f GetTokenFunc) GetTokenCacheOverride(cache bool) (*TokenResponse, *errors.ApiError) {
-	return f()
-}
-
 // Authenticator is the interface used for authentication funcs
 type Authenticator interface {
 	GetToken() (*TokenResponse, *errors.ApiError)
-	GetTokenCacheOverride(useCache bool) (*TokenResponse, *errors.ApiError)
+	GetTokenCacheOverride(authType string, useCache bool) (*TokenResponse, *errors.ApiError)
 }
 
 type authenticator struct {
@@ -130,28 +114,22 @@ func NewAuthenticator(store store.Store, client requests.Client) Authenticator {
 }
 
 func (a *authenticator) GetToken() (*TokenResponse, *errors.ApiError) {
-	if AuthType(viper.GetString(cst.AuthType)) == ClientCredential && (strings.TrimSpace(viper.GetString(cst.AuthClientID)) != "" || strings.TrimSpace(viper.GetString(cst.AuthClientSecret)) != "") {
-		return a.GetTokenCacheOverride(false)
-	}
-	if AuthType(viper.GetString(cst.AuthType)) == Password && strings.TrimSpace(viper.GetString(cst.Password)) != "" {
-		return a.GetTokenCacheOverride(false)
-	}
-	return a.GetTokenCacheOverride(true)
-}
-
-func (a *authenticator) GetTokenCacheOverride(useCache bool) (*TokenResponse, *errors.ApiError) {
 	authType := viper.GetString(cst.AuthType)
-	var at AuthType
-	if authType == "" {
-		at = getDefaultAuthType()
-	} else {
-		at = AuthType(authType)
+
+	if AuthType(authType) == ClientCredential && (strings.TrimSpace(viper.GetString(cst.AuthClientID)) != "" || strings.TrimSpace(viper.GetString(cst.AuthClientSecret)) != "") {
+		return a.GetTokenCacheOverride(authType, false)
 	}
-	return a.getTokenForAuthType(at, useCache)
+	if AuthType(authType) == Password && strings.TrimSpace(viper.GetString(cst.Password)) != "" {
+		return a.GetTokenCacheOverride(authType, false)
+	}
+	return a.GetTokenCacheOverride(authType, true)
 }
 
-func getDefaultAuthType() AuthType {
-	return Password
+func (a *authenticator) GetTokenCacheOverride(authType string, useCache bool) (*TokenResponse, *errors.ApiError) {
+	if authType == "" {
+		return a.getTokenForAuthType(Password, useCache)
+	}
+	return a.getTokenForAuthType(AuthType(authType), useCache)
 }
 
 func (a *authenticator) getTokenForAuthType(at AuthType, useCache bool) (*TokenResponse, *errors.ApiError) {
@@ -191,7 +169,8 @@ func (a *authenticator) getTokenForAuthType(at AuthType, useCache bool) (*TokenR
 		keySuffix = viper.GetString(keyName)
 	}
 
-	keyToken := at.GetTokenKey(keySuffix)
+	tenant := viper.GetString(cst.Tenant)
+	keyToken := at.GetTokenKey(tenant, keySuffix)
 
 	if useCache {
 		if err := a.store.Get(keyToken, &tr); err != nil {
@@ -262,8 +241,9 @@ func (a *authenticator) getTokenForAuthType(at AuthType, useCache bool) (*TokenR
 		var err error
 		token = viper.GetString(cst.GcpToken)
 		if token == "" {
+			gcpAuthType := viper.GetString(cst.GcpAuthType)
 			gcp := GcpClient{}
-			token, err = gcp.GetJwtToken()
+			token, err = gcp.GetJwtToken(gcpAuthType)
 			if err != nil {
 				return nil, errors.New(err).Grow("Failed to fetch token for gcp")
 			}
@@ -401,13 +381,7 @@ func (a *authenticator) fetchTokenVault(at AuthType, data requestBody) (*TokenRe
 			}
 		}()
 
-		browserOpened := false
-		if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
-			if err = browser.OpenURL(redirectResponse.RedirectUrl); err == nil {
-				browserOpened = true
-			}
-		}
-		if !browserOpened {
+		if err = browser.OpenURL(redirectResponse.RedirectUrl); err != nil {
 			ui.Info(fmt.Sprintf("Unable to open browser, complete login process here:\n %s", redirectResponse.RedirectUrl))
 		}
 
@@ -546,8 +520,8 @@ func setupDataForPasswordAuth(data *requestBody) error {
 	// key file and use it to decrypt SecurePassword.
 	if data.Password = viper.GetString(cst.Password); data.Password == "" {
 		passSetting := cst.SecurePassword
-		st := store.StoreType(viper.GetString(cst.StoreType))
-		if st == store.WinCred || st == store.PassLinux {
+		storeType := viper.GetString(cst.StoreType)
+		if storeType == store.WinCred || storeType == store.PassLinux {
 			passSetting = cst.Password
 		}
 		if pass, err := config.GetSecureSetting(passSetting); err == nil && pass != "" {

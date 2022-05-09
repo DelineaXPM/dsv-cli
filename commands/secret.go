@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"crypto/sha1"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -14,7 +15,6 @@ import (
 	"thy/errors"
 	"thy/internal/predictor"
 	"thy/paths"
-	"thy/store"
 	"thy/utils"
 	"thy/vaultcli"
 
@@ -23,15 +23,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-func GetDataOpWrappers(targetEntity string) []*predictor.Params {
-	return []*predictor.Params{
-		{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in a %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), targetEntity), Predictor: predictor.NewPrefixFilePredictor("*")},
-		{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, targetEntity), Predictor: predictor.NewSecretPathPredictorDefault()},
-		{Name: cst.DataDescription, Usage: fmt.Sprintf("Description of a %s", targetEntity)},
-		{Name: cst.DataAttributes, Usage: fmt.Sprintf("Attributes of a %s", targetEntity)},
-		{Name: cst.Overwrite, Usage: fmt.Sprintf("Overwrite all the contents of %s data", targetEntity), ValueType: "bool"},
-	}
-}
 func GetNoDataOpWrappers(targetEntity string) []*predictor.Params {
 	return []*predictor.Params{
 		{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, targetEntity), Predictor: predictor.NewSecretPathPredictorDefault()},
@@ -60,15 +51,15 @@ func GetSecretCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`Execute an action on a %s from %s
 
 Usage:
-   • secret %[3]s -b
-   • secret --path %[3]s -b
+   • secret %[3]s
+   • secret --path %[3]s
 `, cst.NounSecret, cst.ProductName, cst.ExamplePath),
 		FlagsPredictor: GetNoDataOpWrappers(cst.NounSecret),
 		MinNumberArgs:  1,
 		RunFunc: func(args []string) int {
 			id := viper.GetString(cst.ID)
 			path := viper.GetString(cst.Path)
-			if path == "" && id == "" && len(args) > 0 {
+			if path == "" && id == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 				path = args[0]
 			}
 			if path == "" && id == "" {
@@ -79,15 +70,15 @@ Usage:
 	})
 }
 
-func GetReadCmd() (cli.Command, error) {
+func GetSecretReadCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounSecret, cst.Read},
 		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r)", cst.NounSecret, cst.Read),
 		HelpText: fmt.Sprintf(`Read a %[2]s from %[3]s
 
 Usage:
-   • secret %[1]s %[4]s -b
-   • secret %[1]s --path %[4]s -bf data.Data.Key
+   • secret %[1]s %[4]s
+   • secret %[1]s --path %[4]s -f data.Data.Key
    • secret %[1]s --version
 `, cst.Read, cst.NounSecret, cst.ProductName, cst.ExamplePath),
 		FlagsPredictor:    GetNoDataOpWrappers(cst.NounSecret),
@@ -99,7 +90,7 @@ Usage:
 	})
 }
 
-func GetDescribeCmd() (cli.Command, error) {
+func GetSecretDescribeCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounSecret, cst.Describe},
 		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r)", cst.NounSecret, cst.Describe),
@@ -118,7 +109,7 @@ Usage:
 	})
 }
 
-func GetDeleteCmd() (cli.Command, error) {
+func GetSecretDeleteCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounSecret, cst.Delete},
 		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r)", cst.NounSecret, cst.Delete),
@@ -162,7 +153,7 @@ Usage:
 	})
 }
 
-func GetUpdateCmd() (cli.Command, error) {
+func GetSecretUpdateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounSecret, cst.Update},
 		SynopsisText: fmt.Sprintf("%s %s (<path> <data> | (--path|-r) (--data|-d))", cst.NounSecret, cst.Update),
@@ -183,12 +174,12 @@ Usage:
 		},
 		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
 		RunFunc: func(args []string) int {
-			return handleSecretUpsertCmd(vaultcli.New(), cst.NounSecret, args)
+			return handleSecretUpsertCmd(vaultcli.New(), cst.NounSecret, cst.Update, args)
 		},
 	})
 }
 
-func GetRollbackCmd() (cli.Command, error) {
+func GetSecretRollbackCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounSecret, cst.Rollback},
 		SynopsisText: fmt.Sprintf("%s %s (<path> | (--path|-r))", cst.NounSecret, cst.Rollback),
@@ -211,17 +202,20 @@ Usage:
 	})
 }
 
-func GetEditCmd() (cli.Command, error) {
+func GetSecretEditCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounSecret, cst.Update},
-		SynopsisText: fmt.Sprintf("%s %s (<path> <data> | (--path|-r))", cst.NounSecret, cst.Edit),
+		SynopsisText: fmt.Sprintf("%s %s (<path> | (--path|-r))", cst.NounSecret, cst.Edit),
 		HelpText: fmt.Sprintf(`Edit a %[2]s in %[3]s
 
 Usage:
    • secret %[1]s %[4]s
    • secret %[1]s --path %[4]s
 `, cst.Edit, cst.NounSecret, cst.ProductName, cst.ExamplePath),
-		FlagsPredictor:    GetNoDataOpWrappers(cst.NounSecret),
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret), Predictor: predictor.NewSecretPathPredictorDefault()},
+			{Name: cst.ID, Shorthand: "i", Usage: fmt.Sprintf("Target %s for a %s", cst.ID, cst.NounSecret)},
+		},
 		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
 		MinNumberArgs:     1,
 		RunFunc: func(args []string) int {
@@ -230,7 +224,7 @@ Usage:
 	})
 }
 
-func GetCreateCmd() (cli.Command, error) {
+func GetSecretCreateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounSecret, cst.Create},
 		SynopsisText: fmt.Sprintf("%s %s (<path> <data> | (--path|-r) (--data|-d))", cst.NounSecret, cst.Create),
@@ -241,14 +235,19 @@ Usage:
    • secret %[1]s --path %[4]s --data %[5]s
    • secret %[1]s --path %[4]s --data %[6]s
 `, cst.Create, cst.NounSecret, cst.ProductName, cst.ExamplePath, cst.ExampleDataJSON, cst.ExampleDataPath),
-		FlagsPredictor: GetDataOpWrappers(cst.NounSecret),
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in a %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), cst.NounSecret), Predictor: predictor.NewPrefixFilePredictor("*")},
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret), Predictor: predictor.NewSecretPathPredictorDefault()},
+			{Name: cst.DataDescription, Usage: fmt.Sprintf("Description of a %s", cst.NounSecret)},
+			{Name: cst.DataAttributes, Usage: fmt.Sprintf("Attributes of a %s", cst.NounSecret)},
+		},
 		RunFunc: func(args []string) int {
-			return handleSecretUpsertCmd(vaultcli.New(), cst.NounSecret, args)
+			return handleSecretUpsertCmd(vaultcli.New(), cst.NounSecret, cst.Create, args)
 		},
 	})
 }
 
-func GetBustCacheCmd() (cli.Command, error) {
+func GetSecretBustCacheCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounSecret, cst.BustCache},
 		SynopsisText: fmt.Sprintf("%s %s", cst.NounSecret, cst.BustCache),
@@ -285,18 +284,18 @@ Usage:
 }
 
 func handleBustCacheCmd(vcli vaultcli.CLI, args []string) int {
-	var err *errors.ApiError
-	var s store.Store
 	st := viper.GetString(cst.StoreType)
-	if s, err = vcli.Store(st); err == nil {
-		err = s.Wipe(cst.SecretRoot)
-		err = s.Wipe(cst.SecretDescriptionRoot).And(err)
-	}
-	if err == nil {
-		log.Print("Successfully cleared local cache")
+	s, err := vcli.Store(st)
+	if err != nil {
+		vcli.Out().WriteResponse(nil, err)
 	}
 
-	vcli.Out().WriteResponse(nil, err)
+	err = s.Wipe(getSecretCachePrefix())
+	err = s.Wipe(getSecretDescCachePrefix()).And(err)
+	if err != nil {
+		vcli.Out().WriteResponse(nil, err)
+	}
+	log.Print("Successfully cleared local cache")
 	return 0
 }
 
@@ -304,13 +303,13 @@ func handleSecretDescribeCmd(vcli vaultcli.CLI, secretType string, args []string
 	id := viper.GetString(cst.ID)
 	path := viper.GetString(cst.Path)
 	if path == "" {
-		path = viper.GetString(cst.ID)
+		path = id
 		id = ""
 	}
-	if path == "" && len(args) > 0 {
+	if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		path = args[0]
 	}
-	resp, err := getSecret(vcli, secretType, path, id, false, cst.SuffixDescription)
+	resp, err := getSecret(vcli, secretType, path, id, cst.SuffixDescription)
 
 	vcli.Out().WriteResponse(resp, err)
 	return 0
@@ -320,30 +319,28 @@ func handleSecretReadCmd(vcli vaultcli.CLI, secretType string, args []string) in
 	id := viper.GetString(cst.ID)
 	path := viper.GetString(cst.Path)
 	if path == "" {
-		path = viper.GetString(cst.ID)
+		path = id
 		id = ""
 	}
-	if path == "" && len(args) > 0 {
+	if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		path = args[0]
 	}
 	version := viper.GetString(cst.Version)
 	if strings.TrimSpace(version) != "" {
 		path = fmt.Sprint(path, "/", cst.Version, "/", version)
 	}
-	resp, err := getSecret(vcli, secretType, path, id, false, "")
+	resp, err := getSecret(vcli, secretType, path, id, "")
 
 	vcli.Out().WriteResponse(resp, err)
 	return utils.GetExecStatus(err)
 }
 
 func handleSecretRestoreCmd(vcli vaultcli.CLI, secretType string, args []string) int {
-	var err *errors.ApiError
-	var data []byte
 	path := viper.GetString(cst.Path)
 	if path == "" {
 		path = viper.GetString(cst.ID)
 	}
-	if path == "" && len(args) > 0 {
+	if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		path = args[0]
 	}
 
@@ -354,7 +351,7 @@ func handleSecretRestoreCmd(vcli vaultcli.CLI, secretType string, args []string)
 	}
 	path = rc.path
 	uri := paths.CreateResourceURI(rc.resourceType, path, "/restore", true, nil)
-	data, err = vcli.HTTPClient().DoRequest(http.MethodPut, uri, nil)
+	data, err := vcli.HTTPClient().DoRequest(http.MethodPut, uri, nil)
 
 	vcli.Out().WriteResponse(data, err)
 	return utils.GetExecStatus(err)
@@ -399,42 +396,39 @@ func handleSecretSearchCmd(vcli vaultcli.CLI, secretType string, args []string) 
 }
 
 func handleSecretDeleteCmd(vcli vaultcli.CLI, secretType string, args []string) int {
-	var err *errors.ApiError
-	var resp []byte
 	id := viper.GetString(cst.ID)
 	path := viper.GetString(cst.Path)
 	force := viper.GetBool(cst.Force)
 	if path == "" {
-		path = viper.GetString(cst.ID)
+		path = id
 		id = ""
 	}
-	if path == "" && len(args) > 0 {
+	if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		path = args[0]
 	}
 
 	query := map[string]string{"force": strconv.FormatBool(force)}
 	rc, rerr := getResourceConfig(path, secretType)
 	if rerr != nil {
-		vcli.Out().Fail(err)
-		return utils.GetExecStatus(err)
+		vcli.Out().Fail(rerr)
+		return utils.GetExecStatus(rerr)
 	}
 	path = rc.path
 	uri, err := paths.GetResourceURIFromResourcePath(rc.resourceType, path, id, "", query)
-	resp, err = vcli.HTTPClient().DoRequest(http.MethodDelete, uri, nil)
+	resp, err := vcli.HTTPClient().DoRequest(http.MethodDelete, uri, nil)
 
 	vcli.Out().WriteResponse(resp, err)
 	return utils.GetExecStatus(err)
 }
 
 func handleSecretRollbackCmd(vcli vaultcli.CLI, secretType string, args []string) int {
-	var apiError *errors.ApiError
-	var resp []byte
-
+	id := viper.GetString(cst.ID)
 	path := viper.GetString(cst.Path)
 	if path == "" {
-		path = viper.GetString(cst.ID)
+		path = id
+		id = ""
 	}
-	if path == "" && len(args) > 0 {
+	if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		path = args[0]
 	}
 	version := viper.GetString(cst.Version)
@@ -446,11 +440,13 @@ func handleSecretRollbackCmd(vcli vaultcli.CLI, secretType string, args []string
 
 	path = rc.path
 
+	var apiError *errors.ApiError
+	var resp []byte
+
 	// If version is not provided, get the secret's description and parse the version from it.
 	// Submit a request for a version that's previous relative to the one found.
 	if version == "" {
-		id := viper.GetString(cst.ID)
-		resp, apiError = getSecret(vcli, secretType, path, id, false, cst.SuffixDescription)
+		resp, apiError = getSecret(vcli, secretType, path, id, cst.SuffixDescription)
 		if apiError != nil {
 			vcli.Out().WriteResponse(resp, apiError)
 			return utils.GetExecStatus(apiError)
@@ -473,9 +469,7 @@ func handleSecretRollbackCmd(vcli vaultcli.CLI, secretType string, args []string
 	return utils.GetExecStatus(apiError)
 }
 
-func handleSecretUpsertCmd(vcli vaultcli.CLI, secretType string, args []string) int {
-	action := strings.ToLower(viper.GetString(cst.LastCommandKey))
-
+func handleSecretUpsertCmd(vcli vaultcli.CLI, secretType string, action string, args []string) int {
 	if OnlyGlobalArgs(args) {
 		var (
 			resp []byte
@@ -557,25 +551,15 @@ func handleCreateWorkflow(vcli vaultcli.CLI, secretType string) ([]byte, *errors
 
 	qs := []*survey.Question{
 		{
-			Name:   "Path",
-			Prompt: &survey.Input{Message: "Path:"},
-			Validate: func(ans interface{}) error {
-				answer := strings.TrimSpace(ans.(string))
-				if len(answer) == 0 {
-					return errors.NewS("Value is required")
-				}
-				return nil
-			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Name:      "Path",
+			Prompt:    &survey.Input{Message: "Path:"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
-			Name:   "Description",
-			Prompt: &survey.Input{Message: "Description:"},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Name:      "Description",
+			Prompt:    &survey.Input{Message: "Description:"},
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 	}
 	answers := struct {
@@ -649,14 +633,7 @@ func handleCreateWorkflow(vcli vaultcli.CLI, secretType string) ([]byte, *errors
 func handleUpdateWorkflow(vcli vaultcli.CLI, secretType string) ([]byte, *errors.ApiError) {
 	var path string
 	pathPrompt := &survey.Input{Message: "Path:"}
-	pathValidation := func(ans interface{}) error {
-		answer := strings.TrimSpace(ans.(string))
-		if len(answer) == 0 {
-			return errors.NewS("Value is required")
-		}
-		return nil
-	}
-	survErr := survey.AskOne(pathPrompt, &path, survey.WithValidator(pathValidation))
+	survErr := survey.AskOne(pathPrompt, &path, survey.WithValidator(vaultcli.SurveyRequired))
 	if survErr != nil {
 		return nil, errors.New(survErr)
 	}
@@ -825,14 +802,13 @@ func handleUpdateWorkflow(vcli vaultcli.CLI, secretType string) ([]byte, *errors
 }
 
 func handleSecretEditCmd(vcli vaultcli.CLI, secretType string, args []string) int {
-	var resp []byte
 	id := viper.GetString(cst.ID)
 	path := viper.GetString(cst.Path)
 	if path == "" {
-		path = viper.GetString(cst.ID)
+		path = id
 		id = ""
 	}
-	if path == "" && len(args) > 0 {
+	if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		path = args[0]
 	}
 	rc, rerr := getResourceConfig(path, secretType)
@@ -843,8 +819,7 @@ func handleSecretEditCmd(vcli vaultcli.CLI, secretType string, args []string) in
 	path = rc.path
 	uri, err := paths.GetResourceURIFromResourcePath(rc.resourceType, path, id, "", nil)
 
-	// fetch
-	resp, err = getSecret(vcli, secretType, path, id, true, "")
+	resp, err := getSecretFromServer(vcli, secretType, path, id, true, "")
 	if err != nil {
 		vcli.Out().WriteResponse(resp, err)
 		return utils.GetExecStatus(err)
@@ -869,32 +844,16 @@ func handleKeyValueWizard() (map[string]interface{}, *errors.ApiError) {
 	for {
 		qs := []*survey.Question{
 			{
-				Name:   "Key",
-				Prompt: &survey.Input{Message: "Key:"},
-				Validate: func(ans interface{}) error {
-					answer := strings.TrimSpace(ans.(string))
-					if len(answer) == 0 {
-						return errors.NewS("Value is required")
-					}
-					return nil
-				},
-				Transform: func(ans interface{}) (newAns interface{}) {
-					return strings.TrimSpace(ans.(string))
-				},
+				Name:      "Key",
+				Prompt:    &survey.Input{Message: "Key:"},
+				Validate:  vaultcli.SurveyRequired,
+				Transform: vaultcli.SurveyTrimSpace,
 			},
 			{
-				Name:   "Value",
-				Prompt: &survey.Input{Message: "Value:"},
-				Validate: func(ans interface{}) error {
-					answer := strings.TrimSpace(ans.(string))
-					if len(answer) == 0 {
-						return errors.NewS("Value is required")
-					}
-					return nil
-				},
-				Transform: func(ans interface{}) (newAns interface{}) {
-					return strings.TrimSpace(ans.(string))
-				},
+				Name:      "Value",
+				Prompt:    &survey.Input{Message: "Value:"},
+				Validate:  vaultcli.SurveyRequired,
+				Transform: vaultcli.SurveyTrimSpace,
 			},
 			{
 				Name:   "More",
@@ -922,22 +881,11 @@ func handleKeyValueWizard() (map[string]interface{}, *errors.ApiError) {
 
 func handleJSONWizard(msg string) (map[string]interface{}, *errors.ApiError) {
 	var result string
-	validation := func(ans interface{}) error {
-		answer := strings.TrimSpace(ans.(string))
-		if len(answer) == 0 {
-			return nil
-		}
-		mock := map[string]interface{}{}
-		err := json.Unmarshal([]byte(answer), &mock)
-		if err != nil {
-			return errors.NewF("Invalid JSON: %v", err)
-		}
-		return nil
-	}
-	survErr := survey.AskOne(&survey.Input{Message: msg}, &result, survey.WithValidator(validation))
+	survErr := survey.AskOne(&survey.Input{Message: msg}, &result, survey.WithValidator(vaultcli.SurveyOptionalJSON))
 	if survErr != nil {
 		return nil, errors.New(survErr)
 	}
+	result = strings.TrimSpace(result)
 
 	data := make(map[string]interface{})
 	if len(result) == 0 {
@@ -951,98 +899,156 @@ func handleJSONWizard(msg string) (map[string]interface{}, *errors.ApiError) {
 	return data, nil
 }
 
-func getSecret(vcli vaultcli.CLI, secretType string, path string, id string, edit bool, requestSuffix string) (respData []byte, err *errors.ApiError) {
-	var secretDistinguisher string
-	var secretKey string
-	cacheRoot := cst.SecretRoot
-	if requestSuffix == cst.SuffixDescription {
-		cacheRoot = cst.SecretDescriptionRoot
+// getSecret retrieves secret either from server or cache depending on cache strategy configured.
+func getSecret(vcli vaultcli.CLI, secretType string, path string, id string, requestSuffix string) (respData []byte, err *errors.ApiError) {
+	cacheStrategy := viper.GetString(cst.CacheStrategy)
+	if cacheStrategy == "" {
+		cacheStrategy = cst.CacheStrategyNever
 	}
-	if path != "" {
-		secretDistinguisher = path
-	} else {
-		secretDistinguisher = id
-	}
-	secretDistinguisher = strings.ReplaceAll(secretDistinguisher, ":", "/")
-	secretDistinguisher = strings.ReplaceAll(secretDistinguisher, "-", "<>")
-	secretKey = cacheRoot + "-" + secretDistinguisher
 
-	cacheStrategy := store.CacheStrategy(viper.GetString(cst.CacheStrategy))
-	var cacheData []byte
-	var expired bool
-	var s store.Store
-	st := viper.GetString(cst.StoreType)
-	if cacheStrategy == store.CacheThenServer || cacheStrategy == store.CacheThenServerThenExpired {
-		cacheData, expired = getSecretDataFromCache(vcli, secretKey, st)
+	switch cacheStrategy {
+	case cst.CacheStrategyNever:
+		return getSecretFromServer(vcli, secretType, path, id, false, requestSuffix)
+
+	case cst.CacheStrategyServerThenCache:
+		secretCacheKey := getSecretCacheKey(path, id, requestSuffix)
+
+		resp, apiErr := getSecretFromServer(vcli, secretType, path, id, false, requestSuffix)
+		if apiErr == nil {
+			putSecretToCache(vcli, secretCacheKey, resp)
+			return resp, nil
+		}
+
+		cacheData, expired := getSecretFromCache(vcli, secretCacheKey)
 		if !expired && len(cacheData) > 0 {
+			log.Print("Returning secret data from cache.")
 			return cacheData, nil
 		}
+
+		return nil, apiErr
+
+	case cst.CacheStrategyCacheThenServer:
+		secretCacheKey := getSecretCacheKey(path, id, requestSuffix)
+
+		cacheData, expired := getSecretFromCache(vcli, secretCacheKey)
+		if !expired && len(cacheData) > 0 {
+			log.Print("Returning secret data from cache.")
+			return cacheData, nil
+		}
+
+		resp, apiErr := getSecretFromServer(vcli, secretType, path, id, false, requestSuffix)
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		putSecretToCache(vcli, secretCacheKey, resp)
+
+		return resp, nil
+
+	case cst.CacheStrategyCacheThenServerThenExpired:
+		secretCacheKey := getSecretCacheKey(path, id, requestSuffix)
+
+		cacheData, expired := getSecretFromCache(vcli, secretCacheKey)
+		if !expired && len(cacheData) > 0 {
+			log.Print("Returning secret data from cache.")
+			return cacheData, nil
+		}
+
+		resp, apiErr := getSecretFromServer(vcli, secretType, path, id, false, requestSuffix)
+		if apiErr == nil {
+			putSecretToCache(vcli, secretCacheKey, resp)
+			return resp, nil
+		}
+
+		if len(cacheData) > 0 {
+			log.Print("Cache expired but failed to retrieve from server so returning cached data.")
+			return cacheData, nil
+		}
+		return nil, apiErr
+
+	default:
+		// In case of unknown cache strategy CLI acts as it is set to "store.Never".
+		log.Printf("Unsupported cache strategy %q. Requesting secret from server.", cacheStrategy)
+		return getSecretFromServer(vcli, secretType, path, id, false, requestSuffix)
 	}
+}
 
-	queryTerms := map[string]string{"edit": strconv.FormatBool(edit)}
-
+func getSecretFromServer(vcli vaultcli.CLI, secretType string, path string, id string, edit bool, requestSuffix string) ([]byte, *errors.ApiError) {
 	rc, rerr := getResourceConfig(path, secretType)
 	if rerr != nil {
 		return nil, errors.New(rerr)
 	}
-	path = rc.path
-	uri, err := paths.GetResourceURIFromResourcePath(rc.resourceType, path, id, requestSuffix, queryTerms)
+	queryTerms := map[string]string{"edit": strconv.FormatBool(edit)}
+	uri, err := paths.GetResourceURIFromResourcePath(rc.resourceType, rc.path, id, requestSuffix, queryTerms)
 	if err != nil {
 		return nil, err
 	}
-	respData, err = vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
-	if err == nil {
-		if cacheStrategy != store.Never {
-			if s == nil {
-				var errStore *errors.ApiError
-				s, errStore = vcli.Store(st)
-				if errStore != nil {
-					log.Printf("Failed to get store to cache secret for store type %s. Error: %s", st, errStore)
-				}
-			}
-			if s != nil {
-				if errStore := s.Store(secretKey, secretData{
-					Date: time.Now().UTC(),
-					Data: respData,
-				}); errStore != nil {
-					log.Printf("Failed to cache secret for store type %s. Error: %s", st, errStore)
-				}
-			}
-		}
-		return respData, nil
-	} else if cacheStrategy == store.ServerThenCache {
-		cacheData, expired = getSecretDataFromCache(vcli, secretKey, st)
-		if !expired {
-			return cacheData, nil
-		}
-		//TODO: is this ever  execute???
-	} else if cacheStrategy == store.CacheThenServerThenExpired && len(cacheData) > 0 {
-		log.Print("Cache expired but failed to retrieve from server so returning cached data")
-		return cacheData, nil
-	}
-
-	return nil, err.Or(errors.NewS("run in verbose mode for more information"))
+	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
 }
 
-func getSecretDataFromCache(vcli vaultcli.CLI, secretKey string, st string) (cacheData []byte, expired bool) {
-	if s, err := vcli.Store(st); err != nil {
-		log.Printf("Failed to get store of type %s. Error: %s", st, err.Error())
+func getSecretCachePrefix() string {
+	profile := viper.GetString(cst.Profile)
+	return fmt.Sprintf("%s-%x", cst.SecretRoot, sha1.Sum([]byte(profile)))
+}
+
+func getSecretDescCachePrefix() string {
+	profile := viper.GetString(cst.Profile)
+	return fmt.Sprintf("%s-%x", cst.SecretDescriptionRoot, sha1.Sum([]byte(profile)))
+}
+
+func getSecretCacheKey(path string, id string, requestSuffix string) string {
+	var prefix string
+	if requestSuffix == cst.SuffixDescription {
+		prefix = getSecretDescCachePrefix()
 	} else {
-		var data secretData
-		if err := s.Get(secretKey, &data); err != nil && len(data.Data) > 0 {
-			log.Printf("Failed to fetch cached secret from store type %s. Error: %s", st, err.Error())
-		} else {
-			cacheData = data.Data
-			cacheAgeMinutes := viper.GetInt(cst.CacheAge)
-			if cacheAgeMinutes > 0 {
-				expired = (data.Date.Sub(time.Now().UTC()).Seconds() + float64(cacheAgeMinutes)*60) < 0
-			} else {
-				log.Printf("Invalid cache age: %d", cacheAgeMinutes)
-			}
-		}
+		prefix = getSecretCachePrefix()
 	}
 
+	var cacheKey string
+	if path != "" {
+		cacheKey = path
+	} else {
+		cacheKey = id
+	}
+	cacheKey = strings.ReplaceAll(cacheKey, ":", "/")
+	cacheKey = fmt.Sprintf("%s-%x", prefix, sha1.Sum([]byte(cacheKey)))
+	return cacheKey
+}
+
+func getSecretFromCache(vcli vaultcli.CLI, key string) (cacheData []byte, expired bool) {
+	st := viper.GetString(cst.StoreType)
+	s, err := vcli.Store(st)
+	if err != nil {
+		log.Printf("Failed to get store of type %s. Error: %s", st, err.Error())
+		return nil, true
+	}
+
+	var data secretData
+	if err := s.Get(key, &data); err != nil && len(data.Data) > 0 {
+		log.Printf("Failed to fetch cached secret from store type %s. Error: %s", st, err.Error())
+	} else {
+		cacheData = data.Data
+		cacheAgeMinutes := viper.GetInt(cst.CacheAge)
+		if cacheAgeMinutes > 0 {
+			expired = (data.Date.Sub(time.Now().UTC()).Seconds() + float64(cacheAgeMinutes)*60) < 0
+		} else {
+			log.Printf("Invalid cache age: %d", cacheAgeMinutes)
+		}
+	}
 	return cacheData, expired
+}
+
+func putSecretToCache(vcli vaultcli.CLI, key string, data []byte) {
+	st := viper.GetString(cst.StoreType)
+	s, err := vcli.Store(st)
+	if err != nil {
+		log.Printf("Failed to get store to cache secret for store type %s. Error: %s", st, err.Error())
+		return
+	}
+
+	err = s.Store(key, secretData{Date: time.Now().UTC(), Data: data})
+	if err != nil {
+		log.Printf("Failed to cache secret for store type %s. Error: %s", st, err)
+	}
 }
 
 type secretData struct {

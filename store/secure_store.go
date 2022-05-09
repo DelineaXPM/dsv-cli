@@ -1,18 +1,19 @@
 package store
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
 	"thy/errors"
+	ch "thy/store/credential-helpers"
 )
 
-// FileStore is a file-backed store
 type secureStore struct {
-	internalStore Common
+	internalStore ch.StoreHelper
 }
 
-func (f *StoreFactory) NewSecureStore(internalStore Common) Store {
+func NewSecureStore(internalStore ch.StoreHelper) Store {
 	return &secureStore{
 		internalStore: internalStore,
 	}
@@ -72,4 +73,19 @@ func (s *secureStore) List(prefix string) ([]string, *errors.ApiError) {
 		}
 		return keys, nil
 	}
+}
+
+func dataToCreds(key string, data interface{}) (*ch.Credentials, *errors.ApiError) {
+	marshalled, err := json.Marshal(data)
+	if err != nil {
+		return nil, errors.New(err)
+	}
+	return &ch.Credentials{
+		ServerURL: key,
+		Secret:    string(marshalled),
+	}, nil
+}
+
+func secretToData(secret string, out interface{}) *errors.ApiError {
+	return errors.New(json.Unmarshal([]byte(secret), out))
 }

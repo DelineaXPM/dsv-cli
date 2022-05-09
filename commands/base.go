@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -125,10 +126,12 @@ func (c *baseCommand) preRun(args []string) int {
 	}
 
 	viper.Set(cst.MainCommand, c.path[0])
-	viper.Set(cst.LastCommandKey, c.path[len(c.path)-1])
 
 	c.SetFlags()
 	setVerbosity()
+
+	log.Printf("%s CLI version %s (%s/%s)",
+		cst.ProductName, version.Version, runtime.GOOS, runtime.GOARCH)
 
 	encoding := viper.GetString(cst.Encoding)
 	if encoding == "" {

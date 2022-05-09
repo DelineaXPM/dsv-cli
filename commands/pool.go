@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	cst "thy/constants"
 	"thy/errors"
@@ -157,13 +158,13 @@ func handlePoolDelete(vcli vaultcli.CLI, args []string) int {
 func handlePoolCreateWizard(vcli vaultcli.CLI) int {
 	var name string
 	namePrompt := &survey.Input{Message: "Pool name:"}
-	survErr := survey.AskOne(namePrompt, &name, survey.WithValidator(survey.Required))
+	survErr := survey.AskOne(namePrompt, &name, survey.WithValidator(vaultcli.SurveyRequired))
 	if survErr != nil {
 		vcli.Out().WriteResponse(nil, errors.New(survErr))
 		return utils.GetExecStatus(survErr)
 	}
 
-	data, apiErr := poolCreate(vcli, name)
+	data, apiErr := poolCreate(vcli, strings.TrimSpace(name))
 	vcli.Out().WriteResponse(data, apiErr)
 	return utils.GetExecStatus(apiErr)
 }

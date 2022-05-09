@@ -204,9 +204,7 @@ func handleEngineCreateWizard(vcli vaultcli.CLI, args []string) int {
 				}
 				return nil
 			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
 			Name:   "PoolName",
@@ -221,9 +219,7 @@ func handleEngineCreateWizard(vcli vaultcli.CLI, args []string) int {
 				}
 				return nil
 			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 	}
 

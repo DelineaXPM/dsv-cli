@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -20,7 +19,6 @@ import (
 	"thy/utils/test_helpers"
 
 	"github.com/gobuffalo/uuid"
-
 	"golang.org/x/sys/execabs"
 )
 
@@ -38,7 +36,7 @@ func fixturePath(t *testing.T, fixture string) string {
 }
 
 func writeFixture(t *testing.T, fixture string, content []byte) {
-	err := ioutil.WriteFile(fixturePath(t, fixture), content, 0644)
+	err := os.WriteFile(fixturePath(t, fixture), content, 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,23 +56,24 @@ func loadFixture(t *testing.T, fixture string) string {
 }
 
 func TestCliArgs(t *testing.T) {
+	workDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("[TestCliArgs] Unable to determine working directory: %v.", err)
+	}
+	binary := path.Join(workDir, binaryName+".test")
+
+	t.Logf("[TestCliArgs] Working directory: %s", workDir)
+	t.Logf("[TestCliArgs] Path to binary: %s", binary)
+
 	for _, tt := range synchronousCases {
 		t.Run(tt.name, func(t *testing.T) {
-			dir, err := os.Getwd()
-			if err != nil {
-				t.Fatal(err)
-			}
-
 			_ = os.Mkdir("coverage", os.ModeDir)
 			outfile := path.Join("coverage", tt.name+"coverage.out")
-			args := []string{"-test.coverprofile", outfile}
-			for a := range tt.args {
-				args = append(args, tt.args[a])
-			}
-			args = addConfigArg(args)
-			//args = addLocalProfileArg(args) // run locally
 
-			binary := path.Join(dir, binaryName+".test")
+			args := []string{"-test.coverprofile", outfile}
+			args = append(args, tt.args...)
+			args = append(args, "--config", configPath)
+
 			cmd := execabs.Command(binary, args...)
 			output, _ := cmd.CombinedOutput()
 
@@ -122,14 +121,8 @@ var manualKeyNonce = "S1NzeHdFcHB6b1Bz"
 var plaintext = "hello there"
 var ciphertext = "8Tns2mbY/w6YHoICfiDGQM+rDlQzwrZWpqK7"
 
-func addConfigArg(args []string) []string {
-	args = append(args, "--config")
-	args = append(args, configPath)
-	return args
-}
-
 func readConfig() ([]byte, error) {
-	config, err := ioutil.ReadFile(configPath)
+	config, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +130,7 @@ func readConfig() ([]byte, error) {
 }
 
 func writeConfig(config []byte) error {
-	return ioutil.WriteFile(configPath, config, 0644)
+	return os.WriteFile(configPath, config, 0644)
 }
 
 func TestMain(m *testing.M) {
@@ -162,9 +155,9 @@ func TestMain(m *testing.M) {
 
 	cert, key, err := generateRootWithPrivateKey()
 	csr, err := generateCSR()
-	ioutil.WriteFile(certPath, cert, 0644)
-	ioutil.WriteFile(privateKeyPath, key, 0644)
-	ioutil.WriteFile(csrPath, csr, 0644)
+	os.WriteFile(certPath, cert, 0644)
+	os.WriteFile(privateKeyPath, key, 0644)
+	os.WriteFile(csrPath, csr, 0644)
 
 	defer os.Remove(certPath)
 	defer os.Remove(privateKeyPath)

@@ -2,15 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"net/http"
 	"strings"
 	"thy/auth"
 	"thy/vaultcli"
 
 	cst "thy/constants"
-	"thy/errors"
-	"thy/paths"
-	"thy/requests"
 
 	"github.com/mitchellh/cli"
 	"github.com/spf13/viper"
@@ -56,29 +52,12 @@ func handleEvaluateFlag(vcli vaultcli.CLI, args []string) int {
 	}
 	arg := args[0]
 	arg = strings.TrimPrefix(arg, "--")
-	arg = strings.Replace(arg, "-", ".", -1)
-	arg = strings.Replace(arg, "_", ".", -1)
+	arg = strings.ReplaceAll(arg, "-", ".")
+	arg = strings.ReplaceAll(arg, "_", ".")
 
 	data := []byte(viper.GetString(arg))
 	vcli.Out().WriteResponse(data, nil)
 	return 0
-}
-
-func handleSearch(args []string, resourceType string, request requests.Client) (data []byte, err *errors.ApiError) {
-	query := viper.GetString(cst.Query)
-	limit := viper.GetString(cst.Limit)
-	cursor := viper.GetString(cst.Cursor)
-	if query == "" && len(args) == 1 {
-		query = args[0]
-	}
-
-	queryParams := map[string]string{
-		cst.SearchKey: query,
-		cst.Limit:     limit,
-		cst.Cursor:    cursor,
-	}
-	uri := paths.CreateResourceURI(resourceType, "", "", false, queryParams)
-	return request.DoRequest(http.MethodGet, uri, nil)
 }
 
 func hasFlag(args []string, flagName string) bool {

@@ -33,9 +33,9 @@ jobs:
         displayName: 'Install editor'
 
       - task: GoTool@0
-        displayName: 'Use Go 1.17.8'
+        displayName: 'Use Go 1.17.9'
         inputs:
-          version: 1.17.8
+          version: 1.17.9
 
       - bash: |
           go install -v github.com/hansboder/gocovmerge@latest
@@ -132,9 +132,9 @@ jobs:
 
     steps:
       - task: GoTool@0
-        displayName: 'Use Go 1.17.8'
+        displayName: 'Use Go 1.17.9'
         inputs:
-          version: 1.17.8
+          version: 1.17.9
 
       - task: thycotic-software.thycotic-dsv-task.thycotic-dsv-build-release-task.ThycoticDSV@0
         displayName: 'Retrieve ado/cli  from Thycotic DevOps Secrets Vault'
@@ -287,14 +287,23 @@ jobs:
           ls ~/Library/Keychains
           codesign  -s 'Thycotic Software'   ./$(constants.cliname)-darwin-x64
         workingDirectory: '$(Pipeline.Workspace)/cli'
-        displayName: 'Sign macOS binary'
+        displayName: 'Sign macOS darwin x64 binary'
+
+      - bash: |
+          echo $(cliversion)
+          cd $(cliversion)
+          ls
+          ls ~/Library/Keychains
+          codesign  -s 'Thycotic Software'   ./$(constants.cliname)-darwin-arm64
+        workingDirectory: '$(Pipeline.Workspace)/cli'
+        displayName: 'Sign macOS darwin arm64 binary'
 
       - bash: |
           brew install coreutils
           sudo ln -s /usr/local/bin/gsha256sum /usr/local/bin/sha256sum
           cd $(cliversion)
           sha256sum ./$(constants.cliname)-darwin-x64  > ./$(constants.cliname)-darwin-x64-sha256.txt
-
+          sha256sum ./$(constants.cliname)-darwin-arm64  > ./$(constants.cliname)-darwin-arm64-sha256.txt
         workingDirectory: '$(Pipeline.Workspace)/cli'
         displayName: 'Regenerate macOS Hash'
 

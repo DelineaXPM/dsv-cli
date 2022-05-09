@@ -21,35 +21,32 @@ import (
 
 type GcpClient struct{}
 
-type GcpAuthType string
-
 const (
-	GcpGceAuth   = GcpAuthType("gce")
-	GcpIamAuth   = GcpAuthType("iam")
+	GcpGceAuth   = "gce"
+	GcpIamAuth   = "iam"
 	googleIssuer = "https://accounts.google.com"
 )
 
-func (c *GcpClient) GetJwtToken() (string, error) {
-	authType := viper.GetString(cst.GcpAuthType)
+func (c *GcpClient) GetJwtToken(authType string) (string, error) {
 	if authType == "" {
-		authType = "gce"
+		authType = GcpGceAuth
 	}
-	at := GcpAuthType(authType)
+	if authType != GcpGceAuth && authType != GcpIamAuth {
+		return "", fmt.Errorf("invalid GCP auth type: %s", authType)
+	}
 
 	serviceAcctName := viper.GetString(cst.GcpServiceAccount)
 	projectId := viper.GetString(cst.GcpProject)
 
 	//const
-	header := map[string]string{
-		"Metadata-Flavor": "Google",
-	}
+	header := map[string]string{"Metadata-Flavor": "Google"}
 	defaultServiceAcctName := "default"
 	metadataIdentityTemplate := "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/%s/identity?audience=%s&format=full"
 
 	audience := GetAudience()
 	var errPrimary error
 	var errSecondary error
-	if at == GcpGceAuth {
+	if authType == GcpGceAuth {
 		if serviceAcctName == "" {
 			serviceAcctName = defaultServiceAcctName
 		}
@@ -68,7 +65,7 @@ func (c *GcpClient) GetJwtToken() (string, error) {
 			}
 		}
 	}
-	if at == GcpIamAuth || errPrimary != nil {
+	if authType == GcpIamAuth || errPrimary != nil {
 		// reset service account name
 		serviceAcctName = viper.GetString(cst.GcpServiceAccount)
 		if errPrimary != nil {

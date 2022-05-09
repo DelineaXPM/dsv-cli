@@ -1,7 +1,7 @@
 package predictor
 
 import (
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/posener/complete"
@@ -86,7 +86,7 @@ func (f *FlagValue) Set(v string) error {
 		if v != "" && len(v) > 1 && strings.HasPrefix(v, "@") {
 			f.FlagType = "file"
 			fname := v[1:]
-			if b, err := ioutil.ReadFile(fname); err != nil {
+			if b, err := os.ReadFile(fname); err != nil {
 				return err
 			} else {
 				f.Val = string(b)

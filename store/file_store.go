@@ -6,33 +6,32 @@ import (
 	"os"
 	"path"
 	"strings"
-	cst "thy/constants"
 	"thy/errors"
 
 	homedir "github.com/mitchellh/go-homedir"
-	"github.com/peterbourgon/diskv"
-	"github.com/spf13/viper"
+	"github.com/peterbourgon/diskv/v3"
 )
 
-// FileStore is a file-backed store
+const (
+	defaultBasePath = "~/.thy/"
+	defaultBaseDir  = ".thy"
+)
+
 type fileStore struct {
 	internalStore *diskv.Diskv
 }
 
-const (
-	basePath = "~/.thy/"
-)
-
-func (f *StoreFactory) NewFileStore() Store {
-	p := basePath
-	if viper.GetString(cst.StorePath) != "" {
-		p = viper.GetString(cst.StorePath)
-	} else if home, err := homedir.Dir(); err == nil {
-		p = path.Join(home, ".thy")
+func NewFileStore(basePath string) Store {
+	if basePath == "" {
+		if home, err := homedir.Dir(); err == nil {
+			basePath = path.Join(home, defaultBaseDir)
+		} else {
+			basePath = defaultBasePath
+		}
 	}
 	return &fileStore{
 		internalStore: diskv.New(diskv.Options{
-			BasePath:     p,
+			BasePath:     basePath,
 			CacheSizeMax: 1024 * 1024,
 			FilePerm:     0600,
 			PathPerm:     0700,

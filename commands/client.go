@@ -260,31 +260,18 @@ func handleClientCreateWizard(vcli vaultcli.CLI, args []string) int {
 				}
 				return nil
 			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
-			Name:   "Description",
-			Prompt: &survey.Input{Message: "Client description:"},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Name:      "Description",
+			Prompt:    &survey.Input{Message: "Client description:"},
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
-			Name:   "TTL",
-			Prompt: &survey.Input{Message: "Client TTL (in seconds):", Default: "0"},
-			Validate: func(ans interface{}) error {
-				answer := strings.TrimSpace(ans.(string))
-				_, err := strconv.Atoi(answer)
-				if err != nil {
-					return errors.NewS("Please enter a valid integer.")
-				}
-				return nil
-			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Name:      "TTL",
+			Prompt:    &survey.Input{Message: "Client TTL (in seconds):", Default: "0"},
+			Validate:  vaultcli.SurveyRequiredInt,
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
 			Name:   "UrlRequested",
@@ -302,34 +289,16 @@ func handleClientCreateWizard(vcli vaultcli.CLI, args []string) int {
 	if client.UrlRequested {
 		qs = []*survey.Question{
 			{
-				Name:   "UrlTTL",
-				Prompt: &survey.Input{Message: "Bootstrap URL TTL (in seconds):"},
-				Validate: func(ans interface{}) error {
-					answer := strings.TrimSpace(ans.(string))
-					_, err := strconv.Atoi(answer)
-					if err != nil {
-						return errors.NewS("Please enter a valid integer.")
-					}
-					return nil
-				},
-				Transform: func(ans interface{}) (newAns interface{}) {
-					return strings.TrimSpace(ans.(string))
-				},
+				Name:      "UrlTTL",
+				Prompt:    &survey.Input{Message: "Bootstrap URL TTL (in seconds):"},
+				Validate:  vaultcli.SurveyRequiredInt,
+				Transform: vaultcli.SurveyTrimSpace,
 			},
 			{
-				Name:   "Uses",
-				Prompt: &survey.Input{Message: "Number of client uses:", Default: "0"},
-				Validate: func(ans interface{}) error {
-					answer := strings.TrimSpace(ans.(string))
-					_, err := strconv.Atoi(answer)
-					if err != nil {
-						return errors.NewS("Please enter a valid integer.")
-					}
-					return nil
-				},
-				Transform: func(ans interface{}) (newAns interface{}) {
-					return strings.TrimSpace(ans.(string))
-				},
+				Name:      "Uses",
+				Prompt:    &survey.Input{Message: "Number of client uses:", Default: "0"},
+				Validate:  vaultcli.SurveyRequiredInt,
+				Transform: vaultcli.SurveyTrimSpace,
 			},
 		}
 

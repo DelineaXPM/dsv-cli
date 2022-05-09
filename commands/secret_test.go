@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	e "errors"
 	"testing"
 	"time"
 
@@ -14,160 +13,175 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestHandleDescribeCmd(t *testing.T) {
+func TestGetSecretCmd(t *testing.T) {
+	_, err := GetSecretCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetSecretReadCmd(t *testing.T) {
+	_, err := GetSecretReadCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetSecretDescribeCmd(t *testing.T) {
+	_, err := GetSecretDescribeCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetSecretDeleteCmd(t *testing.T) {
+	_, err := GetSecretDeleteCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetSecretRestoreCmd(t *testing.T) {
+	_, err := GetSecretRestoreCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetSecretUpdateCmd(t *testing.T) {
+	_, err := GetSecretUpdateCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetSecretRollbackCmd(t *testing.T) {
+	_, err := GetSecretRollbackCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetSecretEditCmd(t *testing.T) {
+	_, err := GetSecretEditCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetSecretCreateCmd(t *testing.T) {
+	_, err := GetSecretCreateCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetSecretBustCacheCmd(t *testing.T) {
+	_, err := GetSecretBustCacheCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetSecretSearchCmd(t *testing.T) {
+	_, err := GetSecretSearchCmd()
+	assert.Nil(t, err)
+}
+
+func TestHandleSecretDescribeCmd(t *testing.T) {
 	testCase := []struct {
 		name          string
+		fID           string // flag: --id
 		arg           []string
 		cacheStrategy string
 		out           []byte
 		storeType     string
 		expectedErr   *errors.ApiError
 		apiError      *errors.ApiError
-		flags         []struct {
-			flag  string
-			value string
-		}
 	}{
 		{
-			"Happy Path no cacheStrategy",
-			[]string{"path1"},
-			"",
-			[]byte(`test data`),
-			"",
-			nil,
-			nil,
-			nil,
+			name:          "Happy Path no cacheStrategy",
+			arg:           []string{"path1"},
+			cacheStrategy: "",
+			out:           []byte(`test data`),
+			storeType:     "",
+			expectedErr:   nil,
+			apiError:      nil,
 		},
 		{
-			"Happy Path no cacheStrategy",
-			[]string{"140a372c-7d37-11eb-bc08-00155d19ad95"},
-			"",
-			[]byte(`test data`),
-			"",
-			nil,
-			nil,
-			nil,
+			name:          "Happy Path no cacheStrategy",
+			arg:           []string{"140a372c-7d37-11eb-bc08-00155d19ad95"},
+			cacheStrategy: "",
+			out:           []byte(`test data`),
+			storeType:     "",
+			expectedErr:   nil,
+			apiError:      nil,
 		},
 		{
-			"Happy Path no cacheStrategy",
-			[]string{""},
-			"",
-			[]byte(`test data`),
-			"",
-			nil,
-			nil,
-			[]struct {
-				flag  string
-				value string
-			}{
-				{
-					cst.ID,
-					"140a372c-7d37-11eb-bc08-00155d19ad95",
-				},
-			},
+			name:          "Happy Path no cacheStrategy",
+			fID:           "140a372c-7d37-11eb-bc08-00155d19ad95",
+			arg:           []string{""},
+			cacheStrategy: "",
+			out:           []byte(`test data`),
+			storeType:     "",
+			expectedErr:   nil,
+			apiError:      nil,
 		},
 		{
-			"Happy Path cache.server cacheStrategy",
-			[]string{"path1"},
-			"cache.server",
-			[]byte(`test data from cache`),
-			"",
-			nil,
-			nil,
-			nil,
+			name:          "Happy Path cache.server cacheStrategy",
+			arg:           []string{"path1"},
+			cacheStrategy: "cache.server",
+			out:           []byte(`test data from cache`),
+			storeType:     "",
+			expectedErr:   nil,
+			apiError:      nil,
 		},
 		{
-			"Happy Path cache.server cacheStrategy",
-			[]string{"140a372c-7d37-11eb-bc08-00155d19ad95"},
-			"cache.server",
-			[]byte(`test data from cache`),
-			"",
-			nil,
-			nil,
-			nil,
+			name:          "Happy Path cache.server cacheStrategy",
+			arg:           []string{"140a372c-7d37-11eb-bc08-00155d19ad95"},
+			cacheStrategy: "cache.server",
+			out:           []byte(`test data from cache`),
+			storeType:     "",
+			expectedErr:   nil,
+			apiError:      nil,
 		},
 		{
-			"Happy Path cache.server cacheStrategy",
-			[]string{""},
-			"cache.server",
-			[]byte(`test data from cache`),
-			"",
-			nil,
-			nil,
-			[]struct {
-				flag  string
-				value string
-			}{
-				{
-					cst.ID,
-					"140a372c-7d37-11eb-bc08-00155d19ad95",
-				},
-			},
+			name:          "Happy Path cache.server cacheStrategy",
+			fID:           "140a372c-7d37-11eb-bc08-00155d19ad95",
+			arg:           []string{""},
+			cacheStrategy: "cache.server",
+			out:           []byte(`test data from cache`),
+			storeType:     "",
+			expectedErr:   nil,
+			apiError:      nil,
 		},
 		{
-			"Happy Path server.cache cacheStrategy",
-			[]string{"path1"},
-			"server.cache",
-			[]byte(`test data from cache`),
-			"",
-			nil,
-			errors.New(e.New("error")),
-			nil,
+			name:          "Happy Path server.cache cacheStrategy",
+			arg:           []string{"path1"},
+			cacheStrategy: "server.cache",
+			out:           []byte(`test data from cache`),
+			storeType:     "",
+			expectedErr:   nil,
+			apiError:      errors.NewS("error"),
 		},
 		{
-			"Happy Path server.cache cacheStrategy",
-			[]string{"140a372c-7d37-11eb-bc08-00155d19ad95"},
-			"server.cache",
-			[]byte(`test data from cache`),
-			"",
-			nil,
-			errors.New(e.New("error")),
-			nil,
+			name:          "Happy Path server.cache cacheStrategy",
+			arg:           []string{"140a372c-7d37-11eb-bc08-00155d19ad95"},
+			cacheStrategy: "server.cache",
+			out:           []byte(`test data from cache`),
+			storeType:     "",
+			expectedErr:   nil,
+			apiError:      errors.NewS("error"),
 		},
 		{
-			"Happy Path server.cache cacheStrategy",
-			[]string{""},
-			"server.cache",
-			[]byte(`test data from cache`),
-			"",
-			nil,
-			errors.New(e.New("error")),
-			[]struct {
-				flag  string
-				value string
-			}{
-				{
-					cst.ID,
-					"140a372c-7d37-11eb-bc08-00155d19ad95",
-				},
-			},
+			name:          "Happy Path server.cache cacheStrategy",
+			fID:           "140a372c-7d37-11eb-bc08-00155d19ad95",
+			arg:           []string{""},
+			cacheStrategy: "server.cache",
+			out:           []byte(`test data from cache`),
+			storeType:     "",
+			expectedErr:   nil,
+			apiError:      errors.NewS("error"),
 		},
 	}
 
-	_, err := GetDescribeCmd()
-	assert.Nil(t, err)
-
 	for _, tt := range testCase {
 		t.Run(tt.name, func(t *testing.T) {
-			for _, f := range tt.flags {
-				viper.Set(f.flag, f.value)
-			}
-
-			writer := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			writer.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
 				return tt.out, tt.apiError
 			}
 
 			st := &fake.FakeStore{}
-
 			st.GetStub = func(s string, d interface{}) *errors.ApiError {
 				sData, ok := d.(*secretData)
 				if ok {
@@ -176,32 +190,29 @@ func TestHandleDescribeCmd(t *testing.T) {
 				}
 				return tt.expectedErr
 			}
-
 			st.StoreStub = func(s string, i interface{}) *errors.ApiError {
 				return tt.expectedErr
 			}
 
-			viper.Set(cst.StoreType, tt.storeType)
-			viper.Set(cst.CacheStrategy, tt.cacheStrategy)
-
 			vcli, rerr := vaultcli.NewWithOpts(
-				vaultcli.WithHTTPClient(req),
-				vaultcli.WithOutClient(writer),
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
 				vaultcli.WithStore(st),
 			)
 			if rerr != nil {
 				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
 			}
 
+			viper.Reset()
+			viper.Set(cst.StoreType, tt.storeType)
+			viper.Set(cst.CacheStrategy, tt.cacheStrategy)
+			viper.Set(cst.ID, tt.fID)
+
 			_ = handleSecretDescribeCmd(vcli, cst.NounSecret, tt.arg)
 			if tt.expectedErr == nil {
 				assert.Equal(t, data, tt.out)
 			} else {
 				assert.Equal(t, err, tt.expectedErr)
-			}
-
-			for _, f := range tt.flags {
-				viper.Set(f.flag, "")
 			}
 		})
 	}
@@ -214,68 +225,55 @@ func TestHandleSecretSearchCmd(t *testing.T) {
 		apiResponse []byte
 		out         []byte
 		expectedErr *errors.ApiError
-		flags       []struct {
-			flag  string
-			value string
-		}
 	}{
 		{
-			"Happy path",
-			"user1",
-			[]byte(`test`),
-			[]byte(`test`),
-			nil,
-			nil,
+			name:        "Happy path",
+			args:        "user1",
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			expectedErr: nil,
 		},
 		{
-			"api Error",
-			"user1",
-			[]byte(`test`),
-			[]byte(`test`),
-			errors.New(e.New("error")),
-			nil,
+			name:        "api Error",
+			args:        "user1",
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			expectedErr: errors.NewS("error"),
 		},
 		{
-			"No Search query",
-			"",
-			[]byte(`test`),
-			[]byte(`test`),
-			errors.New(e.New("error: must specify " + cst.Query)),
-			nil,
+			name:        "No Search query",
+			args:        "",
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			expectedErr: errors.NewS("error: must specify " + cst.Query),
 		},
 	}
 
-	_, err := GetSecretSearchCmd()
-	assert.Nil(t, err)
-
-	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {
-
 		t.Run(tt.name, func(t *testing.T) {
-			for _, f := range tt.flags {
-				viper.Set(f.flag, f.value)
-			}
-
-			writer := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			writer.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
 				return tt.out, tt.expectedErr
 			}
 
 			vcli, rerr := vaultcli.NewWithOpts(
-				vaultcli.WithHTTPClient(req),
-				vaultcli.WithOutClient(writer),
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
 			)
 			if rerr != nil {
 				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
 			}
+
+			viper.Reset()
 
 			_ = handleSecretSearchCmd(vcli, cst.NounSecret, []string{tt.args})
 			if tt.expectedErr == nil {
@@ -283,123 +281,91 @@ func TestHandleSecretSearchCmd(t *testing.T) {
 			} else {
 				assert.Equal(t, err, tt.expectedErr)
 			}
-
-			for _, f := range tt.flags {
-				viper.Set(f.flag, "")
-			}
 		})
-
 	}
 }
 
-func TestHandleDeleteCmd(t *testing.T) {
+func TestHandleSecretDeleteCmd(t *testing.T) {
 	testCase := []struct {
 		name        string
+		fID         string // flag: --id
 		args        string
 		apiResponse []byte
 		out         []byte
 		expectedErr *errors.ApiError
-		flags       []struct {
-			flag  string
-			value string
-		}
 	}{
 		{
-			"Happy path",
-			"user1",
-			[]byte(`test`),
-			[]byte(`test`),
-			nil,
-			nil,
+			name:        "Happy path",
+			args:        "user1",
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			expectedErr: nil,
 		},
 		{
-			"Happy ID",
-			"140a372c-7d37-11eb-bc08-00155d19ad95",
-			[]byte(`test`),
-			[]byte(`test`),
-			nil,
-			nil,
+			name:        "Happy ID",
+			args:        "140a372c-7d37-11eb-bc08-00155d19ad95",
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			expectedErr: nil,
 		},
 		{
-			"Happy ID",
-			"",
-			[]byte(`test`),
-			[]byte(`test`),
-			nil,
-			[]struct {
-				flag  string
-				value string
-			}{
-				{
-					cst.ID,
-					"140a372c-7d37-11eb-bc08-00155d19ad95",
-				},
-			},
+			name:        "Happy ID",
+			fID:         "140a372c-7d37-11eb-bc08-00155d19ad95",
+			args:        "",
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			expectedErr: nil,
 		},
 		{
-			"api Error",
-			"user1",
-			[]byte(`test`),
-			[]byte(`test`),
-			errors.New(e.New("error")),
-			nil,
+			name:        "api Error",
+			args:        "user1",
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			expectedErr: errors.NewS("error"),
 		},
 		{
-			"api Error",
-			"140a372c-7d37-11eb-bc08-00155d19ad95",
-			[]byte(`test`),
-			[]byte(`test`),
-			errors.New(e.New("error")),
-			nil,
+			name:        "api Error",
+			args:        "140a372c-7d37-11eb-bc08-00155d19ad95",
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			expectedErr: errors.NewS("error"),
 		},
 		{
-			"api Error",
-			"",
-			[]byte(`test`),
-			[]byte(`test`),
-			errors.New(e.New("error")),
-			[]struct {
-				flag  string
-				value string
-			}{
-				{
-					cst.ID,
-					"140a372c-7d37-11eb-bc08-00155d19ad95",
-				},
-			},
+			name:        "api Error",
+			fID:         "140a372c-7d37-11eb-bc08-00155d19ad95",
+			args:        "",
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			expectedErr: errors.NewS("error"),
 		},
 	}
 
-	_, err := GetDeleteCmd()
-	assert.Nil(t, err)
-
-	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {
 		t.Run(tt.name, func(t *testing.T) {
-			for _, f := range tt.flags {
-				viper.Set(f.flag, f.value)
-			}
-
-			writer := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			writer.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
 				return tt.out, tt.expectedErr
 			}
 
 			vcli, rerr := vaultcli.NewWithOpts(
-				vaultcli.WithHTTPClient(req),
-				vaultcli.WithOutClient(writer),
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
 			)
 			if rerr != nil {
 				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
 			}
+
+			viper.Reset()
+			viper.Set(cst.ID, tt.fID)
 
 			_ = handleSecretDeleteCmd(vcli, cst.NounSecret, []string{tt.args})
 			if tt.expectedErr == nil {
@@ -407,121 +373,91 @@ func TestHandleDeleteCmd(t *testing.T) {
 			} else {
 				assert.Equal(t, err, tt.expectedErr)
 			}
-
-			for _, f := range tt.flags {
-				viper.Set(f.flag, "")
-			}
 		})
 	}
 }
 
-func TestHandleRollbackCmd(t *testing.T) {
+func TestHandleSecretRollbackCmd(t *testing.T) {
 	testCase := []struct {
 		name        string
+		fID         string // flag: --id
 		args        string
 		apiResponse []byte
 		out         []byte
 		expectedErr *errors.ApiError
-		flags       []struct {
-			flag  string
-			value string
-		}
 	}{
 		{
-			"success (no version passed in) (ID)",
-			"140a372c-7d37-11eb-bc08-00155d19ad95",
-			[]byte(`test`),
-			[]byte(`{"version": "4"}`),
-			nil,
-			nil,
+			name:        "success (no version passed in) (ID)",
+			args:        "140a372c-7d37-11eb-bc08-00155d19ad95",
+			apiResponse: []byte(`test`),
+			out:         []byte(`{"version": "4"}`),
+			expectedErr: nil,
 		},
 		{
-			"success (no version passed in) (ID)",
-			"",
-			[]byte(`test`),
-			[]byte(`{"version": "4"}`),
-			nil,
-			[]struct {
-				flag  string
-				value string
-			}{
-				{
-					cst.ID,
-					"140a372c-7d37-11eb-bc08-00155d19ad95",
-				},
-			},
+			name:        "success (no version passed in) (ID)",
+			fID:         "140a372c-7d37-11eb-bc08-00155d19ad95",
+			args:        "",
+			apiResponse: []byte(`test`),
+			out:         []byte(`{"version": "4"}`),
+			expectedErr: nil,
 		},
 		{
-			"success (no version passed in) (path)",
-			"azure-dev",
-			[]byte(`test`),
-			[]byte(`{"version": "4"}`),
-			nil,
-			nil,
+			name:        "success (no version passed in) (path)",
+			args:        "azure-dev",
+			apiResponse: []byte(`test`),
+			out:         []byte(`{"version": "4"}`),
+			expectedErr: nil,
 		},
 		{
-			"error (no version passed in) (ID)",
-			"140a372c-7d37-11eb-bc08-00155d19ad95",
-			[]byte(`test`),
-			[]byte(`{"someData": "hello"}`),
-			errors.NewS("version not found"),
-			nil,
+			name:        "error (no version passed in) (ID)",
+			args:        "140a372c-7d37-11eb-bc08-00155d19ad95",
+			apiResponse: []byte(`test`),
+			out:         []byte(`{"someData": "hello"}`),
+			expectedErr: errors.NewS("version not found"),
 		},
 		{
-			"error (no version passed in) (ID)",
-			"",
-			[]byte(`test`),
-			[]byte(`{"someData": "hello"}`),
-			errors.NewS("version not found"),
-			[]struct {
-				flag  string
-				value string
-			}{
-				{
-					cst.ID,
-					"140a372c-7d37-11eb-bc08-00155d19ad95",
-				},
-			},
+			name:        "error (no version passed in) (ID)",
+			fID:         "140a372c-7d37-11eb-bc08-00155d19ad95",
+			args:        "",
+			apiResponse: []byte(`test`),
+			out:         []byte(`{"someData": "hello"}`),
+			expectedErr: errors.NewS("version not found"),
 		},
 		{
-			"error (no version passed in) (path)",
-			"azure-dev",
-			[]byte(`test`),
-			[]byte(`{"someData": "hello"}`),
-			errors.NewS("version not found"),
-			nil,
+			name:        "error (no version passed in) (path)",
+			args:        "azure-dev",
+			apiResponse: []byte(`test`),
+			out:         []byte(`{"someData": "hello"}`),
+			expectedErr: errors.NewS("version not found"),
 		},
 	}
 
-	_, err := GetRollbackCmd()
-	assert.Nil(t, err)
-
 	for _, tt := range testCase {
 		t.Run(tt.name, func(t *testing.T) {
-			for _, f := range tt.flags {
-				viper.Set(f.flag, f.value)
-			}
-
-			writer := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			writer.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
 				return tt.out, tt.expectedErr
 			}
 
 			vcli, rerr := vaultcli.NewWithOpts(
-				vaultcli.WithHTTPClient(req),
-				vaultcli.WithOutClient(writer),
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
 			)
 			if rerr != nil {
 				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
 			}
+
+			viper.Reset()
+			viper.Set(cst.ID, tt.fID)
 
 			_ = handleSecretRollbackCmd(vcli, cst.NounSecret, []string{tt.args})
 			if tt.expectedErr == nil {
@@ -529,168 +465,124 @@ func TestHandleRollbackCmd(t *testing.T) {
 			} else {
 				assert.Equal(t, tt.expectedErr, err)
 			}
-
-			for _, f := range tt.flags {
-				viper.Set(f.flag, "")
-			}
 		})
 	}
 }
 
-func TestHandleReadCmd(t *testing.T) {
+func TestHandleSecretReadCmd(t *testing.T) {
 	testCase := []struct {
 		name          string
+		fID           string // flag: --id
 		arg           []string
 		cacheStrategy string
 		out           []byte
 		storeType     string
 		expectedErr   *errors.ApiError
 		apiError      *errors.ApiError
-		flags         []struct {
-			flag  string
-			value string
-		}
 	}{
 		{
-			"Happy Path no cacheStrategy (ID)",
-			[]string{"140a372c-7d37-11eb-bc08-00155d19ad95"},
-			"",
-			[]byte(`test data`),
-			"",
-			nil,
-			nil,
-			nil,
+			name:          "No cache. ID from args.",
+			arg:           []string{"140a372c-7d37-11eb-bc08-00155d19ad95"},
+			cacheStrategy: "",
+			out:           []byte(`test data`),
+			storeType:     "",
+			expectedErr:   nil,
+			apiError:      nil,
 		},
 		{
-			"Happy Path no cacheStrategy (ID)",
-			[]string{""},
-			"",
-			[]byte(`test data`),
-			"",
-			nil,
-			nil,
-			[]struct {
-				flag  string
-				value string
-			}{
-				{
-					cst.ID,
-					"140a372c-7d37-11eb-bc08-00155d19ad95",
-				},
-			},
+			name:          "No cache. ID from flag.",
+			fID:           "140a372c-7d37-11eb-bc08-00155d19ad95",
+			arg:           []string{""},
+			cacheStrategy: "",
+			out:           []byte(`test data`),
+			storeType:     "",
+			expectedErr:   nil,
+			apiError:      nil,
 		},
 		{
-			"Happy Path no cacheStrategy",
-			[]string{"path1"},
-			"",
-			[]byte(`test data`),
-			"",
-			nil,
-			nil,
-			nil,
+			name:          "No cache. Path from args.",
+			arg:           []string{"path1"},
+			cacheStrategy: "",
+			out:           []byte(`test data`),
+			storeType:     "",
+			expectedErr:   nil,
+			apiError:      nil,
 		},
 		{
-			"Happy Path cache.server cacheStrategy",
-			[]string{"path1"},
-			"cache.server",
-			[]byte(`test data from cache`),
-			"",
-			nil,
-			nil,
-			nil,
+			name:          "Cache then server. Path from args.",
+			arg:           []string{"path1"},
+			cacheStrategy: "cache.server",
+			out:           []byte(`test data from cache`),
+			storeType:     "",
+			expectedErr:   nil,
+			apiError:      nil,
 		},
 		{
-			"Happy Path cache.server cacheStrategy",
-			[]string{""},
-			"cache.server",
-			[]byte(`test data from cache`),
-			"",
-			nil,
-			nil,
-			[]struct {
-				flag  string
-				value string
-			}{
-				{
-					cst.ID,
-					"140a372c-7d37-11eb-bc08-00155d19ad95",
-				},
-			},
+			name:          "Cache then server. ID from flag.",
+			fID:           "140a372c-7d37-11eb-bc08-00155d19ad95",
+			arg:           []string{""},
+			cacheStrategy: "cache.server",
+			out:           []byte(`test data from cache`),
+			storeType:     "",
+			expectedErr:   nil,
+			apiError:      nil,
 		},
 		{
-			"Happy Path cache.server cacheStrategy",
-			[]string{"140a372c-7d37-11eb-bc08-00155d19ad95"},
-			"cache.server",
-			[]byte(`test data from cache`),
-			"",
-			nil,
-			nil,
-			nil,
+			name:          "Cache then server. ID from args.",
+			arg:           []string{"140a372c-7d37-11eb-bc08-00155d19ad95"},
+			cacheStrategy: "cache.server",
+			out:           []byte(`test data from cache`),
+			storeType:     "",
+			expectedErr:   nil,
+			apiError:      nil,
 		},
 		{
-			"Happy Path server.cache cacheStrategy",
-			[]string{"path1"},
-			"server.cache",
-			[]byte(`test data from cache`),
-			"",
-			nil,
-			errors.New(e.New("error")),
-			nil,
+			name:          "Server then cache. Path from args.",
+			arg:           []string{"path1"},
+			cacheStrategy: "server.cache",
+			out:           []byte(`test data from cache`),
+			storeType:     "",
+			expectedErr:   nil,
+			apiError:      errors.NewS("error"),
 		},
 		{
-			"Happy Path server.cache cacheStrategy",
-			[]string{"path1"},
-			"server.cache",
-			[]byte(`test data from cache`),
-			"",
-			nil,
-			errors.New(e.New("error")),
-			[]struct {
-				flag  string
-				value string
-			}{
-				{
-					cst.ID,
-					"140a372c-7d37-11eb-bc08-00155d19ad95",
-				},
-			},
+			name:          "Server then cache. ID from flag.",
+			fID:           "140a372c-7d37-11eb-bc08-00155d19ad95",
+			arg:           []string{"path1"},
+			cacheStrategy: "server.cache",
+			out:           []byte(`test data from cache`),
+			storeType:     "",
+			expectedErr:   nil,
+			apiError:      errors.NewS("error"),
 		},
 		{
-			"Happy Path server.cache cacheStrategy",
-			[]string{"140a372c-7d37-11eb-bc08-00155d19ad95"},
-			"server.cache",
-			[]byte(`test data from cache`),
-			"",
-			nil,
-			errors.New(e.New("error")),
-			nil,
+			name:          "Server then cache. ID from args.",
+			arg:           []string{"140a372c-7d37-11eb-bc08-00155d19ad95"},
+			cacheStrategy: "server.cache",
+			out:           []byte(`test data from cache`),
+			storeType:     "",
+			expectedErr:   nil,
+			apiError:      errors.NewS("error"),
 		},
 	}
 
-	_, err := GetReadCmd()
-	assert.Nil(t, err)
-
 	for _, tt := range testCase {
 		t.Run(tt.name, func(t *testing.T) {
-			for _, f := range tt.flags {
-				viper.Set(f.flag, f.value)
-			}
-
-			writer := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			writer.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
 				return tt.out, tt.apiError
 			}
 
 			st := &fake.FakeStore{}
-
 			st.GetStub = func(s string, d interface{}) *errors.ApiError {
 				sData, ok := d.(*secretData)
 				if ok {
@@ -699,22 +591,24 @@ func TestHandleReadCmd(t *testing.T) {
 				}
 				return tt.expectedErr
 			}
-
 			st.StoreStub = func(s string, i interface{}) *errors.ApiError {
 				return tt.expectedErr
 			}
-			viper.Set(cst.Version, "v1")
-			viper.Set(cst.StoreType, tt.storeType)
-			viper.Set(cst.CacheStrategy, tt.cacheStrategy)
 
 			vcli, rerr := vaultcli.NewWithOpts(
-				vaultcli.WithHTTPClient(req),
-				vaultcli.WithOutClient(writer),
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
 				vaultcli.WithStore(st),
 			)
 			if rerr != nil {
 				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
 			}
+
+			viper.Reset()
+			viper.Set(cst.Version, "v1")
+			viper.Set(cst.StoreType, tt.storeType)
+			viper.Set(cst.CacheStrategy, tt.cacheStrategy)
+			viper.Set(cst.ID, tt.fID)
 
 			_ = handleSecretReadCmd(vcli, cst.NounSecret, tt.arg)
 			if tt.expectedErr == nil {
@@ -722,142 +616,98 @@ func TestHandleReadCmd(t *testing.T) {
 			} else {
 				assert.Equal(t, err, tt.expectedErr)
 			}
-			viper.Set(cst.StoreType, "")
-			viper.Set(cst.CacheStrategy, "")
-
-			for _, f := range tt.flags {
-				viper.Set(f.flag, "")
-			}
 		})
 	}
 }
 
-func TestHandleUpsertCmd(t *testing.T) {
+func TestHandleSecretUpsertCmd(t *testing.T) {
 	testCases := []struct {
 		name        string
+		fID         string // flag: --id
+		fDesc       string // flag: --desc
 		args        []string
 		out         []byte
 		method      string
 		expectedErr *errors.ApiError
-		flags       []struct {
-			flag  string
-			value string
-		}
 	}{
 		{
-			"Happy path POST",
-			[]string{"mySecret", "--desc", "new description"},
-			[]byte(`test`),
-			"create",
-			nil,
-			[]struct {
-				flag  string
-				value string
-			}{
-				{cst.DataDescription, "new description"},
-			},
+			name:        "Happy path POST",
+			fDesc:       "new description",
+			args:        []string{"mySecret", "--desc", "new description"},
+			out:         []byte(`test`),
+			method:      "create",
+			expectedErr: nil,
 		},
 		{
-			"Happy path PUT (ID)",
-			[]string{"140a372c-7d37-11eb-bc08-00155d19ad95", "--desc", "new description"},
-			[]byte(`test`),
-			"update",
-			nil,
-			[]struct {
-				flag  string
-				value string
-			}{
-				{cst.DataDescription, "new description"},
-			},
+			name:        "Happy path PUT (ID)",
+			fDesc:       "new description",
+			args:        []string{"140a372c-7d37-11eb-bc08-00155d19ad95", "--desc", "new description"},
+			out:         []byte(`test`),
+			method:      "update",
+			expectedErr: nil,
 		},
 		{
-			"Happy path PUT (ID)",
-			[]string{"--id", "140a372c-7d37-11eb-bc08-00155d19ad95", "--desc", "new description"},
-			[]byte(`test`),
-			"update",
-			nil,
-			[]struct {
-				flag  string
-				value string
-			}{
-				{cst.ID, "140a372c-7d37-11eb-bc08-00155d19ad95"},
-				{cst.DataDescription, "new description"},
-			},
+			name:        "Happy path PUT (ID)",
+			fID:         "140a372c-7d37-11eb-bc08-00155d19ad95",
+			fDesc:       "new description",
+			args:        []string{"--id", "140a372c-7d37-11eb-bc08-00155d19ad95", "--desc", "new description"},
+			out:         []byte(`test`),
+			method:      "update",
+			expectedErr: nil,
 		},
 		{
-			"Happy path PUT (path)",
-			[]string{"mySecret", "--description", "new description"},
-			[]byte(`test`),
-			"update",
-			nil,
-			[]struct {
-				flag  string
-				value string
-			}{
-				{cst.DataDescription, "new description"},
-			},
+			name:        "Happy path PUT (path)",
+			fDesc:       "new description",
+			args:        []string{"mySecret", "--description", "new description"},
+			out:         []byte(`test`),
+			method:      "update",
+			expectedErr: nil,
 		},
 		{
-			"no path",
-			[]string{"--description", "new description"},
-			[]byte(`test`),
-			"",
-			errors.New(e.New("error: must specify --id or --path (or [path])")),
-			nil,
+			name:        "no path",
+			args:        []string{"--description", "new description"},
+			out:         []byte(`test`),
+			method:      "",
+			expectedErr: errors.NewS("error: must specify --id or --path (or [path])"),
 		},
 	}
 
-	_, err := GetUpdateCmd()
-	assert.Nil(t, err)
-
-	_, err = GetEditCmd()
-	assert.Nil(t, err)
-
-	_, err = GetCreateCmd()
-	assert.Nil(t, err)
-
-	viper.Set(cst.Version, "v1")
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			for _, f := range tt.flags {
-				viper.Set(f.flag, f.value)
-			}
-			viper.Set(cst.LastCommandKey, tt.method)
-
 			var data []byte
 			var err *errors.ApiError
 
-			writer := &fake.FakeOutClient{}
-			writer.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
-			writer.FailEStub = func(apiError *errors.ApiError) { err = apiError }
+			outClient.FailEStub = func(apiError *errors.ApiError) { err = apiError }
 
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
 				return tt.out, tt.expectedErr
 			}
 
 			vcli, rerr := vaultcli.NewWithOpts(
-				vaultcli.WithHTTPClient(req),
-				vaultcli.WithOutClient(writer),
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
 			)
 			if rerr != nil {
 				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
 			}
 
-			_ = handleSecretUpsertCmd(vcli, cst.NounSecret, tt.args)
+			viper.Reset()
+			viper.Set(cst.ID, tt.fID)
+			viper.Set(cst.DataDescription, tt.fDesc)
+
+			_ = handleSecretUpsertCmd(vcli, cst.NounSecret, tt.method, tt.args)
 
 			if tt.expectedErr == nil {
 				assert.Equal(t, tt.out, data)
 			} else {
 				assert.Equal(t, tt.expectedErr, err)
 			}
-			for _, f := range tt.flags {
-				viper.Set(f.flag, "")
-			}
-			viper.Set(cst.LastCommandKey, "")
 		})
 	}
 }
@@ -869,61 +719,49 @@ func TestHandleBustCacheCmd(t *testing.T) {
 		out         []byte
 		storeType   string
 		expectedErr *errors.ApiError
-		flags       []struct {
-			flag  string
-			value string
-		}
 	}{
 		{
-			"Happy Path",
-			[]string{},
-			nil,
-			"",
-			nil,
-			nil,
+			name:        "Happy Path",
+			arg:         []string{},
+			out:         nil,
+			storeType:   "",
+			expectedErr: nil,
 		},
 		{
-			"Error",
-			[]string{},
-			nil,
-			"",
-			errors.New(e.New("error")),
-			nil,
+			name:        "Error",
+			arg:         []string{},
+			out:         nil,
+			storeType:   "",
+			expectedErr: errors.NewS("error"),
 		},
 	}
 
-	_, err := GetBustCacheCmd()
-	assert.Nil(t, err)
-
 	for _, tt := range testCase {
 		t.Run(tt.name, func(t *testing.T) {
-			for _, f := range tt.flags {
-				viper.Set(f.flag, f.value)
-			}
-
-			writer := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			writer.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
 			st := &fake.FakeStore{}
-
 			st.WipeStub = func(s string) *errors.ApiError {
 				return tt.expectedErr
 			}
 
-			viper.Set(cst.StoreType, tt.storeType)
-
 			vcli, rerr := vaultcli.NewWithOpts(
-				vaultcli.WithOutClient(writer),
+				vaultcli.WithOutClient(outClient),
 				vaultcli.WithStore(st),
 			)
 			if rerr != nil {
 				t.Fatalf("Unexpected error during vaultCLI init: %v", rerr)
 			}
+
+			viper.Reset()
+			viper.Set(cst.StoreType, tt.storeType)
 
 			_ = handleBustCacheCmd(vcli, tt.arg)
 			if tt.expectedErr == nil {
@@ -931,102 +769,77 @@ func TestHandleBustCacheCmd(t *testing.T) {
 			} else {
 				assert.Equal(t, err, tt.expectedErr)
 			}
-
-			for _, f := range tt.flags {
-				viper.Set(f.flag, "")
-			}
 		})
 	}
 }
 
-func TestHandleEditCmd(t *testing.T) {
+func TestHandleSecretEditCmd(t *testing.T) {
 	testCase := []struct {
 		name         string
+		fID          string // flag: --id
 		arg          []string
 		out          []byte
 		editResponse []byte
 		expectedErr  *errors.ApiError
 		apiError     *errors.ApiError
 		editError    *errors.ApiError
-		flags        []struct {
-			flag  string
-			value string
-		}
 	}{
 		{
-			"Happy Path",
-			[]string{"path1"},
-			[]byte(`test data`),
-			[]byte(`test data`),
-			nil,
-			nil,
-			nil,
-			nil,
+			name:         "Happy Path",
+			arg:          []string{"path1"},
+			out:          []byte(`test data`),
+			editResponse: []byte(`test data`),
+			expectedErr:  nil,
+			apiError:     nil,
+			editError:    nil,
 		},
 		{
-			"Happy Path",
-			[]string{"140a372c-7d37-11eb-bc08-00155d19ad95"},
-			[]byte(`test data`),
-			[]byte(`test data`),
-			nil,
-			nil,
-			nil,
-			nil,
+			name:         "Happy Path",
+			arg:          []string{"140a372c-7d37-11eb-bc08-00155d19ad95"},
+			out:          []byte(`test data`),
+			editResponse: []byte(`test data`),
+			expectedErr:  nil,
+			apiError:     nil,
+			editError:    nil,
 		},
 		{
-			"Happy Path",
-			[]string{""},
-			[]byte(`test data`),
-			[]byte(`test data`),
-			nil,
-			nil,
-			nil,
-			[]struct {
-				flag  string
-				value string
-			}{
-				{
-					cst.ID,
-					"140a372c-7d37-11eb-bc08-00155d19ad95",
-				},
-			},
+			name:         "Happy Path",
+			fID:          "140a372c-7d37-11eb-bc08-00155d19ad95",
+			arg:          []string{""},
+			out:          []byte(`test data`),
+			editResponse: []byte(`test data`),
+			expectedErr:  nil,
+			apiError:     nil,
+			editError:    nil,
 		},
 		{
-			"error get permission",
-			[]string{"path1"},
-			[]byte(`test data`),
-			nil,
-			errors.New(e.New("error")),
-			errors.New(e.New("error")),
-			nil,
-			nil,
+			name:         "error get permission",
+			arg:          []string{"path1"},
+			out:          []byte(`test data`),
+			editResponse: nil,
+			expectedErr:  errors.NewS("error"),
+			apiError:     errors.NewS("error"),
+			editError:    nil,
 		},
 	}
 
-	_, err := GetEditCmd()
-	assert.Nil(t, err)
-
 	for _, tt := range testCase {
 		t.Run(tt.name, func(t *testing.T) {
-			for _, f := range tt.flags {
-				viper.Set(f.flag, f.value)
-			}
-
-			writer := &fake.FakeOutClient{}
 			var data []byte
 			var err *errors.ApiError
-			writer.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
 				err = apiError
 			}
 
-			req := &fake.FakeClient{}
-			req.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
 				return tt.out, tt.apiError
 			}
 
 			st := &fake.FakeStore{}
-
 			st.GetStub = func(s string, d interface{}) *errors.ApiError {
 				sData, ok := d.(*secretData)
 				if ok {
@@ -1035,13 +848,9 @@ func TestHandleEditCmd(t *testing.T) {
 				}
 				return tt.expectedErr
 			}
-
 			st.StoreStub = func(s string, i interface{}) *errors.ApiError {
 				return tt.expectedErr
 			}
-
-			viper.Set(cst.StoreType, "")
-			viper.Set(cst.CacheStrategy, "")
 
 			editFunc := func(data []byte, save vaultcli.SaveFunc) (edited []byte, err *errors.ApiError) {
 				_, _ = save([]byte(`config`))
@@ -1049,8 +858,8 @@ func TestHandleEditCmd(t *testing.T) {
 			}
 
 			vcli, rerr := vaultcli.NewWithOpts(
-				vaultcli.WithHTTPClient(req),
-				vaultcli.WithOutClient(writer),
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
 				vaultcli.WithStore(st),
 				vaultcli.WithEditFunc(editFunc),
 			)
@@ -1058,21 +867,15 @@ func TestHandleEditCmd(t *testing.T) {
 				t.Fatalf("Unexpected error during vaultCLI init: %v", rerr)
 			}
 
+			viper.Reset()
+			viper.Set(cst.ID, tt.fID)
+
 			_ = handleSecretEditCmd(vcli, cst.NounSecret, tt.arg)
 			if tt.expectedErr == nil {
 				assert.Equal(t, data, tt.out)
 			} else {
 				assert.Equal(t, err, tt.expectedErr)
 			}
-
-			for _, f := range tt.flags {
-				viper.Set(f.flag, "")
-			}
 		})
 	}
-}
-
-func TestGetSecretCmd(t *testing.T) {
-	_, err := GetSecretCmd()
-	assert.Nil(t, err)
 }

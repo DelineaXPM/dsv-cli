@@ -155,12 +155,7 @@ func handleBreakGlassGenerateWizard(vcli vaultcli.CLI, args []string) int {
 					Message: "New admin:",
 					Help:    "Choose who the new administrators will be after the Break Glass event.",
 				},
-				Transform: func(ans interface{}) (newAns interface{}) {
-					answer := ans.(string)
-					answer = strings.TrimSpace(answer)
-					answer = strings.Trim(answer, ",")
-					return answer
-				},
+				Transform: vaultcli.SurveyTrimSpace,
 			},
 			{Name: "addMore", Prompt: &survey.Confirm{Message: "Add more?", Default: true}},
 		}
@@ -231,14 +226,9 @@ func handleBreakGlassApplyWizard(vcli vaultcli.CLI, args []string) int {
 	for {
 		qs := []*survey.Question{
 			{
-				Name:   "share",
-				Prompt: &survey.Input{Message: "Share:"},
-				Transform: func(ans interface{}) (newAns interface{}) {
-					answer := ans.(string)
-					answer = strings.TrimSpace(answer)
-					answer = strings.Trim(answer, ",")
-					return answer
-				},
+				Name:      "share",
+				Prompt:    &survey.Input{Message: "Share:"},
+				Transform: vaultcli.SurveyTrimSpace,
 			},
 			{Name: "addMore", Prompt: &survey.Confirm{Message: "Add more?", Default: true}},
 		}

@@ -137,9 +137,11 @@ func TestSecretPathPredictor(t *testing.T) {
 			fakeClient := &fake.FakeClient{
 				DoRequestOutStub: doRequestOutFunc,
 			}
+			fakeAuth := &fake.FakeAuthenticator{}
+			fakeAuth.GetTokenStub = authFunc
 
 			pred := NewSecretPathPredictor(
-				func() auth.Authenticator { return auth.GetTokenFunc(authFunc) },
+				func() auth.Authenticator { return fakeAuth },
 				func() requests.Client { return fakeClient },
 			)
 

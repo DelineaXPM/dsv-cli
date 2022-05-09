@@ -127,8 +127,7 @@ Usage:
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to fetch (required)", strings.Title(cst.DataUsername), cst.NounUser)},
 		},
-		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
-		MinNumberArgs:     1,
+		MinNumberArgs: 1,
 		RunFunc: func(args []string) int {
 			return handleUserRestoreCmd(vaultcli.New(), args)
 		},
@@ -349,20 +348,12 @@ func handleUserCreateWorkflow(vcli vaultcli.CLI, args []string) int {
 				}
 				return nil
 			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				answer := ans.(string)
-				answer = strings.TrimSpace(answer)
-				return answer
-			},
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
-			Name:   "DisplayName",
-			Prompt: &survey.Input{Message: "Display name:"},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				answer := ans.(string)
-				answer = strings.TrimSpace(answer)
-				return answer
-			},
+			Name:      "DisplayName",
+			Prompt:    &survey.Input{Message: "Display name:"},
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 	}
 
@@ -405,7 +396,7 @@ func handleUserCreateWorkflow(vcli vaultcli.CLI, args []string) int {
 
 		if !strings.HasSuffix(answers.Provider, fmt.Sprintf("[type: %s]", cst.ThyOne)) {
 			externalIDPrompt := &survey.Password{Message: "External ID:"}
-			survErr := survey.AskOne(externalIDPrompt, &externalID, survey.WithValidator(survey.Required))
+			survErr := survey.AskOne(externalIDPrompt, &externalID, survey.WithValidator(vaultcli.SurveyRequired))
 			if survErr != nil {
 				vcli.Out().WriteResponse(nil, errors.New(survErr))
 				return utils.GetExecStatus(survErr)
@@ -418,7 +409,7 @@ func handleUserCreateWorkflow(vcli vaultcli.CLI, args []string) int {
 		Password:    password,
 		DisplayName: answers.DisplayName,
 		Provider:    provider,
-		ExternalID:  externalID,
+		ExternalID:  strings.TrimSpace(externalID),
 	}
 	resp, apiError := userCreate(vcli, body)
 	vcli.Out().WriteResponse(resp, apiError)
@@ -428,7 +419,7 @@ func handleUserCreateWorkflow(vcli vaultcli.CLI, args []string) int {
 func handleUserUpdateWorkflow(vcli vaultcli.CLI, args []string) int {
 	var username string
 	usernamePrompt := &survey.Input{Message: "Username:"}
-	survErr := survey.AskOne(usernamePrompt, &username)
+	survErr := survey.AskOne(usernamePrompt, &username, survey.WithValidator(vaultcli.SurveyRequired))
 	if survErr != nil {
 		vcli.Out().WriteResponse(nil, errors.New(survErr))
 		return utils.GetExecStatus(survErr)
@@ -507,11 +498,12 @@ func handleUserUpdateWorkflow(vcli vaultcli.CLI, args []string) int {
 
 	if confirm {
 		displayPrompt := &survey.Input{Message: "Display name:"}
-		survErr := survey.AskOne(displayPrompt, &displayName, survey.WithValidator(survey.Required))
+		survErr := survey.AskOne(displayPrompt, &displayName, survey.WithValidator(vaultcli.SurveyRequired))
 		if survErr != nil {
 			vcli.Out().WriteResponse(nil, errors.New(survErr))
 			return utils.GetExecStatus(survErr)
 		}
+		displayName = strings.TrimSpace(displayName)
 	}
 
 	if password == "" && displayName == "" {

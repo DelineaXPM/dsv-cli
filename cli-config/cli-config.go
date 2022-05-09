@@ -84,8 +84,8 @@ func GetSecureSettingForProfile(key string, profile string) (string, *terrors.Ap
 	}
 	keyProfile := profile + "-" + key
 
-	st := store.StoreType(viper.GetString(cst.StoreType))
-	s, err := store.GetStore(string(st))
+	storeType := viper.GetString(cst.StoreType)
+	s, err := store.GetStore(storeType)
 	if err != nil {
 		return "", terrors.New(err).Grow("failed to fetch store")
 	}

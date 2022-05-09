@@ -15,7 +15,6 @@ import (
 	"thy/internal/predictor"
 	"thy/internal/prompt"
 	"thy/paths"
-	"thy/store"
 	"thy/utils"
 	"thy/vaultcli"
 
@@ -170,24 +169,24 @@ func handleRegisterRootWorkflow(vcli vaultcli.CLI, args []string) int {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
-		data, err := store.ReadFile(certPath)
+		data, err := os.ReadFile(certPath)
 		if err != nil {
 			ui.Error(err.Error())
 			return utils.GetExecStatus(err)
 		}
-		params[cst.CertPath] = data
+		params[cst.CertPath] = string(data)
 	}
 
 	if privKeyPath, err := prompt.Ask(ui, "Path to private key file:"); err != nil {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
-		data, err := store.ReadFile(privKeyPath)
+		data, err := os.ReadFile(privKeyPath)
 		if err != nil {
 			ui.Error(err.Error())
 			return utils.GetExecStatus(err)
 		}
-		params[cst.PrivKeyPath] = data
+		params[cst.PrivKeyPath] = string(data)
 	}
 
 	if rootCAPath, err := prompt.Ask(ui, "Path to a new secret that will contain root CA registration information:"); err != nil {
@@ -286,12 +285,12 @@ func handleSignWorkflow(vcli vaultcli.CLI, args []string) int {
 		ui.Error(err.Error())
 		return utils.GetExecStatus(err)
 	} else {
-		data, err := store.ReadFile(csrPath)
+		data, err := os.ReadFile(csrPath)
 		if err != nil {
 			ui.Error(err.Error())
 			return utils.GetExecStatus(err)
 		}
-		params[cst.CSRPath] = data
+		params[cst.CSRPath] = string(data)
 	}
 
 	if rootCAPath, err := prompt.Ask(ui, "Path of an existing secret that contains root CA information:"); err != nil {

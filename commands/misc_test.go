@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"testing"
-	cst "thy/constants"
+
 	"thy/errors"
 	"thy/fake"
 	"thy/vaultcli"
@@ -11,61 +11,51 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestHandleEvaluateFlag(t *testing.T) {
+func TestGetWhoAmICmd(t *testing.T) {
+	_, err := GetWhoAmICmd()
+	assert.Nil(t, err)
+}
 
-	testCase := []struct {
-		name        string
-		args        string
-		out         []byte
-		expectedErr *errors.ApiError
-	}{
-		{
-			"Happy path",
-			"arg1",
-			[]byte(`test`),
-			nil,
-		},
-		{
-			"Happy path",
-			"--arg1",
-			[]byte(`test`),
-			nil,
-		},
-	}
-
+func TestGetEvaluateFlagCmd(t *testing.T) {
 	_, err := GetEvaluateFlagCmd()
 	assert.Nil(t, err)
+}
 
-	viper.Set(cst.Version, "v1")
+func TestHandleEvaluateFlag(t *testing.T) {
+	testCase := []struct {
+		name string
+		args string
+	}{
+		{"Happy path 1", "arg.one"},
+		{"Happy path 2", "arg-one"},
+		{"Happy path 3", "arg_one"},
+		{"Happy path 4", "--arg.one"},
+		{"Happy path 5", "--arg-one"},
+		{"Happy path 6", "--arg_one"},
+	}
+
 	for _, tt := range testCase {
-
 		t.Run(tt.name, func(t *testing.T) {
-			writer := &fake.FakeOutClient{}
 			var data []byte
-			var err *errors.ApiError
-			writer.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
-				data = bytes
-				err = apiError
-			}
 
-			viper.Set("arg1", "test")
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+				data = bytes
+			}
 
 			vcli, rerr := vaultcli.NewWithOpts(
-				vaultcli.WithOutClient(writer),
+				vaultcli.WithOutClient(outClient),
 			)
 			if rerr != nil {
-				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
+				t.Fatalf("Unexpected error during vaultCLI init: %v", rerr)
 			}
+
+			viper.Set("arg.one", "arg value")
 
 			_ = handleEvaluateFlag(vcli, []string{tt.args})
-			if tt.expectedErr == nil {
-				assert.Equal(t, data, tt.out)
-			} else {
-				assert.Equal(t, err, tt.expectedErr)
-			}
+			assert.Equal(t, []byte("arg value"), data)
 
-			viper.Set("arg1", "")
+			viper.Set("arg.one", "")
 		})
-
 	}
 }

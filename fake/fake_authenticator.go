@@ -20,10 +20,11 @@ type FakeAuthenticator struct {
 		result1 *auth.TokenResponse
 		result2 *errors.ApiError
 	}
-	GetTokenCacheOverrideStub        func(bool) (*auth.TokenResponse, *errors.ApiError)
+	GetTokenCacheOverrideStub        func(string, bool) (*auth.TokenResponse, *errors.ApiError)
 	getTokenCacheOverrideMutex       sync.RWMutex
 	getTokenCacheOverrideArgsForCall []struct {
-		arg1 bool
+		arg1 string
+		arg2 bool
 	}
 	getTokenCacheOverrideReturns struct {
 		result1 *auth.TokenResponse
@@ -42,15 +43,16 @@ func (fake *FakeAuthenticator) GetToken() (*auth.TokenResponse, *errors.ApiError
 	ret, specificReturn := fake.getTokenReturnsOnCall[len(fake.getTokenArgsForCall)]
 	fake.getTokenArgsForCall = append(fake.getTokenArgsForCall, struct {
 	}{})
+	stub := fake.GetTokenStub
+	fakeReturns := fake.getTokenReturns
 	fake.recordInvocation("GetToken", []interface{}{})
 	fake.getTokenMutex.Unlock()
-	if fake.GetTokenStub != nil {
-		return fake.GetTokenStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.getTokenReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -92,21 +94,23 @@ func (fake *FakeAuthenticator) GetTokenReturnsOnCall(i int, result1 *auth.TokenR
 	}{result1, result2}
 }
 
-func (fake *FakeAuthenticator) GetTokenCacheOverride(arg1 bool) (*auth.TokenResponse, *errors.ApiError) {
+func (fake *FakeAuthenticator) GetTokenCacheOverride(arg1 string, arg2 bool) (*auth.TokenResponse, *errors.ApiError) {
 	fake.getTokenCacheOverrideMutex.Lock()
 	ret, specificReturn := fake.getTokenCacheOverrideReturnsOnCall[len(fake.getTokenCacheOverrideArgsForCall)]
 	fake.getTokenCacheOverrideArgsForCall = append(fake.getTokenCacheOverrideArgsForCall, struct {
-		arg1 bool
-	}{arg1})
-	fake.recordInvocation("GetTokenCacheOverride", []interface{}{arg1})
+		arg1 string
+		arg2 bool
+	}{arg1, arg2})
+	stub := fake.GetTokenCacheOverrideStub
+	fakeReturns := fake.getTokenCacheOverrideReturns
+	fake.recordInvocation("GetTokenCacheOverride", []interface{}{arg1, arg2})
 	fake.getTokenCacheOverrideMutex.Unlock()
-	if fake.GetTokenCacheOverrideStub != nil {
-		return fake.GetTokenCacheOverrideStub(arg1)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.getTokenCacheOverrideReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -116,17 +120,17 @@ func (fake *FakeAuthenticator) GetTokenCacheOverrideCallCount() int {
 	return len(fake.getTokenCacheOverrideArgsForCall)
 }
 
-func (fake *FakeAuthenticator) GetTokenCacheOverrideCalls(stub func(bool) (*auth.TokenResponse, *errors.ApiError)) {
+func (fake *FakeAuthenticator) GetTokenCacheOverrideCalls(stub func(string, bool) (*auth.TokenResponse, *errors.ApiError)) {
 	fake.getTokenCacheOverrideMutex.Lock()
 	defer fake.getTokenCacheOverrideMutex.Unlock()
 	fake.GetTokenCacheOverrideStub = stub
 }
 
-func (fake *FakeAuthenticator) GetTokenCacheOverrideArgsForCall(i int) bool {
+func (fake *FakeAuthenticator) GetTokenCacheOverrideArgsForCall(i int) (string, bool) {
 	fake.getTokenCacheOverrideMutex.RLock()
 	defer fake.getTokenCacheOverrideMutex.RUnlock()
 	argsForCall := fake.getTokenCacheOverrideArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeAuthenticator) GetTokenCacheOverrideReturns(result1 *auth.TokenResponse, result2 *errors.ApiError) {

@@ -44,7 +44,7 @@ func SetCredsLabel(label string) {
 
 // Store uses a helper and an input reader to save credentials.
 // The reader must contain the JSON serialization of a Credentials struct.
-func Store(helper Helper, reader io.Reader) error {
+func Store(helper StoreHelper, reader io.Reader) error {
 	scanner := bufio.NewScanner(reader)
 
 	buffer := new(bytes.Buffer)
@@ -71,7 +71,7 @@ func Store(helper Helper, reader io.Reader) error {
 // Get retrieves the credentials for a given server url.
 // The reader must contain the server URL to search.
 // The writer is used to write the JSON serialization of the credentials.
-func Get(helper Helper, reader io.Reader, writer io.Writer) error {
+func Get(helper StoreHelper, reader io.Reader, writer io.Writer) error {
 	scanner := bufio.NewScanner(reader)
 
 	buffer := new(bytes.Buffer)
@@ -110,7 +110,7 @@ func Get(helper Helper, reader io.Reader, writer io.Writer) error {
 
 // Erase removes credentials from the store.
 // The reader must contain the server URL to remove.
-func Erase(helper Helper, reader io.Reader) error {
+func Erase(helper StoreHelper, reader io.Reader) error {
 	scanner := bufio.NewScanner(reader)
 
 	buffer := new(bytes.Buffer)
@@ -132,8 +132,8 @@ func Erase(helper Helper, reader io.Reader) error {
 
 //List returns all the serverURLs of keys in
 //the OS store as a list of strings
-func List(helper Helper, writer io.Writer) error {
-	accts, err := helper.List()
+func List(helper StoreHelper, writer io.Writer) error {
+	accts, err := helper.List("")
 	if err != nil {
 		return err
 	}

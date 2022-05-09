@@ -491,9 +491,7 @@ func handleGroupCreateWizard(vcli vaultcli.CLI, args []string) int {
 					}
 					return errors.NewS("A user with this username does not exist.")
 				},
-				Transform: func(ans interface{}) (newAns interface{}) {
-					return strings.TrimSpace(ans.(string))
-				},
+				Transform: vaultcli.SurveyTrimSpace,
 			},
 			{Name: "addMore", Prompt: &survey.Confirm{Message: "Add more?", Default: true}},
 		}

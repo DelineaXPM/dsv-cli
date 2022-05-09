@@ -106,61 +106,27 @@ Usage:
 func handleSiemCreate(vcli vaultcli.CLI, args []string) int {
 	qs := []*survey.Question{
 		{
-			Name:   "SIEMType",
-			Prompt: &survey.Input{Message: "Type of SIEM endpoint:", Default: "syslog"},
-			Validate: func(ans interface{}) error {
-				answer := strings.TrimSpace(ans.(string))
-				if len(answer) == 0 {
-					return errors.NewS("Value is required.")
-				}
-				return nil
-			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Name:      "SIEMType",
+			Prompt:    &survey.Input{Message: "Type of SIEM endpoint:", Default: "syslog"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
-			Name:   "Name",
-			Prompt: &survey.Input{Message: "Name of SIEM endpoint:"},
-			Validate: func(ans interface{}) error {
-				answer := strings.TrimSpace(ans.(string))
-				if len(answer) == 0 {
-					return errors.NewS("Value is required.")
-				}
-				return nil
-			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Name:      "Name",
+			Prompt:    &survey.Input{Message: "Name of SIEM endpoint:"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
-			Name:   "Host",
-			Prompt: &survey.Input{Message: "Host:"},
-			Validate: func(ans interface{}) error {
-				answer := strings.TrimSpace(ans.(string))
-				if len(answer) == 0 {
-					return errors.NewS("Value is required.")
-				}
-				return nil
-			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Name:      "Host",
+			Prompt:    &survey.Input{Message: "Host:"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
-			Name:   "Port",
-			Prompt: &survey.Input{Message: "Port:"},
-			Validate: func(ans interface{}) error {
-				answer := strings.TrimSpace(ans.(string))
-				if len(answer) == 0 {
-					return errors.NewS("Value is required.")
-				}
-				_, err := strconv.Atoi(answer)
-				if err != nil {
-					return errors.NewS("Value must be a number.")
-				}
-				return nil
-			},
+			Name:     "Port",
+			Prompt:   &survey.Input{Message: "Port:"},
+			Validate: vaultcli.SurveyRequiredInt,
 			Transform: func(ans interface{}) (newAns interface{}) {
 				answer := strings.TrimSpace(ans.(string))
 				_, val := strconv.Atoi(answer)
@@ -168,60 +134,33 @@ func handleSiemCreate(vcli vaultcli.CLI, args []string) int {
 			},
 		},
 		{
-			Name:   "Protocol",
-			Prompt: &survey.Input{Message: "Protocol:"},
-			Validate: func(ans interface{}) error {
-				answer := strings.TrimSpace(ans.(string))
-				if len(answer) == 0 {
-					return errors.NewS("Value is required.")
-				}
-				return nil
-			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Name:      "Protocol",
+			Prompt:    &survey.Input{Message: "Protocol:"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
-			Name:   "LoggingFormat",
-			Prompt: &survey.Input{Message: "Logging Format:", Default: "rfc5424"},
-			Validate: func(ans interface{}) error {
-				answer := strings.TrimSpace(ans.(string))
-				if len(answer) == 0 {
-					return errors.NewS("Value is required.")
-				}
-				return nil
-			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Name:      "Endpoint",
+			Prompt:    &survey.Input{Message: "Endpoint:"},
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
-			Name:   "AuthMethod",
-			Prompt: &survey.Input{Message: "Authentication Method:", Default: "token"},
-			Validate: func(ans interface{}) error {
-				answer := strings.TrimSpace(ans.(string))
-				if len(answer) == 0 {
-					return errors.NewS("Value is required.")
-				}
-				return nil
-			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Name:      "LoggingFormat",
+			Prompt:    &survey.Input{Message: "Logging Format:", Default: "rfc5424"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
-			Name:   "Auth",
-			Prompt: &survey.Password{Message: "Authentication:"},
-			Validate: func(ans interface{}) error {
-				answer := strings.TrimSpace(ans.(string))
-				if len(answer) == 0 {
-					return errors.NewS("Value is required.")
-				}
-				return nil
-			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Name:      "AuthMethod",
+			Prompt:    &survey.Input{Message: "Authentication Method:", Default: "token"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "Auth",
+			Prompt:    &survey.Password{Message: "Authentication:"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
 			Name:   "SendToEngine",
@@ -238,14 +177,7 @@ func handleSiemCreate(vcli vaultcli.CLI, args []string) int {
 
 	if answers.SendToEngine {
 		poolPrompt := &survey.Input{Message: "Engine Pool:"}
-		poolValidation := func(ans interface{}) error {
-			answer := strings.TrimSpace(ans.(string))
-			if len(answer) == 0 {
-				return errors.NewS("Value is required.")
-			}
-			return nil
-		}
-		survErr := survey.AskOne(poolPrompt, &answers.Pool, survey.WithValidator(poolValidation))
+		survErr := survey.AskOne(poolPrompt, &answers.Pool, survey.WithValidator(vaultcli.SurveyRequired))
 		if survErr != nil {
 			vcli.Out().WriteResponse(nil, errors.New(survErr))
 			return utils.GetExecStatus(survErr)
@@ -275,47 +207,21 @@ func handleSiemUpdate(vcli vaultcli.CLI, args []string) int {
 
 	qs := []*survey.Question{
 		{
-			Name:   "SIEMType",
-			Prompt: &survey.Input{Message: "Type of SIEM endpoint:", Default: "syslog"},
-			Validate: func(ans interface{}) error {
-				answer := strings.TrimSpace(ans.(string))
-				if len(answer) == 0 {
-					return errors.NewS("Value is required.")
-				}
-				return nil
-			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Name:      "SIEMType",
+			Prompt:    &survey.Input{Message: "Type of SIEM endpoint:", Default: "syslog"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
-			Name:   "Host",
-			Prompt: &survey.Input{Message: "Host:"},
-			Validate: func(ans interface{}) error {
-				answer := strings.TrimSpace(ans.(string))
-				if len(answer) == 0 {
-					return errors.NewS("Value is required.")
-				}
-				return nil
-			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Name:      "Host",
+			Prompt:    &survey.Input{Message: "Host:"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
-			Name:   "Port",
-			Prompt: &survey.Input{Message: "Port:"},
-			Validate: func(ans interface{}) error {
-				answer := strings.TrimSpace(ans.(string))
-				if len(answer) == 0 {
-					return errors.NewS("Value is required.")
-				}
-				_, err := strconv.Atoi(answer)
-				if err != nil {
-					return errors.NewS("Value must be a number.")
-				}
-				return nil
-			},
+			Name:     "Port",
+			Prompt:   &survey.Input{Message: "Port:"},
+			Validate: vaultcli.SurveyRequiredInt,
 			Transform: func(ans interface{}) (newAns interface{}) {
 				answer := strings.TrimSpace(ans.(string))
 				_, val := strconv.Atoi(answer)
@@ -323,60 +229,33 @@ func handleSiemUpdate(vcli vaultcli.CLI, args []string) int {
 			},
 		},
 		{
-			Name:   "Protocol",
-			Prompt: &survey.Input{Message: "Protocol:"},
-			Validate: func(ans interface{}) error {
-				answer := strings.TrimSpace(ans.(string))
-				if len(answer) == 0 {
-					return errors.NewS("Value is required.")
-				}
-				return nil
-			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Name:      "Protocol",
+			Prompt:    &survey.Input{Message: "Protocol:"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
-			Name:   "LoggingFormat",
-			Prompt: &survey.Input{Message: "Logging Format:", Default: "rfc5424"},
-			Validate: func(ans interface{}) error {
-				answer := strings.TrimSpace(ans.(string))
-				if len(answer) == 0 {
-					return errors.NewS("Value is required.")
-				}
-				return nil
-			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Name:      "Endpoint",
+			Prompt:    &survey.Input{Message: "Endpoint:"},
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
-			Name:   "AuthMethod",
-			Prompt: &survey.Input{Message: "Authentication Method:", Default: "token"},
-			Validate: func(ans interface{}) error {
-				answer := strings.TrimSpace(ans.(string))
-				if len(answer) == 0 {
-					return errors.NewS("Value is required.")
-				}
-				return nil
-			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Name:      "LoggingFormat",
+			Prompt:    &survey.Input{Message: "Logging Format:", Default: "rfc5424"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
-			Name:   "Auth",
-			Prompt: &survey.Password{Message: "Authentication:"},
-			Validate: func(ans interface{}) error {
-				answer := strings.TrimSpace(ans.(string))
-				if len(answer) == 0 {
-					return errors.NewS("Value is required.")
-				}
-				return nil
-			},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Name:      "AuthMethod",
+			Prompt:    &survey.Input{Message: "Authentication Method:", Default: "token"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "Auth",
+			Prompt:    &survey.Password{Message: "Authentication:"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
 			Name:   "SendToEngine",
@@ -393,14 +272,7 @@ func handleSiemUpdate(vcli vaultcli.CLI, args []string) int {
 
 	if answers.SendToEngine {
 		poolPrompt := &survey.Input{Message: "Engine Pool:"}
-		poolValidation := func(ans interface{}) error {
-			answer := strings.TrimSpace(ans.(string))
-			if len(answer) == 0 {
-				return errors.NewS("Value is required.")
-			}
-			return nil
-		}
-		survErr := survey.AskOne(poolPrompt, &answers.Pool, survey.WithValidator(poolValidation))
+		survErr := survey.AskOne(poolPrompt, &answers.Pool, survey.WithValidator(vaultcli.SurveyRequired))
 		if survErr != nil {
 			vcli.Out().WriteResponse(nil, errors.New(survErr))
 			return utils.GetExecStatus(survErr)
@@ -448,6 +320,7 @@ type siemCreateRequest struct {
 	Host          string `json:"host"`
 	Port          int    `json:"port"`
 	Protocol      string `json:"protocol"`
+	Endpoint      string `json:"endpoint"`
 	LoggingFormat string `json:"loggingFormat"`
 	AuthMethod    string `json:"authMethod"`
 	Auth          string `json:"auth"`
@@ -466,6 +339,7 @@ type siemUpdateRequest struct {
 	Host          string `json:"host"`
 	Port          int    `json:"port"`
 	Protocol      string `json:"protocol"`
+	Endpoint      string `json:"endpoint"`
 	LoggingFormat string `json:"loggingFormat"`
 	AuthMethod    string `json:"authMethod"`
 	Auth          string `json:"auth"`

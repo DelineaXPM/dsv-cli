@@ -2,7 +2,6 @@ package version
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -11,6 +10,8 @@ import (
 	"testing"
 	"thy/utils"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestIsVersionOutdated(t *testing.T) {
@@ -150,7 +151,7 @@ func TestUpdateCache(t *testing.T) {
 
 	updateCache(temporaryFileName, content)
 
-	fileContent, err := ioutil.ReadFile(temporaryFileName)
+	fileContent, err := os.ReadFile(temporaryFileName)
 	assert.NoError(t, err)
 
 	expectedContent := fmt.Sprintf("%s\n%s", time.Now().Format(dateLayout), content)

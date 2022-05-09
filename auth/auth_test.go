@@ -47,24 +47,23 @@ var (
 )
 
 func TestGetTokenKey(t *testing.T) {
+	const tenantName = "dev"
 	tests := []struct {
-		in   string
-		auth string
-		want string
+		authType  string
+		keySuffix string
+		want      string
 	}{
-		{"refresh", "auth.gcp.service", "token-password--auth.gcp.service"},
-		{"cert", "auth.gcp.service", "token-cert--auth.gcp.service"},
+		{"refresh", "auth.gcp.service", "token-password-dev-auth.gcp.service"},
+		{"password", "auth.gcp.service", "token-password-dev-auth.gcp.service"},
+		{"cert", "auth.gcp.service", "token-cert-dev-auth.gcp.service"},
 	}
-	au := auth.AuthType("password")
-	au.GetTokenKey("p")
 
 	for _, tt := range tests {
-		au := auth.AuthType(tt.in)
-		key := au.GetTokenKey(tt.auth)
+		au := auth.AuthType(tt.authType)
+		key := au.GetTokenKey(tenantName, tt.keySuffix)
 		if key != tt.want {
-			t.Fatalf("Failed got  expected :: %v, got :: %v", tt.want, key)
+			t.Fatalf("Expected :: %s, got :: %s", tt.want, key)
 		}
-
 	}
 }
 
@@ -171,7 +170,7 @@ func TestGetToken_Password(t *testing.T) {
 
 			registerResponse(tokenEndpoint, tc.apiResponse["status"].(int), http.MethodPost, tc.apiResponse["response"].(map[string]interface{}))
 
-			rsp, err := authDef.GetTokenCacheOverride(false)
+			rsp, err := authDef.GetTokenCacheOverride(tc.auth, false)
 
 			if tc.expectedError != nil && err == nil || err != nil && tc.expectedError == nil {
 				t.Fatalf("Failed got  expected :: %v, got :: %v", tc.expectedError, err)
@@ -338,7 +337,7 @@ func TestGetToken_RefreshToken(t *testing.T) {
 
 			registerResponse(tokenEndpoint, tc.apiResponse["status"].(int), http.MethodPost, tc.apiResponse["response"].(map[string]interface{}))
 
-			rsp, err := authDef.GetTokenCacheOverride(false)
+			rsp, err := authDef.GetTokenCacheOverride(tc.auth, false)
 
 			if tc.expectedError != nil && err == nil || err != nil && tc.expectedError == nil {
 				t.Fatalf("Failed got  expected :: %v, got :: %v", tc.expectedError, err)
@@ -419,7 +418,7 @@ func TestGetToken_Azure(t *testing.T) {
 			registerResponse(tokenEndpoint, tc.apiResponse["status"].(int), http.MethodPost, tc.apiResponse["response"].(map[string]interface{}))
 			registerResponse(msiEndpoint, tc.msiResponse["status"].(int), http.MethodGet, tc.msiResponse["response"].(map[string]interface{}))
 
-			rsp, err := authDef.GetTokenCacheOverride(false)
+			rsp, err := authDef.GetTokenCacheOverride(tc.auth, false)
 
 			if tc.expectedError != nil && err == nil || err != nil && tc.expectedError == nil {
 				t.Fatalf("Failed got  expected :: %v, got :: %v", tc.expectedError, err)
@@ -481,7 +480,7 @@ func TestGetToken_GCP(t *testing.T) {
 			defer httpmock.DeactivateAndReset()
 			registerResponse(tokenEndpoint, tc.apiResponse["status"].(int), http.MethodPost, tc.apiResponse["response"].(map[string]interface{}))
 
-			rsp, err := authDef.GetTokenCacheOverride(false)
+			rsp, err := authDef.GetTokenCacheOverride(tc.auth, false)
 
 			if tc.expectedError != nil && err == nil || err != nil && tc.expectedError == nil {
 				t.Fatalf("Failed got  expected :: %v, got :: %v", tc.expectedError, err)
@@ -554,7 +553,7 @@ func TestToken_GcpSignJwt(t *testing.T) {
 			viper.Set("tenant", tn)
 
 			// act
-			gcpJwt, err := client.GetJwtToken()
+			gcpJwt, err := client.GetJwtToken("")
 
 			if tc.expectedError != nil && err == nil || err != nil && tc.expectedError == nil {
 				t.Fatalf("Failed got  expected :: %v, got :: %v", tc.expectedError, err)

@@ -31,7 +31,7 @@ Usage:
    • %[1]s --path %[2]s
 		`, cst.NounPolicy, cst.ExamplePolicyPath),
 		FlagsPredictor: []*predictor.Params{
-			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s", cst.Path, cst.NounPolicy), Predictor: predictor.NewSecretPathPredictorDefault()},
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s", cst.Path, cst.NounPolicy)},
 			{Name: cst.Version, Usage: "List the current and last (n) versions"},
 		},
 		MinNumberArgs: 1,
@@ -59,11 +59,10 @@ Usage:
    • %[1]s %[3]s --path %[2]s
 		`, cst.NounPolicy, cst.ExamplePolicyPath, cst.Read),
 		FlagsPredictor: []*predictor.Params{
-			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s", cst.Path, cst.NounPolicy), Predictor: predictor.NewSecretPathPredictorDefault()},
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s", cst.Path, cst.NounPolicy)},
 			{Name: cst.Version, Usage: "List the current and last (n) versions"},
 		},
-		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
-		MinNumberArgs:     1,
+		MinNumberArgs: 1,
 		RunFunc: func(args []string) int {
 			return handlePolicyReadCmd(vaultcli.New(), args)
 		},
@@ -81,10 +80,9 @@ Usage:
    • %[1]s %[3]s --path %[2]s
 		`, cst.NounPolicy, cst.ExamplePolicyPath, cst.Edit),
 		FlagsPredictor: []*predictor.Params{
-			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s", cst.Path, cst.NounPolicy), Predictor: predictor.NewSecretPathPredictorDefault()},
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s", cst.Path, cst.NounPolicy)},
 		},
-		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
-		MinNumberArgs:     1,
+		MinNumberArgs: 1,
 		RunFunc: func(args []string) int {
 			return handlePolicyEditCmd(vaultcli.New(), args)
 		},
@@ -102,11 +100,10 @@ Usage:
    • %[1]s %[3]s --path %[2]s --force
 		`, cst.NounPolicy, cst.ExamplePolicyPath, cst.Delete),
 		FlagsPredictor: []*predictor.Params{
-			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s (required)", cst.Path), Predictor: predictor.NewSecretPathPredictorDefault()},
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s (required)", cst.Path)},
 			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s", cst.NounPolicy), ValueType: "bool"},
 		},
-		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
-		MinNumberArgs:     1,
+		MinNumberArgs: 1,
 		RunFunc: func(args []string) int {
 			return handlePolicyDeleteCmd(vaultcli.New(), args)
 		},
@@ -123,10 +120,9 @@ Usage:
    • policy %[1]s %[4]s
 		`, cst.Restore, cst.NounPolicy, cst.ProductName, cst.ExamplePath),
 		FlagsPredictor: []*predictor.Params{
-			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s", cst.Path, cst.NounPolicy), Predictor: predictor.NewSecretPathPredictorDefault()},
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s", cst.Path, cst.NounPolicy)},
 		},
-		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
-		MinNumberArgs:     1,
+		MinNumberArgs: 1,
 		RunFunc: func(args []string) int {
 			return handlePolicyRestoreCmd(vaultcli.New(), args)
 		},
@@ -145,7 +141,7 @@ Usage:
 		`, cst.NounPolicy, cst.ExamplePolicyPath, cst.Create, cst.ExampleDataPath),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in a %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), cst.NounPolicy), Predictor: predictor.NewPrefixFilePredictor("*")},
-			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounPolicy), Predictor: predictor.NewSecretPathPredictorDefault()},
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounPolicy)},
 			{Name: cst.DataAction, Usage: fmt.Sprintf("Policy actions to be stored in a %s (required, regex and list supported)(required)", cst.NounPolicy), Predictor: predictor.ActionTypePredictor{}},
 			{Name: cst.DataEffect, Usage: fmt.Sprintf("Policy effect to be stored in a %s. Defaults to allow if not specified", cst.NounPolicy), Default: "allow", Predictor: predictor.EffectTypePredictor{}},
 			{Name: cst.DataDescription, Usage: fmt.Sprintf("Policy description to be stored in a %s ", cst.NounPolicy)},
@@ -153,7 +149,6 @@ Usage:
 			{Name: cst.DataCidr, Usage: fmt.Sprintf("Policy CIDR condition remote IP to be stored in a %s ", cst.NounPolicy)},
 			{Name: cst.DataResource, Usage: fmt.Sprintf("Policy resources to be stored in a %s. Defaults to the path plus all paths below (<.*>) ", cst.NounPolicy)},
 		},
-		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
 		RunFunc: func(args []string) int {
 			if OnlyGlobalArgs(args) {
 				return handlePolicyCreateWizard(vaultcli.New(), args)
@@ -176,7 +171,7 @@ Usage:
 		`, cst.NounPolicy, cst.ExamplePolicyPath, cst.Update, cst.ExampleDataPath),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in a %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), cst.NounPolicy), Predictor: predictor.NewPrefixFilePredictor("*")},
-			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounPolicy), Predictor: predictor.NewSecretPathPredictorDefault()},
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounPolicy)},
 			{Name: cst.DataAction, Usage: fmt.Sprintf("Policy actions to be stored in a %s (required, regex and list supported)(required)", cst.NounPolicy), Predictor: predictor.ActionTypePredictor{}},
 			{Name: cst.DataEffect, Usage: fmt.Sprintf("Policy effect to be stored in a %s. Defaults to allow if not specified", cst.NounPolicy), Default: "allow", Predictor: predictor.EffectTypePredictor{}},
 			{Name: cst.DataDescription, Usage: fmt.Sprintf("Policy description to be stored in a %s ", cst.NounPolicy)},
@@ -184,7 +179,6 @@ Usage:
 			{Name: cst.DataCidr, Usage: fmt.Sprintf("Policy CIDR condition remote IP to be stored in a %s ", cst.NounPolicy)},
 			{Name: cst.DataResource, Usage: fmt.Sprintf("Policy resources to be stored in a %s. Defaults to the path plus all paths below (<.*>) ", cst.NounPolicy)},
 		},
-		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
 		RunFunc: func(args []string) int {
 			if OnlyGlobalArgs(args) {
 				return handlePolicyUpdateWizard(vaultcli.New(), args)
@@ -205,11 +199,10 @@ Usage:
    • %[1]s %[3]s --path %[2]s
 		`, cst.NounPolicy, cst.ExamplePolicyPath, cst.Rollback, cst.Version),
 		FlagsPredictor: []*predictor.Params{
-			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret), Predictor: predictor.NewSecretPathPredictorDefault()},
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret)},
 			{Name: cst.Version, Usage: "The version to which to rollback"},
 		},
-		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
-		MinNumberArgs:     1,
+		MinNumberArgs: 1,
 		RunFunc: func(args []string) int {
 			return handlePolicyRollbackCmd(vaultcli.New(), args)
 		},
@@ -597,11 +590,9 @@ func handlePolicyUpdateWizard(vcli vaultcli.CLI, args []string) int {
 func policyCollectDataWizard() (string, error) {
 	qs := []*survey.Question{
 		{
-			Name:   "Description",
-			Prompt: &survey.Input{Message: "Description of policy:"},
-			Transform: func(ans interface{}) (newAns interface{}) {
-				return strings.TrimSpace(ans.(string))
-			},
+			Name:      "Description",
+			Prompt:    &survey.Input{Message: "Description of policy:"},
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
 			Name: "Actions",
@@ -642,9 +633,7 @@ func policyCollectDataWizard() (string, error) {
 					}
 					return nil
 				},
-				Transform: func(ans interface{}) (newAns interface{}) {
-					return strings.TrimSpace(ans.(string))
-				},
+				Transform: vaultcli.SurveyTrimSpace,
 			},
 			{Name: "addMore", Prompt: &survey.Confirm{Message: "Add more?", Default: true}},
 		}
@@ -685,11 +674,9 @@ func policyCollectDataWizard() (string, error) {
 		for confirm {
 			qs := []*survey.Question{
 				{
-					Name:   "Resource",
-					Prompt: &survey.Input{Message: "Resource:"},
-					Transform: func(ans interface{}) (newAns interface{}) {
-						return strings.TrimSpace(ans.(string))
-					},
+					Name:      "Resource",
+					Prompt:    &survey.Input{Message: "Resource:"},
+					Transform: vaultcli.SurveyTrimSpace,
 				},
 				{Name: "addMore", Prompt: &survey.Confirm{Message: "Add more?", Default: true}},
 			}
@@ -712,17 +699,7 @@ func policyCollectDataWizard() (string, error) {
 
 	var cidr string
 	cidrPrompt := &survey.Input{Message: "CIDR range to lock down access to a specific IP range:"}
-	cidrValidation := func(ans interface{}) error {
-		answer := strings.TrimSpace(ans.(string))
-		if len(answer) == 0 {
-			return nil
-		}
-		if _, _, err := net.ParseCIDR(answer); err != nil {
-			return err
-		}
-		return nil
-	}
-	survErr = survey.AskOne(cidrPrompt, &cidr, survey.WithValidator(cidrValidation))
+	survErr = survey.AskOne(cidrPrompt, &cidr, survey.WithValidator(vaultcli.SurveyOptionalCIDR))
 	if survErr != nil {
 		return "", survErr
 	}

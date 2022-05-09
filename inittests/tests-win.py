@@ -64,7 +64,7 @@ class Suite(unittest.TestCase):
         fail = False
 
         secret_path = utils.create_secret_file()
-        os.environ["INIT_SECRET_PATH"] = secret_path
+        os.environ["INIT_SECRET_PATH"] = secret_path.replace("\\", "-")
         os.environ["INIT_SECRET_FILE"] = "@{}".format(secret_path)
         child, lines = custom_setup("{}/{}".format(folder, step_1))
 
