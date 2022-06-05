@@ -3,8 +3,8 @@
 brews:
   - # GitHub/GitLab repository to push the formula to
     tap:
-      owner: any_owner_name
-      name: cli
+      owner: thycotic
+      name: dsv-cli
 
     name: brew_installer_name
     # Template for the url which is determined by the given Token (github or gitlab)
