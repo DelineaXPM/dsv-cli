@@ -1,6 +1,7 @@
 package vaultcli
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -19,9 +20,9 @@ import (
 type SaveFunc func(data []byte) (resp []byte, err *errors.ApiError)
 
 func EditData(data []byte, saveFunc SaveFunc, startErr *errors.ApiError, retry bool) (edited []byte, runErr *errors.ApiError) {
-	viper.Set(cst.Output, string(format.File))
+	viper.Set(cst.Output, "disable-color")
 	dataFormatted, errString := format.FormatResponse(data, nil, viper.GetBool(cst.Beautify))
-	viper.Set(cst.Output, string(format.StdOut))
+	viper.Set(cst.Output, format.OutToStdout)
 	if errString != "" {
 		return nil, errors.NewS(errString)
 	}
@@ -89,7 +90,7 @@ func doEditData(data []byte, startErr *errors.ApiError) (edited []byte, runErr *
 	if err != nil {
 		return nil, errors.New(err).Grow(fmt.Sprintf("Failed to read edited file: %q", tmpFile.Name()))
 	}
-	if utils.SlicesEqual(data, edited) {
+	if bytes.Equal(data, edited) {
 		return nil, errors.NewS("Data not modified")
 	}
 	if len(edited) == 0 {

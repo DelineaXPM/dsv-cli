@@ -1,0 +1,181 @@
+variables:
+  - group: "CLI Init Tests"
+  - group: "CLI_integration_test"
+  - group: "CLi-pipeline-variables"
+  - group: "CLI End-to-End tests"
+
+jobs:
+  - job: Test_Ubuntu
+    pool:
+      name: DSV-Golang-AWS
+
+    steps:
+      - task: thycotic-software.thycotic-dsv-task.thycotic-dsv-build-release-task.ThycoticDSV@0
+        displayName: 'Retrieve ado/cli from Thycotic DevOps Secrets Vault'
+        inputs:
+          ServerUrl: '$(ServerUrl)'
+          ClientId: '$(ClientId)'
+          ClientSecret: '$(ClientSecret)'
+          SecretPath: ado/cli
+
+      - task: GoTool@0
+        displayName: 'Use Go 1.18.3'
+        inputs:
+          version: 1.18.3
+
+      # TODO: this produces an error: "The task name WhiteSource is ambiguous".
+      #       Uncomment when the issue will be resolved.
+      # - task: WhiteSource@21
+      #   inputs:
+      #     cwd: '$(System.DefaultWorkingDirectory)'
+      #     scanReportTimeout: '3'
+
+      - bash: |
+          echo "[---] Check difference."
+          go mod tidy
+          git diff --exit-code
+          if [ $(echo $?) != 0 ];
+            then
+              echo "[---] Failed."
+              exit 1
+            else
+              echo "[---] Finished."
+          fi
+          echo "[---] Download dependencies."
+          go mod download
+        displayName: 'Download dependencies'
+
+      - script: |
+          echo "[---] Compiling binary."
+          go build -o dsv
+          echo "[---] Finished."
+        displayName: 'Build'
+
+      - bash: |
+          echo "[---] Install editor (nano)"
+          sudo apt-get install nano
+          echo "[---] Install hansboder/gocovmerge"
+          go install -v github.com/hansboder/gocovmerge@latest
+          echo "[---] Finished."
+        displayName: 'Install tools'
+
+      - bash: |
+          echo "[---] git describe: $(git describe --always --dirty)"
+          go test -v -p 1 -covermode=count -coverprofile=./coverage.out ./... | tee test.out
+          rm -f cli-config/.thy.yml
+          echo "[---] Merging coverage."
+          ~/go/bin/gocovmerge -dir coverage -pattern "\.out" > ./coverage-integration.out
+          rm -rf coverage
+          echo "[---] Finished."
+        displayName: 'Run tests'
+
+      - bash: |
+          cat test.out | ~/go/bin/go-junit-report -set-exit-code > ./report.xml
+        displayName: 'Generate report'
+
+      - bash: |
+          echo "[---] git describe: $(git describe --always --dirty)"
+
+          echo "[---] Starting End-to-End testing."
+          make e2e-test | tee test-e2e.out
+
+          echo "[---] Merging E2E coverage results into one file."
+          ~/go/bin/gocovmerge -dir ./tests/e2e/coverage -pattern "\.out" > ./coverage-e2e.out
+          rm -rf ./tests/e2e/coverage
+
+          echo "[---] Finished."
+        condition: always()
+        displayName: '[E2E] Run tests'
+      
+      - bash: |
+          cat test-e2e.out | ~/go/bin/go-junit-report -set-exit-code > ./report-e2e.xml
+        displayName: '[E2E] Generate report'
+      
+      - bash: |
+          echo "[---] Merging coverage.out, coverage-e2e.out and coverage-integration.out files."
+          ~/go/bin/gocovmerge coverage.out coverage-e2e.out coverage-integration.out > ./coverage-all.out
+
+          echo "[---] Converting coverage-all.out to codecoverage.xml file."
+          ~/go/bin/gocov convert coverage-all.out | ~/go/bin/gocov-xml > ./codecoverage.xml
+
+          echo "[---] Finished."
+        displayName: 'Prepare coverage'
+
+      - task: PublishTestResults@2
+        displayName: 'Publish Test Results'
+        inputs:
+          testResultsFiles: |
+            **/report.xml
+            **/report-e2e.xml
+          mergeTestResults: true
+          failTaskOnFailedTests: true
+          testRunTitle: 'CLI Tests'
+        condition: succeededOrFailed()
+
+      - task: PublishCodeCoverageResults@1
+        displayName: 'Publish Code Coverage'
+        inputs:
+          codeCoverageTool: Cobertura
+          summaryFileLocation: '$(System.DefaultWorkingDirectory)/codecoverage.xml'
+          failIfCoverageEmpty: true
+        condition: succeededOrFailed()
+
+  - job: Test_Windows
+    pool:
+      name: Bambe-Windows
+
+    steps:
+      - task: GoTool@0
+        displayName: 'Use Go 1.18.3'
+        inputs:
+          version: 1.18.3
+
+      - script: |
+          go mod download
+        displayName: 'Download dependencies'
+
+      - script: |
+          echo "[---] Compiling binary."
+          go build -o dsv
+          echo "[---] Finished."
+        displayName: 'Build'
+
+      - script: |
+          echo "[---] Deleting test cache."
+          go clean -testcache
+          echo "[---] Starting End-to-End testing."
+          go test -v -tags=endtoend ./tests/e2e
+          echo "[---] Finished."
+          echo "[---] Note: Results are not published."
+        displayName: '[E2E] Run tests'
+
+  - job: Test_MacOS
+    pool:
+      vmImage: macOS-11
+      name: Azure Pipelines
+      demands: xcode
+
+    steps:
+      - task: GoTool@0
+        displayName: 'Use Go 1.18.3'
+        inputs:
+          version: 1.18.3
+
+      - script: |
+          go mod download
+        displayName: 'Download dependencies'
+
+      - script: |
+          echo "[---] Compiling binary."
+          go build -o dsv
+          echo "[---] Finished."
+        displayName: 'Build'
+
+      - script: |
+          echo "[---] Deleting test cache."
+          go clean -testcache
+          echo "[---] Starting End-to-End testing."
+          go test -v -tags=endtoend ./tests/e2e
+          echo "[---] Finished."
+          echo "[---] Note: Results are not published."
+        displayName: '[E2E] Run tests'

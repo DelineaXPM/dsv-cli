@@ -6,7 +6,7 @@ import (
 
 	cst "thy/constants"
 	"thy/errors"
-	"thy/fake"
+	"thy/tests/fake"
 	"thy/vaultcli"
 
 	"github.com/spf13/viper"
@@ -296,6 +296,41 @@ func TestHandlePolicyCreateCmd(t *testing.T) {
 			apiErr:    errors.NewS(`{"code":"fail"`),
 			wantErr:   errors.NewS(`{"code":"fail"`),
 		},
+		{
+			name:      "Create path with supported specific characters",
+			fActions:  "create",
+			fSubjects: "groups:g44,groups:g32",
+			args:      []string{"secrets:fol+der:fol-der/fold@r/fold:er/123/secret"},
+			apiOut:    []byte(`{"code":"success"`),
+			wantOut:   []byte(`{"code":"success"`),
+		},
+		{
+			name:      "Create path with &",
+			fActions:  "create",
+			fSubjects: "groups:g44,groups:g32",
+			args:      []string{"secrets:foler&:secret"},
+			apiOut:    []byte(`{"code":"fail"`),
+			wantOut:   []byte(`{"code":"fail"`),
+			wantErr:   errors.NewS(`Path "secrets:foler&:secret" is invalid: path may contain only letters, numbers, underscores, dashes, @, pluses and periods separated by colon or slash`),
+		},
+		{
+			name:      "Create path with $",
+			fActions:  "create",
+			fSubjects: "groups:g44,groups:g32",
+			args:      []string{"secrets:foler$:secret"},
+			apiOut:    []byte(`{"code":"fail"`),
+			wantOut:   []byte(`{"code":"fail"`),
+			wantErr:   errors.NewS(`Path "secrets:foler$:secret" is invalid: path may contain only letters, numbers, underscores, dashes, @, pluses and periods separated by colon or slash`),
+		},
+		{
+			name:      "Create path with %",
+			fActions:  "create",
+			fSubjects: "groups:g44,groups:g32",
+			args:      []string{"secrets:foler%:secret"},
+			apiOut:    []byte(`{"code":"fail"`),
+			wantOut:   []byte(`{"code":"fail"`),
+			wantErr:   errors.NewS(`Path "secrets:foler%:secret" is invalid: path may contain only letters, numbers, underscores, dashes, @, pluses and periods separated by colon or slash`),
+		},
 	}
 
 	for _, tt := range testCase {
@@ -311,6 +346,7 @@ func TestHandlePolicyCreateCmd(t *testing.T) {
 			outClient.FailEStub = func(apiError *errors.ApiError) {
 				err = apiError
 			}
+			outClient.FailFStub = func(format string, args ...interface{}) { err = errors.NewF(format, args...) }
 
 			httpClient := &fake.FakeClient{}
 			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {

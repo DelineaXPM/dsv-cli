@@ -16,7 +16,7 @@ To request a documentation change, fork and submit a pull request.
 * If that fails, run: `git config core.eol lf` and re-checkout again or delete and reclone the repo.
 
 ## Building the CLI
-To build the program or contribute to its development, use Go version 1.16 or later.
+To build the program or contribute to its development, use Go version 1.17 or later.
 
 Build:
 ```bash

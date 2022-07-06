@@ -3,6 +3,7 @@ package requests_test
 import (
 	"net/http"
 	"testing"
+
 	"thy/requests"
 
 	"github.com/shurcooL/graphql"

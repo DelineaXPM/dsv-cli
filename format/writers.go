@@ -3,7 +3,7 @@ package format
 import (
 	serrors "errors"
 	"io"
-	"io/ioutil"
+	"os"
 
 	"github.com/atotto/clipboard"
 )
@@ -32,7 +32,7 @@ func NewFileWriter(filePath string) io.Writer {
 }
 
 func (w fileWriter) Write(p []byte) (n int, err error) {
-	err = ioutil.WriteFile(w.filePath, p, 0664)
+	err = os.WriteFile(w.filePath, p, 0664)
 	if err == nil {
 		n = len(p)
 	}

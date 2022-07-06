@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -29,6 +30,19 @@ func SurveyRequiredInt(ans interface{}) error {
 	_, err := strconv.Atoi(answer)
 	if err != nil {
 		return errors.New("Please enter a valid integer.")
+	}
+	return nil
+}
+
+// SurveyRequiredFile verifies that the answer is a valid path to a file.
+func SurveyRequiredFile(ans interface{}) error {
+	answer := strings.TrimSpace(ans.(string))
+	if len(answer) == 0 {
+		return errors.New("Value is required.")
+	}
+	_, err := os.Stat(answer)
+	if err != nil {
+		return errors.New("Cannot find file at given path.")
 	}
 	return nil
 }
@@ -64,4 +78,22 @@ func SurveyOptionalJSON(ans interface{}) error {
 // SurveyTrimSpace trims spaces.
 func SurveyTrimSpace(ans interface{}) (newAns interface{}) {
 	return strings.TrimSpace(ans.(string))
+}
+
+// SurveyRequiredPath checks path.
+func SurveyRequiredPath(ans interface{}) error {
+	answer := strings.TrimSpace(ans.(string))
+	if len(answer) == 0 {
+		return errors.New("Value is required.")
+	}
+	return ValidatePath(answer)
+}
+
+// SurveyRequiredName checks name.
+func SurveyRequiredName(ans interface{}) error {
+	answer := strings.TrimSpace(ans.(string))
+	if len(answer) == 0 {
+		return errors.New("Value is required.")
+	}
+	return ValidateName(answer)
 }

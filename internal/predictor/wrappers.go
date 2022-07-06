@@ -4,10 +4,10 @@ import (
 	"os"
 	"strings"
 
+	"thy/vaultcli"
+
 	"github.com/posener/complete"
 	flag "github.com/spf13/pflag"
-
-	"thy/internal/cmd"
 )
 
 // Wrapper merges a flag with its predictor.
@@ -51,7 +51,7 @@ func New(params *Params) *Wrapper {
 		}
 	}
 
-	cmdFriendlyName := cmd.FriendlyName(params.Name)
+	cmdFriendlyName := vaultcli.ToFlagName(params.Name)
 	w := &Wrapper{
 		Predictor:    pred,
 		Name:         params.Name,

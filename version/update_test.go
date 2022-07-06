@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"thy/utils"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -41,37 +40,37 @@ func TestIsVersionOutdated(t *testing.T) {
 func TestReadCache(t *testing.T) {
 	testCases := []struct {
 		name     string
-		filename *string
+		filename string
 		content  string
 		result   *latestInfo
 	}{
 		{
 			name:     "File not exists",
-			filename: nil,
+			filename: "",
 			content:  ``,
 			result:   nil,
 		},
 		{
 			name:     "Content with one string",
-			filename: utils.ToPointerString("one_string_content_*.json"),
+			filename: "one_string_content_*.json",
 			content:  time.Now().Format(dateLayout),
 			result:   nil,
 		},
 		{
 			name:     "Content with wrong date format",
-			filename: utils.ToPointerString("wrong_date_*.json"),
+			filename: "wrong_date_*.json",
 			content:  "wrong_date_content\n",
 			result:   nil,
 		},
 		{
 			name:     "Content with wrong JSON data",
-			filename: utils.ToPointerString("wrong_json_data_*.json"),
+			filename: "wrong_json_data_*.json",
 			content:  time.Now().Format(dateLayout) + "\nWrong JSON string",
 			result:   nil,
 		},
 		{
 			name:     "Old cached content",
-			filename: utils.ToPointerString("old_cached_content_*.json"),
+			filename: "old_cached_content_*.json",
 			//content:  time.Now().Add(checkFrequencyDays*-2*time.Hour*24).Format(dateLayout) + "\nWrong JSON string",
 			content: time.Now().Add(checkFrequencyDays*-2*time.Hour*24).Format(dateLayout) + `
 {"latest":"1.29.0","links": {"darwin/amd64":"https://dsv.thycotic.com/downloads/cli/1.29.0/dsv-darwin-x64", "linux/amd64":"https://dsv.thycotic.com/downloads/cli/1.29.0/dsv-linux-x64"}}`,
@@ -79,7 +78,7 @@ func TestReadCache(t *testing.T) {
 		},
 		{
 			name:     "Correct case",
-			filename: utils.ToPointerString("correct_case_*.json"),
+			filename: "correct_case_*.json",
 			content: time.Now().Add(-1*(checkFrequencyDays-1)*time.Hour*24).Format(dateLayout) + `
 		{"latest":"1.29.0","links": {"darwin/amd64":"https://dsv.thycotic.com/downloads/cli/1.29.0/dsv-darwin-x64"}}` +
 				"\n",
@@ -95,8 +94,8 @@ func TestReadCache(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			fName := "some_not_existed_file"
-			if testCase.filename != nil {
-				temporaryFile, err := ioutil.TempFile("", *testCase.filename)
+			if testCase.filename != "" {
+				temporaryFile, err := ioutil.TempFile("", testCase.filename)
 				assert.NoError(t, err)
 				defer func(name string) {
 					err := os.Remove(name)

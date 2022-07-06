@@ -177,7 +177,7 @@ Usage:
 
 func handleCreateAutoKey(vcli vaultcli.CLI, args []string) int {
 	path := viper.GetString(cst.Path)
-	if path == "" && len(args) > 0 {
+	if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		path = args[0]
 	}
 	uri, err := makeKeyURL(path, nil)
@@ -193,7 +193,7 @@ func handleCreateAutoKey(vcli vaultcli.CLI, args []string) int {
 
 func handleReadAutoKey(vcli vaultcli.CLI, args []string) int {
 	path := viper.GetString(cst.Path)
-	if path == "" && len(args) > 0 {
+	if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		path = args[0]
 	}
 
@@ -210,7 +210,7 @@ func handleReadAutoKey(vcli vaultcli.CLI, args []string) int {
 
 func handleDeleteAutoKey(vcli vaultcli.CLI, args []string) int {
 	path := viper.GetString(cst.Path)
-	if path == "" && len(args) > 0 {
+	if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		path = args[0]
 	}
 
@@ -229,7 +229,7 @@ func handleDeleteAutoKey(vcli vaultcli.CLI, args []string) int {
 
 func handleRestoreAutoKey(vcli vaultcli.CLI, args []string) int {
 	path := viper.GetString(cst.Path)
-	if path == "" && len(args) > 0 {
+	if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		path = args[0]
 	}
 
@@ -263,7 +263,7 @@ func handleRotate(vcli vaultcli.CLI, args []string) int {
 		return 1
 	}
 
-	filename := paths.GetFilenameFromArgs(args)
+	filename := vaultcli.GetFilenameFromArgs(args)
 	isDataInFile := filename != ""
 	var body rotationRequest
 	if isDataInFile {
@@ -332,7 +332,7 @@ func handleEncrypt(vcli vaultcli.CLI, args []string) int {
 		return 1
 	}
 
-	filename := paths.GetFilenameFromArgs(args)
+	filename := vaultcli.GetFilenameFromArgs(args)
 	isDataInFile := filename != ""
 	if isDataInFile {
 		data = base64Encode(data)
@@ -381,7 +381,7 @@ func handleDecrypt(vcli vaultcli.CLI, args []string) int {
 		return 1
 	}
 
-	filename := paths.GetFilenameFromArgs(args)
+	filename := vaultcli.GetFilenameFromArgs(args)
 	isDataInFile := filename != ""
 
 	var body decryptionRequest

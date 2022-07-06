@@ -31,16 +31,7 @@ Usage:
    • config %[1]s
    • config %[4]s --data %[5]s
 		`, cst.Read, cst.NounConfig, cst.ProductName, cst.Update, cst.ExampleConfigPath),
-		MinNumberArgs: 1,
 		RunFunc: func(args []string) int {
-			id := viper.GetString(cst.ID)
-			path := viper.GetString(cst.Path)
-			if path == "" && len(args) > 0 {
-				path = args[0]
-			}
-			if path == "" && id == "" {
-				return cli.RunResultHelp
-			}
 			return handleConfigReadCmd(vaultcli.New(), args)
 		},
 	})
@@ -52,7 +43,7 @@ func GetConfigReadCmd() (cli.Command, error) {
 		SynopsisText: fmt.Sprintf("%s %s", cst.NounConfig, cst.Read),
 		HelpText: fmt.Sprintf(`Read the %[2]s from %[3]s
 Usage:
-   • config %[1]s -b
+   • config %[1]s
 		`, cst.Read, cst.NounConfig, cst.ProductName),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Version, Usage: "List the current and last (n) versions"},
@@ -112,29 +103,25 @@ func handleConfigReadCmd(vcli vaultcli.CLI, args []string) int {
 }
 
 func handleConfigUpdateCmd(vcli vaultcli.CLI, args []string) int {
-	var err *errors.ApiError
-	var resp []byte
-	uri := paths.CreateURI("config", nil)
 	data := viper.GetString(cst.Data)
 	encoding := viper.GetString(cst.Encoding)
-	var fileName string
 	if data == "" {
 		vcli.Out().FailF("Please provide --%s or -%s and a value for it", cst.Data, string(cst.Data[0]))
 		return 1
 	}
 
-	if f := paths.GetFilenameFromArgs(args); f != "" {
-		fileName = f
-	}
+	fileName := vaultcli.GetFilenameFromArgs(args)
 
 	if !utf8.Valid([]byte(data)) {
 		data = utf16toString([]byte(data))
 	}
+
+	uri := paths.CreateURI("config", nil)
 	model := PostConfigModel{
 		Config:        data,
 		Serialization: encoding,
 	}
-	resp, err = vcli.HTTPClient().DoRequest(http.MethodPut, uri, &model)
+	resp, err := vcli.HTTPClient().DoRequest(http.MethodPut, uri, &model)
 	vcli.Out().WriteResponse(resp, err)
 
 	if err == nil && resp != nil && fileName != "" {
@@ -151,10 +138,8 @@ func handleConfigUpdateCmd(vcli vaultcli.CLI, args []string) int {
 }
 
 func handleConfigEditCmd(vcli vaultcli.CLI, args []string) int {
-	var err *errors.ApiError
-	var resp []byte
 	uri := paths.CreateURI("config", nil)
-	resp, err = vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
+	resp, err := vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
 	if err != nil {
 		vcli.Out().WriteResponse(resp, err)
 		return utils.GetExecStatus(err)

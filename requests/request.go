@@ -17,7 +17,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -o ../fake/fake_client.go . Client
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -o ../tests/fake/fake_client.go . Client
 
 type Client interface {
 	DoRequest(method string, uri string, body interface{}) ([]byte, *errors.ApiError)
@@ -80,6 +80,8 @@ func (c *httpClient) buildRequest(method string, uri string, body interface{}) (
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", viper.GetString(cst.NounToken))
 	req.Header.Set("User-Agent", agent)
+	req.Header.Set("Delinea-DSV-Client", fmt.Sprintf(
+		"cli-%s-%s/%s", version.Version, runtime.GOOS, runtime.GOARCH))
 
 	return req, nil
 }

@@ -1,8 +1,9 @@
 package utils
 
 import (
-	"github.com/mitchellh/go-homedir"
 	"runtime"
+
+	"github.com/mitchellh/go-homedir"
 )
 
 type EnvProvider interface {

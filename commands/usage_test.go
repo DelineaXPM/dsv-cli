@@ -4,11 +4,12 @@ import (
 	e "errors"
 	"fmt"
 	"testing"
+	"time"
+
 	cst "thy/constants"
 	"thy/errors"
-	"thy/fake"
+	"thy/tests/fake"
 	"thy/vaultcli"
-	"time"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"

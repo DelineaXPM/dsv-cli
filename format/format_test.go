@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"testing"
+
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
@@ -13,14 +14,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestIsJson_False(t *testing.T) {
-	str := "hi"
-	assert.False(t, format.IsJson([]byte(str)))
-}
+func TestIsJson(t *testing.T) {
+	assert.False(t, format.IsJson([]byte("hi")))
+	assert.False(t, format.IsJson([]byte("{")))
+	assert.False(t, format.IsJson([]byte("}")))
+	assert.False(t, format.IsJson([]byte(`{"A":5},`)))
 
-func TestIsJson_True(t *testing.T) {
-	str := "{\"A\":5}"
-	assert.True(t, format.IsJson([]byte(str)))
+	assert.True(t, format.IsJson([]byte(`1`)))
+	assert.True(t, format.IsJson([]byte(`[1, "a", null]`)))
+	assert.True(t, format.IsJson([]byte(`"hi"`)))
+	assert.True(t, format.IsJson([]byte(`{"A":5}`)))
 }
 
 func TestJsonMarshal(t *testing.T) {

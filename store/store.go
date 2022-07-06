@@ -14,6 +14,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -o ../tests/fake/fake_store.go . Store
+
 // Store interface provides common methods for storing data.
 type Store interface {
 	Store(key string, secret interface{}) *errors.ApiError

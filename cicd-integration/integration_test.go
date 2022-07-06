@@ -286,7 +286,6 @@ func init() {
 	}{
 		// secret operations
 		// TODO investigate test setup, as the order of calls matters for some reason.
-		{"secret-help", []string{"secret", ""}, outputPattern(`Execute an action on a secret.*`)},
 		{"secret-create-1-pass", []string{"secret", "create", "--path", secret1Name, "--data", secret1Data, "--attributes", secret1Attributes, "--desc", secret1Desc, "-f", ".data", "-v"}, outputPattern(secret1DataFmt)},
 		{"secret-update-pass", []string{"secret", "update", "--path", secret1Name, "--desc", "updated secret", "-f", ".data", "-v"}, outputPattern(secret1DataFmt)},
 		{"secret-rollback-pass", []string{"secret", "rollback", "--path", secret1Name, "-f", ".data"}, outputPattern(secret1DataFmt)},
@@ -346,17 +345,7 @@ func init() {
 		{"group-restore", []string{"group", "restore", groupName}, outputEmpty()},
 
 		// role operations
-		{"role-help", []string{"role", ""}, outputPattern(`Execute an action on a role.*`)},
 		{"role-create-pass", []string{"role", "create", "--name", roleName}, outputPattern(fmt.Sprintf(`"name":\s*"%s"`, roleName))},
-		{"role-create-fail", []string{"role", "create", "--name", roleName}, outputPattern(`"code": 400`)},
-		{"role-update-pass", []string{"role", "update", "--name", roleName, "--desc", "updated role"}, outputPattern(fmt.Sprintf(`"name":\s*"%s"`, roleName))},
-
-		{"role-get-pass", []string{"role", "read", roleName}, outputPattern(fmt.Sprintf(`"name":\s*"%s"`, roleName))},
-		{"role-get-implicit-pass", []string{"role", roleName}, outputPattern(fmt.Sprintf(`"name":\s*"%s"`, roleName))},
-		{"role-search-find-pass", []string{"role", "search", roleName[:3], "data.[0].name"}, outputPattern(roleName)},
-		{"role-search-none-pass", []string{"role", "search", "abcdef"}, outputPattern(`"data": null`)},
-		{"role-create-provider-missing", []string{"role", "create", "--name", "bob", "--external-id", "1234"}, outputPattern("must specify both provider and external ID")},
-		{"role-create-external-id-missing", []string{"role", "create", "--name", "bob", "--provider", "aws-dev"}, outputPattern("must specify both provider and external ID")},
 
 		// client operations
 		{"client-create-pass", []string{"client", "create", "--role", roleName}, outputPattern(`"role":\s*"[^"]+"`)},
@@ -397,7 +386,7 @@ func init() {
 		// {"audit-pass", []string{"audit", "--startdate", monthAgoDate}, outputPattern("data")},
 
 		//config operations
-		{"config-help", []string{"config", ""}, outputPattern(`Execute an action on the.*`)},
+		{"config-help", []string{"config", "--help"}, outputPattern(`Execute an action on the.*`)},
 		{"config-get-implicit-pass", []string{"config"}, outputPattern(`"permissionDocument":`)},
 		{"config-get-pass", []string{"config", "read"}, outputPattern(`"permissionDocument":`)},
 
@@ -417,21 +406,6 @@ func init() {
 		{"crypto-manual-encrypt", []string{"crypto", "manual", "encrypt", "--path", manualKeyPath, "--data", plaintext}, outputPattern(`"version": "0"`)},
 		{"crypto-manual-decrypt", []string{"crypto", "manual", "decrypt", "--path", manualKeyPath, "--data", ciphertext}, outputPattern(`"data": "hello there"`)},
 		{"crypto-manual-key-update", []string{"crypto", "manual", "key-update", "--path", manualKeyPath, "--private-key", manualPrivateKey}, outputPattern(`"version": "1"`)},
-
-		// Pool
-		{"pool-create", []string{"pool", "create", "--name", "mypool"}, outputPattern(`"name": "mypool"`)},
-		{"pool-read", []string{"pool", "read", "--name", "mypool"}, outputPattern(`"name": "mypool"`)},
-		{"pool-list", []string{"pool", "list"}, outputPattern(`"pools"`)},
-
-		// Engine
-		{"engine-create-fail", []string{"engine", "create", "--name", "myengine", "--pool-name", "bad-pool"}, outputPattern(`specified pool doesn't exist`)},
-		{"engine-create-pass", []string{"engine", "create", "--name", "myengine", "--pool-name", "mypool"}, outputPattern(`"name": "myengine"`)},
-		{"engine-read", []string{"engine", "read", "--name", "myengine"}, outputPattern(`"name": "myengine"`)},
-		{"engine-list", []string{"engine", "list"}, outputPattern(`"engines"`)},
-		{"engine-delete", []string{"engine", "delete", "myengine"}, outputEmpty()},
-
-		// Whoami
-		{"whoami", []string{"whoami", ""}, outputPattern(`users:` + adminUser)},
 
 		// PKI
 		{"register-root-cert", []string{"pki", "register", "--rootcapath", existingRootSecret,
@@ -477,7 +451,6 @@ func init() {
 		{"rootCA-secret-delete", []string{"secret", "delete", "--path", existingRootSecret, "--force"}, outputEmpty()},
 		{"leafCA-secret-delete", []string{"secret", "delete", "--path", leafSecretPath, "--force"}, outputEmpty()},
 		{"home-secret-delete", []string{"home", "delete", homeSecretPath, "--force"}, outputEmpty()},
-		{"pool-delete", []string{"pool", "delete", "mypool"}, outputEmpty()},
 		{"crypto-manual-key-delete", []string{"crypto", "manual", "key-delete", "--path", manualKeyPath, "--force"}, outputEmpty()},
 	}
 }

@@ -13,8 +13,8 @@ import (
 	"thy/auth"
 	cst "thy/constants"
 	"thy/errors"
-	"thy/fake"
 	"thy/requests"
+	"thy/tests/fake"
 )
 
 var secretPathPredictorCases = []struct {

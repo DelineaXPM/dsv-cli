@@ -33,7 +33,7 @@ func GetAuthProviderCmd() (cli.Command, error) {
 		MinNumberArgs: 1,
 		RunFunc: func(args []string) int {
 			name := viper.GetString(cst.DataName)
-			if name == "" && len(args) > 0 {
+			if name == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 				name = args[0]
 			}
 			if name == "" {

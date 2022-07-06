@@ -9,7 +9,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"golang.org/x/sys/execabs"
 	"io/ioutil"
 	"log"
 	"os"
@@ -17,6 +16,9 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"golang.org/x/sys/execabs"
+
 	cst "thy/constants"
 )
 

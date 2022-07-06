@@ -58,20 +58,15 @@ func (e *ApiError) HttpResponse() *http.Response {
 	return e.httpResponse
 }
 
-// add adds an error to the current error.
-func (e *ApiError) add(msg string) {
-	if msg == "" {
-		return
-	}
-	e.stack = append([]string{msg}, e.stack...)
-}
-
 // Grow adds to an error and returns it.
 func (e *ApiError) Grow(msg string) *ApiError {
 	if e == nil {
 		return nil
 	}
-	e.add(msg)
+	if msg == "" {
+		return e
+	}
+	e.stack = append([]string{msg}, e.stack...)
 	return e
 }
 

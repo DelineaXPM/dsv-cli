@@ -37,18 +37,6 @@ func TestNewS(t *testing.T) {
 	assert.Equal(t, "test string", apiErr.Error())
 }
 
-func TestAdd(t *testing.T) {
-	apiErr := NewS("A")
-
-	apiErr.add("B")
-	assert.Equal(t, "B\nA", apiErr.String())
-	assert.Equal(t, "B\nA", apiErr.Error())
-
-	apiErr.add("")
-	assert.Equal(t, "B\nA", apiErr.String())
-	assert.Equal(t, "B\nA", apiErr.Error())
-}
-
 func TestGrow(t *testing.T) {
 	var apiErr *ApiError
 	apiErr = apiErr.Grow("A").Grow("B").Grow("C")

@@ -2,6 +2,7 @@ variables:
   - group: "CLI Init Tests"
   - group: "CLI_integration_test"
   - group: "CLi-pipeline-variables"
+  - group: "CLI End-to-End tests"
 
 trigger:
   - master
@@ -28,20 +29,93 @@ jobs:
           ClientSecret: '$(ClientSecret)'
           SecretPath: ado/cli
 
-      - bash: |
-          sudo apt-get install nano
-        displayName: 'Install editor'
-
       - task: GoTool@0
-        displayName: 'Use Go 1.17.9'
+        displayName: 'Use Go 1.18.3'
         inputs:
-          version: 1.17.9
+          version: 1.18.3
+
+      # TODO: this produces an error: "The task name WhiteSource is ambiguous".
+      #       Uncomment when the issue will be resolved.
+      # - task: WhiteSource@21
+      #   inputs:
+      #     cwd: '$(System.DefaultWorkingDirectory)'
+      #     scanReportTimeout: '3'
 
       - bash: |
+          go mod download
+        displayName: 'Download dependencies'
+      
+      - bash: |
+          echo "[---] Install editor (nano)"
+          sudo apt-get install nano
+          echo "[---] Install hansboder/gocovmerge"
           go install -v github.com/hansboder/gocovmerge@latest
-        displayName: 'Go install hansboder/gocovmerge'
+          echo "[---] Finished."
+        displayName: 'Install tools'
 
       - bash: |
+          echo "[---] git describe: $(git describe --always --dirty)"
+          go test -v -p 1 -covermode=count -coverprofile=./coverage.out ./... | tee test.out
+          rm -f cli-config/.thy.yml
+          echo "[---] Merging coverage."
+          ~/go/bin/gocovmerge -dir coverage -pattern "\.out" > ./coverage-integration.out
+          rm -rf coverage
+          echo "[---] Finished."
+        displayName: 'Run tests'
+      
+      - bash: |
+          cat test.out | ~/go/bin/go-junit-report -set-exit-code > ./report.xml
+        displayName: 'Generate report'
+
+      - bash: |
+          echo "[---] git describe: $(git describe --always --dirty)"
+
+          echo "[---] Starting End-to-End testing."
+          make e2e-test | tee test-e2e.out
+
+          echo "[---] Merging E2E coverage results into one file."
+          ~/go/bin/gocovmerge -dir ./tests/e2e/coverage -pattern "\.out" > ./coverage-e2e.out
+          rm -rf ./tests/e2e/coverage
+
+          echo "[---] Finished."
+        condition: always()
+        displayName: '[E2E] Run tests'
+      
+      - bash: |
+          cat test-e2e.out | ~/go/bin/go-junit-report -set-exit-code > ./report-e2e.xml
+        displayName: '[E2E] Generate report'
+      
+      - bash: |
+          echo "[---] Merging coverage.out, coverage-e2e.out and coverage-integration.out files."
+          ~/go/bin/gocovmerge coverage.out coverage-e2e.out coverage-integration.out > ./coverage-all.out
+
+          echo "[---] Converting coverage-all.out to codecoverage.xml file."
+          ~/go/bin/gocov convert coverage-all.out | ~/go/bin/gocov-xml > ./codecoverage.xml
+
+          echo "[---] Finished."
+        displayName: 'Prepare coverage'
+
+      - task: PublishTestResults@2
+        displayName: 'Publish Test Results'
+        inputs:
+          testResultsFiles: |
+            **/report.xml
+            **/report-e2e.xml
+          mergeTestResults: true
+          failTaskOnFailedTests: true
+          testRunTitle: 'CLI Tests'
+        condition: succeededOrFailed()
+
+      - task: PublishCodeCoverageResults@1
+        displayName: 'Publish Code Coverage'
+        inputs:
+          codeCoverageTool: Cobertura
+          summaryFileLocation: '$(System.DefaultWorkingDirectory)/codecoverage.xml'
+          failIfCoverageEmpty: true
+        condition: succeededOrFailed()
+
+      - bash: |
+          echo "[---] git describe: $(git describe --always --dirty)"
           # clean build directory
           make clean build-release-all create-checksum capture-latest-version
           
@@ -52,47 +126,6 @@ jobs:
           mv bin/cli-version.json $(Build.ArtifactStagingDirectory)/version
         displayName: 'Make - Release Builds'
 
-      - task: Bash@3
-        displayName: 'Run Tests'
-        inputs:
-          filePath: pipelines/pipeline_scripts/run_tests.sh
-        env:
-          WorkingDirectory: $(System.DefaultWorkingDirectory)
-          constants_cliname: $(constants.cliname)
-          ArtifactStagingDirectory: $(Build.ArtifactStagingDirectory)
-          GO111MODULE: on
-        condition: always()
-
-      - task: PublishTestResults@2
-        displayName: 'Publish Test Results'
-        inputs:
-          testResultsFiles: |
-            **/report.xml
-            **/TEST-Suite-**.xml
-          mergeTestResults: true
-          failTaskOnFailedTests: true
-          testRunTitle: 'CLI Tests'
-        condition: succeededOrFailed()
-
-      - task: ArchiveFiles@2
-        displayName: 'Archive Python inittests'
-        inputs:
-          rootFolderOrFile: inittests
-          includeRootFolder: false
-          archiveFile: '$(Build.ArtifactStagingDirectory)/inittests.zip'
-
-      - task: PublishBuildArtifacts@1
-        displayName: 'Publish Artifact: Python inittests'
-        inputs:
-          PathtoPublish: '$(Build.ArtifactStagingDirectory)/inittests.zip'
-          ArtifactName: 'python_inittests_zipped'
-
-      - task: PublishBuildArtifacts@1
-        displayName: 'Publish Artifact: Latest version file'
-        inputs:
-          PathtoPublish: '$(Build.ArtifactStagingDirectory)/version/cli-version.json'
-          ArtifactName: 'cli-latest-version'
-
       - task: CopyFiles@2
         displayName: 'Copy Unsigned Builds To Staging Directory'
         inputs:
@@ -101,14 +134,14 @@ jobs:
           CleanTargetFolder: true
           OverWrite: true
 
-      - task: PublishPipelineArtifact@1
-        displayName: 'Publish Test Coverage'
+      - task: PublishBuildArtifacts@1
+        displayName: 'Build Artifact: Latest version file'
         inputs:
-          targetPath: '$(Build.ArtifactStagingDirectory)/all.out'
-          artifact: coverage
+          PathtoPublish: '$(Build.ArtifactStagingDirectory)/version/cli-version.json'
+          ArtifactName: 'cli-latest-version'
 
       - task: PublishPipelineArtifact@1
-        displayName: 'Publish Unsigned Builds'
+        displayName: 'Pipeline Artifact: Unsigned Builds'
         inputs:
           targetPath: '$(Build.ArtifactStagingDirectory)/bin'
           artifact: 'ReleaseBuilds-Unsigned'
@@ -116,28 +149,34 @@ jobs:
       - task: Bash@3
         displayName: 'Public GitHub Sync'
         inputs:
-          filePath: pipelines/pipeline_scripts/public_github_sync.sh
+          filePath: pipelines/scripts/github_sync.sh
         env:
           SourceVersion: $(Build.SourceVersion)
           githubPat: $(githubPat)
         condition: and(succeeded(), or(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), startsWith(variables['Build.SourceBranch'], 'refs/tags/')))
 
-
-#####Sign_Windows_Exe_and_Run_Win_Init_Tests#######
-
-  - job: Sign_Windows_Exe_and_Run_Win_Init_Tests
+  - job: Sign_Windows_Binary
     dependsOn: Build_All_Platforms
     pool:
       name: Bambe-Windows
 
     steps:
       - task: GoTool@0
-        displayName: 'Use Go 1.17.9'
+        displayName: 'Use Go 1.18.3'
         inputs:
-          version: 1.17.9
+          version: 1.18.3
+      
+      - script: |
+          echo "[---] Deleting test cache."
+          go clean -testcache
+          echo "[---] Starting End-to-End testing."
+          go test -v -tags=endtoend ./tests/e2e
+          echo "[---] Finished."
+          echo "[---] Note: Results are not published."
+        displayName: '[E2E] Run tests'
 
       - task: thycotic-software.thycotic-dsv-task.thycotic-dsv-build-release-task.ThycoticDSV@0
-        displayName: 'Retrieve ado/cli  from Thycotic DevOps Secrets Vault'
+        displayName: 'Retrieve ado/cli from Thycotic DevOps Secrets Vault'
         inputs:
           ServerUrl: '$(ServerUrl)'
           ClientId: '$(ClientId)'
@@ -145,7 +184,7 @@ jobs:
           SecretPath: 'ado/cli '
 
       - powershell: |
-          # Write your PowerShell commands here.
+          # Clean out old builds from cli dir
           if (Test-Path -Path "cli")
           {
               Remove-Item 'cli' -Recurse
@@ -157,61 +196,6 @@ jobs:
           }
         workingDirectory: '$(Pipeline.Workspace)'
         displayName: 'Clear Pipeline Directory'
-
-      - task: DownloadPipelineArtifact@2
-        displayName: 'Download Test Coverage'
-        inputs:
-          artifactName: coverage
-          targetPath: '$(System.DefaultWorkingDirectory)/coverage/'
-
-      - script: |
-          echo Creating python venv with name "winenv"
-          py -3 -m venv winenv
-        workingDirectory: '$(System.DefaultWorkingDirectory)/inittests'
-        displayName: 'Setup Python Virtual Environment'
-
-      - pwsh: |
-          Remove-Item "test-reports\*.xml"  -ErrorAction Ignore
-          .\run-win-tests.ps1
-          Set-Location ..
-          echo "-------------Merging Code Coverage Files--------"
-          ~/go/bin/gocovmerge -dir coverage -pattern "\.out" |  out-file ./all.out
-
-          [System.Environment]::CurrentDirectory = (Get-Location).Path
-          $content = Get-Content "all.out"
-          [IO.File]::WriteAllLines("all_encoded.out", $content )
-
-          echo "-------------Generating Code Coverage--------"
-
-          Remove-Item "$(System.DefaultWorkingDirectory)\codecoverage.xml"  -ErrorAction Ignore
-          dir
-
-          ~/go/bin/gocov convert all_encoded.out | ~/go/bin/gocov-xml > "$(System.DefaultWorkingDirectory)\codecoverage.xml"
-
-
-          echo "--------------Done--------------------"
-        workingDirectory: '$(System.DefaultWorkingDirectory)/inittests'
-        displayName: 'Run Windows Init Tests'
-        env:
-          IS_SYSTEM_TEST: true
-
-      - task: PublishTestResults@2
-        displayName: 'Publish Windows Init Test Results'
-        inputs:
-          testResultsFiles: '**TEST-Suite-**.xml'
-          searchFolder: '$(System.DefaultWorkingDirectory)\inittests\test-reports'
-          mergeTestResults: true
-          failTaskOnFailedTests: true
-          testRunTitle: 'Windows Init Tests'
-        condition: succeededOrFailed()
-
-      - task: PublishCodeCoverageResults@1
-        displayName: 'Publish Merged Code Coverage'
-        inputs:
-          codeCoverageTool: Cobertura
-          summaryFileLocation: '$(System.DefaultWorkingDirectory)\codecoverage.xml'
-          failIfCoverageEmpty: true
-        condition: succeededOrFailed()
 
       - task: DownloadPipelineArtifact@2
         displayName: 'Download Unsigned Builds'
@@ -231,8 +215,8 @@ jobs:
           cd $(cliversion)"
           dir
           
-          signtool sign /tr http://timestamp.digicert.com  /td sha256 /fd sha256 /sha1 668feb4178afea4d3c4ae833459b09c2bcf6b64e "./$(constants.cliname)-win-x64.exe"
-          signtool sign /tr http://timestamp.digicert.com  /td sha256 /fd sha256 /sha1 668feb4178afea4d3c4ae833459b09c2bcf6b64e "./$(constants.cliname)-win-x86.exe"
+          signtool sign /tr http://timestamp.digicert.com /td sha256 /fd sha256 /sha1 668feb4178afea4d3c4ae833459b09c2bcf6b64e "./$(constants.cliname)-win-x64.exe"
+          signtool sign /tr http://timestamp.digicert.com /td sha256 /fd sha256 /sha1 668feb4178afea4d3c4ae833459b09c2bcf6b64e "./$(constants.cliname)-win-x86.exe"
         workingDirectory: '$(Pipeline.Workspace)/cli'
         displayName: 'Sign Windows Executable'
         env:
@@ -246,15 +230,13 @@ jobs:
         displayName: 'Regenerate Windows Hash'
 
       - task: PublishBuildArtifacts@1
-        displayName: 'Publish Artifact: ReleaseBuilds'
+        displayName: 'Build Artifact: ReleaseBuilds'
         inputs:
           PathtoPublish: '$(Pipeline.Workspace)/cli'
           ArtifactName: ReleaseBuilds
 
-###### Sign_Mac_OS_Binary ########
-
   - job: Sign_Mac_OS_Binary
-    dependsOn:  Build_All_Platforms
+    dependsOn: Build_All_Platforms
     pool:
       vmImage: macOS-11
       name: Azure Pipelines
@@ -285,30 +267,25 @@ jobs:
           cd $(cliversion)
           ls
           ls ~/Library/Keychains
-          codesign  -s 'Thycotic Software'   ./$(constants.cliname)-darwin-x64
+          echo "[---] Signing x64 binary."
+          codesign -s 'Thycotic Software' ./$(constants.cliname)-darwin-x64
+          echo "[---] Signing arm64 binary."
+          codesign -s 'Thycotic Software' ./$(constants.cliname)-darwin-arm64
+          echo "[---] Finished."
         workingDirectory: '$(Pipeline.Workspace)/cli'
-        displayName: 'Sign macOS darwin x64 binary'
-
-      - bash: |
-          echo $(cliversion)
-          cd $(cliversion)
-          ls
-          ls ~/Library/Keychains
-          codesign  -s 'Thycotic Software'   ./$(constants.cliname)-darwin-arm64
-        workingDirectory: '$(Pipeline.Workspace)/cli'
-        displayName: 'Sign macOS darwin arm64 binary'
+        displayName: 'Sign macOS binaries'
 
       - bash: |
           brew install coreutils
           sudo ln -s /usr/local/bin/gsha256sum /usr/local/bin/sha256sum
           cd $(cliversion)
-          sha256sum ./$(constants.cliname)-darwin-x64  > ./$(constants.cliname)-darwin-x64-sha256.txt
-          sha256sum ./$(constants.cliname)-darwin-arm64  > ./$(constants.cliname)-darwin-arm64-sha256.txt
+          sha256sum ./$(constants.cliname)-darwin-x64 > ./$(constants.cliname)-darwin-x64-sha256.txt
+          sha256sum ./$(constants.cliname)-darwin-arm64 > ./$(constants.cliname)-darwin-arm64-sha256.txt
         workingDirectory: '$(Pipeline.Workspace)/cli'
         displayName: 'Regenerate macOS Hash'
 
       - task: PublishBuildArtifacts@1
-        displayName: 'Publish Artifact: ReleaseBuilds'
+        displayName: 'Build Artifact: ReleaseBuilds'
         inputs:
           PathtoPublish: '$(Pipeline.Workspace)/cli'
           ArtifactName: ReleaseBuilds

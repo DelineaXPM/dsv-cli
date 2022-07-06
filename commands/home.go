@@ -29,7 +29,7 @@ Usage:
 		MinNumberArgs: 1,
 		RunFunc: func(args []string) int {
 			path := viper.GetString(cst.Path)
-			if path == "" && len(args) > 0 {
+			if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 				path = args[0]
 			}
 			if path == "" {

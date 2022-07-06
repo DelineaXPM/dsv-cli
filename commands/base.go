@@ -17,9 +17,9 @@ import (
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
-	"thy/internal/cmd"
 	"thy/internal/predictor"
 	"thy/utils"
+	"thy/vaultcli"
 	"thy/version"
 
 	"github.com/mitchellh/cli"
@@ -130,8 +130,13 @@ func (c *baseCommand) preRun(args []string) int {
 	c.SetFlags()
 	setVerbosity()
 
-	log.Printf("%s CLI version %s (%s/%s)",
-		cst.ProductName, version.Version, runtime.GOOS, runtime.GOARCH)
+	if viper.GetBool(cst.Verbose) {
+		log.Printf("%s CLI", cst.ProductName)
+		log.Printf("\t- version:   %s", version.Version)
+		log.Printf("\t- platform:  %s/%s", runtime.GOOS, runtime.GOARCH)
+		log.Printf("\t- gitCommit: %s", version.GitCommit)
+		log.Printf("\t- buildDate: %s", version.GetBuildDate())
+	}
 
 	encoding := viper.GetString(cst.Encoding)
 	if encoding == "" {
@@ -342,16 +347,6 @@ func IsInstall(args []string) bool {
 	return false
 }
 
-func getFlagName(arg string) string {
-	if strings.HasPrefix(arg, "--") {
-		return arg[2:]
-	}
-	if strings.HasPrefix(arg, "-") {
-		return arg[1:]
-	}
-	return ""
-}
-
 // OnlyGlobalArgs checks if passed in command line args to a subcommand are only global flags.
 // It assumes viper had already set values for relevant flags like profile and config.
 func OnlyGlobalArgs(args []string) bool {
@@ -359,14 +354,17 @@ func OnlyGlobalArgs(args []string) bool {
 
 	var isGlobal bool
 	for _, arg := range args {
-		f := getFlagName(arg)
-		if f == "" {
-			continue
+		if !strings.HasPrefix(arg, "-") {
+			continue // skip, not a flag
 		}
+
+		f := strings.TrimPrefix(arg, "--")
+		f = strings.TrimPrefix(f, "-")
+		f = strings.Split(f, "=")[0]
 
 		isGlobal = false
 		for _, g := range globalFlags {
-			if f == cmd.FriendlyName(g.Name) || f == g.Shorthand {
+			if f == vaultcli.ToFlagName(g.Name) || f == g.Shorthand {
 				isGlobal = g.Global
 				break
 			}

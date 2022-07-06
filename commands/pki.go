@@ -13,11 +13,11 @@ import (
 	cst "thy/constants"
 	apperrors "thy/errors"
 	"thy/internal/predictor"
-	"thy/internal/prompt"
 	"thy/paths"
 	"thy/utils"
 	"thy/vaultcli"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/mitchellh/cli"
 	"github.com/spf13/viper"
 )
@@ -27,9 +27,7 @@ func GetPkiCmd() (cli.Command, error) {
 		Path:         []string{cst.NounPki},
 		SynopsisText: "pki (<action>)",
 		HelpText:     "Work with certificates",
-		RunFunc: func(args []string) int {
-			return cli.RunResultHelp
-		},
+		RunFunc:      func(args []string) int { return cli.RunResultHelp },
 	})
 }
 
@@ -50,7 +48,7 @@ Usage:
 			{Name: cst.CRL, Usage: "URL of the CRL from which the revocation of leaf certificates can be checked"},
 		},
 		RunFunc: func(args []string) int {
-			return handleRegisterRoot(vaultcli.New(), args)
+			return handleRegisterRootCmd(vaultcli.New(), args)
 		},
 	})
 }
@@ -71,7 +69,7 @@ Usage:
 			{Name: cst.Chain, Usage: "Include root certificate in response", ValueType: "bool"},
 		},
 		RunFunc: func(args []string) int {
-			return handleSign(vaultcli.New(), args)
+			return handleSignCmd(vaultcli.New(), args)
 		},
 	})
 }
@@ -82,8 +80,8 @@ func GetPkiLeafCmd() (cli.Command, error) {
 		SynopsisText: "Get a new private key and leaf certificate signed by a registered root CA",
 		HelpText: fmt.Sprintf(`
 Usage:
-   • %[1]s %[2]s --%[3]s myroot --%[4]s myleafcert --%[5]s thycotic.com --%[6]s Thycotic --%[7]s US --%[8]s DC --%[9]s Washington --%[10]s 100d
-   • %[1]s %[2]s --%[3]s myroot --%[5]s thycotic.com
+   • %[1]s %[2]s --%[3]s myroot --%[4]s myleafcert --%[5]s delinea.com --%[6]s Delinea --%[7]s US --%[8]s DC --%[9]s Washington --%[10]s 100d
+   • %[1]s %[2]s --%[3]s myroot --%[5]s delinea.com
 		`, cst.NounPki, cst.Leaf, cst.RootCAPath, cst.PkiStorePath, cst.CommonName, cst.Organization, cst.Country, cst.State, cst.Locality, cst.TTL),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.CommonName, Usage: "Domain for which a certificate is generated (required)"},
@@ -100,7 +98,7 @@ Usage:
 			{Name: cst.Chain, Usage: "Include root certificate in response", ValueType: "bool"},
 		},
 		RunFunc: func(args []string) int {
-			return handleLeaf(vaultcli.New(), args)
+			return handleLeafCmd(vaultcli.New(), args)
 		},
 	})
 }
@@ -111,8 +109,8 @@ func GetPkiGenerateRootCmd() (cli.Command, error) {
 		SynopsisText: "Generate and store a new root certificates with private key",
 		HelpText: fmt.Sprintf(`
 Usage:
-   • %[1]s %[2]s --%[3]s myroot --%[4]s google.org,golang.org --%[5]s thycotic.com --%[6]s Thycotic --%[7]s US --%[8]s DC --%[9]s Washington --%[10]s 42d
-   • %[1]s %[2]s --%[3]s myroot --%[4]s google.org,golang.org --%[5]s thycotic.com --%[10]s 52w
+   • %[1]s %[2]s --%[3]s myroot --%[4]s google.org,golang.org --%[5]s delinea.com --%[6]s Delinea --%[7]s US --%[8]s DC --%[9]s Washington --%[10]s 42d
+   • %[1]s %[2]s --%[3]s myroot --%[4]s google.org,golang.org --%[5]s delinea.com --%[10]s 52w
 		`, cst.NounPki, cst.GenerateRoot, cst.RootCAPath, cst.Domains, cst.CommonName, cst.Organization, cst.Country, cst.State, cst.Locality, cst.MaxTTL),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.CommonName, Usage: "The domain name of the root CA (required)"},
@@ -129,7 +127,7 @@ Usage:
 			{Name: cst.CRL, Usage: "URL of the CRL from which the revocation of leaf certificates can be checked"},
 		},
 		RunFunc: func(args []string) int {
-			return handleGenerateRoot(vaultcli.New(), args)
+			return handleGenerateRootCmd(vaultcli.New(), args)
 		},
 	})
 }
@@ -150,72 +148,190 @@ Usage:
 		},
 		MinNumberArgs: 8,
 		RunFunc: func(args []string) int {
-			return handleGetSSHCertificate(vaultcli.New(), args)
+			return handleGetSSHCertificateCmd(vaultcli.New(), args)
 		},
 	})
 }
 
+func handleRegisterRootCmd(vcli vaultcli.CLI, args []string) int {
+	if OnlyGlobalArgs(args) {
+		return handleRegisterRootWorkflow(vcli, args)
+	}
+	params := map[string]string{
+		cst.CertPath:    viper.GetString(cst.CertPath),
+		cst.PrivKeyPath: viper.GetString(cst.PrivKeyPath),
+		cst.RootCAPath:  viper.GetString(cst.RootCAPath),
+		cst.Domains:     viper.GetString(cst.Domains),
+		cst.MaxTTL:      viper.GetString(cst.MaxTTL),
+	}
+	data, err := submitRoot(vcli, params)
+	vcli.Out().WriteResponse(data, apperrors.New(err))
+	return utils.GetExecStatus(err)
+}
+
+func handleSignCmd(vcli vaultcli.CLI, args []string) int {
+	if OnlyGlobalArgs(args) {
+		return handleSignWorkflow(vcli, args)
+	}
+	params := map[string]string{
+		cst.CSRPath:         viper.GetString(cst.CSRPath),
+		cst.RootCAPath:      viper.GetString(cst.RootCAPath),
+		cst.SubjectAltNames: viper.GetString(cst.SubjectAltNames),
+		cst.TTL:             viper.GetString(cst.TTL),
+		cst.Chain:           viper.GetString(cst.Chain),
+	}
+	data, err := submitSign(vcli, params)
+	vcli.Out().WriteResponse(data, apperrors.New(err))
+	return utils.GetExecStatus(err)
+}
+
+func handleLeafCmd(vcli vaultcli.CLI, args []string) int {
+	if OnlyGlobalArgs(args) {
+		return handleLeafWorkflow(vcli, args)
+	}
+	params := map[string]string{
+		cst.RootCAPath:   viper.GetString(cst.RootCAPath),
+		cst.PkiStorePath: viper.GetString(cst.PkiStorePath),
+		cst.TTL:          viper.GetString(cst.TTL),
+		cst.CommonName:   viper.GetString(cst.CommonName),
+		cst.Organization: viper.GetString(cst.Organization),
+		cst.Country:      viper.GetString(cst.Country),
+		cst.State:        viper.GetString(cst.State),
+		cst.Locality:     viper.GetString(cst.Locality),
+		cst.EmailAddress: viper.GetString(cst.EmailAddress),
+		cst.Description:  viper.GetString(cst.Description),
+		cst.Chain:        viper.GetString(cst.Chain),
+	}
+	data, err := submitLeaf(vcli, params)
+	vcli.Out().WriteResponse(data, apperrors.New(err))
+	return utils.GetExecStatus(err)
+}
+
+func handleGenerateRootCmd(vcli vaultcli.CLI, args []string) int {
+	if OnlyGlobalArgs(args) {
+		return handleGenerateRootWorkflow(vcli, args)
+	}
+	params := map[string]string{
+		cst.RootCAPath:   viper.GetString(cst.RootCAPath),
+		cst.Domains:      viper.GetString(cst.Domains),
+		cst.MaxTTL:       viper.GetString(cst.MaxTTL),
+		cst.CommonName:   viper.GetString(cst.CommonName),
+		cst.Organization: viper.GetString(cst.Organization),
+		cst.Country:      viper.GetString(cst.Country),
+		cst.State:        viper.GetString(cst.State),
+		cst.Locality:     viper.GetString(cst.Locality),
+		cst.EmailAddress: viper.GetString(cst.EmailAddress),
+		cst.Description:  viper.GetString(cst.Description),
+	}
+	data, err := submitGenerateRoot(vcli, params)
+	vcli.Out().WriteResponse(data, apperrors.New(err))
+	return utils.GetExecStatus(err)
+}
+
+func handleGetSSHCertificateCmd(vcli vaultcli.CLI, args []string) int {
+	params := map[string]string{
+		cst.RootCAPath: viper.GetString(cst.RootCAPath),
+		cst.LeafCAPath: viper.GetString(cst.LeafCAPath),
+		cst.Principals: viper.GetString(cst.Principals),
+		cst.TTL:        viper.GetString(cst.TTL),
+	}
+	paramErr := ValidateParams(params, []string{cst.RootCAPath, cst.LeafCAPath, cst.Principals, cst.TTL})
+	if paramErr != nil {
+		vcli.Out().Fail(paramErr)
+		return utils.GetExecStatus(paramErr)
+	}
+
+	body := sshCertificateInformation{
+		RootCAPath: params[cst.RootCAPath],
+		LeafCAPAth: params[cst.LeafCAPath],
+		Principals: utils.StringToSlice(params[cst.Principals]),
+	}
+
+	if ttl, err := utils.ParseHours(params[cst.TTL]); err != nil {
+		vcli.Out().Fail(err)
+		return utils.GetExecStatus(err)
+	} else {
+		body.TTL = ttl
+	}
+
+	resp, apiErr := pkiSSHCert(vcli, &body)
+	vcli.Out().WriteResponse(resp, apiErr)
+	return utils.GetExecStatus(apiErr)
+}
+
 func handleRegisterRootWorkflow(vcli vaultcli.CLI, args []string) int {
-	params := make(map[string]string)
-	ui := &PasswordUi{
-		cli.BasicUi{
-			Writer:      os.Stdout,
-			Reader:      os.Stdin,
-			ErrorWriter: os.Stderr,
+	qs := []*survey.Question{
+		{
+			Name:      "CertFile",
+			Prompt:    &survey.Input{Message: "Path to certificate file:"},
+			Validate:  vaultcli.SurveyRequiredFile,
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "PrivKeyFile",
+			Prompt:    &survey.Input{Message: "Path to private key file:"},
+			Validate:  vaultcli.SurveyRequiredFile,
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "SecretPath",
+			Prompt:    &survey.Input{Message: "Path to a new secret that will contain root CA registration information:"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "Domains",
+			Prompt:    &survey.Input{Message: "List of domains (comma-delimited strings):"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "MaxTTL",
+			Prompt:    &survey.Input{Message: "Maximum TTL:"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "CRL",
+			Prompt:    &survey.Input{Message: "Certificate Revocation List URL:"},
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 	}
 
-	if certPath, err := prompt.Ask(ui, "Path to certificate file:"); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		data, err := os.ReadFile(certPath)
-		if err != nil {
-			ui.Error(err.Error())
-			return utils.GetExecStatus(err)
-		}
-		params[cst.CertPath] = string(data)
+	answers := struct {
+		CertFile    string
+		PrivKeyFile string
+		SecretPath  string
+		Domains     string
+		MaxTTL      string
+		CRL         string
+	}{}
+	survErr := survey.Ask(qs, &answers)
+	if survErr != nil {
+		vcli.Out().Fail(survErr)
+		return utils.GetExecStatus(survErr)
 	}
 
-	if privKeyPath, err := prompt.Ask(ui, "Path to private key file:"); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		data, err := os.ReadFile(privKeyPath)
-		if err != nil {
-			ui.Error(err.Error())
-			return utils.GetExecStatus(err)
-		}
-		params[cst.PrivKeyPath] = string(data)
+	params := map[string]string{
+		cst.RootCAPath: answers.SecretPath,
+		cst.Domains:    answers.Domains,
+		cst.MaxTTL:     answers.MaxTTL,
+		cst.CRL:        answers.CRL,
 	}
 
-	if rootCAPath, err := prompt.Ask(ui, "Path to a new secret that will contain root CA registration information:"); err != nil {
-		ui.Error(err.Error())
+	data, err := os.ReadFile(answers.CertFile)
+	if err != nil {
+		vcli.Out().Fail(err)
 		return utils.GetExecStatus(err)
-	} else {
-		params[cst.RootCAPath] = rootCAPath
 	}
+	params[cst.CertPath] = string(data)
 
-	if domains, err := prompt.Ask(ui, "List of domains (comma-delimited strings):"); err != nil {
-		ui.Error(err.Error())
+	data, err = os.ReadFile(answers.PrivKeyFile)
+	if err != nil {
+		vcli.Out().Fail(err)
 		return utils.GetExecStatus(err)
-	} else {
-		params[cst.Domains] = domains
 	}
-
-	if maxTTL, err := prompt.Ask(ui, "Maximum TTL:"); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.MaxTTL] = maxTTL
-	}
-
-	if crl, err := prompt.AskDefault(ui, "Certificate Revocation List URL", ""); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.CRL] = crl
-	}
+	params[cst.PrivKeyPath] = string(data)
 
 	resp, err := submitRoot(vcli, params)
 	vcli.Out().WriteResponse(resp, apperrors.New(err))
@@ -249,102 +365,69 @@ func submitRoot(vcli vaultcli.CLI, params map[string]string) ([]byte, error) {
 		MaxTTL:      maxTTL,
 		CRL:         viper.GetString(cst.CRL),
 	}
-
-	basePath := strings.Join([]string{cst.NounPki, cst.Register}, "/")
-	uri := paths.CreateURI(basePath, nil)
-	return vcli.HTTPClient().DoRequest(http.MethodPost, uri, body)
-}
-
-func handleRegisterRoot(vcli vaultcli.CLI, args []string) int {
-	if OnlyGlobalArgs(args) {
-		return handleRegisterRootWorkflow(vcli, args)
-	}
-	params := make(map[string]string)
-	params[cst.CertPath] = viper.GetString(cst.CertPath)
-	params[cst.PrivKeyPath] = viper.GetString(cst.PrivKeyPath)
-	params[cst.RootCAPath] = viper.GetString(cst.RootCAPath)
-	params[cst.Domains] = viper.GetString(cst.Domains)
-	params[cst.MaxTTL] = viper.GetString(cst.MaxTTL)
-
-	data, err := submitRoot(vcli, params)
-	vcli.Out().WriteResponse(data, apperrors.New(err))
-	return utils.GetExecStatus(err)
+	return pkiRegister(vcli, &body)
 }
 
 func handleSignWorkflow(vcli vaultcli.CLI, args []string) int {
-	params := make(map[string]string)
-	ui := &PasswordUi{
-		cli.BasicUi{
-			Writer:      os.Stdout,
-			Reader:      os.Stdin,
-			ErrorWriter: os.Stderr,
+	qs := []*survey.Question{
+		{
+			Name:      "CSRPath",
+			Prompt:    &survey.Input{Message: "Path to certificate signing request file:"},
+			Validate:  vaultcli.SurveyRequiredFile,
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "SecretPath",
+			Prompt:    &survey.Input{Message: "Path of an existing secret that contains root CA information:"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "SubjectAltNames",
+			Prompt:    &survey.Input{Message: "List of subject alternative names (comma-delimited strings):"},
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "TTL",
+			Prompt:    &survey.Input{Message: "TTL:"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:   "Chain",
+			Prompt: &survey.Confirm{Message: "Chain (optional - include root certificate):", Default: false},
 		},
 	}
 
-	if csrPath, err := prompt.Ask(ui, "Path to certificate signing request file:"); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		data, err := os.ReadFile(csrPath)
-		if err != nil {
-			ui.Error(err.Error())
-			return utils.GetExecStatus(err)
-		}
-		params[cst.CSRPath] = string(data)
+	answers := struct {
+		CSRPath         string
+		SecretPath      string
+		SubjectAltNames string
+		TTL             string
+		Chain           bool
+	}{}
+	survErr := survey.Ask(qs, &answers)
+	if survErr != nil {
+		vcli.Out().Fail(survErr)
+		return utils.GetExecStatus(survErr)
 	}
 
-	if rootCAPath, err := prompt.Ask(ui, "Path of an existing secret that contains root CA information:"); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.RootCAPath] = rootCAPath
+	params := map[string]string{
+		cst.RootCAPath:      answers.SecretPath,
+		cst.SubjectAltNames: answers.SubjectAltNames,
+		cst.TTL:             answers.TTL,
+		cst.Chain:           strconv.FormatBool(answers.Chain),
 	}
 
-	if subjectAltNames, err := prompt.AskDefault(ui, "List of subject alternative names (comma-delimited strings)", ""); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.SubjectAltNames] = subjectAltNames
-	}
-
-	if ttl, err := prompt.Ask(ui, "TTL:"); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.TTL] = ttl
-	}
-
-	yes, err := prompt.YesNo(ui, "Chain (optional - include root certificate)", false)
+	data, err := os.ReadFile(answers.CSRPath)
 	if err != nil {
-		ui.Error(err.Error())
+		vcli.Out().Fail(err)
 		return utils.GetExecStatus(err)
 	}
-
-	if yes {
-		params[cst.Chain] = "true"
-	} else {
-		params[cst.Chain] = "false"
-	}
+	params[cst.CSRPath] = string(data)
 
 	resp, err := submitSign(vcli, params)
 	vcli.Out().WriteResponse(resp, apperrors.New(err))
-	return utils.GetExecStatus(err)
-}
-
-func handleSign(vcli vaultcli.CLI, args []string) int {
-	if OnlyGlobalArgs(args) {
-		return handleSignWorkflow(vcli, args)
-	}
-
-	params := make(map[string]string)
-	params[cst.CSRPath] = viper.GetString(cst.CSRPath)
-	params[cst.RootCAPath] = viper.GetString(cst.RootCAPath)
-	params[cst.SubjectAltNames] = viper.GetString(cst.SubjectAltNames)
-	params[cst.TTL] = viper.GetString(cst.TTL)
-	params[cst.Chain] = viper.GetString(cst.Chain)
-
-	data, err := submitSign(vcli, params)
-	vcli.Out().WriteResponse(data, apperrors.New(err))
 	return utils.GetExecStatus(err)
 }
 
@@ -374,96 +457,93 @@ func submitSign(vcli vaultcli.CLI, params map[string]string) ([]byte, error) {
 	if c, err := strconv.ParseBool(params[cst.Chain]); err == nil {
 		body.Chain = c
 	}
-
-	basePath := strings.Join([]string{cst.NounPki, cst.Sign}, "/")
-	uri := paths.CreateURI(basePath, nil)
-	return vcli.HTTPClient().DoRequest(http.MethodPost, uri, body)
+	return pkiSign(vcli, &body)
 }
 
 func handleLeafWorkflow(vcli vaultcli.CLI, args []string) int {
-	params := make(map[string]string)
-	ui := &PasswordUi{
-		cli.BasicUi{
-			Writer:      os.Stdout,
-			Reader:      os.Stdin,
-			ErrorWriter: os.Stderr,
+	qs := []*survey.Question{
+		{
+			Name:      "RootCAPath",
+			Prompt:    &survey.Input{Message: "Path of an existing secret that contains root CA information:"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "CommonName",
+			Prompt:    &survey.Input{Message: "Common name:"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "Organization",
+			Prompt:    &survey.Input{Message: "Organization:"},
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "Country",
+			Prompt:    &survey.Input{Message: "Country:"},
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "State",
+			Prompt:    &survey.Input{Message: "State:"},
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "Locality",
+			Prompt:    &survey.Input{Message: "Locality:"},
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "Email",
+			Prompt:    &survey.Input{Message: "Email:"},
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "TTL",
+			Prompt:    &survey.Input{Message: "TTL:"},
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "PkiStorePath",
+			Prompt:    &survey.Input{Message: "Path to a new secret in which to store the generated certificate with private key:"},
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:   "Chain",
+			Prompt: &survey.Confirm{Message: "Chain (optional - include root certificate):", Default: false},
 		},
 	}
 
-	if rootCAPath, err := prompt.Ask(ui, "Path of an existing secret that contains root CA information:"); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.RootCAPath] = rootCAPath
+	answers := struct {
+		RootCAPath   string
+		CommonName   string
+		Organization string
+		Country      string
+		State        string
+		Locality     string
+		Email        string
+		TTL          string
+		PkiStorePath string
+		Chain        bool
+	}{}
+	survErr := survey.Ask(qs, &answers)
+	if survErr != nil {
+		vcli.Out().Fail(survErr)
+		return utils.GetExecStatus(survErr)
 	}
 
-	if commonName, err := prompt.Ask(ui, "Common name:"); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.CommonName] = commonName
-	}
-
-	if organization, err := prompt.AskDefault(ui, "Organization:", ""); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.Organization] = organization
-	}
-
-	if country, err := prompt.AskDefault(ui, "Country:", ""); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.Country] = country
-	}
-
-	if state, err := prompt.AskDefault(ui, "State:", ""); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.State] = state
-	}
-
-	if locality, err := prompt.AskDefault(ui, "Locality:", ""); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.Locality] = locality
-	}
-
-	if email, err := prompt.AskDefault(ui, "Email:", ""); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.EmailAddress] = email
-	}
-
-	if ttl, err := prompt.AskDefault(ui, "TTL:", ""); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.TTL] = ttl
-	}
-
-	if storePath, err := prompt.AskDefault(
-		ui, "Path to a new secret in which to store the generated certificate with private key", ""); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.PkiStorePath] = storePath
-	}
-
-	yes, err := prompt.YesNo(ui, "Chain (optional - include root certificate)", false)
-	if err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	}
-
-	if yes {
-		params[cst.Chain] = "true"
-	} else {
-		params[cst.Chain] = "false"
+	params := map[string]string{
+		cst.RootCAPath:   answers.RootCAPath,
+		cst.CommonName:   answers.CommonName,
+		cst.Organization: answers.Organization,
+		cst.Country:      answers.Country,
+		cst.State:        answers.State,
+		cst.Locality:     answers.Locality,
+		cst.EmailAddress: answers.Email,
+		cst.TTL:          answers.TTL,
+		cst.PkiStorePath: answers.PkiStorePath,
+		cst.Chain:        strconv.FormatBool(answers.Chain),
 	}
 
 	resp, err := submitLeaf(vcli, params)
@@ -499,113 +579,96 @@ func submitLeaf(vcli vaultcli.CLI, params map[string]string) ([]byte, error) {
 		body.TTL = ttl
 	}
 
-	basePath := strings.Join([]string{cst.NounPki, cst.Leaf}, "/")
-	uri := paths.CreateURI(basePath, nil)
-	return vcli.HTTPClient().DoRequest(http.MethodPost, uri, body)
-}
-
-func handleLeaf(vcli vaultcli.CLI, args []string) int {
-	if OnlyGlobalArgs(args) {
-		return handleLeafWorkflow(vcli, args)
-	}
-	params := make(map[string]string)
-	params[cst.RootCAPath] = viper.GetString(cst.RootCAPath)
-	params[cst.PkiStorePath] = viper.GetString(cst.PkiStorePath)
-	params[cst.TTL] = viper.GetString(cst.TTL)
-
-	params[cst.CommonName] = viper.GetString(cst.CommonName)
-	params[cst.Organization] = viper.GetString(cst.Organization)
-	params[cst.Country] = viper.GetString(cst.Country)
-	params[cst.State] = viper.GetString(cst.State)
-	params[cst.Locality] = viper.GetString(cst.Locality)
-	params[cst.EmailAddress] = viper.GetString(cst.EmailAddress)
-	params[cst.Description] = viper.GetString(cst.Description)
-	params[cst.Chain] = viper.GetString(cst.Chain)
-
-	data, err := submitLeaf(vcli, params)
-	vcli.Out().WriteResponse(data, apperrors.New(err))
-	return utils.GetExecStatus(err)
+	return pkiLeaf(vcli, &body)
 }
 
 func handleGenerateRootWorkflow(vcli vaultcli.CLI, args []string) int {
-	params := make(map[string]string)
-	ui := &PasswordUi{
-		cli.BasicUi{
-			Writer:      os.Stdout,
-			Reader:      os.Stdin,
-			ErrorWriter: os.Stderr,
+	qs := []*survey.Question{
+		{
+			Name:      "RootCAPath",
+			Prompt:    &survey.Input{Message: "Path of a new secret in which to store the generated root certificate with private key:"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "CommonName",
+			Prompt:    &survey.Input{Message: "Common name:"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "Organization",
+			Prompt:    &survey.Input{Message: "Organization:"},
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "Country",
+			Prompt:    &survey.Input{Message: "Country:"},
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "State",
+			Prompt:    &survey.Input{Message: "State:"},
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "Locality",
+			Prompt:    &survey.Input{Message: "Locality:"},
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "Email",
+			Prompt:    &survey.Input{Message: "Email:"},
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "Domains",
+			Prompt:    &survey.Input{Message: "List of domains (comma-delimited strings):"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "MaxTTL",
+			Prompt:    &survey.Input{Message: "Maximum TTL:"},
+			Validate:  vaultcli.SurveyRequired,
+			Transform: vaultcli.SurveyTrimSpace,
+		},
+		{
+			Name:      "CRL",
+			Prompt:    &survey.Input{Message: "Certificate Revocation List URL:"},
+			Transform: vaultcli.SurveyTrimSpace,
 		},
 	}
 
-	if rootCAPath, err := prompt.Ask(
-		ui, "Path of a new secret in which to store the generated root certificate with private key:"); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.RootCAPath] = rootCAPath
+	answers := struct {
+		RootCAPath   string
+		CommonName   string
+		Organization string
+		Country      string
+		State        string
+		Locality     string
+		Email        string
+		Domains      string
+		MaxTTL       string
+		CRL          string
+	}{}
+	survErr := survey.Ask(qs, &answers)
+	if survErr != nil {
+		vcli.Out().Fail(survErr)
+		return utils.GetExecStatus(survErr)
 	}
 
-	if commonName, err := prompt.Ask(ui, "Common name:"); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.CommonName] = commonName
-	}
-
-	if organization, err := prompt.AskDefault(ui, "Organization:", ""); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.Organization] = organization
-	}
-
-	if country, err := prompt.AskDefault(ui, "Country:", ""); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.Country] = country
-	}
-
-	if state, err := prompt.AskDefault(ui, "State:", ""); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.State] = state
-	}
-
-	if locality, err := prompt.AskDefault(ui, "Locality:", ""); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.Locality] = locality
-	}
-
-	if email, err := prompt.AskDefault(ui, "Email:", ""); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.EmailAddress] = email
-	}
-
-	if domains, err := prompt.Ask(ui, "List of domains (comma-delimited strings):"); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.Domains] = domains
-	}
-
-	if maxTTL, err := prompt.Ask(ui, "Maximum TTL:"); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.MaxTTL] = maxTTL
-	}
-
-	if crl, err := prompt.AskDefault(ui, "Certificate Revocation List URL", ""); err != nil {
-		ui.Error(err.Error())
-		return utils.GetExecStatus(err)
-	} else {
-		params[cst.CRL] = crl
+	params := map[string]string{
+		cst.RootCAPath:   answers.RootCAPath,
+		cst.CommonName:   answers.CommonName,
+		cst.Organization: answers.Organization,
+		cst.Country:      answers.Country,
+		cst.State:        answers.State,
+		cst.Locality:     answers.Locality,
+		cst.EmailAddress: answers.Email,
+		cst.Domains:      answers.Domains,
+		cst.MaxTTL:       answers.MaxTTL,
+		cst.CRL:          answers.CRL,
 	}
 
 	resp, err := submitGenerateRoot(vcli, params)
@@ -637,65 +700,7 @@ func submitGenerateRoot(vcli vaultcli.CLI, params map[string]string) ([]byte, er
 	}
 	body.MaxTTL = maxTTL
 
-	basePath := strings.Join([]string{cst.NounPki, cst.Root}, "/")
-	uri := paths.CreateURI(basePath, nil)
-	return vcli.HTTPClient().DoRequest(http.MethodPost, uri, body)
-}
-
-func handleGenerateRoot(vcli vaultcli.CLI, args []string) int {
-	if OnlyGlobalArgs(args) {
-		return handleGenerateRootWorkflow(vcli, args)
-	}
-
-	params := make(map[string]string)
-	params[cst.RootCAPath] = viper.GetString(cst.RootCAPath)
-	params[cst.Domains] = viper.GetString(cst.Domains)
-	params[cst.MaxTTL] = viper.GetString(cst.MaxTTL)
-
-	params[cst.CommonName] = viper.GetString(cst.CommonName)
-	params[cst.Organization] = viper.GetString(cst.Organization)
-	params[cst.Country] = viper.GetString(cst.Country)
-	params[cst.State] = viper.GetString(cst.State)
-	params[cst.Locality] = viper.GetString(cst.Locality)
-	params[cst.EmailAddress] = viper.GetString(cst.EmailAddress)
-	params[cst.Description] = viper.GetString(cst.Description)
-
-	data, err := submitGenerateRoot(vcli, params)
-	vcli.Out().WriteResponse(data, apperrors.New(err))
-	return utils.GetExecStatus(err)
-}
-
-func handleGetSSHCertificate(vcli vaultcli.CLI, args []string) int {
-	params := make(map[string]string)
-	params[cst.RootCAPath] = viper.GetString(cst.RootCAPath)
-	params[cst.LeafCAPath] = viper.GetString(cst.LeafCAPath)
-	params[cst.Principals] = viper.GetString(cst.Principals)
-	params[cst.TTL] = viper.GetString(cst.TTL)
-
-	paramErr := ValidateParams(params, []string{cst.RootCAPath, cst.LeafCAPath, cst.Principals, cst.TTL})
-	if paramErr != nil {
-		vcli.Out().Fail(paramErr)
-		return utils.GetExecStatus(paramErr)
-	}
-
-	body := sshCertificateInformation{
-		RootCAPath: params[cst.RootCAPath],
-		LeafCAPAth: params[cst.LeafCAPath],
-		Principals: utils.StringToSlice(params[cst.Principals]),
-	}
-
-	if ttl, err := utils.ParseHours(params[cst.TTL]); err != nil {
-		vcli.Out().Fail(err)
-		return utils.GetExecStatus(err)
-	} else {
-		body.TTL = ttl
-	}
-
-	basePath := strings.Join([]string{cst.NounPki, cst.SSHCert}, "/")
-	uri := paths.CreateURI(basePath, nil)
-	resp, apiError := vcli.HTTPClient().DoRequest(http.MethodPost, uri, body)
-	vcli.Out().WriteResponse(resp, apiError)
-	return utils.GetExecStatus(apiError)
+	return pkiGenRoot(vcli, &body)
 }
 
 func parsePem(data string) (*pem.Block, error) {
@@ -710,6 +715,8 @@ func base64Encode(data string) string {
 	return base64.StdEncoding.EncodeToString([]byte(data))
 }
 
+// API callers:
+
 type rootCASecret struct {
 	RootCAPath  string   `json:"rootCAPath"`
 	PrivateKey  string   `json:"privateKey"`
@@ -719,35 +726,10 @@ type rootCASecret struct {
 	CRL         string   `json:"crl"`
 }
 
-type signingRequest struct {
-	RootCAPath      string   `json:"rootCAPath"`
-	CSR             string   `json:"csr"`
-	SubjectAltNames []string `json:"subjectAltNames"`
-	TTL             int      `json:"ttl"`
-	Chain           bool     `json:"chain"`
-}
-
-type signingRequestInformation struct {
-	subjectInformation
-	RootCAPath string `json:"rootCAPath"`
-	StorePath  string `json:"storePath"`
-	TTL        int    `json:"ttl"`
-	Chain      bool   `json:"chain"`
-}
-
-type generateRootInformation struct {
-	subjectInformation
-	RootCAPath string   `json:"rootCAPath"`
-	Domains    []string `json:"domains"`
-	MaxTTL     int      `json:"maxTTL"`
-	CRL        string   `json:"crl"`
-}
-
-type sshCertificateInformation struct {
-	RootCAPath string   `json:"rootCAPath"`
-	LeafCAPAth string   `json:"leafCAPath"`
-	Principals []string `json:"principals"`
-	TTL        int      `json:"ttl"`
+func pkiRegister(vcli vaultcli.CLI, body *rootCASecret) ([]byte, *apperrors.ApiError) {
+	basePath := strings.Join([]string{cst.NounPki, cst.Register}, "/")
+	uri := paths.CreateURI(basePath, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodPost, uri, body)
 }
 
 type subjectInformation struct {
@@ -759,4 +741,59 @@ type subjectInformation struct {
 	CommonName         string `json:"commonName"`
 	EmailAddress       string `json:"emailAddress"`
 	Description        string `json:"description"`
+}
+
+type generateRootInformation struct {
+	subjectInformation
+	RootCAPath string   `json:"rootCAPath"`
+	Domains    []string `json:"domains"`
+	MaxTTL     int      `json:"maxTTL"`
+	CRL        string   `json:"crl"`
+}
+
+func pkiGenRoot(vcli vaultcli.CLI, body *generateRootInformation) ([]byte, *apperrors.ApiError) {
+	basePath := strings.Join([]string{cst.NounPki, cst.Root}, "/")
+	uri := paths.CreateURI(basePath, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodPost, uri, body)
+}
+
+type signingRequestInformation struct {
+	subjectInformation
+	RootCAPath string `json:"rootCAPath"`
+	StorePath  string `json:"storePath"`
+	TTL        int    `json:"ttl"`
+	Chain      bool   `json:"chain"`
+}
+
+func pkiLeaf(vcli vaultcli.CLI, body *signingRequestInformation) ([]byte, *apperrors.ApiError) {
+	basePath := strings.Join([]string{cst.NounPki, cst.Leaf}, "/")
+	uri := paths.CreateURI(basePath, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodPost, uri, body)
+}
+
+type sshCertificateInformation struct {
+	RootCAPath string   `json:"rootCAPath"`
+	LeafCAPAth string   `json:"leafCAPath"`
+	Principals []string `json:"principals"`
+	TTL        int      `json:"ttl"`
+}
+
+func pkiSSHCert(vcli vaultcli.CLI, body *sshCertificateInformation) ([]byte, *apperrors.ApiError) {
+	basePath := strings.Join([]string{cst.NounPki, cst.SSHCert}, "/")
+	uri := paths.CreateURI(basePath, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodPost, uri, body)
+}
+
+type signingRequest struct {
+	RootCAPath      string   `json:"rootCAPath"`
+	CSR             string   `json:"csr"`
+	SubjectAltNames []string `json:"subjectAltNames"`
+	TTL             int      `json:"ttl"`
+	Chain           bool     `json:"chain"`
+}
+
+func pkiSign(vcli vaultcli.CLI, body *signingRequest) ([]byte, *apperrors.ApiError) {
+	basePath := strings.Join([]string{cst.NounPki, cst.Sign}, "/")
+	uri := paths.CreateURI(basePath, nil)
+	return vcli.HTTPClient().DoRequest(http.MethodPost, uri, body)
 }

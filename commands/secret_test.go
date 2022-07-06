@@ -6,7 +6,7 @@ import (
 
 	cst "thy/constants"
 	"thy/errors"
-	"thy/fake"
+	"thy/tests/fake"
 	"thy/vaultcli"
 
 	"github.com/spf13/viper"
@@ -670,6 +670,22 @@ func TestHandleSecretUpsertCmd(t *testing.T) {
 			method:      "",
 			expectedErr: errors.NewS("error: must specify --id or --path (or [path])"),
 		},
+		{
+			name:        "specific symbols in path are not supported",
+			fDesc:       "new description",
+			args:        []string{"secret$$", "--description", "new description"},
+			out:         []byte(`test`),
+			method:      "create",
+			expectedErr: errors.NewS(`Path "secret$$" is invalid: path may contain only letters, numbers, underscores, dashes, @, pluses and periods separated by colon or slash`),
+		},
+		{
+			name:        "specific symbols in path should be supported",
+			fDesc:       "new description",
+			args:        []string{"folder+:filder-:folder@/folder./folder_/secret", "--description", "new description"},
+			out:         []byte(`test`),
+			method:      "create",
+			expectedErr: nil,
+		},
 	}
 
 	for _, tt := range testCases {
@@ -683,6 +699,7 @@ func TestHandleSecretUpsertCmd(t *testing.T) {
 				err = apiError
 			}
 			outClient.FailEStub = func(apiError *errors.ApiError) { err = apiError }
+			outClient.FailFStub = func(format string, args ...interface{}) { err = errors.NewF(format, args...) }
 
 			httpClient := &fake.FakeClient{}
 			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {

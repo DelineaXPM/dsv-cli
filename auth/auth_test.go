@@ -9,6 +9,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+
 	"thy/auth"
 	cst "thy/constants"
 	"thy/errors"

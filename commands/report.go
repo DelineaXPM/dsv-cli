@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"strings"
+
 	cst "thy/constants"
 	"thy/errors"
 	"thy/internal/predictor"

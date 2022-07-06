@@ -37,7 +37,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -o ../fake/fake_authenticator.go . Authenticator
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -o ../tests/fake/fake_authenticator.go . Authenticator
 
 const (
 	leewaySecondsTokenExp   = 10

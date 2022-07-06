@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"thy/auth"
-	config "thy/cli-config"
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
@@ -17,7 +16,6 @@ import (
 	"thy/vaultcli"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/howeyc/gopass"
 	"github.com/mitchellh/cli"
 	"github.com/spf13/viper"
 )
@@ -89,7 +87,7 @@ Usage:
 func handleAuth(vcli vaultcli.CLI, args []string) int {
 	var data []byte
 
-	username := config.GetFlagBeforeParse(cst.Username, args)
+	username := vaultcli.GetFlagVal(cst.Username, args)
 	if username != "" {
 		// We rely on the password auth type being set in order to trigger that flow later
 		viper.Set(cst.AuthType, "password")
@@ -167,25 +165,6 @@ func handleAuthList(vcli vaultcli.CLI, args []string) int {
 	}
 	vcli.Out().WriteResponse(keysBytes, err)
 	return 0
-}
-
-// PasswordUi embeds a BasicUi and overrides the AskSecret method to allow for password masking.
-type PasswordUi struct {
-	cli.BasicUi
-}
-
-// AskSecret prompts for password and masks it as the user types.
-func (ui PasswordUi) AskSecret(query string) (string, error) {
-	var password []byte
-	var err error
-	ui.Output(query)
-	password, err = gopass.GetPasswdMasked()
-	if err != nil {
-		if err != gopass.ErrInterrupted {
-			ui.Error(err.Error())
-		}
-	}
-	return string(password), err
 }
 
 func handleAuthChangePassword(vcli vaultcli.CLI, args []string) int {

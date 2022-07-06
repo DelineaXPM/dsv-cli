@@ -25,7 +25,7 @@ func GetSiemCmd() (cli.Command, error) {
 		HelpText:     "Work with SIEM endpoints",
 		RunFunc: func(args []string) int {
 			path := viper.GetString(cst.Path)
-			if path == "" && len(args) > 0 {
+			if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 				path = args[0]
 			}
 			if path == "" {

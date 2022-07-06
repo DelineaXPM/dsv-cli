@@ -25,7 +25,7 @@ func GetPoolCmd() (cli.Command, error) {
 		HelpText:     "Work with engine pools",
 		RunFunc: func(args []string) int {
 			path := viper.GetString(cst.Path)
-			if path == "" && len(args) > 0 {
+			if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 				path = args[0]
 			}
 			if path == "" {
@@ -104,7 +104,7 @@ Usage:
 
 func handlePoolRead(vcli vaultcli.CLI, args []string) int {
 	name := viper.GetString(cst.DataName)
-	if name == "" && len(args) > 0 {
+	if name == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		name = args[0]
 	}
 	if name == "" {
@@ -125,6 +125,10 @@ func handlePoolCreate(vcli vaultcli.CLI, args []string) int {
 		vcli.Out().WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
+	if err := vaultcli.ValidateName(name); err != nil {
+		vcli.Out().FailF("error: pool name %q is invalid: %v", name, err)
+		return utils.GetExecStatus(err)
+	}
 
 	data, apiErr := poolCreate(vcli, name)
 	vcli.Out().WriteResponse(data, apiErr)
@@ -139,7 +143,7 @@ func handlePoolList(vcli vaultcli.CLI, args []string) int {
 
 func handlePoolDelete(vcli vaultcli.CLI, args []string) int {
 	name := viper.GetString(cst.DataName)
-	if name == "" && len(args) > 0 {
+	if name == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		name = args[0]
 	}
 	if name == "" {
@@ -158,7 +162,7 @@ func handlePoolDelete(vcli vaultcli.CLI, args []string) int {
 func handlePoolCreateWizard(vcli vaultcli.CLI) int {
 	var name string
 	namePrompt := &survey.Input{Message: "Pool name:"}
-	survErr := survey.AskOne(namePrompt, &name, survey.WithValidator(vaultcli.SurveyRequired))
+	survErr := survey.AskOne(namePrompt, &name, survey.WithValidator(vaultcli.SurveyRequiredName))
 	if survErr != nil {
 		vcli.Out().WriteResponse(nil, errors.New(survErr))
 		return utils.GetExecStatus(survErr)

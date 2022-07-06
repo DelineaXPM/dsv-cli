@@ -2,6 +2,7 @@ package requests
 
 import (
 	"context"
+
 	cst "thy/constants"
 	"thy/errors"
 	"thy/format"
@@ -12,7 +13,7 @@ import (
 	"github.com/shurcooL/graphql"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -o ../fake/fake_graph_client.go . GraphClient
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -o ../tests/fake/fake_graph_client.go . GraphClient
 
 type GraphClient interface {
 	DoRequest(uri string, query interface{}, variables map[string]interface{}) ([]byte, *errors.ApiError)

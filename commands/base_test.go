@@ -81,6 +81,7 @@ func TestOnlyGlobalArgs(t *testing.T) {
 	}
 
 	allGlobals("--profile local")
+	allGlobals("--profile=local")
 	allGlobals("--config cfg")
 	allGlobals("--profile local --config cfg")
 	allGlobals("-v")
@@ -89,6 +90,7 @@ func TestOnlyGlobalArgs(t *testing.T) {
 	allGlobals("--profile local --config cfg--verbose")
 	allGlobals("--auth-type password -v")
 	allGlobals("--auth-type password --auth-username tom --auth-password r1ddle")
+	allGlobals("--auth-type password --auth-username=tom --auth-password r1ddle")
 	allGlobals("-a password -u tom -p r1ddle")
 
 	notGlobals("--data")

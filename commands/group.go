@@ -35,7 +35,7 @@ Usage:
 		MinNumberArgs: 1,
 		RunFunc: func(args []string) int {
 			groupData := viper.GetString(cst.DataGroupName)
-			if groupData == "" && len(args) > 0 {
+			if groupData == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 				groupData = args[0]
 			}
 			if groupData == "" {
@@ -62,7 +62,7 @@ Usage:
 		MinNumberArgs: 1,
 		RunFunc: func(args []string) int {
 			groupData := viper.GetString(cst.DataGroupName)
-			if groupData == "" && len(args) > 0 {
+			if groupData == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 				groupData = args[0]
 			}
 			if groupData == "" {
@@ -254,6 +254,10 @@ func handleGroupCreateCmd(vcli vaultcli.CLI, args []string) int {
 		if groupName == "" {
 			err := errors.NewS("error: must specify " + cst.DataGroupName)
 			vcli.Out().WriteResponse(nil, err)
+			return utils.GetExecStatus(err)
+		}
+		if err := vaultcli.ValidateName(groupName); err != nil {
+			vcli.Out().FailF("error: %s %q is invalid: %v", cst.DataGroupName, groupName, err)
 			return utils.GetExecStatus(err)
 		}
 		membersString := viper.GetString(cst.Members)
@@ -454,6 +458,9 @@ func handleGroupCreateWizard(vcli vaultcli.CLI, args []string) int {
 		answer := ans.(string)
 		if answer == "" {
 			return errors.NewS("A group name is required.")
+		}
+		if err := vaultcli.ValidateName(answer); err != nil {
+			return err
 		}
 		_, apiError := groupRead(vcli, answer)
 		if apiError == nil {

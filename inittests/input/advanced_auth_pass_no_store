@@ -1,4 +1,0 @@
-./[INIT_CLINAME] init --dev [INIT_DEV_DOMAIN] --config configs/advanced_auth_pass_no_store
-[INIT_TENANT]
-2
-1

@@ -1,17 +1,19 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"runtime/debug"
 	"strings"
 
-	config "thy/cli-config"
 	cmd "thy/commands"
 	cst "thy/constants"
 	"thy/format"
 	"thy/utils"
+	"thy/vaultcli"
 	"thy/version"
 
 	"github.com/mitchellh/cli"
@@ -193,14 +195,24 @@ func runCLI(args []string) (exitStatus int, err error) {
 	c.AutocompleteUninstall = "uninstall"
 	log.SetOutput(ioutil.Discard)
 
-	cfgFile := config.GetFlagBeforeParse(cst.Config, c.Args)
-	profile := strings.ToLower(config.GetFlagBeforeParse(cst.Profile, c.Args))
-
 	if !cmd.IsInit(c.Args) && !cmd.IsInstall(c.Args) {
 		// TODO : We do this twice to support autocomplete. Investigate how to only do once instead
-		if err := config.InitCliConfig(cfgFile, profile, c.Args); err != nil {
-			return utils.GetExecStatus(err), err
+
+		cfgFile := vaultcli.GetFlagVal(cst.Config, c.Args)
+		profile := strings.ToLower(vaultcli.GetFlagVal(cst.Profile, c.Args))
+		tenant := vaultcli.GetFlagVal(cst.Tenant, args)
+
+		err := vaultcli.ViperInit(cfgFile, profile, c.Args)
+		if tenant == "" {
+			if errors.Is(err, vaultcli.ErrFileNotFound) {
+				// Do not return the error to allow users to view help text for commands.
+				out := format.NewDefaultOutClient()
+				out.FailF("Create CLI config file manually or execute command '%s init' to initiate CLI configuration - cannot find config.", cst.CmdRoot)
+			} else if err != nil {
+				return utils.GetExecStatus(err), fmt.Errorf("Error: %v.", err)
+			}
 		}
 	}
+
 	return c.Run()
 }

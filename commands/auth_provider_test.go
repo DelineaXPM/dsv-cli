@@ -6,7 +6,7 @@ import (
 
 	cst "thy/constants"
 	"thy/errors"
-	"thy/fake"
+	"thy/tests/fake"
 	"thy/vaultcli"
 
 	"github.com/spf13/viper"

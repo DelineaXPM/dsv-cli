@@ -251,6 +251,10 @@ func handleRoleCreateCmd(vcli vaultcli.CLI, args []string) int {
 		vcli.Out().WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
+	if err := vaultcli.ValidateName(name); err != nil {
+		vcli.Out().FailF("error: role name %q is invalid: %v", name, err)
+		return utils.GetExecStatus(err)
+	}
 
 	role := &roleCreateRequest{
 		Name:        name,
@@ -304,6 +308,9 @@ func handleRoleWorkflow(vcli vaultcli.CLI, args []string) int {
 				answer = strings.TrimSpace(answer)
 				if len(answer) == 0 {
 					return errors.NewS("Value is required")
+				}
+				if err := vaultcli.ValidateName(answer); err != nil {
+					return err
 				}
 				_, apiError := roleRead(vcli, answer)
 				if apiError == nil {

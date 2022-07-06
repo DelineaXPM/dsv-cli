@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"strings"
+
 	cst "thy/constants"
 	"thy/errors"
 	"thy/utils"
@@ -16,15 +17,16 @@ import (
 	"github.com/savaki/jq"
 	"github.com/spf13/viper"
 	"github.com/tidwall/pretty"
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 )
 
-type WriterType string
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -o ../tests/fake/fake_out_client.go . OutClient
 
+// List of known output destinations.
 const (
-	StdOut    = WriterType("stdout")
-	File      = WriterType("file")
-	ClipBoard = WriterType("clip")
+	OutToStdout     = "stdout"
+	OutToClip       = "clip"
+	OutToFilePrefix = "file:"
 )
 
 type OutClient interface {
@@ -41,51 +43,39 @@ type outClient struct {
 }
 
 func NewDefaultOutClient() OutClient {
-	var outWriter io.Writer
 	outputType := viper.GetString(cst.Output)
-	if outputType == "" {
-		outputType = "stdout"
-	}
-	var wt WriterType
-	if strings.HasPrefix(outputType, cst.OutFilePrefix) {
-		wt = File
-	} else {
-		wt = WriterType(outputType)
+
+	var outWriter io.Writer
+	switch {
+	case outputType == OutToStdout:
+		outWriter = os.Stdout
+
+	case outputType == OutToClip:
+		outWriter = clipWriter{}
+
+	case strings.HasPrefix(outputType, OutToFilePrefix):
+		path := strings.TrimPrefix(outputType, OutToFilePrefix)
+		outWriter = NewFileWriter(path)
+
+	default:
+		outWriter = os.Stdout
 	}
 
-	if wt == StdOut {
-		outWriter = os.Stdout
-	} else if wt == ClipBoard {
-		outWriter = clipWriter{}
-	} else if wt == File {
-		filePath := outputType[len(cst.OutFilePrefix):]
-		outWriter = NewFileWriter(filePath)
-	}
-	return NewOutClient(outWriter, os.Stderr)
+	return &outClient{outWriter: outWriter, errWriter: os.Stderr}
 }
 
 func NewOutClient(sw io.Writer, ew io.Writer) OutClient {
-	c := outClient{}
-	if sw == nil {
-		c.outWriter = os.Stdout
-	} else {
+	c := outClient{
+		outWriter: os.Stdout,
+		errWriter: os.Stderr,
+	}
+	if sw != nil {
 		c.outWriter = sw
 	}
-	if ew == nil {
-		c.errWriter = os.Stderr
-	} else {
+	if ew != nil {
 		c.errWriter = ew
 	}
 	return &c
-}
-
-func IsJson(b []byte) bool {
-	var j interface{}
-	if err := json.Unmarshal(b, &j); err == nil {
-		return true
-	} else {
-		return false
-	}
 }
 
 func JsonMarshal(obj interface{}) ([]byte, error) {
@@ -102,46 +92,6 @@ func JsonMarshal(obj interface{}) ([]byte, error) {
 		return b[:len(b)-1], nil
 	}
 	return b, nil
-}
-
-func prettifyWindows(data []byte) ([]byte, *errors.ApiError) {
-	isJson := encodingIsJson()
-	if isJson {
-		return pretty.Pretty(data), nil
-	} else {
-		return toYaml(data)
-	}
-}
-
-func toYaml(data []byte) ([]byte, *errors.ApiError) {
-	var obj interface{}
-	err := json.Unmarshal(data, &obj)
-	if err != nil {
-		return nil, errors.New(err).Grow("Failed marshalling data as json prior to conversion to yaml")
-	}
-	return errors.Convert(yaml.Marshal(obj))
-}
-
-func encodingIsJson() bool {
-	encoding := viper.GetString(cst.Encoding)
-	if encoding == "" || (encoding != cst.Json && encoding != cst.Yaml && encoding != cst.YamlShort) {
-		encoding = cst.Json
-	}
-	return encoding == cst.Json
-}
-
-func prettifyUnix(data []byte, colorify bool) ([]byte, *errors.ApiError) {
-	isJson := encodingIsJson()
-	if isJson {
-		formatter := prettyjson.NewFormatter()
-		formatter.KeyColor = color.New(color.FgMagenta, color.FgCyan)
-		if !colorify {
-			formatter.DisabledColor = true
-		}
-		return errors.Convert(formatter.Format(data))
-	} else {
-		return toYaml(data)
-	}
 }
 
 func (c *outClient) FailE(err *errors.ApiError) {
@@ -161,7 +111,7 @@ func (c *outClient) FailF(errFmt string, args ...interface{}) {
 }
 
 func (c *outClient) WriteResponse(data []byte, err *errors.ApiError) {
-	dataNil := len(data) <= 0
+	dataNil := len(data) == 0
 	if dataNil && err == nil {
 		return
 	}
@@ -174,7 +124,7 @@ func (c *outClient) WriteResponse(data []byte, err *errors.ApiError) {
 	}
 	dataFmted, errFmted := FormatResponse(data, err, isBeautify)
 
-	if _, printErr := fmt.Fprint(c.outWriter, dataFmted); printErr != nil && len(errFmted) <= 0 {
+	if _, printErr := fmt.Fprint(c.outWriter, dataFmted); printErr != nil && len(errFmted) == 0 {
 		errFmted = formatError(printErr)
 	}
 	fmt.Fprint(c.errWriter, errFmted)
@@ -194,6 +144,11 @@ func FilterResponse(data []byte) ([]byte, *errors.ApiError) {
 	}
 	data, err = op.Apply(data)
 	return data, errors.New(err).Grow("Failed to apply the filter to the data")
+}
+
+func IsJson(b []byte) bool {
+	var j interface{}
+	return json.Unmarshal(b, &j) == nil
 }
 
 func FormatResponse(data []byte, err *errors.ApiError, isBeautify bool) (dataStr string, errStr string) {
@@ -233,26 +188,63 @@ func FormatResponse(data []byte, err *errors.ApiError, isBeautify bool) (dataStr
 }
 
 func BeautifyBytes(data []byte, colorify *bool) (dataStr, errStr string) {
-	isWindows := utils.GetEnvProviderFunc().GetOs() == "windows"
-	outputType := viper.GetString(cst.Output)
-	outputStdOut := outputType == "" || outputType == string(StdOut)
-	shouldColor := outputStdOut
+	shouldColor := false
 	if colorify != nil {
 		shouldColor = *colorify
+	} else {
+		outputType := viper.GetString(cst.Output)
+		shouldColor = outputType == "" || outputType == OutToStdout
 	}
 
+	var prettyData []byte
 	var beautifyErr *errors.ApiError
-	if isWindows {
-		data, beautifyErr = prettifyWindows(data)
-		dataStr = string(data)
+
+	if utils.GetEnvProviderFunc().GetOs() == "windows" {
+		prettyData, beautifyErr = prettifyWindows(data)
 	} else {
-		data, beautifyErr = prettifyUnix(data, shouldColor)
-		dataStr = string(data)
+		prettyData, beautifyErr = prettifyUnix(data, shouldColor)
 	}
+
 	if beautifyErr != nil {
 		errStr = formatError(beautifyErr.Grow("Failed to present data"))
 	}
-	return dataStr, errStr
+	return string(prettyData), errStr
+}
+
+func prettifyWindows(data []byte) ([]byte, *errors.ApiError) {
+	if encodingIsJson() {
+		return pretty.Pretty(data), nil
+	}
+	return toYaml(data)
+}
+
+func prettifyUnix(data []byte, colorify bool) ([]byte, *errors.ApiError) {
+	if encodingIsJson() {
+		formatter := prettyjson.NewFormatter()
+		formatter.KeyColor = color.New(color.FgMagenta, color.FgCyan)
+		if !colorify {
+			formatter.DisabledColor = true
+		}
+		return errors.Convert(formatter.Format(data))
+	}
+	return toYaml(data)
+}
+
+func encodingIsJson() bool {
+	encoding := viper.GetString(cst.Encoding)
+	if encoding == "" || (encoding != cst.Json && encoding != cst.Yaml && encoding != cst.YamlShort) {
+		encoding = cst.Json
+	}
+	return encoding == cst.Json
+}
+
+func toYaml(data []byte) ([]byte, *errors.ApiError) {
+	var obj interface{}
+	err := json.Unmarshal(data, &obj)
+	if err != nil {
+		return nil, errors.New(err).Grow("Failed marshalling data as json prior to conversion to yaml")
+	}
+	return errors.Convert(yaml.Marshal(obj))
 }
 
 func formatError(err error) string {

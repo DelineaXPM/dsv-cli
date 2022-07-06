@@ -499,6 +499,10 @@ func handleSecretUpsertCmd(vcli vaultcli.CLI, secretType string, action string, 
 	if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		path = args[0]
 	}
+	if err := vaultcli.ValidatePath(path); path != "" && err != nil {
+		vcli.Out().FailF("Path %q is invalid: %v", path, err)
+		return utils.GetExecStatus(err)
+	}
 
 	rc, rerr := getResourceConfig(path, secretType)
 	if rerr != nil {
@@ -553,7 +557,7 @@ func handleCreateWorkflow(vcli vaultcli.CLI, secretType string) ([]byte, *errors
 		{
 			Name:      "Path",
 			Prompt:    &survey.Input{Message: "Path:"},
-			Validate:  vaultcli.SurveyRequired,
+			Validate:  vaultcli.SurveyRequiredPath,
 			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
@@ -1085,7 +1089,7 @@ func getResourceConfig(path, resourceType string) (*resourceConfig, error) {
 			resourceType: fmt.Sprintf("%s/%s", cst.NounHome, current),
 			path:         path,
 		}
-		if utils.CheckPrefix(path, "users:", "roles:") {
+		if strings.HasPrefix(path, "users:") || strings.HasPrefix(path, "roles:") {
 			p := strings.SplitAfterN(path, "/", 2)
 			if len(p) == 2 {
 				rc.resourceType = fmt.Sprintf("%s/%s", "home", p[0])

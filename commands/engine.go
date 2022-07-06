@@ -25,7 +25,7 @@ func GetEngineCmd() (cli.Command, error) {
 		HelpText:     "Work with engines",
 		RunFunc: func(args []string) int {
 			path := viper.GetString(cst.Path)
-			if path == "" && len(args) > 0 {
+			if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 				path = args[0]
 			}
 			if path == "" {
@@ -119,7 +119,7 @@ Usage:
 
 func handleEngineReadCmd(vcli vaultcli.CLI, args []string) int {
 	name := viper.GetString(cst.DataName)
-	if name == "" && len(args) > 0 {
+	if name == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		name = args[0]
 	}
 	if name == "" {
@@ -141,7 +141,7 @@ func handleEngineListCmd(vcli vaultcli.CLI, args []string) int {
 
 func handleEngineDeleteCmd(vcli vaultcli.CLI, args []string) int {
 	name := viper.GetString(cst.DataName)
-	if name == "" && len(args) > 0 {
+	if name == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		name = args[0]
 	}
 	if name == "" {
@@ -157,7 +157,7 @@ func handleEngineDeleteCmd(vcli vaultcli.CLI, args []string) int {
 
 func handleEnginePingCmd(vcli vaultcli.CLI, args []string) int {
 	name := viper.GetString(cst.DataName)
-	if name == "" && len(args) > 0 {
+	if name == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		name = args[0]
 	}
 	if name == "" {
@@ -183,6 +183,10 @@ func handleEngineCreateCmd(vcli vaultcli.CLI, args []string) int {
 		vcli.Out().WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
+	if err := vaultcli.ValidateName(engineName); err != nil {
+		vcli.Out().FailF("error: engine name %q is invalid: %v", engineName, err)
+		return utils.GetExecStatus(err)
+	}
 
 	data, apiErr := engineCreate(vcli, engineName, poolName)
 	vcli.Out().WriteResponse(data, apiErr)
@@ -198,6 +202,9 @@ func handleEngineCreateWizard(vcli vaultcli.CLI, args []string) int {
 			Prompt: &survey.Input{Message: "Engine name:"},
 			Validate: func(ans interface{}) error {
 				answer := strings.TrimSpace(ans.(string))
+				if err := vaultcli.ValidateName(answer); err != nil {
+					return err
+				}
 				_, apiError := engineRead(vcli, answer)
 				if apiError == nil {
 					return errors.NewS("An engine with this name already exists.")

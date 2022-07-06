@@ -8,7 +8,7 @@ import (
 
 	cst "thy/constants"
 	"thy/errors"
-	"thy/fake"
+	"thy/tests/fake"
 	"thy/vaultcli"
 )
 

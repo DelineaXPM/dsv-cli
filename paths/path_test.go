@@ -168,29 +168,3 @@ func TestGetURIPathFromInternalPath(t *testing.T) {
 		})
 	}
 }
-
-func TestGetFilenameFromArgs(t *testing.T) {
-	f := func(args []string, expected string) {
-		t.Helper()
-		actual := GetFilenameFromArgs(args)
-		assert.Equal(t, expected, actual)
-	}
-
-	// No match.
-	f([]string{}, "")
-	f([]string{"--path", "pth1"}, "")
-	f([]string{"--data", "str1"}, "")
-	f([]string{"--data"}, "")
-	f([]string{"-d", "str1"}, "")
-	f([]string{"-d"}, "")
-
-	// Long flag used.
-	f([]string{"--data", "@file1"}, "file1")
-	f([]string{"--data", "@file1", "--path", "pth1"}, "file1")
-	f([]string{"--path", "pth1", "--data", "@file1"}, "file1")
-
-	// Short flag used.
-	f([]string{"-d", "@file1"}, "file1")
-	f([]string{"-d", "@file1", "--path", "pth1"}, "file1")
-	f([]string{"--path", "pth1", "-d", "@file1"}, "file1")
-}

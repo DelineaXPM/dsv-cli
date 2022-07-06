@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+
 	cst "thy/constants"
 	"thy/errors"
 
@@ -100,23 +101,4 @@ func GetAPIVersion() string {
 		ver = verOverride
 	}
 	return ver
-}
-
-// GetFilenameFromArgs tries to extract a filename from args. If args has a --data or -d flag and
-// its value starts with an '@' followed by a filename, the function tries to capture that filename.
-func GetFilenameFromArgs(args []string) string {
-	var fileName string
-	for i := range args {
-		if args[i] == "--data" || args[i] == "-d" {
-			if i+1 == len(args) {
-				break
-			}
-			value := args[i+1]
-			if strings.HasPrefix(value, cst.CmdFilePrefix) {
-				fileName = value[1:]
-			}
-			break
-		}
-	}
-	return fileName
 }

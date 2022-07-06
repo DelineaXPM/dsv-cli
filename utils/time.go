@@ -17,7 +17,7 @@ func ParseHours(s string) (int, error) {
 	n, unit := s[:len(s)-1], string(s[len(s)-1])
 
 	// If no valid time unit is specified, assume s is an integer denoting hours.
-	if !Contains(units, unit) {
+	if IndexOf(units, unit) == -1 {
 		num, err := strconv.Atoi(s)
 		if err != nil {
 			return 0, invalidFormatErr

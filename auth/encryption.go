@@ -6,8 +6,10 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"github.com/spf13/viper"
 	"io"
+
+	"github.com/spf13/viper"
+
 	cst "thy/constants"
 	"thy/errors"
 	"thy/store"

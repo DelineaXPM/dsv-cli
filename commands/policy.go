@@ -37,7 +37,7 @@ Usage:
 		MinNumberArgs: 1,
 		RunFunc: func(args []string) int {
 			path := viper.GetString(cst.Path)
-			if path == "" && len(args) > 0 {
+			if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 				path = args[0]
 			}
 			if path == "" {
@@ -328,6 +328,10 @@ func handlePolicyCreateCmd(vcli vaultcli.CLI, args []string) int {
 	if status != 0 {
 		return status
 	}
+	if err := vaultcli.ValidatePath(path); err != nil {
+		vcli.Out().FailF("Path %q is invalid: %v", path, err)
+		return utils.GetExecStatus(err)
+	}
 
 	data := viper.GetString(cst.Data)
 	encoding := viper.GetString(cst.Encoding)
@@ -453,7 +457,7 @@ func policyBuildFromFlags() (string, *errors.ApiError) {
 func getPolicyParams(args []string) (path string, status int) {
 	status = 0
 	path = viper.GetString(cst.Path)
-	if path == "" && len(args) > 0 {
+	if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		path = args[0]
 	}
 	if path == "" {
@@ -513,6 +517,9 @@ func handlePolicyCreateWizard(vcli vaultcli.CLI, args []string) int {
 		answer := strings.TrimSpace(ans.(string))
 		if len(answer) == 0 {
 			return errors.NewS("Value is required")
+		}
+		if err := vaultcli.ValidatePath(answer); err != nil {
+			return err
 		}
 		answer = paths.ProcessResource(answer)
 		_, apiError := policyRead(vcli, answer)

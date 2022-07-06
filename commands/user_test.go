@@ -5,7 +5,7 @@ import (
 
 	cst "thy/constants"
 	"thy/errors"
-	"thy/fake"
+	"thy/tests/fake"
 	"thy/vaultcli"
 
 	"github.com/spf13/viper"
@@ -259,7 +259,7 @@ func TestHandleUserCreateCmd(t *testing.T) {
 			name:        "Create fails no username",
 			args:        []string{"--password", "password"},
 			password:    "password",
-			expectedErr: errors.NewS("error: must specify " + cst.DataUsername),
+			expectedErr: errors.NewS(`error: username "" is invalid: must specify username`),
 		},
 		{
 			name:        "Create fails no password",
@@ -306,6 +306,8 @@ func TestHandleUserCreateCmd(t *testing.T) {
 				data = bytes
 				err = apiError
 			}
+
+			outClient.FailFStub = func(format string, args ...interface{}) { err = errors.NewF(format, args...) }
 
 			httpClient := &fake.FakeClient{}
 			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {

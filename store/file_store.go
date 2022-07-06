@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"strings"
+
 	"thy/errors"
 
 	homedir "github.com/mitchellh/go-homedir"

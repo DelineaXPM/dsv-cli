@@ -41,7 +41,7 @@ Usage:
 		MinNumberArgs: 1,
 		RunFunc: func(args []string) int {
 			userData := viper.GetString(cst.DataUsername)
-			if userData == "" && len(args) > 0 {
+			if userData == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 				userData = args[0]
 			}
 			if userData == "" {
@@ -185,7 +185,7 @@ Usage:
 
 func handleUserReadCmd(vcli vaultcli.CLI, args []string) int {
 	userName := viper.GetString(cst.DataUsername)
-	if userName == "" && len(args) > 0 {
+	if userName == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		userName = args[0]
 	}
 	if userName == "" {
@@ -222,7 +222,7 @@ func handleUserSearchCmd(vcli vaultcli.CLI, args []string) int {
 func handleUserDeleteCmd(vcli vaultcli.CLI, args []string) int {
 	userName := viper.GetString(cst.DataUsername)
 	force := viper.GetBool(cst.Force)
-	if userName == "" && len(args) > 0 {
+	if userName == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		userName = args[0]
 	}
 	if userName == "" {
@@ -238,7 +238,7 @@ func handleUserDeleteCmd(vcli vaultcli.CLI, args []string) int {
 
 func handleUserRestoreCmd(vcli vaultcli.CLI, args []string) int {
 	userName := viper.GetString(cst.DataUsername)
-	if userName == "" && len(args) > 0 {
+	if userName == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		userName = args[0]
 	}
 	if userName == "" {
@@ -258,9 +258,8 @@ func handleUserCreateCmd(vcli vaultcli.CLI, args []string) int {
 	provider := viper.GetString(cst.DataProvider)
 	externalID := viper.GetString(cst.DataExternalID)
 
-	if userName == "" {
-		err := errors.NewS("error: must specify " + cst.DataUsername)
-		vcli.Out().WriteResponse(nil, err)
+	if err := vaultcli.ValidateUsername(userName); err != nil {
+		vcli.Out().FailF("error: %s %q is invalid: %v", cst.DataUsername, userName, err)
 		return utils.GetExecStatus(err)
 	}
 
@@ -341,6 +340,9 @@ func handleUserCreateWorkflow(vcli vaultcli.CLI, args []string) int {
 				answer = strings.TrimSpace(answer)
 				if len(answer) == 0 {
 					return errors.NewS("Value is required")
+				}
+				if err := vaultcli.ValidateUsername(answer); err != nil {
+					return err
 				}
 				_, apiError := userRead(vcli, answer)
 				if apiError == nil {

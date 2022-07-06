@@ -266,7 +266,7 @@ func handleUpdateManualKey(vcli vaultcli.CLI, args []string) int {
 
 func handleReadManualKey(vcli vaultcli.CLI, args []string) int {
 	path := viper.GetString(cst.Path)
-	if path == "" && len(args) > 0 {
+	if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		path = args[0]
 	}
 
@@ -283,7 +283,7 @@ func handleReadManualKey(vcli vaultcli.CLI, args []string) int {
 
 func handleDeleteManualKey(vcli vaultcli.CLI, args []string) int {
 	path := viper.GetString(cst.Path)
-	if path == "" && len(args) > 0 {
+	if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		path = args[0]
 	}
 
@@ -302,7 +302,7 @@ func handleDeleteManualKey(vcli vaultcli.CLI, args []string) int {
 
 func handleRestoreManualKey(vcli vaultcli.CLI, args []string) int {
 	path := viper.GetString(cst.Path)
-	if path == "" && len(args) > 0 {
+	if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		path = args[0]
 	}
 
@@ -330,7 +330,7 @@ func handleManualKeyEncrypt(vcli vaultcli.CLI, args []string) int {
 		return 1
 	}
 
-	filename := paths.GetFilenameFromArgs(args)
+	filename := vaultcli.GetFilenameFromArgs(args)
 	isDataInFile := filename != ""
 	if isDataInFile {
 		data = base64Encode(data)
@@ -379,7 +379,7 @@ func handleManualKeyDecrypt(vcli vaultcli.CLI, args []string) int {
 		return 1
 	}
 
-	filename := paths.GetFilenameFromArgs(args)
+	filename := vaultcli.GetFilenameFromArgs(args)
 	isDataInFile := filename != ""
 
 	var body decryptionRequest
