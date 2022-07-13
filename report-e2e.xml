@@ -1,26 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <testsuites>
-	<testsuite tests="18" failures="0" time="19.455" name="thy/tests/e2e">
+	<testsuite tests="18" failures="0" time="20.627" name="thy/tests/e2e">
 		<properties>
 			<property name="go.version" value="go1.12"></property>
 		</properties>
-		<testcase classname="e2e" name="TestEngine" time="3.680"></testcase>
-		<testcase classname="e2e" name="TestInitWithNoConfig" time="0.420"></testcase>
-		<testcase classname="e2e" name="TestInitWithExistingConfig" time="0.470"></testcase>
-		<testcase classname="e2e" name="TestInitOverwriteExistingConfig" time="0.410"></testcase>
-		<testcase classname="e2e" name="TestInitAuthFails" time="0.210"></testcase>
-		<testcase classname="e2e" name="TestInitAWSInvalid" time="0.280"></testcase>
-		<testcase classname="e2e" name="TestInitClientCredsInvalid" time="0.220"></testcase>
+		<testcase classname="e2e" name="TestEngine" time="4.230"></testcase>
+		<testcase classname="e2e" name="TestInitWithNoConfig" time="0.540"></testcase>
+		<testcase classname="e2e" name="TestInitWithExistingConfig" time="0.380"></testcase>
+		<testcase classname="e2e" name="TestInitOverwriteExistingConfig" time="0.390"></testcase>
+		<testcase classname="e2e" name="TestInitAuthFails" time="0.230"></testcase>
+		<testcase classname="e2e" name="TestInitAWSInvalid" time="0.260"></testcase>
+		<testcase classname="e2e" name="TestInitClientCredsInvalid" time="0.310"></testcase>
 		<testcase classname="e2e" name="TestInitMissingInitialProfile" time="0.010"></testcase>
-		<testcase classname="e2e" name="TestInitProfileExists" time="0.380"></testcase>
-		<testcase classname="e2e" name="TestInitWrongStoreType" time="0.160"></testcase>
-		<testcase classname="e2e" name="TestInitWithNoStore" time="0.170"></testcase>
-		<testcase classname="e2e" name="TestInitUsingCertificateRawData" time="0.380"></testcase>
-		<testcase classname="e2e" name="TestInitUsingCertificateFileData" time="0.320"></testcase>
-		<testcase classname="e2e" name="TestPool" time="2.990"></testcase>
-		<testcase classname="e2e" name="TestPoolInteractiveCreate" time="0.620"></testcase>
-		<testcase classname="e2e" name="TestRole" time="5.640"></testcase>
-		<testcase classname="e2e" name="TestSecret" time="0.220"></testcase>
-		<testcase classname="e2e" name="TestWhoami" time="0.310"></testcase>
+		<testcase classname="e2e" name="TestInitProfileExists" time="0.450"></testcase>
+		<testcase classname="e2e" name="TestInitWrongStoreType" time="0.190"></testcase>
+		<testcase classname="e2e" name="TestInitWithNoStore" time="0.160"></testcase>
+		<testcase classname="e2e" name="TestInitUsingCertificateRawData" time="0.460"></testcase>
+		<testcase classname="e2e" name="TestInitUsingCertificateFileData" time="0.360"></testcase>
+		<testcase classname="e2e" name="TestPool" time="3.180"></testcase>
+		<testcase classname="e2e" name="TestPoolInteractiveCreate" time="0.640"></testcase>
+		<testcase classname="e2e" name="TestRole" time="5.630"></testcase>
+		<testcase classname="e2e" name="TestSecret" time="0.260"></testcase>
+		<testcase classname="e2e" name="TestWhoami" time="0.230"></testcase>
 	</testsuite>
 </testsuites>

@@ -349,7 +349,7 @@ func init() {
 
 		// client operations
 		{"client-create-pass", []string{"client", "create", "--role", roleName}, outputPattern(`"role":\s*"[^"]+"`)},
-		{"client-create-fail", []string{"client", "create", "--role", roleName + "doesntexist"}, outputPattern(`"code": 500`)},
+		{"client-create-fail", []string{"client", "create", "--role", roleName + "doesntexist"}, outputPattern(`"code": 400`)},
 		{"client-search-pass", []string{"client", "search", "--role", roleName}, outputPattern(`"clientId"`)},
 
 		// delegated access operations
