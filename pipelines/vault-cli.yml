@@ -209,6 +209,18 @@ jobs:
         workingDirectory: '$(System.DefaultWorkingDirectory)'
         displayName: 'Get Version'
 
+      - powershell: |
+          cd $(cliversion)
+          dir
+          # Clean out files not related to Windows from cli dir
+          Remove-Item '$(constants.cliname)-darwin-arm64'
+          Remove-Item '$(constants.cliname)-darwin-arm64-sha256.txt'
+          Remove-Item '$(constants.cliname)-darwin-x64'
+          Remove-Item '$(constants.cliname)-darwin-x64-sha256.txt'
+          dir
+        workingDirectory: '$(Pipeline.Workspace)/cli'
+        displayName: 'Clear Unused Files'
+
       - script: |
           echo $(cliversion)
           
@@ -267,6 +279,18 @@ jobs:
           cd $(cliversion)
           ls
           ls ~/Library/Keychains
+          
+          #Clear unused files
+          rm ./$(constants.cliname)-linux-x64
+          rm ./$(constants.cliname)-linux-x64-sha256.txt
+          rm ./$(constants.cliname)-linux-x86
+          rm ./$(constants.cliname)-linux-x86-sha256.txt
+          rm ./$(constants.cliname)-win-x64.exe
+          rm ./$(constants.cliname)-win-x64.exe-sha256.txt
+          rm ./$(constants.cliname)-win-x86.exe
+          rm ./$(constants.cliname)-win-x86.exe-sha256.txt
+          ls
+          
           echo "[---] Signing x64 binary."
           codesign -s 'Thycotic Software' ./$(constants.cliname)-darwin-x64
           echo "[---] Signing arm64 binary."
