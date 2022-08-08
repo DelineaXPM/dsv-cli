@@ -76,6 +76,16 @@ dsv policy create \
     --subjects users:<username>
 ```
 
+- Create, Read, Update and Delete SIEMs with "e2e-cli-test" prefix 
+```
+dsv policy create \
+    --path "config:siem:e2e-cli-test" \
+    --effect allow \
+    --actions "<create|delete|read|update>" \
+    --resources "config:siem:e2e-cli-test<.*>" \
+    --subjects users:<username>
+```
+
 ### Create certificate data
 
 - Create a role for authentication by certificate

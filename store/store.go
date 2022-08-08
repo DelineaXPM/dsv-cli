@@ -104,6 +104,41 @@ func StoreSecureSetting(key string, val string, sType string) *errors.ApiError {
 	return s.Store(keyFull, val)
 }
 
+func getSecureSettingForProfile(key string, profile string) (string, *errors.ApiError) {
+	if key == "" {
+		return "", errors.NewS("key cannot be empty")
+	}
+	if val := viper.GetString(key); val != "" {
+		return val, nil
+	}
+
+	if profile == "" {
+		return "", errors.NewS("profile cannot be empty")
+	}
+	keyProfile := profile + "-" + key
+
+	storeType := viper.GetString(cst.StoreType)
+	s, err := GetStore(storeType)
+	if err != nil {
+		return "", errors.New(err).Grow("failed to fetch store")
+	}
+	keyFull := cst.CliConfigRoot + "-" + strings.Replace(keyProfile, ".", "-", -1)
+	var res string
+	err = s.Get(keyFull, &res)
+	return res, err
+}
+
+func GetSecureSetting(key string) (string, *errors.ApiError) {
+	if key == "" {
+		return "", errors.NewS("key cannot be empty")
+	}
+	profile := viper.GetString(cst.Profile)
+	if profile == "" {
+		profile = cst.DefaultProfile
+	}
+	return getSecureSettingForProfile(key, profile)
+}
+
 // GetDefaultPath retrieves an OS-independent default path for secrets, tokens, encrypted key files. By default, it is /home/{username}/.thy/.
 func GetDefaultPath() (string, error) {
 	if s, err := homedir.Dir(); err != nil {

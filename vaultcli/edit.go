@@ -3,7 +3,6 @@ package vaultcli
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -43,7 +42,7 @@ func doEditData(data []byte, startErr *errors.ApiError) (edited []byte, runErr *
 		return nil, getErr
 	}
 	tmpDir := os.TempDir()
-	tmpFile, err := ioutil.TempFile(tmpDir, cst.CmdRoot)
+	tmpFile, err := os.CreateTemp(tmpDir, cst.CmdRoot)
 	if err != nil {
 		return nil, errors.New(err).Grow("Error while creating temp file to edit data")
 	}
@@ -53,7 +52,7 @@ func doEditData(data []byte, startErr *errors.ApiError) (edited []byte, runErr *
 		}
 	}()
 
-	if err := ioutil.WriteFile(tmpFile.Name(), data, 0600); err != nil {
+	if err := os.WriteFile(tmpFile.Name(), data, 0600); err != nil {
 		return nil, errors.New(err).Grow("Error while copying data to temp file")
 	}
 

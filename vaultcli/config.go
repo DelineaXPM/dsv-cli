@@ -97,9 +97,7 @@ func NewConfigFile(path string) (*ConfigFile, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to determine home directory: %w", err)
 		}
-
-		filename := fmt.Sprintf("%s.%s", cst.CliConfigName, cst.CliConfigType)
-		path = filepath.Join(home, filename)
+		path = filepath.Join(home, cst.CliConfigName)
 	}
 
 	return &ConfigFile{

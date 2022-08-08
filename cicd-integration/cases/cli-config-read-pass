@@ -1,4 +1,4 @@
-CLI config (cli-config/.thy.yml):
+CLI config (cicd-integration/.thy.yml):
 default:
   auth:
     client:

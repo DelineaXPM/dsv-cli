@@ -17,6 +17,8 @@ main_authorizer
 main_authorizer.zip
 main.zip
 report.xml
+report-e2e.xml
+codecoverage.xml
 packaged.yaml
 /output
 .idea
@@ -31,13 +33,11 @@ docs/site/
 dsv
 dsv.exe
 
-inittests/initenv/
-inittests/__pycache__/
-inittests/test-reports/
-inittests/cases/__pycache__/
-inittests/winenv/
-inittests/localvars/
-inittests/testdata/
-inittests/.defaultvars
 cicd-integration/data/test_policy.json
-cli-config/.thy.yml
+cicd-integration/.thy.yml
+
+scratch.*
+dist/
+.artifacts/
+.cache/
+mage_output_file.go

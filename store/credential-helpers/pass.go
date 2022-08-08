@@ -9,7 +9,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -156,7 +155,7 @@ func listPassDir(recurse bool, includeDirs bool, relative bool, args ...string) 
 	dirPath := path.Join(append([]string{passDir}, args...)...)
 	paths = []string{}
 	if !recurse {
-		contents, err := ioutil.ReadDir(dirPath)
+		contents, err := os.ReadDir(dirPath)
 		if err != nil {
 			if os.IsNotExist(err) {
 				return []string{}, nil

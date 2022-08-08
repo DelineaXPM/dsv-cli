@@ -56,6 +56,7 @@ const (
 	NounPrincipal       = "principal"
 	NounPki             = "pki"
 	NounSiem            = "siem"
+	NounSiems           = "siems"
 	NounHome            = "home"
 	NounPool            = "pool"
 	NounPools           = "pools"

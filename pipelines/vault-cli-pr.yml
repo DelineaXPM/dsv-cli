@@ -1,5 +1,7 @@
+# this is configured via branch policy, not here.
+trigger: none
+
 variables:
-  - group: "CLI Init Tests"
   - group: "CLI_integration_test"
   - group: "CLi-pipeline-variables"
   - group: "CLI End-to-End tests"
@@ -19,16 +21,14 @@ jobs:
           SecretPath: ado/cli
 
       - task: GoTool@0
-        displayName: 'Use Go 1.18.3'
+        displayName: 'Use Go 1.18.4'
         inputs:
-          version: 1.18.3
+          version: 1.18.4
 
-      # TODO: this produces an error: "The task name WhiteSource is ambiguous".
-      #       Uncomment when the issue will be resolved.
-      # - task: WhiteSource@21
-      #   inputs:
-      #     cwd: '$(System.DefaultWorkingDirectory)'
-      #     scanReportTimeout: '3'
+      - task: WhiteSource@21
+        inputs:
+          cwd: '$(System.DefaultWorkingDirectory)'
+          scanReportTimeout: '3'
 
       - bash: |
           echo "[---] Check difference."
@@ -86,11 +86,11 @@ jobs:
           echo "[---] Finished."
         condition: always()
         displayName: '[E2E] Run tests'
-      
+
       - bash: |
           cat test-e2e.out | ~/go/bin/go-junit-report -set-exit-code > ./report-e2e.xml
         displayName: '[E2E] Generate report'
-      
+
       - bash: |
           echo "[---] Merging coverage.out, coverage-e2e.out and coverage-integration.out files."
           ~/go/bin/gocovmerge coverage.out coverage-e2e.out coverage-integration.out > ./coverage-all.out
@@ -126,9 +126,9 @@ jobs:
 
     steps:
       - task: GoTool@0
-        displayName: 'Use Go 1.18.3'
+        displayName: 'Use Go 1.18.4'
         inputs:
-          version: 1.18.3
+          version: 1.18.4
 
       - script: |
           go mod download
@@ -157,9 +157,9 @@ jobs:
 
     steps:
       - task: GoTool@0
-        displayName: 'Use Go 1.18.3'
+        displayName: 'Use Go 1.18.4'
         inputs:
-          version: 1.18.3
+          version: 1.18.4
 
       - script: |
           go mod download

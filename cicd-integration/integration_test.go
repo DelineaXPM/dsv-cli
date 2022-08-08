@@ -25,35 +25,8 @@ import (
 var update = flag.Bool("update", false, "update golden case files")
 
 var binaryName = constants.CmdRoot
-var casesPathRelative = filepath.Join("cases")
 
-func fixturePath(t *testing.T, fixture string) string {
-	_, filename, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatalf("problems recovering caller information")
-	}
-	return filepath.Join(filepath.Dir(filename), casesPathRelative, fixture)
-}
-
-func writeFixture(t *testing.T, fixture string, content []byte) {
-	err := os.WriteFile(fixturePath(t, fixture), content, 0644)
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-func loadFixture(t *testing.T, fixture string) string {
-	tmpl, err := template.ParseFiles(fixturePath(t, fixture))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var tmplBytes bytes.Buffer
-	err = tmpl.Execute(&tmplBytes, envToMap())
-	if err != nil {
-		t.Fatal(err)
-	}
-	return tmplBytes.String()
-}
+const configPath = "cicd-integration/.thy.yml"
 
 func TestCliArgs(t *testing.T) {
 	workDir, err := os.Getwd()
@@ -65,9 +38,14 @@ func TestCliArgs(t *testing.T) {
 	t.Logf("[TestCliArgs] Working directory: %s", workDir)
 	t.Logf("[TestCliArgs] Path to binary: %s", binary)
 
+	err = os.Mkdir("coverage", os.ModeDir)
+	if err != nil {
+		t.Fatalf("[TestCliArgs] os.Mkdir(coverage, os.ModeDir): %v", err)
+	}
+	t.Log("[TestCliArgs] Successfully created the directory for coverage reports.")
+
 	for _, tt := range synchronousCases {
 		t.Run(tt.name, func(t *testing.T) {
-			_ = os.Mkdir("coverage", os.ModeDir)
 			outfile := path.Join("coverage", tt.name+"coverage.out")
 
 			args := []string{"-test.coverprofile", outfile}
@@ -109,39 +87,27 @@ func TestCliArgs(t *testing.T) {
 	}
 }
 
-const configPath = "cli-config/.thy.yml"
-
 var certPath = strings.Join([]string{"cicd-integration", "data", "cert.pem"}, string(filepath.Separator))
 var privateKeyPath = strings.Join([]string{"cicd-integration", "data", "key.pem"}, string(filepath.Separator))
 var csrPath = strings.Join([]string{"cicd-integration", "data", "csr.pem"}, string(filepath.Separator))
 
-var manualKeyPath = "thekey:first"
-var manualPrivateKey = "MnI1dTh4L0E/RChHK0tiUGVTaFZtWXEzczZ2OXkkQiY="
-var manualKeyNonce = "S1NzeHdFcHB6b1Bz"
-var plaintext = "hello there"
-var ciphertext = "8Tns2mbY/w6YHoICfiDGQM+rDlQzwrZWpqK7"
-
-func readConfig() ([]byte, error) {
-	config, err := os.ReadFile(configPath)
-	if err != nil {
-		return nil, err
-	}
-	return config, nil
-}
-
-func writeConfig(config []byte) error {
-	return os.WriteFile(configPath, config, 0644)
-}
+const (
+	manualKeyPath    = "thekey:first"
+	manualPrivateKey = "MnI1dTh4L0E/RChHK0tiUGVTaFZtWXEzczZ2OXkkQiY="
+	manualKeyNonce   = "S1NzeHdFcHB6b1Bz"
+	plaintext        = "hello there"
+	ciphertext       = "8Tns2mbY/w6YHoICfiDGQM+rDlQzwrZWpqK7"
+)
 
 func TestMain(m *testing.M) {
 	var rootDir string
 	if out, err := execabs.Command("git", "rev-parse", "--show-toplevel").CombinedOutput(); err == nil {
-		rootDir = string(out)
+		rootDir = strings.TrimRight(string(out), " \n")
 	} else {
 		rootDir = "../"
 	}
 
-	if err := os.Chdir(strings.TrimRight(rootDir, " \n")); err != nil {
+	if err := os.Chdir(rootDir); err != nil {
 		log.Fatal(err)
 	}
 
@@ -166,7 +132,7 @@ func TestMain(m *testing.M) {
 	// Before and after *all* tests, make sure any modifications to the config are reverted.
 	// Reading and writing the config before and after *each* test is not feasible, as there may be tests that
 	// intentionally modify the config to test for presence or absence of a property or modification of a value.
-	config, err := readConfig()
+	config, err := os.ReadFile(configPath)
 	if err != nil {
 		fmt.Printf("could not read config: %v", err)
 		os.Exit(1)
@@ -175,7 +141,7 @@ func TestMain(m *testing.M) {
 	m.Run()
 	_ = os.Unsetenv("IS_SYSTEM_TEST")
 
-	err = writeConfig(config)
+	err = os.WriteFile(configPath, config, 0644)
 	if err != nil {
 		fmt.Printf("could not write config: %v", err)
 		os.Exit(1)
@@ -211,11 +177,14 @@ func outputGolden() outputValidation {
 	}
 }
 
-var secret1Name, secret2Name string
-var secret1Desc, secret2Desc string
-var secret1Tag string
-var secret1Data, secret1Attributes, secret1DataFmt, secret2Data string
-var groupData, members, memberName string
+var (
+	secret1Name       string
+	secret1Desc       string
+	secret1Tag        string
+	secret1Data       string
+	secret1Attributes string
+	secret1DataFmt    string
+)
 var adminUser, adminPass string
 var user1, user1Pass string
 var roleName string
@@ -229,7 +198,7 @@ var synchronousCases []struct {
 }
 
 func init() {
-	if err := generateThyYml(".thy.yml", "../cli-config/.thy.yml"); err != nil {
+	if err := generateThyYml(".thy.yml.template", ".thy.yml"); err != nil {
 		panic(err)
 	}
 
@@ -248,18 +217,12 @@ func init() {
 	secret1Attributes = fmt.Sprintf(`{"tag":"%s", "tll": 100}`, secret1Tag)
 	secret1DataFmt = `"field": "secret password"`
 
-	secret2Name = u.String()
-	secret2Desc = `desc of s2`
-	secret2Data = `{"field":"secret password 2"}`
 	r, _ := uuid.NewV4()
 	roleName = r.String()
 
 	user1 = os.Getenv("USER1_NAME")
 	user1Pass = os.Getenv("DSV_USER1_PASSWORD")
 	groupName = u.String()
-	memberName = u.String()
-	groupData = fmt.Sprintf(`{"addedMemberNames": "%s"}`, groupName)
-	members = fmt.Sprintf(`{"memberNames": ["%s"]}`, user1)
 
 	policyName = "secrets:" + secret1Name
 	p2, _ := uuid.NewV4()
@@ -453,6 +416,34 @@ func init() {
 		{"home-secret-delete", []string{"home", "delete", homeSecretPath, "--force"}, outputEmpty()},
 		{"crypto-manual-key-delete", []string{"crypto", "manual", "key-delete", "--path", manualKeyPath, "--force"}, outputEmpty()},
 	}
+}
+
+func fixturePath(t *testing.T, fixture string) string {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatalf("problems recovering caller information")
+	}
+	return filepath.Join(filepath.Dir(filename), "cases", fixture)
+}
+
+func writeFixture(t *testing.T, fixture string, content []byte) {
+	err := os.WriteFile(fixturePath(t, fixture), content, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func loadFixture(t *testing.T, fixture string) string {
+	tmpl, err := template.ParseFiles(fixturePath(t, fixture))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var tmplBytes bytes.Buffer
+	err = tmpl.Execute(&tmplBytes, envToMap())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return tmplBytes.String()
 }
 
 func generateThyYml(inPath, outPath string) error {

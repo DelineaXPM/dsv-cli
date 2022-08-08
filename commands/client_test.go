@@ -175,19 +175,11 @@ func TestHandleClientDeleteCmd(t *testing.T) {
 
 func TestHandleClientCreateCmd(t *testing.T) {
 	testCases := []struct {
-		name        string
-		args        []string
-		apiResponse []byte
-		out         []byte
-		expectedErr *errors.ApiError
+		name string
+		role string
+		out  []byte
 	}{
-		{
-			"Create client credential",
-			[]string{"--role", "gcp-svc-1"},
-			[]byte(`test`),
-			[]byte(`test`),
-			nil,
-		},
+		{"Create client credential", "rolename-1", []byte(`test`)},
 	}
 
 	for _, tt := range testCases {
@@ -203,7 +195,7 @@ func TestHandleClientCreateCmd(t *testing.T) {
 
 			httpClient := &fake.FakeClient{}
 			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
-				return tt.out, tt.expectedErr
+				return tt.out, nil
 			}
 
 			vcli, rerr := vaultcli.NewWithOpts(
@@ -214,13 +206,9 @@ func TestHandleClientCreateCmd(t *testing.T) {
 				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
 			}
 
-			_ = handleClientCreateCmd(vcli, tt.args)
+			_ = handleClientCreateCmd(vcli, []string{tt.role})
 
-			if tt.expectedErr == nil {
-				assert.Equal(t, data, tt.out)
-			} else {
-				assert.Equal(t, err, tt.expectedErr)
-			}
+			assert.Equal(t, data, tt.out)
 		})
 	}
 }

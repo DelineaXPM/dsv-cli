@@ -15,6 +15,7 @@ const (
 	ExampleAuthType         = "clientcred"
 	ExampleUserSearch       = "adm"
 	ExamplePolicySearch     = "secrets/databases"
+	ExampleSiemSearch       = "my_siem"
 	ExampleAuthClientID     = "8sdh2el7-ai29S05a5"
 	ExampleAuthClientSecret = "pLaKNWL99IK2kL-xMI"
 	ExampleDomain           = "secretsvaultcloud.com"

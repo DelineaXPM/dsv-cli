@@ -2,7 +2,6 @@ package version
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -95,7 +94,7 @@ func TestReadCache(t *testing.T) {
 			t.Parallel()
 			fName := "some_not_existed_file"
 			if testCase.filename != "" {
-				temporaryFile, err := ioutil.TempFile("", testCase.filename)
+				temporaryFile, err := os.CreateTemp("", testCase.filename)
 				assert.NoError(t, err)
 				defer func(name string) {
 					err := os.Remove(name)
@@ -141,7 +140,7 @@ func TestFetchContent(t *testing.T) {
 func TestUpdateCache(t *testing.T) {
 	content := []byte("some content")
 
-	temporaryDirName, err := ioutil.TempDir("", "")
+	temporaryDirName, err := os.MkdirTemp("", "")
 	assert.NoError(t, err)
 	defer os.Remove(temporaryDirName)
 

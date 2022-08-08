@@ -30,7 +30,7 @@ fi
 echo "[---] Tag validation complete. Tag ${SYNC_GIT_TAG} is OK."
 
 echo "[---] Removing untracked files before sync."
-git clean -fdX
+git clean -fdx
 
 echo "[---] Running git status."
 git status

@@ -1,6 +1,10 @@
 package vaultcli
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func TestSurveyRequired(t *testing.T) {
 	tcase := func(in string, wantError bool) {
@@ -52,6 +56,103 @@ func TestSurveyRequiredInt(t *testing.T) {
 	tcase(" a ", true)
 	tcase("	a	", true)
 	tcase("a	", true)
+}
+
+func TestSurveyRequiredPortNumber(t *testing.T) {
+	tcase := func(in string, wantError bool) {
+		t.Helper()
+		got := SurveyRequiredPortNumber(in)
+		if wantError && got == nil {
+			t.Errorf("Expected error SurveyRequiredPortNumber(%s), but <nil> returned", in)
+		} else if !wantError && got != nil {
+			t.Errorf("Unexpected error SurveyRequiredPortNumber(%s): %v", in, got)
+		}
+	}
+	tcase("0", false)
+	tcase(" 1", false)
+	tcase("  1", false)
+	tcase("  1 ", false)
+	tcase("  1  ", false)
+	tcase(" 1  ", false)
+	tcase("1  ", false)
+	tcase("	1", false)
+	tcase("	1	", false)
+	tcase("1	", false)
+	tcase("65534", false)
+	tcase("65535", false)
+
+	tcase("-1", true)
+	tcase("65536", true)
+
+	tcase("", true)
+	tcase(" ", true)
+	tcase("a", true)
+	tcase(" a ", true)
+	tcase("	a	", true)
+	tcase("a	", true)
+}
+
+func TestSurveyRequiredFile(t *testing.T) {
+	tcase := func(in string, wantError bool) {
+		t.Helper()
+		got := SurveyRequiredFile(in)
+		if wantError && got == nil {
+			t.Errorf("Expected error SurveyRequiredFile(%s), but <nil> returned", in)
+		} else if !wantError && got != nil {
+			t.Errorf("Unexpected error SurveyRequiredFile(%s): %v", in, got)
+		}
+	}
+
+	tcase("", true)
+	tcase(" ", true)
+	tcase("	", true)
+	tcase(filepath.Join(os.TempDir(), "dsv-cli-test-file-does-not-exist"), true)
+
+	f, err := os.CreateTemp("", "dsv-cli-test-file-*")
+	if err != nil {
+		t.Fatalf("os.CreateTemp(): %v", err)
+	}
+	tcase(f.Name(), false)
+	err = os.Remove(f.Name())
+	if err != nil {
+		t.Fatalf("os.Remove(): %v", err)
+	}
+}
+
+func TestSurveyRequiredPath(t *testing.T) {
+	tcase := func(in string, wantError bool) {
+		t.Helper()
+		got := SurveyRequiredPath(in)
+		if wantError && got == nil {
+			t.Errorf("Expected error SurveyRequiredPath(%s), but <nil> returned", in)
+		} else if !wantError && got != nil {
+			t.Errorf("Unexpected error SurveyRequiredPath(%s): %v", in, got)
+		}
+	}
+
+	tcase("", true)
+	tcase(" ", true)
+	tcase("	", true)
+	tcase(":invalid:path", true)
+	tcase("valid:path", false)
+}
+
+func TestSurveyRequiredName(t *testing.T) {
+	tcase := func(in string, wantError bool) {
+		t.Helper()
+		got := SurveyRequiredName(in)
+		if wantError && got == nil {
+			t.Errorf("Expected error SurveyRequiredName(%s), but <nil> returned", in)
+		} else if !wantError && got != nil {
+			t.Errorf("Unexpected error SurveyRequiredName(%s): %v", in, got)
+		}
+	}
+
+	tcase("", true)
+	tcase(" ", true)
+	tcase("	", true)
+	tcase("&invalid:name", true)
+	tcase("val1d_name", false)
 }
 
 func TestSurveyOptionalCIDR(t *testing.T) {

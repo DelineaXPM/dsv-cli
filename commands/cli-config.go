@@ -296,7 +296,7 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 		// The `dsv init` command is the only command that allows path to a directory in `--config` flag.
 		info, err := os.Stat(cfgPath)
 		if err == nil && info != nil && info.IsDir() {
-			cfgPath = filepath.Join(cfgPath, ".thy.yml")
+			cfgPath = filepath.Join(cfgPath, cst.CliConfigName)
 		}
 	}
 
@@ -521,132 +521,133 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 	var user, password, passwordKey, authProvider, encryptionKeyFileName string
 	authProvider = viper.GetString(cst.AuthProvider)
 
-	if storeType != store.None {
-		if auth.AuthType(authType) == auth.Password {
-			if setupRequired {
-				user, password, err = promptInitialUsernamePassword(tenant)
-			} else {
-				user, password, err = promptUsernamePassword(tenant)
-			}
-			if err != nil {
-				vcli.Out().WriteResponse(nil, errors.New(err))
-				return 1
-			}
-
-			prf.Set(user, cst.NounAuth, cst.DataUsername)
-			viper.Set(cst.Username, user)
-			viper.Set(cst.Password, password)
-
-			encryptionKeyFileName = auth.GetEncryptionKeyFilename(viper.GetString(cst.Tenant), user)
-
-			if isSecureStore {
-				if err := store.StoreSecureSetting(strings.Join([]string{profile, cst.NounAuth, cst.DataPassword}, "."), password, storeType); err != nil {
-					ui.Error(err.Error())
-					return 1
-				}
-			} else {
-				encrypted, key, err := auth.StorePassword(encryptionKeyFileName, password)
-				if err != nil {
-					ui.Error(err.Error())
-					return 1
-				}
-				passwordKey = key
-				prf.Set(encrypted, cst.NounAuth, cst.DataSecurePassword)
-			}
-
-		} else if auth.AuthType(authType) == auth.ClientCredential {
-			clientID, clientSecret, err := promptClientCredentials()
-			if err != nil {
-				vcli.Out().WriteResponse(nil, errors.New(err))
-				return 1
-			}
-
-			prf.Set(clientID, cst.NounAuth, cst.NounClient, cst.ID)
-			viper.Set(cst.AuthClientID, clientID)
-
-			if isSecureStore {
-				if err := store.StoreSecureSetting(strings.Join([]string{profile, cst.NounAuth, cst.NounClient, cst.NounSecret}, "."), clientSecret, storeType); err != nil {
-					ui.Error(err.Error())
-					return 1
-				}
-			} else {
-				prf.Set(clientSecret, cst.NounAuth, cst.NounClient, cst.NounSecret)
-				viper.Set(cst.AuthClientSecret, clientSecret)
-			}
-
-		} else if auth.AuthType(authType) == auth.FederatedAws {
-			var awsProfile string
-			awsProfilePrompt := &survey.Input{
-				Message: "Please enter aws profile for federated aws auth:",
-				Default: "default",
-			}
-			survErr := survey.AskOne(awsProfilePrompt, &awsProfile, survey.WithValidator(vaultcli.SurveyRequired))
-			if survErr != nil {
-				vcli.Out().WriteResponse(nil, errors.New(survErr))
-				return utils.GetExecStatus(survErr)
-			}
-			awsProfile = strings.TrimSpace(awsProfile)
-			prf.Set(awsProfile, cst.NounAuth, cst.NounAwsProfile)
-			viper.Set(cst.AwsProfile, awsProfile)
-		} else if auth.AuthType(authType) == auth.Oidc || auth.AuthType(authType) == auth.FederatedThyOne {
-			if auth.AuthType(authType) == auth.Oidc {
-				if authProvider == "" {
-					authProviderPrompt := &survey.Input{
-						Message: "Please enter auth provider name:",
-						Default: cst.DefaultThyOneName,
-					}
-					survErr := survey.AskOne(authProviderPrompt, &authProvider, survey.WithValidator(vaultcli.SurveyRequired))
-					if survErr != nil {
-						vcli.Out().WriteResponse(nil, errors.New(survErr))
-						return utils.GetExecStatus(survErr)
-					}
-					authProvider = strings.TrimSpace(authProvider)
-				}
-			} else {
-				authProvider = cst.DefaultThyOneName
-
-				if isDevDomain {
-					authProviderPrompt := &survey.Input{
-						Message: "Thycotic One authentication provider name:",
-						Default: cst.DefaultThyOneName,
-					}
-					survErr := survey.AskOne(authProviderPrompt, &authProvider, survey.WithValidator(vaultcli.SurveyRequired))
-					if survErr != nil {
-						vcli.Out().WriteResponse(nil, errors.New(survErr))
-						return utils.GetExecStatus(survErr)
-					}
-					authProvider = strings.TrimSpace(authProvider)
-				}
-			}
-
-			var callback string
-			if callback = viper.GetString(cst.Callback); callback == "" {
-				callback = cst.DefaultCallback
-			}
-
-			prf.Set(authProvider, cst.NounAuth, cst.DataProvider)
-			prf.Set(callback, cst.NounAuth, cst.DataCallback)
-
-			viper.Set(cst.AuthProvider, authProvider)
-			viper.Set(cst.Callback, callback)
-		} else if auth.AuthType(authType) == auth.Certificate {
-			clientCert, err := promptCertificate()
-			if err != nil {
-				vcli.Out().WriteResponse(nil, errors.New(err))
-				return 1
-			}
-			clientPrivKey, err := promptPrivateKey()
-			if err != nil {
-				vcli.Out().WriteResponse(nil, errors.New(err))
-				return 1
-			}
-
-			prf.Set(clientCert, cst.NounAuth, cst.NounCert)
-			prf.Set(clientPrivKey, cst.NounAuth, cst.NounPrivateKey)
-
-			viper.Set(cst.AuthCert, clientCert)
-			viper.Set(cst.AuthPrivateKey, clientPrivKey)
+	switch {
+	case (storeType != store.None && auth.AuthType(authType) == auth.Password):
+		if setupRequired {
+			user, password, err = promptInitialUsernamePassword(tenant)
+		} else {
+			user, password, err = promptUsernamePassword(tenant)
 		}
+		if err != nil {
+			vcli.Out().WriteResponse(nil, errors.New(err))
+			return 1
+		}
+
+		prf.Set(user, cst.NounAuth, cst.DataUsername)
+		viper.Set(cst.Username, user)
+		viper.Set(cst.Password, password)
+
+		encryptionKeyFileName = auth.GetEncryptionKeyFilename(viper.GetString(cst.Tenant), user)
+
+		if isSecureStore {
+			if err := store.StoreSecureSetting(strings.Join([]string{profile, cst.NounAuth, cst.DataPassword}, "."), password, storeType); err != nil {
+				ui.Error(err.Error())
+				return 1
+			}
+		} else {
+			encrypted, key, err := auth.StorePassword(encryptionKeyFileName, password)
+			if err != nil {
+				ui.Error(err.Error())
+				return 1
+			}
+			passwordKey = key
+			prf.Set(encrypted, cst.NounAuth, cst.DataSecurePassword)
+		}
+
+	case (storeType != store.None && auth.AuthType(authType) == auth.ClientCredential):
+		clientID, clientSecret, err := promptClientCredentials()
+		if err != nil {
+			vcli.Out().WriteResponse(nil, errors.New(err))
+			return 1
+		}
+
+		prf.Set(clientID, cst.NounAuth, cst.NounClient, cst.ID)
+		viper.Set(cst.AuthClientID, clientID)
+
+		if isSecureStore {
+			if err := store.StoreSecureSetting(strings.Join([]string{profile, cst.NounAuth, cst.NounClient, cst.NounSecret}, "."), clientSecret, storeType); err != nil {
+				ui.Error(err.Error())
+				return 1
+			}
+		} else {
+			prf.Set(clientSecret, cst.NounAuth, cst.NounClient, cst.NounSecret)
+			viper.Set(cst.AuthClientSecret, clientSecret)
+		}
+
+	case auth.AuthType(authType) == auth.FederatedAws:
+		var awsProfile string
+		awsProfilePrompt := &survey.Input{
+			Message: "Please enter aws profile for federated aws auth:",
+			Default: "default",
+		}
+		survErr := survey.AskOne(awsProfilePrompt, &awsProfile, survey.WithValidator(vaultcli.SurveyRequired))
+		if survErr != nil {
+			vcli.Out().WriteResponse(nil, errors.New(survErr))
+			return utils.GetExecStatus(survErr)
+		}
+		awsProfile = strings.TrimSpace(awsProfile)
+		prf.Set(awsProfile, cst.NounAuth, cst.NounAwsProfile)
+		viper.Set(cst.AwsProfile, awsProfile)
+
+	case auth.AuthType(authType) == auth.Oidc || auth.AuthType(authType) == auth.FederatedThyOne:
+		if auth.AuthType(authType) == auth.Oidc {
+			if authProvider == "" {
+				authProviderPrompt := &survey.Input{
+					Message: "Please enter auth provider name:",
+					Default: cst.DefaultThyOneName,
+				}
+				survErr := survey.AskOne(authProviderPrompt, &authProvider, survey.WithValidator(vaultcli.SurveyRequired))
+				if survErr != nil {
+					vcli.Out().WriteResponse(nil, errors.New(survErr))
+					return utils.GetExecStatus(survErr)
+				}
+				authProvider = strings.TrimSpace(authProvider)
+			}
+		} else {
+			authProvider = cst.DefaultThyOneName
+
+			if isDevDomain {
+				authProviderPrompt := &survey.Input{
+					Message: "Thycotic One authentication provider name:",
+					Default: cst.DefaultThyOneName,
+				}
+				survErr := survey.AskOne(authProviderPrompt, &authProvider, survey.WithValidator(vaultcli.SurveyRequired))
+				if survErr != nil {
+					vcli.Out().WriteResponse(nil, errors.New(survErr))
+					return utils.GetExecStatus(survErr)
+				}
+				authProvider = strings.TrimSpace(authProvider)
+			}
+		}
+
+		var callback string
+		if callback = viper.GetString(cst.Callback); callback == "" {
+			callback = cst.DefaultCallback
+		}
+
+		prf.Set(authProvider, cst.NounAuth, cst.DataProvider)
+		prf.Set(callback, cst.NounAuth, cst.DataCallback)
+
+		viper.Set(cst.AuthProvider, authProvider)
+		viper.Set(cst.Callback, callback)
+
+	case auth.AuthType(authType) == auth.Certificate:
+		clientCert, err := promptCertificate()
+		if err != nil {
+			vcli.Out().WriteResponse(nil, errors.New(err))
+			return 1
+		}
+		clientPrivKey, err := promptPrivateKey()
+		if err != nil {
+			vcli.Out().WriteResponse(nil, errors.New(err))
+			return 1
+		}
+
+		prf.Set(clientCert, cst.NounAuth, cst.NounCert)
+		prf.Set(clientPrivKey, cst.NounAuth, cst.NounPrivateKey)
+
+		viper.Set(cst.AuthCert, clientCert)
+		viper.Set(cst.AuthPrivateKey, clientPrivKey)
 	}
 
 	if setupRequired {
@@ -672,7 +673,6 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 			ui.Output("Failed to authenticate, restoring previous config.")
 			ui.Output("Please check your credentials, or tenant name, or domain name and try again.")
 			return 1
-
 		}
 
 		// Store encryption key file (for auth type password).
@@ -688,6 +688,24 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 				return 1
 			}
 		}
+	} else {
+		ui.Output("Authentication parameters are not checked since 'None (no caching)' was selected for the store type.")
+		ui.Output("Each command that calls DSV API will trigger authentication first to get access token.")
+
+		switch auth.AuthType(authType) {
+		case auth.Password:
+			ui.Output(`To authenticate using username and password use '--auth-username' and '--auth-password' flags.
+
+Example:
+	dsv secret search --auth-username "example-username" --auth-password "example-password"`)
+
+		case auth.ClientCredential:
+			ui.Output(`To authenticate using client credentials use '--auth-client-id' and '--auth-client-secret' flags.
+
+Example:
+	dsv secret search --auth-client-id "a71d...f0d4" --auth-client-secret "R8WzW...jWg"`)
+
+		}
 	}
 
 	cf.AddProfile(prf)
@@ -696,9 +714,8 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 		vcli.Out().FailF("Error: could not save configuration at path %q: %v.", cf.GetPath(), err)
 		return 1
 	}
-	if storeType == store.None {
-		ui.Output("Config created but no credentials saved, specify them as environment variables or via command line flags.")
-	}
+
+	ui.Output("\nCLI configuration file successfully saved.")
 	return 0
 }
 

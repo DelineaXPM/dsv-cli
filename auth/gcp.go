@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	serrors "errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 
@@ -137,7 +137,7 @@ func ParseMetadataIdentityResponse(resp *http.Response) (string, error) {
 		return "", fmt.Errorf("Metadata identity request failed. Status: %d", resp.StatusCode)
 	}
 	defer resp.Body.Close()
-	respData, err := ioutil.ReadAll(resp.Body)
+	respData, err := io.ReadAll(resp.Body)
 	respString := string(respData)
 	if err != nil {
 		return "", err

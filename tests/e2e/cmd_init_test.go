@@ -491,7 +491,7 @@ func TestInitWithNoStore(t *testing.T) {
 		c.ExpectString("Please enter auth type")
 		c.SendKeyEnter()
 
-		c.ExpectString("Config created but no credentials saved, specify them as environment variables or via command line flags.")
+		c.ExpectString("CLI configuration file successfully saved.")
 		c.ExpectEOF()
 	})
 

@@ -1,7 +1,6 @@
 package predictor
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -77,7 +76,7 @@ func listFiles(dir, pattern string, allowFiles bool, prefix string) []string {
 	}
 
 	// list directories
-	if dirs, err := ioutil.ReadDir(dir); err == nil {
+	if dirs, err := os.ReadDir(dir); err == nil {
 		for _, d := range dirs {
 			if d.IsDir() {
 				m[filepath.Join(dir, d.Name())] = true

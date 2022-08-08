@@ -5,7 +5,6 @@ package e2e
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -301,7 +300,13 @@ func runFlow(t *testing.T, command []string, flow func(c console)) {
 	}
 
 	term := vt10x.New(vt10x.WithWriter(tty))
-	c, err := expect.NewConsole(expect.WithStdin(pty), expect.WithStdout(term), expect.WithCloser(pty, tty))
+	c, err := expect.NewConsole(
+		expect.WithStdin(pty),
+		expect.WithStdout(term),
+		expect.WithCloser(pty, tty),
+		// 10 seconds should be enough even for high API response time.
+		expect.WithDefaultTimeout(10*time.Second),
+	)
 	if err != nil {
 		t.Fatalf("failed to create console: %v", err)
 	}
@@ -338,9 +343,9 @@ func createFile(t *testing.T, path string) {
 
 func writeFile(t *testing.T, data []byte, path string) {
 	t.Helper()
-	err := ioutil.WriteFile(path, data, os.ModePerm)
+	err := os.WriteFile(path, data, os.ModePerm)
 	if err != nil {
-		t.Fatalf("ioutil.WriteFile(%q) = %v", path, err)
+		t.Fatalf("os.WriteFile(%q) = %v", path, err)
 	}
 }
 

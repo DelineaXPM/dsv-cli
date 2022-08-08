@@ -60,7 +60,6 @@ Usage:
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Usage: "Path to existing SIEM"},
 		},
-		MinNumberArgs: 1,
 		RunFunc: func(args []string) int {
 			return handleSiemUpdate(vaultcli.New(), args)
 		},
@@ -103,88 +102,65 @@ Usage:
 	})
 }
 
-func handleSiemCreate(vcli vaultcli.CLI, args []string) int {
-	qs := []*survey.Question{
-		{
-			Name:      "SIEMType",
-			Prompt:    &survey.Input{Message: "Type of SIEM endpoint:", Default: "syslog"},
-			Validate:  vaultcli.SurveyRequired,
-			Transform: vaultcli.SurveyTrimSpace,
+func GetSiemSearchCommand() (cli.Command, error) {
+	return NewCommand(CommandArgs{
+		Path:         []string{cst.NounSiem, cst.Search},
+		SynopsisText: `Search for SIEM endpoints`,
+		HelpText: fmt.Sprintf(`Usage:
+   • %[1]s %[2]s %[3]s
+   • %[1]s %[2]s --query %[3]s
+		`, cst.NounSiem, cst.Search, cst.ExampleSiemSearch),
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("Filter %s of items to fetch (required)", cst.Query)},
+			{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
+			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 		},
-		{
-			Name:      "Name",
-			Prompt:    &survey.Input{Message: "Name of SIEM endpoint:"},
-			Validate:  vaultcli.SurveyRequired,
-			Transform: vaultcli.SurveyTrimSpace,
+		RunFunc: func(args []string) int {
+			return handleSiemSearchCmd(vaultcli.New(), args)
 		},
-		{
-			Name:      "Host",
-			Prompt:    &survey.Input{Message: "Host:"},
-			Validate:  vaultcli.SurveyRequired,
-			Transform: vaultcli.SurveyTrimSpace,
-		},
-		{
-			Name:     "Port",
-			Prompt:   &survey.Input{Message: "Port:"},
-			Validate: vaultcli.SurveyRequiredInt,
-			Transform: func(ans interface{}) (newAns interface{}) {
-				answer := strings.TrimSpace(ans.(string))
-				_, val := strconv.Atoi(answer)
-				return val
-			},
-		},
-		{
-			Name:      "Protocol",
-			Prompt:    &survey.Input{Message: "Protocol:"},
-			Validate:  vaultcli.SurveyRequired,
-			Transform: vaultcli.SurveyTrimSpace,
-		},
-		{
-			Name:      "Endpoint",
-			Prompt:    &survey.Input{Message: "Endpoint:"},
-			Transform: vaultcli.SurveyTrimSpace,
-		},
-		{
-			Name:      "LoggingFormat",
-			Prompt:    &survey.Input{Message: "Logging Format:", Default: "rfc5424"},
-			Validate:  vaultcli.SurveyRequired,
-			Transform: vaultcli.SurveyTrimSpace,
-		},
-		{
-			Name:      "AuthMethod",
-			Prompt:    &survey.Input{Message: "Authentication Method:", Default: "token"},
-			Validate:  vaultcli.SurveyRequired,
-			Transform: vaultcli.SurveyTrimSpace,
-		},
-		{
-			Name:      "Auth",
-			Prompt:    &survey.Password{Message: "Authentication:"},
-			Validate:  vaultcli.SurveyRequired,
-			Transform: vaultcli.SurveyTrimSpace,
-		},
-		{
-			Name:   "SendToEngine",
-			Prompt: &survey.Confirm{Message: "Route Through DSV Engine:", Default: false},
-		},
+	})
+}
+
+func handleSiemSearchCmd(vcli vaultcli.CLI, args []string) int {
+	query := viper.GetString(cst.Query)
+	limit := viper.GetString(cst.Limit)
+	cursor := viper.GetString(cst.Cursor)
+	if query == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		query = args[0]
 	}
 
-	answers := siemCreateRequest{}
-	survErr := survey.Ask(qs, &answers)
+	data, apiErr := siemSearch(vcli, &siemSearchParams{query: query, limit: limit, cursor: cursor})
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
+}
+
+func handleSiemCreate(vcli vaultcli.CLI, args []string) int {
+	var name string
+	namePrompt := &survey.Input{Message: "Name of SIEM endpoint:"}
+	survErr := survey.AskOne(namePrompt, &name, survey.WithValidator(vaultcli.SurveyRequired))
 	if survErr != nil {
 		vcli.Out().WriteResponse(nil, errors.New(survErr))
 		return utils.GetExecStatus(survErr)
 	}
 
-	if answers.SendToEngine {
-		poolPrompt := &survey.Input{Message: "Engine Pool:"}
-		survErr := survey.AskOne(poolPrompt, &answers.Pool, survey.WithValidator(vaultcli.SurveyRequired))
-		if survErr != nil {
-			vcli.Out().WriteResponse(nil, errors.New(survErr))
-			return utils.GetExecStatus(survErr)
-		}
+	answers, err := promptSiemData(vcli)
+	if err != nil {
+		vcli.Out().WriteResponse(nil, errors.New(err))
+		return utils.GetExecStatus(err)
 	}
-
-	data, apiError := siemCreate(vcli, &answers)
+	data, apiError := siemCreate(vcli, &siemCreateRequest{
+		Name:          name,
+		SIEMType:      answers.SIEMType,
+		Host:          answers.Host,
+		Port:          answers.Port,
+		Protocol:      answers.Protocol,
+		Endpoint:      answers.Endpoint,
+		LoggingFormat: answers.LoggingFormat,
+		AuthMethod:    answers.AuthMethod,
+		Auth:          answers.Auth,
+		SendToEngine:  answers.SendToEngine,
+		Pool:          answers.Pool,
+	})
 	vcli.Out().WriteResponse(data, apiError)
 	return utils.GetExecStatus(apiError)
 }
@@ -195,22 +171,72 @@ func handleSiemUpdate(vcli vaultcli.CLI, args []string) int {
 		name = args[0]
 	}
 	if name == "" {
-		vcli.Out().FailF("error: must specify %s", cst.Path)
-		return 1
+		namePrompt := &survey.Input{Message: "Name of SIEM endpoint:"}
+		survErr := survey.AskOne(namePrompt, &name, survey.WithValidator(vaultcli.SurveyRequired))
+		if survErr != nil {
+			vcli.Out().WriteResponse(nil, errors.New(survErr))
+			return utils.GetExecStatus(survErr)
+		}
 	}
-
-	_, apiErr := siemRead(vcli, name)
+	existedSiem, apiErr := siemRead(vcli, name)
 	if apiErr != nil {
 		vcli.Out().WriteResponse(nil, apiErr)
 		return utils.GetExecStatus(apiErr)
 	}
+	vcli.Out().WriteResponse(existedSiem, nil)
+
+	answers, err := promptSiemData(vcli)
+	if err != nil {
+		vcli.Out().WriteResponse(nil, errors.New(err))
+		return utils.GetExecStatus(err)
+	}
+
+	data, apiErr := siemUpdate(vcli, name, answers)
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
+}
+
+func promptSiemData(vcli vaultcli.CLI) (*siemUpdateRequest, error) {
+	actionPrompt := &survey.Select{
+		Message: "Select SIEM type:",
+		Options: []string{
+			"syslog",
+			"splunk",
+			"json",
+			"cef",
+		},
+	}
+	var siemType string
+	survErr := survey.AskOne(actionPrompt, &siemType)
+	if survErr != nil {
+		return nil, errors.New(survErr)
+	}
+
+	protocolOptions, loggingFormat := []string{}, ""
+	switch siemType {
+	case "syslog":
+		protocolOptions = append(protocolOptions, "tls", "tcp", "udp")
+		loggingFormat = "rfc5424"
+	case "splunk":
+		protocolOptions = append(protocolOptions, "https")
+		loggingFormat = "json"
+	case "json":
+		protocolOptions = append(protocolOptions, "http", "https", "udp", "tcp")
+		loggingFormat = "json"
+	case "cef":
+		protocolOptions = append(protocolOptions, "tcp", "tls", "udp")
+		loggingFormat = "cef"
+	default:
+		return nil, fmt.Errorf("unknown siem type")
+	}
 
 	qs := []*survey.Question{
 		{
-			Name:      "SIEMType",
-			Prompt:    &survey.Input{Message: "Type of SIEM endpoint:", Default: "syslog"},
-			Validate:  vaultcli.SurveyRequired,
-			Transform: vaultcli.SurveyTrimSpace,
+			Name: "Protocol",
+			Prompt: &survey.Select{
+				Message: fmt.Sprintf("Select protocol for %s SIEM type:", siemType),
+				Options: protocolOptions,
+			},
 		},
 		{
 			Name:      "Host",
@@ -221,18 +247,12 @@ func handleSiemUpdate(vcli vaultcli.CLI, args []string) int {
 		{
 			Name:     "Port",
 			Prompt:   &survey.Input{Message: "Port:"},
-			Validate: vaultcli.SurveyRequiredInt,
+			Validate: vaultcli.SurveyRequiredPortNumber,
 			Transform: func(ans interface{}) (newAns interface{}) {
 				answer := strings.TrimSpace(ans.(string))
-				_, val := strconv.Atoi(answer)
+				val, _ := strconv.Atoi(answer)
 				return val
 			},
-		},
-		{
-			Name:      "Protocol",
-			Prompt:    &survey.Input{Message: "Protocol:"},
-			Validate:  vaultcli.SurveyRequired,
-			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
 			Name:      "Endpoint",
@@ -240,16 +260,11 @@ func handleSiemUpdate(vcli vaultcli.CLI, args []string) int {
 			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
-			Name:      "LoggingFormat",
-			Prompt:    &survey.Input{Message: "Logging Format:", Default: "rfc5424"},
-			Validate:  vaultcli.SurveyRequired,
-			Transform: vaultcli.SurveyTrimSpace,
-		},
-		{
-			Name:      "AuthMethod",
-			Prompt:    &survey.Input{Message: "Authentication Method:", Default: "token"},
-			Validate:  vaultcli.SurveyRequired,
-			Transform: vaultcli.SurveyTrimSpace,
+			Name: "AuthMethod",
+			Prompt: &survey.Select{
+				Message: "Select authentication method:",
+				Options: []string{"token"},
+			},
 		},
 		{
 			Name:      "Auth",
@@ -258,30 +273,33 @@ func handleSiemUpdate(vcli vaultcli.CLI, args []string) int {
 			Transform: vaultcli.SurveyTrimSpace,
 		},
 		{
-			Name:   "SendToEngine",
-			Prompt: &survey.Confirm{Message: "Route Through DSV Engine:", Default: false},
+			Name: "LoggingFormat",
+			Prompt: &survey.Select{
+				Message: "Select logging format:",
+				Options: []string{loggingFormat},
+			},
+		},
+		{
+			Name: "SendToEngine",
+			Prompt: &survey.Confirm{
+				Message: "Route through DSV engine:",
+				Default: false,
+			},
 		},
 	}
-
-	answers := siemUpdateRequest{}
-	survErr := survey.Ask(qs, &answers)
+	answers := siemUpdateRequest{SIEMType: siemType}
+	survErr = survey.Ask(qs, &answers)
 	if survErr != nil {
-		vcli.Out().WriteResponse(nil, errors.New(survErr))
-		return utils.GetExecStatus(survErr)
+		return nil, errors.New(survErr)
 	}
-
 	if answers.SendToEngine {
-		poolPrompt := &survey.Input{Message: "Engine Pool:"}
+		poolPrompt := &survey.Input{Message: "Engine pool:"}
 		survErr := survey.AskOne(poolPrompt, &answers.Pool, survey.WithValidator(vaultcli.SurveyRequired))
 		if survErr != nil {
-			vcli.Out().WriteResponse(nil, errors.New(survErr))
-			return utils.GetExecStatus(survErr)
+			return nil, errors.New(survErr)
 		}
 	}
-
-	data, apiErr := siemUpdate(vcli, name, &answers)
-	vcli.Out().WriteResponse(data, apiErr)
-	return utils.GetExecStatus(apiErr)
+	return &answers, nil
 }
 
 func handleSiemRead(vcli vaultcli.CLI, args []string) int {
@@ -363,4 +381,26 @@ func siemDelete(vcli vaultcli.CLI, name string) ([]byte, *errors.ApiError) {
 	basePath := strings.Join([]string{cst.Config, cst.NounSiem}, "/")
 	uri := paths.CreateResourceURI(basePath, name, "", true, nil)
 	return vcli.HTTPClient().DoRequest(http.MethodDelete, uri, nil)
+}
+
+type siemSearchParams struct {
+	query  string
+	limit  string
+	cursor string
+}
+
+func siemSearch(vcli vaultcli.CLI, p *siemSearchParams) ([]byte, *errors.ApiError) {
+	queryParams := map[string]string{}
+	if p.query != "" {
+		queryParams[cst.SearchKey] = p.query
+	}
+	if p.limit != "" {
+		queryParams[cst.Limit] = p.limit
+	}
+	if p.cursor != "" {
+		queryParams[cst.Cursor] = p.cursor
+	}
+	baseType := strings.Join([]string{cst.Config, cst.NounSiem}, "/")
+	uri := paths.CreateResourceURI(baseType, "", "", false, queryParams)
+	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
 }

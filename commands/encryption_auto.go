@@ -3,7 +3,6 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
@@ -306,7 +305,7 @@ func handleRotate(vcli vaultcli.CLI, args []string) int {
 			newFileName = info.Name()
 		}
 
-		err := ioutil.WriteFile(newFileName, resp, 0664)
+		err := os.WriteFile(newFileName, resp, 0664)
 		if err != nil {
 			vcli.Out().Fail(err)
 			return 1
@@ -361,7 +360,7 @@ func handleEncrypt(vcli vaultcli.CLI, args []string) int {
 			newFileName = info.Name() + ".enc"
 		}
 
-		err := ioutil.WriteFile(newFileName, resp, 0664)
+		err := os.WriteFile(newFileName, resp, 0664)
 		if err != nil {
 			vcli.Out().Fail(err)
 			return 1
@@ -437,7 +436,7 @@ func handleDecrypt(vcli vaultcli.CLI, args []string) int {
 			newFileName = info.Name() + ".txt"
 		}
 
-		err = ioutil.WriteFile(newFileName, resp, 0664)
+		err = os.WriteFile(newFileName, resp, 0664)
 		if err != nil {
 			vcli.Out().Fail(err)
 			return 1

@@ -3,8 +3,7 @@ package constants
 // Configuration-related constants.
 const (
 	CmdRoot                 = "dsv"
-	CliConfigName           = ".thy"
-	CliConfigType           = "yml"
+	CliConfigName           = ".thy.yml"
 	EnvVarPrefix            = "thy"
 	CmdFilePrefix           = "@"
 	DontAutocompleteGlobals = false

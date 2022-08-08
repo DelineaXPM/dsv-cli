@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"runtime/debug"
@@ -136,6 +136,7 @@ func runCLI(args []string) (exitStatus int, err error) {
 		"siem create":                   cmd.GetSiemCreateCmd,
 		"siem update":                   cmd.GetSiemUpdateCmd,
 		"siem read":                     cmd.GetSiemReadCmd,
+		"siem search":                   cmd.GetSiemSearchCommand,
 		"siem delete":                   cmd.GetSiemDeleteCmd,
 		"home":                          cmd.GetHomeCmd,
 		"home read":                     cmd.GetHomeReadCmd,
@@ -193,7 +194,7 @@ func runCLI(args []string) (exitStatus int, err error) {
 	c.Autocomplete = true
 	c.AutocompleteInstall = "install"
 	c.AutocompleteUninstall = "uninstall"
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 
 	if !cmd.IsInit(c.Args) && !cmd.IsInstall(c.Args) {
 		// TODO : We do this twice to support autocomplete. Investigate how to only do once instead

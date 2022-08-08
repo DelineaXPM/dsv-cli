@@ -19,6 +19,7 @@ const (
 	rolesKey   = "roles"
 	poolsKey   = "pools"
 	enginesKey = "engines"
+	siemKey    = "siem"
 )
 
 var (
@@ -29,6 +30,7 @@ var (
 func makeRoleName() string   { return makeName(rolesKey) }
 func makePoolName() string   { return makeName(poolsKey) }
 func makeEngineName() string { return makeName(enginesKey) }
+func makeSIEMName() string   { return makeName(siemKey) }
 
 func makeName(key string) string {
 	name := fmt.Sprintf("%s-%s-%d", commonPrefix, key, time.Now().UnixNano())
@@ -78,6 +80,13 @@ func resilienceAfter() error {
 		fmt.Fprintf(os.Stderr, "[ResilienceAfter] Recorded %d used pool(s).\n", len(usedObjects[poolsKey]))
 		for _, name := range usedObjects[poolsKey] {
 			delete(fmt.Sprintf("pool delete %s", name))
+		}
+	}
+
+	if len(usedObjects[siemKey]) > 0 {
+		fmt.Fprintf(os.Stderr, "[ResilienceAfter] Recorded %d used siem(s).\n", len(usedObjects[siemKey]))
+		for _, name := range usedObjects[siemKey] {
+			delete(fmt.Sprintf("siem delete %s", name))
 		}
 	}
 

@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -19,7 +19,6 @@ import (
 	"text/template"
 	"time"
 
-	config "thy/cli-config"
 	cst "thy/constants"
 	"thy/errors"
 	"thy/paths"
@@ -266,7 +265,7 @@ func (a *authenticator) getTokenForAuthType(at AuthType, useCache bool) (*TokenR
 			}
 		} else if at == ClientCredential {
 			data.AuthClientID = viper.GetString(cst.AuthClientID)
-			if secret, err := config.GetSecureSetting(cst.AuthClientSecret); err != nil || secret == "" {
+			if secret, err := store.GetSecureSetting(cst.AuthClientSecret); err != nil || secret == "" {
 				if err == nil {
 					err = errors.NewS("auth-client-secret setting is empty")
 				}
@@ -308,7 +307,7 @@ func (a *authenticator) getTokenForAuthType(at AuthType, useCache bool) (*TokenR
 	if tr, err := a.fetchTokenVault(at, data); err != nil {
 		if at == Refresh {
 			log.Printf("Refresh authentication failed: %s\n", err.Error())
-			if pass, err := config.GetSecureSetting(cst.Password); err == nil && pass != "" && viper.GetString(cst.Username) != "" {
+			if pass, err := store.GetSecureSetting(cst.Password); err == nil && pass != "" && viper.GetString(cst.Username) != "" {
 				log.Println("Username and password set. Attempt password authentication")
 				return a.getTokenForAuthType(Password, false)
 			} else {
@@ -412,7 +411,7 @@ func (a *authenticator) fetchTokenVault(at AuthType, data requestBody) (*TokenRe
 // handleOidcAuth handles OIDC and Thycotic One auths
 func (a *authenticator) handleOidcAuth(doneCh chan<- AuthResponse) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		b, err := ioutil.ReadAll(req.Body)
+		b, err := io.ReadAll(req.Body)
 		if err != nil {
 			w.Write([]byte(err.Error()))
 			doneCh <- AuthResponse{
@@ -524,7 +523,7 @@ func setupDataForPasswordAuth(data *requestBody) error {
 		if storeType == store.WinCred || storeType == store.PassLinux {
 			passSetting = cst.Password
 		}
-		if pass, err := config.GetSecureSetting(passSetting); err == nil && pass != "" {
+		if pass, err := store.GetSecureSetting(passSetting); err == nil && pass != "" {
 			if passSetting == cst.SecurePassword {
 				keyPath := GetEncryptionKeyFilename(viper.GetString(cst.Tenant), userName)
 				key, err := store.ReadFileInDefaultPath(keyPath)
@@ -561,7 +560,7 @@ func buildAwsParams() (headers string, body string, err *errors.ApiError) {
 		r, _ := stsClient.GetCallerIdentityRequest(nil)
 		r.Sign()
 		headers, err1 := json.Marshal(r.HTTPRequest.Header)
-		body, err2 := ioutil.ReadAll(r.HTTPRequest.Body)
+		body, err2 := io.ReadAll(r.HTTPRequest.Body)
 		hString := base64.StdEncoding.EncodeToString(headers)
 		bString := base64.StdEncoding.EncodeToString(body)
 		return hString, bString, errors.New(err1).Or(errors.New(err2))

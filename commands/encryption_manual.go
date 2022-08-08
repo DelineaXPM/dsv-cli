@@ -3,7 +3,6 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
@@ -359,7 +358,7 @@ func handleManualKeyEncrypt(vcli vaultcli.CLI, args []string) int {
 			newFileName = info.Name() + ".enc"
 		}
 
-		err := ioutil.WriteFile(newFileName, resp, 0664)
+		err := os.WriteFile(newFileName, resp, 0664)
 		if err != nil {
 			vcli.Out().Fail(err)
 			return 1
@@ -435,7 +434,7 @@ func handleManualKeyDecrypt(vcli vaultcli.CLI, args []string) int {
 			newFileName = info.Name() + ".txt"
 		}
 
-		err = ioutil.WriteFile(newFileName, resp, 0664)
+		err = os.WriteFile(newFileName, resp, 0664)
 		if err != nil {
 			vcli.Out().Fail(err)
 			return 1

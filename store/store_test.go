@@ -1,4 +1,4 @@
-package store_test
+package store
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	cst "thy/constants"
-	"thy/store"
+	"thy/errors"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -19,11 +19,11 @@ type tokenData struct {
 }
 
 func TestStores(t *testing.T) {
-	storeTypes := []string{store.File}
+	storeTypes := []string{File}
 
 	isWindows := runtime.GOOS == "windows"
 	if isWindows {
-		storeTypes = append(storeTypes, store.WinCred)
+		storeTypes = append(storeTypes, WinCred)
 	}
 
 	// TODO : get pass installation working in ci-cd
@@ -42,14 +42,14 @@ func TestStores(t *testing.T) {
 func testStore(t *testing.T, storeType string) {
 	t.Helper()
 
-	if storeType == store.File {
+	if storeType == File {
 		// Setup for file store to not use local user default path.
 		viper.Set(cst.StorePath, "./testing-store-asb5a23afs3")
 		defer os.Remove("./testing-store-asb5a23afs3")
 	}
 
 	// arrange
-	s, err := store.GetStore(storeType)
+	s, err := GetStore(storeType)
 	assert.Nil(t, err)
 
 	obj := tokenData{
@@ -82,4 +82,32 @@ func testStore(t *testing.T, storeType string) {
 	obj2 = tokenData{}
 	err = s.Get("token", &obj2)
 	assert.Empty(t, obj2)
+}
+
+func TestGetSecureSetting(t *testing.T) {
+	tests := []struct {
+		name          string
+		key           string
+		profile       string
+		expectedError error
+		expectedVal   string
+	}{
+		{"missing-key", "", "some-profile", errors.NewS("key cannot be empty"), ""},
+		{"empty-value", "hello", "some-profile", nil, ""},
+		{"missing-profile", "hello", "", errors.NewS("profile cannot be empty"), ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			val, err := getSecureSettingForProfile(tt.key, tt.profile)
+
+			if tt.expectedError != nil {
+				assert.Contains(t, err.Error(), tt.expectedError.Error())
+			}
+			if err == nil {
+				assert.Equal(t, tt.expectedVal, val)
+			}
+		})
+
+	}
 }

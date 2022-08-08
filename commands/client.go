@@ -34,7 +34,7 @@ Usage:
 		MinNumberArgs: 1,
 		RunFunc: func(args []string) int {
 			name := viper.GetString(cst.DataName)
-			if name == "" && len(args) > 0 {
+			if name == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 				name = args[0]
 			}
 			if name == "" {
@@ -156,7 +156,7 @@ Usage:
 
 func handleClientReadCmd(vcli vaultcli.CLI, args []string) int {
 	clientID := viper.GetString(cst.ClientID)
-	if clientID == "" && len(args) > 0 {
+	if clientID == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		clientID = args[0]
 	}
 	if clientID == "" {
@@ -173,7 +173,7 @@ func handleClientReadCmd(vcli vaultcli.CLI, args []string) int {
 func handleClientDeleteCmd(vcli vaultcli.CLI, args []string) int {
 	force := viper.GetBool(cst.Force)
 	clientID := viper.GetString(cst.ClientID)
-	if clientID == "" && len(args) > 0 {
+	if clientID == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		clientID = args[0]
 	}
 	if clientID == "" {
@@ -189,7 +189,7 @@ func handleClientDeleteCmd(vcli vaultcli.CLI, args []string) int {
 
 func handleClientRestoreCmd(vcli vaultcli.CLI, args []string) int {
 	clientID := viper.GetString(cst.ClientID)
-	if clientID == "" && len(args) > 0 {
+	if clientID == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		clientID = args[0]
 	}
 	if clientID == "" {
@@ -205,7 +205,7 @@ func handleClientRestoreCmd(vcli vaultcli.CLI, args []string) int {
 
 func handleClientCreateCmd(vcli vaultcli.CLI, args []string) int {
 	roleName := viper.GetString(cst.NounRole)
-	if roleName == "" && len(args) > 0 {
+	if roleName == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		roleName = args[0]
 	}
 	if roleName == "" {
@@ -229,7 +229,7 @@ func handleClientSearchCmd(vcli vaultcli.CLI, args []string) int {
 	role := viper.GetString(cst.NounRole)
 	limit := viper.GetString(cst.Limit)
 	cursor := viper.GetString(cst.Cursor)
-	if role == "" && len(args) > 0 {
+	if role == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		role = args[0]
 	}
 	if role == "" {

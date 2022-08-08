@@ -3,7 +3,6 @@ package auth_test
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -509,7 +508,7 @@ func TestToken_GcpSignJwt(t *testing.T) {
 	if credsRaw, err = json.Marshal(creds); err != nil {
 		log.Fatal("unable to marshal test gcp creds")
 	}
-	if err := ioutil.WriteFile("app_creds.json", credsRaw, 0644); err != nil {
+	if err := os.WriteFile("app_creds.json", credsRaw, 0644); err != nil {
 		log.Fatal("unable to write test gcp credential file")
 	}
 	defer func() {
