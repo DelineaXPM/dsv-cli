@@ -12,6 +12,7 @@ func ValidatePath(resource string) error {
 		return errors.New("path may contain only letters, numbers, underscores, dashes, @, pluses and periods separated by colon or slash")
 	}
 	resource = strings.ReplaceAll(resource, ":", "/")
+	resource = strings.TrimPrefix(resource, "/")
 	must := regexp.MustCompile(`[a-zA-Z0-9]+`)
 	for _, token := range strings.Split(resource, "/") {
 		if !must.MatchString(token) {
@@ -37,6 +38,13 @@ func ValidateUsername(username string) error {
 	}
 	if !regexp.MustCompile(`^[a-zA-Z0-9@\+._-]+$`).MatchString(username) {
 		return errors.New("name may contain only letters, numbers, underscores, dashes, @, pluses and periods")
+	}
+	return nil
+}
+
+func ValidateProfile(profile string) error {
+	if strings.Contains(profile, " ") {
+		return errors.New("Profile name contains restricted characters. Leading, trailing and middle whitespace are not allowed.")
 	}
 	return nil
 }

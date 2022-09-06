@@ -9,7 +9,7 @@ import (
 )
 
 func TestRole(t *testing.T) {
-	e := newEnv(t)
+	e := newEnv()
 
 	roleName := makeRoleName()
 

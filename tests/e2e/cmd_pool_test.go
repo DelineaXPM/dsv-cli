@@ -10,7 +10,7 @@ import (
 )
 
 func TestPool(t *testing.T) {
-	e := newEnv(t)
+	e := newEnv()
 
 	poolName := makePoolName()
 
@@ -70,7 +70,7 @@ func TestPoolInteractiveCreate(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Sorry, interactive End-to-End tests cannot be executed on Windows.")
 	}
-	e := newEnv(t)
+	e := newEnv()
 
 	poolName := makePoolName()
 

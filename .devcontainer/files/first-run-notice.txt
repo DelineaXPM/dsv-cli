@@ -1,0 +1,12 @@
+# Welcome to devcontainer
+
+> This bakes in Go, Kind, Docker, and more into a self-contained devenvironment.
+
+> TIP: run `glow README.md` to get a nice formatted setup guide in your terminal.
+
+Common Starting Tasks:
+
+- `glow README.md`
+- `mage -l`
+- `mage -h init`
+- `mage job:setup`

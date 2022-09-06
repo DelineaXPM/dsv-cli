@@ -13,7 +13,7 @@ func TestSIEM_CRUD(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Sorry, interactive End-to-End tests cannot be executed on Windows.")
 	}
-	e := newEnv(t)
+	e := newEnv()
 
 	var (
 		siemName          = makeSIEMName()

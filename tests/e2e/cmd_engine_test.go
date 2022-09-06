@@ -9,7 +9,7 @@ import (
 )
 
 func TestEngine(t *testing.T) {
-	e := newEnv(t)
+	e := newEnv()
 
 	poolName := makePoolName()
 	engineName := makeEngineName()

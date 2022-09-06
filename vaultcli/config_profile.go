@@ -1,34 +1,39 @@
 package vaultcli
 
 import (
-	"errors"
 	"strconv"
-	"strings"
 )
 
-const invalidProfileName = "Profile name contains restricted characters. Leading, trailing and middle whitespace are not allowed."
-
 type Profile struct {
-	name string
-	data map[string]interface{}
-}
+	Name string
 
-func IsValidProfile(profile string) error {
-	if strings.Contains(profile, " ") {
-		return errors.New(invalidProfileName)
-	}
-	return nil
+	data map[string]interface{}
 }
 
 func NewProfile(name string) *Profile {
 	return &Profile{
-		name: name,
+		Name: name,
 		data: make(map[string]interface{}),
 	}
 }
 
-func (p *Profile) raw() map[string]interface{} {
-	return p.data
+func (p *Profile) Get(path ...string) string {
+	curr := p.data
+
+	var val string
+	var ok bool
+	for i, key := range path {
+		if i == len(path)-1 {
+			val, _ = curr[key].(string)
+			break
+		}
+
+		curr, ok = curr[key].(map[string]interface{})
+		if !ok {
+			break
+		}
+	}
+	return val
 }
 
 func (p *Profile) Set(val string, path ...string) {

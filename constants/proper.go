@@ -1,6 +1,6 @@
 package constants
 
-//  Constants for Proper Nouns
+// Constants for Proper Nouns
 const (
 	ProductName      = "DevOps Secrets Vault"
 	ProductShortName = "Vault"

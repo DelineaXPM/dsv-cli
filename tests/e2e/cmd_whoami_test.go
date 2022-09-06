@@ -10,7 +10,7 @@ import (
 )
 
 func TestWhoami(t *testing.T) {
-	e := newEnv(t)
+	e := newEnv()
 
 	cmd := []string{
 		"whoami",

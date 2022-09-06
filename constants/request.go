@@ -1,6 +1,6 @@
 package constants
 
-//  Constants for Requests
+// Constants for Requests
 const (
 	PrefixEntity         = "secrets/"
 	PrefixEntityInternal = "secrets:"

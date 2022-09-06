@@ -137,7 +137,7 @@ func handleSiemSearchCmd(vcli vaultcli.CLI, args []string) int {
 func handleSiemCreate(vcli vaultcli.CLI, args []string) int {
 	var name string
 	namePrompt := &survey.Input{Message: "Name of SIEM endpoint:"}
-	survErr := survey.AskOne(namePrompt, &name, survey.WithValidator(vaultcli.SurveyRequired))
+	survErr := survey.AskOne(namePrompt, &name, survey.WithValidator(vaultcli.SurveyRequiredName))
 	if survErr != nil {
 		vcli.Out().WriteResponse(nil, errors.New(survErr))
 		return utils.GetExecStatus(survErr)
@@ -172,7 +172,7 @@ func handleSiemUpdate(vcli vaultcli.CLI, args []string) int {
 	}
 	if name == "" {
 		namePrompt := &survey.Input{Message: "Name of SIEM endpoint:"}
-		survErr := survey.AskOne(namePrompt, &name, survey.WithValidator(vaultcli.SurveyRequired))
+		survErr := survey.AskOne(namePrompt, &name, survey.WithValidator(vaultcli.SurveyRequiredName))
 		if survErr != nil {
 			vcli.Out().WriteResponse(nil, errors.New(survErr))
 			return utils.GetExecStatus(survErr)
@@ -294,7 +294,7 @@ func promptSiemData(vcli vaultcli.CLI) (*siemUpdateRequest, error) {
 	}
 	if answers.SendToEngine {
 		poolPrompt := &survey.Input{Message: "Engine pool:"}
-		survErr := survey.AskOne(poolPrompt, &answers.Pool, survey.WithValidator(vaultcli.SurveyRequired))
+		survErr := survey.AskOne(poolPrompt, &answers.Pool, survey.WithValidator(vaultcli.SurveyRequiredName))
 		if survErr != nil {
 			return nil, errors.New(survErr)
 		}

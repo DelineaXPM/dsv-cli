@@ -34,6 +34,16 @@ type FakeAuthenticator struct {
 		result1 *auth.TokenResponse
 		result2 *errors.ApiError
 	}
+	WipeCachedTokensStub        func() *errors.ApiError
+	wipeCachedTokensMutex       sync.RWMutex
+	wipeCachedTokensArgsForCall []struct {
+	}
+	wipeCachedTokensReturns struct {
+		result1 *errors.ApiError
+	}
+	wipeCachedTokensReturnsOnCall map[int]struct {
+		result1 *errors.ApiError
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -159,6 +169,59 @@ func (fake *FakeAuthenticator) GetTokenCacheOverrideReturnsOnCall(i int, result1
 	}{result1, result2}
 }
 
+func (fake *FakeAuthenticator) WipeCachedTokens() *errors.ApiError {
+	fake.wipeCachedTokensMutex.Lock()
+	ret, specificReturn := fake.wipeCachedTokensReturnsOnCall[len(fake.wipeCachedTokensArgsForCall)]
+	fake.wipeCachedTokensArgsForCall = append(fake.wipeCachedTokensArgsForCall, struct {
+	}{})
+	stub := fake.WipeCachedTokensStub
+	fakeReturns := fake.wipeCachedTokensReturns
+	fake.recordInvocation("WipeCachedTokens", []interface{}{})
+	fake.wipeCachedTokensMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeAuthenticator) WipeCachedTokensCallCount() int {
+	fake.wipeCachedTokensMutex.RLock()
+	defer fake.wipeCachedTokensMutex.RUnlock()
+	return len(fake.wipeCachedTokensArgsForCall)
+}
+
+func (fake *FakeAuthenticator) WipeCachedTokensCalls(stub func() *errors.ApiError) {
+	fake.wipeCachedTokensMutex.Lock()
+	defer fake.wipeCachedTokensMutex.Unlock()
+	fake.WipeCachedTokensStub = stub
+}
+
+func (fake *FakeAuthenticator) WipeCachedTokensReturns(result1 *errors.ApiError) {
+	fake.wipeCachedTokensMutex.Lock()
+	defer fake.wipeCachedTokensMutex.Unlock()
+	fake.WipeCachedTokensStub = nil
+	fake.wipeCachedTokensReturns = struct {
+		result1 *errors.ApiError
+	}{result1}
+}
+
+func (fake *FakeAuthenticator) WipeCachedTokensReturnsOnCall(i int, result1 *errors.ApiError) {
+	fake.wipeCachedTokensMutex.Lock()
+	defer fake.wipeCachedTokensMutex.Unlock()
+	fake.WipeCachedTokensStub = nil
+	if fake.wipeCachedTokensReturnsOnCall == nil {
+		fake.wipeCachedTokensReturnsOnCall = make(map[int]struct {
+			result1 *errors.ApiError
+		})
+	}
+	fake.wipeCachedTokensReturnsOnCall[i] = struct {
+		result1 *errors.ApiError
+	}{result1}
+}
+
 func (fake *FakeAuthenticator) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -166,6 +229,8 @@ func (fake *FakeAuthenticator) Invocations() map[string][][]interface{} {
 	defer fake.getTokenMutex.RUnlock()
 	fake.getTokenCacheOverrideMutex.RLock()
 	defer fake.getTokenCacheOverrideMutex.RUnlock()
+	fake.wipeCachedTokensMutex.RLock()
+	defer fake.wipeCachedTokensMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

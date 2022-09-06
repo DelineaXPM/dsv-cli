@@ -94,7 +94,7 @@ func resilienceAfter() error {
 }
 
 func delete(command string) {
-	e := newEnv(nil)
+	e := newEnv()
 
 	binArgs := append(strings.Split(command, " "),
 		"--auth-type=password",

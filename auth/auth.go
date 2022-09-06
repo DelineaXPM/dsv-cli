@@ -46,50 +46,65 @@ const (
 // Note that this global error variable is of type *ApiError, not regular error.
 var KeyfileNotFoundError = errors.NewS("failed to find the encryption key")
 
-// AuthType is the type of authentication
+// AuthType is the type of authentication.
 type AuthType string
 
-// Types of supported authentication
+// Types of supported authentication.
 const (
-	Implicit         = AuthType("")
 	Password         = AuthType("password")
 	Refresh          = AuthType("refresh")
 	ClientCredential = AuthType("clientcred")
-	FederatedThyOne  = AuthType(cst.DefaultThyOneName)
 	Certificate      = AuthType("cert")
+	FederatedThyOne  = AuthType(cst.DefaultThyOneName)
 	FederatedAws     = AuthType("aws")
 	FederatedAzure   = AuthType("azure")
 	FederatedGcp     = AuthType("gcp")
 	Oidc             = AuthType("oidc")
 )
 
-// GetTokenKey gets the key for the auth type
-func (a AuthType) GetTokenKey(tenant string, keySuffix string) string {
-	if a == Implicit {
-		panic("implicit is invalid auth type")
-	}
-
-	key := cst.TokenRoot + "-"
-	if a == Refresh {
-		// Refresh and Password are stored the same
-		key = key + string(Password)
-	} else {
-		key = key + string(a)
-	}
-
-	key += "-" + tenant
-
-	if keySuffix != "" {
-		keySuffix = strings.ReplaceAll(keySuffix, "-", "%2D")
-		key = key + "-" + keySuffix
-	}
-	return key
+// authTypeToCachePrefix maps authentication type to cache key prefix.
+// Note: prefix must start with "token".
+var authTypeToCachePrefix = map[AuthType]string{
+	Password:         "token-password-",
+	Refresh:          "token-password-", // Refresh and Password are stored the same.
+	ClientCredential: "token-clientcred-",
+	Certificate:      "token-cert-",
+	FederatedThyOne:  "token-thy-one-",
+	FederatedAws:     "token-aws-",
+	FederatedAzure:   "token-azure-",
+	FederatedGcp:     "token-gcp-",
+	Oidc:             "token-oidc-",
 }
 
-// Authenticator is the interface used for authentication funcs
+// authTypeToGrantType maps authentication type to grant type which will be sent to DSV.
+var authTypeToGrantType = map[AuthType]string{
+	Password:         "password",
+	Refresh:          "refresh_token",
+	ClientCredential: "client_credentials",
+	Certificate:      "certificate",
+	FederatedThyOne:  "oidc",
+	FederatedAws:     "aws_iam",
+	FederatedAzure:   "azure",
+	FederatedGcp:     "gcp",
+	Oidc:             "oidc",
+}
+
+// GetTokenCacheKey gets the key for the auth type.
+func (a AuthType) GetTokenCacheKey(tenant string, profile string) (string, *errors.ApiError) {
+	prefix, ok := authTypeToCachePrefix[a]
+	if !ok {
+		return "", errors.NewF("unexpected authentication type %s", a)
+	}
+
+	key := prefix + tenant + "-" + profile
+	return key, nil
+}
+
+// Authenticator is the interface used for authentication funcs.
 type Authenticator interface {
 	GetToken() (*TokenResponse, *errors.ApiError)
 	GetTokenCacheOverride(authType string, useCache bool) (*TokenResponse, *errors.ApiError)
+	WipeCachedTokens() *errors.ApiError
 }
 
 type authenticator struct {
@@ -107,7 +122,7 @@ func NewAuthenticatorDefault() Authenticator {
 	}
 }
 
-// NewAuthenticator returns a new authenticator
+// NewAuthenticator returns a new authenticator.
 func NewAuthenticator(store store.Store, client requests.Client) Authenticator {
 	return &authenticator{store, client}
 }
@@ -115,9 +130,6 @@ func NewAuthenticator(store store.Store, client requests.Client) Authenticator {
 func (a *authenticator) GetToken() (*TokenResponse, *errors.ApiError) {
 	authType := viper.GetString(cst.AuthType)
 
-	if AuthType(authType) == ClientCredential && (strings.TrimSpace(viper.GetString(cst.AuthClientID)) != "" || strings.TrimSpace(viper.GetString(cst.AuthClientSecret)) != "") {
-		return a.GetTokenCacheOverride(authType, false)
-	}
 	if AuthType(authType) == Password && strings.TrimSpace(viper.GetString(cst.Password)) != "" {
 		return a.GetTokenCacheOverride(authType, false)
 	}
@@ -131,70 +143,57 @@ func (a *authenticator) GetTokenCacheOverride(authType string, useCache bool) (*
 	return a.getTokenForAuthType(AuthType(authType), useCache)
 }
 
+// WipeCachedTokens removes all cached tokens for the current profile.
+func (a *authenticator) WipeCachedTokens() *errors.ApiError {
+	profile := viper.GetString(cst.Profile)
+	if profile == "" {
+		profile = cst.DefaultProfile
+	}
+	tokens, err := a.store.List("token")
+	if err != nil {
+		return err
+	}
+	for _, t := range tokens {
+		if strings.HasSuffix(t, profile) {
+			err = a.store.Delete(t)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (a *authenticator) getTokenForAuthType(at AuthType, useCache bool) (*TokenResponse, *errors.ApiError) {
+	tenant := viper.GetString(cst.Tenant)
+	profile := viper.GetString(cst.Profile)
+	if profile == "" {
+		profile = cst.DefaultProfile
+	}
+	keyToken, err := at.GetTokenCacheKey(tenant, profile)
+	if err != nil {
+		return nil, err
+	}
+
 	var data requestBody
 	var tr *TokenResponse
-
-	pSpecs := paramSpecDict[at]
-	var keyName string
-	for _, p := range pSpecs {
-		if p.IsKey {
-			keyName = p.ArgName
-			break
-		}
-	}
-	if keyName == "" {
-		return nil, errors.NewF("failure to auth. Token cache key not found for authentication type %s\n", string(at))
-	}
-
-	// Else, viper prepends env keys with cli prefix
-	var keySuffix string
-	if at == FederatedAzure {
-		keySuffix = os.Getenv(keyName)
-	} else if at == FederatedGcp {
-		keySuffix = viper.GetString(cst.GcpServiceAccount)
-		if keySuffix == "" {
-			keySuffix = cst.DefaultProfile
-		}
-	} else if at == Oidc || at == FederatedThyOne {
-		profile := viper.GetString(cst.Profile)
-		keySuffix = viper.GetString(keyName)
-		if profile != "" && profile != cst.DefaultProfile {
-			keySuffix = fmt.Sprintf("%s-%s", keySuffix, profile)
-		}
-	} else if at == Certificate {
-		keySuffix = viper.GetString(cst.Profile)
-	} else {
-		keySuffix = viper.GetString(keyName)
-	}
-
-	tenant := viper.GetString(cst.Tenant)
-	keyToken := at.GetTokenKey(tenant, keySuffix)
 
 	if useCache {
 		if err := a.store.Get(keyToken, &tr); err != nil {
 			return nil, err
 		} else if tr != nil && !tr.IsNil() {
-			// If init (cli-config) or config, invalidate existing token and later re-authenticate.
-			if cmd := viper.GetString(cst.MainCommand); cmd == cst.NounCliConfig {
-				err := a.store.Wipe(keyToken)
-				if err != nil {
-					return nil, err
+			if tr.SecondsRemainingToken() > 0 {
+				return tr, nil
+			} else if tr.SecondsRemainingRefreshToken() > 0 {
+				log.Printf("Token expired but valid refresh token. Attempting to refresh. Token cache key: '%s'\n", keyToken)
+				at = Refresh
+				data = requestBody{
+					GrantType:    authTypeToGrantType[at],
+					RefreshToken: tr.RefreshToken,
 				}
-			} else {
-				if tr.SecondsRemainingToken() > 0 {
-					return tr, nil
-				} else if tr.SecondsRemainingRefreshToken() > 0 {
-					log.Printf("Token expired but valid refresh token. Attempting to refresh. Token cache key: '%s'\n", keySuffix)
-					at = Refresh
-					data = requestBody{
-						GrantType:    authTypeToGrantType[at],
-						RefreshToken: tr.RefreshToken,
-					}
 
-				} else {
-					log.Printf("Refresh token expired. Attempting to reauthenticate. Token cache key: '%s'\n", keySuffix)
-				}
+			} else {
+				log.Printf("Refresh token expired. Attempting to reauthenticate. Token cache key: '%s'\n", keyToken)
 			}
 		}
 	}
@@ -236,9 +235,8 @@ func (a *authenticator) getTokenForAuthType(at AuthType, useCache bool) (*TokenR
 	}
 
 	if at == FederatedGcp {
-		var token string
 		var err error
-		token = viper.GetString(cst.GcpToken)
+		token := viper.GetString(cst.GcpToken)
 		if token == "" {
 			gcpAuthType := viper.GetString(cst.GcpAuthType)
 			gcp := GcpClient{}
@@ -326,9 +324,8 @@ func (a *authenticator) getTokenForAuthType(at AuthType, useCache bool) (*TokenR
 		log.Printf("%s authentication succeeded.\n", strings.Title(string(at)))
 		if err := a.store.Store(keyToken, tr); err != nil {
 			return nil, err.Grow("Failed caching token")
-		} else {
-			return tr, nil
 		}
+		return tr, nil
 	}
 }
 
@@ -344,7 +341,6 @@ type AuthResponse struct {
 }
 
 func (a *authenticator) fetchTokenVault(at AuthType, data requestBody) (*TokenResponse, *errors.ApiError) {
-	var response TokenResponse
 	if err := data.ValidateForAuthType(at); err != nil {
 		return nil, errors.New(err)
 	}
@@ -398,6 +394,7 @@ func (a *authenticator) fetchTokenVault(at AuthType, data requestBody) (*TokenRe
 		}
 	}
 
+	var response TokenResponse
 	uri := paths.CreateURI(cst.NounToken, nil)
 	if err := a.requestClient.DoRequestOut(http.MethodPost, uri, data, &response); err != nil {
 		return nil, err
@@ -459,7 +456,6 @@ func (a *authenticator) handleOidcAuth(doneCh chan<- AuthResponse) http.HandlerF
 			authCode: code,
 			state:    state,
 		}
-
 	}
 }
 
@@ -569,22 +565,21 @@ func buildAwsParams() (headers string, body string, err *errors.ApiError) {
 
 type requestBody struct {
 	GrantType          string `json:"grant_type"`
-	Username           string `json:"username"`
-	Provider           string `json:"provider"`
-	Password           string `json:"password"`
-	AuthClientID       string `json:"client_id"`
-	AuthClientSecret   string `json:"client_secret"`
-	RefreshToken       string `json:"refresh_token"`
-	AwsBody            string `json:"aws_body"`
-	AwsHeaders         string `json:"aws_headers"`
-	Jwt                string `json:"jwt"`
-	AzureAuthClientID  string
-	AuthorizationCode  string `json:"authorization_code"`
-	CallbackUrl        string `json:"callback_url"`
-	State              string `json:"state"`
-	CallbackHost       string `json:"_"`
-	CertChallengeID    string `json:"cert_challenge_id"`
-	DecryptedChallenge string `json:"decrypted_challenge"`
+	Username           string `json:"username,omitempty"`
+	Provider           string `json:"provider,omitempty"`
+	Password           string `json:"password,omitempty"`
+	AuthClientID       string `json:"client_id,omitempty"`
+	AuthClientSecret   string `json:"client_secret,omitempty"`
+	RefreshToken       string `json:"refresh_token,omitempty"`
+	AwsBody            string `json:"aws_body,omitempty"`
+	AwsHeaders         string `json:"aws_headers,omitempty"`
+	Jwt                string `json:"jwt,omitempty"`
+	AuthorizationCode  string `json:"authorization_code,omitempty"`
+	CallbackHost       string `json:"-"`
+	CallbackUrl        string `json:"callback_url,omitempty"`
+	State              string `json:"state,omitempty"`
+	CertChallengeID    string `json:"cert_challenge_id,omitempty"`
+	DecryptedChallenge string `json:"decrypted_challenge,omitempty"`
 }
 
 type TokenResponse struct {
@@ -626,18 +621,6 @@ func (r *requestBody) ValidateForAuthType(at AuthType) error {
 	return nil
 }
 
-var authTypeToGrantType = map[AuthType]string{
-	Password:         "password",
-	FederatedThyOne:  "oidc",
-	ClientCredential: "client_credentials",
-	Certificate:      "certificate",
-	Refresh:          "refresh_token",
-	FederatedAws:     "aws_iam",
-	FederatedAzure:   "azure",
-	FederatedGcp:     "gcp",
-	Oidc:             "oidc",
-}
-
 type paramSpec struct {
 	PropName   string
 	ArgName    string
@@ -649,98 +632,78 @@ var paramSpecDict = map[AuthType][]paramSpec{
 	Password: {
 		{PropName: "Password",
 			ArgName:    cst.Password,
-			IsKey:      false,
 			RequestVar: true,
 		},
 		{PropName: "Username",
 			ArgName:    cst.Username,
-			IsKey:      true,
 			RequestVar: true,
 		},
 		{PropName: "Provider",
 			ArgName:    cst.AuthProvider,
-			IsKey:      false,
 			RequestVar: false,
 		},
 	},
 	FederatedThyOne: {
 		{PropName: "AuthType",
 			ArgName:    cst.AuthType,
-			IsKey:      true,
 			RequestVar: false,
 		},
 	},
 	ClientCredential: {
 		{PropName: "AuthClientID",
 			ArgName:    cst.AuthClientID,
-			IsKey:      true,
 			RequestVar: true,
 		},
 		{PropName: "AuthClientSecret",
 			ArgName:    cst.AuthClientSecret,
-			IsKey:      false,
 			RequestVar: true,
 		},
 	},
 	Certificate: {
 		{PropName: "CertificatePath",
 			ArgName:    cst.CertPath,
-			IsKey:      true,
 			RequestVar: false,
 		},
 	},
 	FederatedAws: {
 		{PropName: "Profile",
 			ArgName:    cst.AwsProfile,
-			IsKey:      true,
 			RequestVar: false,
 		},
 		{PropName: "AwsBody",
 			ArgName:    "",
-			IsKey:      false,
 			RequestVar: true,
 		},
 		{PropName: "AwsHeaders",
 			ArgName:    "",
-			IsKey:      false,
 			RequestVar: true,
 		},
 	},
 	Refresh: {
 		{PropName: "RefreshToken",
 			ArgName:    cst.RefreshToken,
-			IsKey:      true,
 			RequestVar: true,
 		},
 	},
 	FederatedAzure: {
 		{PropName: "JwtToken",
 			ArgName:    "jwt",
-			IsKey:      false,
 			RequestVar: true,
-		},
-		{PropName: "AzureAuthClientID",
-			ArgName:    cst.AzureAuthClientID,
-			IsKey:      true,
-			RequestVar: false,
 		},
 	},
 	FederatedGcp: {
 		{PropName: "JwtToken",
 			ArgName:    "jwt",
-			IsKey:      false,
 			RequestVar: true,
 		},
 		{PropName: "Service",
 			ArgName:    "Service",
-			IsKey:      true,
 			RequestVar: false,
 		},
 	},
 	Oidc: {
 		{PropName: "AuthType",
 			ArgName:    cst.AuthType,
-			IsKey:      true,
 			RequestVar: false,
 		},
 	},

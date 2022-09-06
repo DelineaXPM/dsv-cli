@@ -46,28 +46,37 @@ var (
 	}
 )
 
-func TestGetTokenKey(t *testing.T) {
+func TestGetTokenCacheKey(t *testing.T) {
 	const tenantName = "dev"
-	tests := []struct {
-		authType  string
-		keySuffix string
-		want      string
+	const profileName = "admin"
+
+	cases := []struct {
+		authType string
+		expected string
 	}{
-		{"refresh", "auth.gcp.service", "token-password-dev-auth.gcp.service"},
-		{"password", "auth.gcp.service", "token-password-dev-auth.gcp.service"},
-		{"cert", "auth.gcp.service", "token-cert-dev-auth.gcp.service"},
+		{"refresh", "token-password-dev-admin"},
+		{"password", "token-password-dev-admin"},
+		{"clientcred", "token-clientcred-dev-admin"},
+		{"thy-one", "token-thy-one-dev-admin"},
+		{"aws", "token-aws-dev-admin"},
+		{"azure", "token-azure-dev-admin"},
+		{"gcp", "token-gcp-dev-admin"},
+		{"oidc", "token-oidc-dev-admin"},
 	}
 
-	for _, tt := range tests {
-		au := auth.AuthType(tt.authType)
-		key := au.GetTokenKey(tenantName, tt.keySuffix)
-		if key != tt.want {
-			t.Fatalf("Expected :: %s, got :: %s", tt.want, key)
+	for _, tc := range cases {
+		au := auth.AuthType(tc.authType)
+		key, err := au.GetTokenCacheKey(tenantName, profileName)
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", key)
+		}
+		if key != tc.expected {
+			t.Fatalf("Expected: %q, got: %q", tc.expected, key)
 		}
 	}
 }
 
-//TODO:  need to refactor the code and rewrite
+// TODO:  need to refactor the code and rewrite
 func TestGetToken(t *testing.T) {
 	testCases := []struct {
 		auth          string
@@ -99,7 +108,7 @@ func TestGetToken(t *testing.T) {
 }
 
 func TestGetToken_Password(t *testing.T) {
-	storeType := "none"
+	const storeType = "none"
 
 	testCases := []struct {
 		name           string
@@ -147,7 +156,7 @@ func TestGetToken_Password(t *testing.T) {
 			"somePass12#",
 			"",
 			btr,
-			errors.NewS("failure to auth. Token cache key not found for authentication type fastword"),
+			errors.NewS("unexpected authentication type fastword"),
 		},
 	}
 
@@ -173,7 +182,7 @@ func TestGetToken_Password(t *testing.T) {
 			rsp, err := authDef.GetTokenCacheOverride(tc.auth, false)
 
 			if tc.expectedError != nil && err == nil || err != nil && tc.expectedError == nil {
-				t.Fatalf("Failed got  expected :: %v, got :: %v", tc.expectedError, err)
+				t.Fatalf("Failed. Expected: %v, got: %v", tc.expectedError, err)
 			}
 
 			if tc.expectedError != nil {

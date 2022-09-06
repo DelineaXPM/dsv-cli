@@ -16,7 +16,7 @@ func TestInitWithNoConfig(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Sorry, interactive End-to-End tests cannot be executed on Windows.")
 	}
-	e := newEnv(t)
+	e := newEnv()
 
 	var (
 		config = filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
@@ -70,7 +70,7 @@ func TestInitWithExistingConfig(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Sorry, interactive End-to-End tests cannot be executed on Windows.")
 	}
-	e := newEnv(t)
+	e := newEnv()
 
 	const (
 		profileName = "automation"
@@ -95,9 +95,6 @@ func TestInitWithExistingConfig(t *testing.T) {
 		c.SendKeyEnter()
 
 		c.ExpectString("Please enter profile name")
-		c.SendLine("a a")
-
-		c.ExpectString("Sorry, your reply was invalid: Profile name contains restricted characters.")
 		c.SendLine(profileName)
 
 		c.ExpectString("Please enter tenant name")
@@ -156,7 +153,7 @@ func TestInitOverwriteExistingConfig(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Sorry, interactive End-to-End tests cannot be executed on Windows.")
 	}
-	e := newEnv(t)
+	e := newEnv()
 
 	var (
 		config = filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
@@ -173,6 +170,9 @@ func TestInitOverwriteExistingConfig(t *testing.T) {
 		c.ExpectString("Found an existing cli-config located at")
 		c.ExpectString("Select an option")
 		c.SendKeyArrowDown()
+		c.SendKeyEnter()
+
+		c.ExpectString("Please enter profile name")
 		c.SendKeyEnter()
 
 		c.ExpectString("Please enter tenant name")
@@ -216,7 +216,7 @@ func TestInitAuthFails(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Sorry, interactive End-to-End tests cannot be executed on Windows.")
 	}
-	e := newEnv(t)
+	e := newEnv()
 
 	var (
 		config = filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
@@ -269,7 +269,7 @@ func TestInitAWSInvalid(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Sorry, interactive End-to-End tests cannot be executed on Windows.")
 	}
-	e := newEnv(t)
+	e := newEnv()
 
 	var (
 		config = filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
@@ -286,6 +286,9 @@ func TestInitAWSInvalid(t *testing.T) {
 		c.ExpectString("Found an existing cli-config located at")
 		c.ExpectString("Select an option")
 		c.SendKeyArrowDown()
+		c.SendKeyEnter()
+
+		c.ExpectString("Please enter profile name")
 		c.SendKeyEnter()
 
 		c.ExpectString("Please enter tenant name")
@@ -318,7 +321,7 @@ func TestInitClientCredsInvalid(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Sorry, interactive End-to-End tests cannot be executed on Windows.")
 	}
-	e := newEnv(t)
+	e := newEnv()
 
 	var (
 		config = filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
@@ -335,6 +338,9 @@ func TestInitClientCredsInvalid(t *testing.T) {
 		c.ExpectString("Found an existing cli-config located at")
 		c.ExpectString("Select an option")
 		c.SendKeyArrowDown()
+		c.SendKeyEnter()
+
+		c.ExpectString("Please enter profile name")
 		c.SendKeyEnter()
 
 		c.ExpectString("Please enter tenant name")
@@ -364,31 +370,11 @@ func TestInitClientCredsInvalid(t *testing.T) {
 	})
 }
 
-func TestInitMissingInitialProfile(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Sorry, interactive End-to-End tests cannot be executed on Windows.")
-	}
-	e := newEnv(t)
-
-	var (
-		config = filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
-	)
-
-	cmd := []string{
-		"init", fmt.Sprintf("--dev=%s", e.domain), fmt.Sprintf("--config=%s", config), "--profile=automation",
-	}
-
-	runFlow(t, cmd, func(c console) {
-		c.ExpectString("Initial configuration is needed in order to add a custom profile.")
-		c.ExpectEOF()
-	})
-}
-
 func TestInitProfileExists(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Sorry, interactive End-to-End tests cannot be executed on Windows.")
 	}
-	e := newEnv(t)
+	e := newEnv()
 
 	var (
 		config = filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
@@ -439,7 +425,7 @@ func TestInitWrongStoreType(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Sorry, interactive End-to-End tests cannot be executed on Windows.")
 	}
-	e := newEnv(t)
+	e := newEnv()
 
 	var (
 		config = filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
@@ -468,7 +454,7 @@ func TestInitWithNoStore(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Sorry, interactive End-to-End tests cannot be executed on Windows.")
 	}
-	e := newEnv(t)
+	e := newEnv()
 
 	var (
 		config = filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
@@ -509,11 +495,10 @@ func TestInitUsingCertificateRawData(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Sorry, interactive End-to-End tests cannot be executed on Windows.")
 	}
-	e := newEnv(t)
+	e := newEnv()
 
 	const (
 		profileName = "raw-cert-data"
-		cacheAge    = "5"
 	)
 	var (
 		config = filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
@@ -546,12 +531,7 @@ func TestInitUsingCertificateRawData(t *testing.T) {
 		c.SendKeyEnter()
 
 		c.ExpectString("Please enter cache strategy for secrets")
-		c.SendKeyArrowDown()
-		c.SendKeyArrowDown()
 		c.SendKeyEnter()
-
-		c.ExpectString("Please enter cache age (minutes until expiration)")
-		c.SendLine(cacheAge)
 
 		c.ExpectString("Please enter auth type")
 		c.SendKeyArrowDown()
@@ -587,8 +567,7 @@ func TestInitUsingCertificateRawData(t *testing.T) {
 	requireLine(t, got, fmt.Sprintf("certificate: %s", e.certificate))
 	requireLine(t, got, fmt.Sprintf("privateKey: %s", e.privateKey))
 	requireLine(t, got, "cache:")
-	requireLine(t, got, fmt.Sprintf("age: %s", cacheAge))
-	requireLine(t, got, "strategy: cache.server")
+	requireLine(t, got, "strategy: server")
 	requireLine(t, got, fmt.Sprintf("domain: %s", e.domain))
 	requireLine(t, got, "store:")
 	requireLine(t, got, "type: file")
@@ -599,7 +578,7 @@ func TestInitUsingCertificateFileData(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Sorry, interactive End-to-End tests cannot be executed on Windows.")
 	}
-	e := newEnv(t)
+	e := newEnv()
 
 	const (
 		profileName = "file-cert-data"

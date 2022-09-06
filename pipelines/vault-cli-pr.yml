@@ -2,9 +2,9 @@
 trigger: none
 
 variables:
-  - group: "CLI_integration_test"
-  - group: "CLi-pipeline-variables"
-  - group: "CLI End-to-End tests"
+  - group: 'CLI_integration_test'
+  - group: 'CLi-pipeline-variables'
+  - group: 'CLI End-to-End tests'
 
 jobs:
   - job: Test_Ubuntu
@@ -52,15 +52,15 @@ jobs:
         displayName: 'Build'
 
       - bash: |
-          echo "[---] Install editor (nano)"
-          sudo apt-get install nano
+          # echo "[---] Install editor (nano)"
+          # sudo apt-get install nano
           echo "[---] Install hansboder/gocovmerge"
           go install -v github.com/hansboder/gocovmerge@latest
           echo "[---] Finished."
         displayName: 'Install tools'
 
       - bash: |
-          echo "[---] git describe: $(git describe --always --dirty)"
+          echo "[---] git describe: $(git describe --always --dirty --tags)"
           go test -v -p 1 -covermode=count -coverprofile=./coverage.out ./... | tee test.out
           rm -f cli-config/.thy.yml
           echo "[---] Merging coverage."
@@ -74,7 +74,7 @@ jobs:
         displayName: 'Generate report'
 
       - bash: |
-          echo "[---] git describe: $(git describe --always --dirty)"
+          echo "[---] git describe: $(git describe --always --dirty --tags)"
 
           echo "[---] Starting End-to-End testing."
           make e2e-test | tee test-e2e.out

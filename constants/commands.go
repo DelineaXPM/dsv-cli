@@ -1,6 +1,6 @@
 package constants
 
-//  Constants for Actions
+// Constants for Actions
 const (
 	Read           = "read"
 	Create         = "create"
@@ -25,6 +25,7 @@ const (
 	Generate       = "generate"
 	Apply          = "apply"
 	Status         = "status"
+	UseProfile     = "use-profile"
 )
 
 // Nouns
@@ -114,7 +115,6 @@ const (
 	Callback                = "auth.callback"
 	AuthCert                = "auth.certificate"
 	AuthPrivateKey          = "auth.privateKey"
-	AzureAuthClientID       = "AZURE_CLIENT_ID"
 	ThyOne                  = "thycoticone"
 	ThyOneAuthClientBaseUri = "baseUri"
 	ThyOneAuthClientID      = "clientId"

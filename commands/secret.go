@@ -309,7 +309,11 @@ func handleSecretDescribeCmd(vcli vaultcli.CLI, secretType string, args []string
 	if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		path = args[0]
 	}
-	resp, err := getSecret(vcli, secretType, path, id, cst.SuffixDescription)
+	suffix := cst.SuffixDescription
+	if version := strings.TrimSpace(viper.GetString(cst.Version)); version != "" {
+		suffix = fmt.Sprint(suffix, "/", cst.Version, "/", version)
+	}
+	resp, err := getSecret(vcli, secretType, path, id, suffix)
 
 	vcli.Out().WriteResponse(resp, err)
 	return 0
@@ -325,11 +329,11 @@ func handleSecretReadCmd(vcli vaultcli.CLI, secretType string, args []string) in
 	if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		path = args[0]
 	}
-	version := viper.GetString(cst.Version)
-	if strings.TrimSpace(version) != "" {
-		path = fmt.Sprint(path, "/", cst.Version, "/", version)
+	version := strings.TrimSpace(viper.GetString(cst.Version))
+	if version != "" {
+		version = fmt.Sprint("/", cst.Version, "/", version)
 	}
-	resp, err := getSecret(vcli, secretType, path, id, "")
+	resp, err := getSecret(vcli, secretType, path, id, version)
 
 	vcli.Out().WriteResponse(resp, err)
 	return utils.GetExecStatus(err)

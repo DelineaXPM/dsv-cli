@@ -133,7 +133,7 @@ func TestSurveyRequiredPath(t *testing.T) {
 	tcase("", true)
 	tcase(" ", true)
 	tcase("	", true)
-	tcase(":invalid:path", true)
+	tcase("::invalid:path", true)
 	tcase("valid:path", false)
 }
 
@@ -152,6 +152,28 @@ func TestSurveyRequiredName(t *testing.T) {
 	tcase(" ", true)
 	tcase("	", true)
 	tcase("&invalid:name", true)
+	tcase("val1d_name", false)
+}
+
+func TestSurveyRequiredProfileName(t *testing.T) {
+	existingProfiles := []string{"aa", "bb"}
+
+	tcase := func(in string, wantError bool) {
+		t.Helper()
+		got := SurveyRequiredProfileName(existingProfiles)(in)
+		if wantError && got == nil {
+			t.Errorf("Expected error SurveyRequiredProfileName(%s), but <nil> returned", in)
+		} else if !wantError && got != nil {
+			t.Errorf("Unexpected error SurveyRequiredProfileName(%s): %v", in, got)
+		}
+	}
+
+	tcase("", true)
+	tcase(" ", true)
+	tcase("	", true)
+	tcase("invalid name", true)
+	tcase("UpperCaseName", true)
+	tcase("aa", true) // Already defined in existing profiles list.
 	tcase("val1d_name", false)
 }
 

@@ -1,6 +1,7 @@
 package vaultcli
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,13 +15,15 @@ func TestValidatePath(t *testing.T) {
 		{"", true},
 		{"a", false},
 		{"a:a", false},
-		{":a:a", true},
-		{"/a:a", true},
+		{":a:a", false},
+		{"/a:a", false},
+		{"//a:a", true},
 		{"secrets:a:a", false},
 		{"secrets:a::a", true},
-		{":secrets:a:a", true},
-		{"/secrets:a:a", true},
-		{"/secrets/a:a", true},
+		{":secrets:a:a", false},
+		{"/secrets:a:a", false},
+		{"/secrets/a:a", false},
+		{"//secrets/a:a", true},
 		{"secrets/a:a", false},
 		{"secrets/1:a", false},
 		{"secrets/+:a", true},
@@ -93,5 +96,31 @@ func TestValidateUsername(t *testing.T) {
 			err := ValidateUsername(test.internalPath)
 			assert.Equal(t, test.expectedErr, err != nil)
 		})
+	}
+}
+
+func TestValidateProfile(t *testing.T) {
+	testCases := []struct {
+		profile string
+		noErr   bool
+	}{
+		{profile: "profile1", noErr: true},
+		{profile: "profile_name", noErr: true},
+		{profile: "profile-name", noErr: true},
+		{profile: "profile%name", noErr: true},
+		{profile: "profilename'", noErr: true},
+		{profile: "=", noErr: true},
+		{profile: "profile name", noErr: false},
+		{profile: " profilename", noErr: false},
+		{profile: "profilename  ", noErr: false},
+		{profile: `"profilename "`, noErr: false},
+	}
+	for _, tc := range testCases {
+		got := ValidateProfile(tc.profile)
+		if tc.noErr {
+			assert.NoError(t, got, fmt.Sprintf("ValidateProfile(%s) should not return error", tc.profile))
+		} else {
+			assert.Error(t, got, fmt.Sprintf("ValidateProfile(%s) should return error", tc.profile))
+		}
 	}
 }

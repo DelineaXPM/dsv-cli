@@ -1,8 +1,28 @@
-variables:
-  - group: "CLI_integration_test"
-  - group: "CLi-pipeline-variables"
-  - group: "CLI End-to-End tests"
+---
+parameters:
+  - name: clean
+    displayName: Checkout clean
+    type: boolean
+    default: false
+    values:
+      - false
+      - true
 
+  # Bypass scans & tests on repeated runs that have already passed these, helping troubleshooting pipeline issues on a release more quickly
+  - name: yolo
+    displayName: you only live once
+    type: boolean
+    default: false
+    values:
+      - false
+      - true
+
+variables:
+  - group: 'CLI_integration_test'
+  - group: 'CLi-pipeline-variables'
+  - group: 'CLI End-to-End tests'
+  - name: GO_VERSION
+    value: 1.18.4
 trigger:
   branches:
     include:
@@ -15,8 +35,8 @@ trigger:
       - '**/*.md'
 
 schedules:
-  - cron: "0 6 * * 1-5"
-    displayName: "Mon through Fri at 6:00"
+  - cron: '0 6 * * 1-5'
+    displayName: 'Mon through Fri at 6:00'
     branches:
       include:
         - master
@@ -27,6 +47,9 @@ jobs:
       name: DSV-Golang-AWS
 
     steps:
+      - checkout: self
+        clean: ${{ parameters.clean }}
+
       - task: thycotic-software.thycotic-dsv-task.thycotic-dsv-build-release-task.ThycoticDSV@0
         displayName: 'Retrieve ado/cli from Thycotic DevOps Secrets Vault'
         inputs:
@@ -36,11 +59,12 @@ jobs:
           SecretPath: ado/cli
 
       - task: GoTool@0
-        displayName: 'Use Go 1.18.4'
+        displayName: 'Use Go $(GO_VERSION)'
         inputs:
-          version: 1.18.4
+          version: $(GO_VERSION)
 
       - task: WhiteSource@21
+        condition: ne(${{ parameters.yolo }}, 'true')
         inputs:
           cwd: '$(System.DefaultWorkingDirectory)'
           scanReportTimeout: '3'
@@ -50,15 +74,16 @@ jobs:
         displayName: 'Download dependencies'
 
       - bash: |
-          echo "[---] Install editor (nano)"
-          sudo apt-get install nano
+          # echo "[---] Install editor (nano)"
+          # sudo apt-get install nano
           echo "[---] Install hansboder/gocovmerge"
           go install -v github.com/hansboder/gocovmerge@latest
           echo "[---] Finished."
         displayName: 'Install tools'
+        condition: ne(${{ parameters.yolo }}, 'true')
 
       - bash: |
-          echo "[---] git describe: $(git describe --always --dirty)"
+          echo "[---] git describe: $(git describe --always --dirty --tags)"
           go test -v -p 1 -covermode=count -coverprofile=./coverage.out ./... | tee test.out
           rm -f cli-config/.thy.yml
           echo "[---] Merging coverage."
@@ -66,13 +91,15 @@ jobs:
           rm -rf coverage
           echo "[---] Finished."
         displayName: 'Run tests'
+        condition: ne(${{ parameters.yolo }}, 'true')
 
       - bash: |
           cat test.out | ~/go/bin/go-junit-report -set-exit-code > ./report.xml
         displayName: 'Generate report'
+        condition: ne(${{ parameters.yolo }}, 'true')
 
       - bash: |
-          echo "[---] git describe: $(git describe --always --dirty)"
+          echo "[---] git describe: $(git describe --always --dirty --tags)"
 
           echo "[---] Starting End-to-End testing."
           make e2e-test | tee test-e2e.out
@@ -82,12 +109,13 @@ jobs:
           rm -rf ./tests/e2e/coverage
 
           echo "[---] Finished."
-        condition: always()
+        condition: and(always(), ne(${{ parameters.yolo }}, 'true'))
         displayName: '[E2E] Run tests'
 
       - bash: |
           cat test-e2e.out | ~/go/bin/go-junit-report -set-exit-code > ./report-e2e.xml
         displayName: '[E2E] Generate report'
+        condition: ne(${{ parameters.yolo }}, 'true')
 
       - bash: |
           echo "[---] Merging coverage.out, coverage-e2e.out and coverage-integration.out files."
@@ -98,6 +126,7 @@ jobs:
 
           echo "[---] Finished."
         displayName: 'Prepare coverage'
+        condition: ne(${{ parameters.yolo }}, 'true')
 
       - task: PublishTestResults@2
         displayName: 'Publish Test Results'
@@ -108,7 +137,7 @@ jobs:
           mergeTestResults: true
           failTaskOnFailedTests: true
           testRunTitle: 'CLI Tests'
-        condition: succeededOrFailed()
+        condition: and(succeededOrFailed(), ne(${{ parameters.yolo }}, 'true'))
 
       - task: PublishCodeCoverageResults@1
         displayName: 'Publish Code Coverage'
@@ -116,14 +145,14 @@ jobs:
           codeCoverageTool: Cobertura
           summaryFileLocation: '$(System.DefaultWorkingDirectory)/codecoverage.xml'
           failIfCoverageEmpty: true
-        condition: succeededOrFailed()
+        condition: and(succeededOrFailed(), ne(${{ parameters.yolo }}, 'true'))
 
       - bash: |
-          echo "[---] git describe: $(git describe --always --dirty)"
+          echo "[---] git describe: $(git describe --always --dirty --tags)"
           # clean build directory
           make clean build-release-all create-checksum capture-latest-version
 
-          version=$(git describe)
+          version=$(git describe --always --dirty --tags)
           echo "##vso[task.setvariable variable=CLI_Version;]$version"
 
           mkdir $(Build.ArtifactStagingDirectory)/version
@@ -162,22 +191,26 @@ jobs:
   - job: Sign_Windows_Binary
     dependsOn: Build_All_Platforms
     pool:
-      name: Bambe-Windows
-
+      vmImage: windows-latest
+      # name: Bambe-Windows
     steps:
-      - task: GoTool@0
-        displayName: 'Use Go 1.18.4'
-        inputs:
-          version: 1.18.4
+      - checkout: self
+        clean: ${{ parameters.clean }}
 
-      - script: |
-          echo "[---] Deleting test cache."
-          go clean -testcache
-          echo "[---] Starting End-to-End testing."
-          go test -v -tags=endtoend ./tests/e2e
-          echo "[---] Finished."
-          echo "[---] Note: Results are not published."
+      - task: GoTool@0
+        displayName: 'Use Go $(GO_VERSION)'
+        inputs:
+          version: $(GO_VERSION)
+
+      - pwsh: |
+          Write-Host "[---] Deleting test cache."
+          &go clean -testcache
+          Write-Host "[---] Starting End-to-End testing."
+          &go test -v -tags=endtoend ./tests/e2e
+          Write-Host "[---] Finished."
+          Write-Host "[---] Note: Results are not published."
         displayName: '[E2E] Run tests'
+        condition: ne(${{ parameters.yolo }}, 'true')
 
       - task: thycotic-software.thycotic-dsv-task.thycotic-dsv-build-release-task.ThycoticDSV@0
         displayName: 'Retrieve ado/cli from Thycotic DevOps Secrets Vault'
@@ -187,17 +220,13 @@ jobs:
           ClientSecret: '$(ClientSecret)'
           SecretPath: 'ado/cli '
 
-      - powershell: |
+      - pwsh: |
           # Clean out old builds from cli dir
-          if (Test-Path -Path "cli")
-          {
-              Remove-Item 'cli' -Recurse
-              dir
-          }
-          if (Test-Path -Path "$(System.DefaultWorkingDirectory)/coverage/")
-          {
-              Remove-Item '$(System.DefaultWorkingDirectory)/coverage/' -Recurse
-          }
+          $CLIDirectory = Join-Path $ENV:SYSTEM_DEFAULTWORKINGDIRECTORY 'cli'
+          $CoverageDirectory = Join-Path $ENV:SYSTEM_DEFAULTWORKINGDIRECTORY 'coverage'
+
+          Remove-Item $CLIDirectory -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item $CoverageDirectory -Recurse -Force -ErrorAction SilentlyContinue
         workingDirectory: '$(Pipeline.Workspace)'
         displayName: 'Clear Pipeline Directory'
 
@@ -207,41 +236,57 @@ jobs:
           artifactName: 'ReleaseBuilds-Unsigned'
           targetPath: '$(Pipeline.Workspace)/cli'
 
-      - powershell: |
-          $version =git describe
+      - pwsh: |
+          $version = &git describe --always --dirty --tags
           Write-Host "##vso[task.setvariable variable=cliversion]$version"
         workingDirectory: '$(System.DefaultWorkingDirectory)'
         displayName: 'Get Version'
 
-      - powershell: |
-          cd $(cliversion)
-          dir
-          # Clean out files not related to Windows from cli dir
-          Remove-Item '$(constants.cliname)-darwin-arm64'
-          Remove-Item '$(constants.cliname)-darwin-arm64-sha256.txt'
-          Remove-Item '$(constants.cliname)-darwin-x64'
-          Remove-Item '$(constants.cliname)-darwin-x64-sha256.txt'
-          dir
+      - pwsh: |
+          Remove-Item (Join-Path '$(cliversion)' '$(constants.cliname)-darwin-arm64') -ErrorAction SilentlyContinue
+          Remove-Item (Join-Path '$(cliversion)' '$(constants.cliname)-darwin-arm64-sha256.txt') -ErrorAction SilentlyContinue
+          Remove-Item (Join-Path '$(cliversion)' '$(constants.cliname)-darwin-x64') -ErrorAction SilentlyContinue
+          Remove-Item (Join-Path '$(cliversion)' '$(constants.cliname)-darwin-x64-sha256.txt') -ErrorAction SilentlyContinue
+          Write-Host (Get-ChildItem '$(cliversion)' -ErrorAction SilentlyContinue | Format-Table -Autosize -Wrap | Out-String)
         workingDirectory: '$(Pipeline.Workspace)/cli'
         displayName: 'Clear Unused Files'
 
-      - script: |
-          echo $(cliversion)
+      - pwsh: |
+          Write-Host $(cliversion)
+          Get-ChildItem -Recurse
 
-          cd $(cliversion)"
-          dir
+          $X64Version = Resolve-Path (Join-Path $(cliversion) $(constants.cliname)-win-x64.exe)
+          $X86Version = Resolve-Path (Join-Path $(cliversion) $(constants.cliname)-win-x86.exe)
 
-          signtool sign /tr http://timestamp.digicert.com /td sha256 /fd sha256 /sha1 668feb4178afea4d3c4ae833459b09c2bcf6b64e "./$(constants.cliname)-win-x64.exe"
-          signtool sign /tr http://timestamp.digicert.com /td sha256 /fd sha256 /sha1 668feb4178afea4d3c4ae833459b09c2bcf6b64e "./$(constants.cliname)-win-x86.exe"
+          try {
+            Test-Path -LiteralPath $X86Version -PathType Leaf && Write-Host "✅ $X86Version verified to exist"
+
+            @($X64Version, $X86Version)  | ForEach-Object {
+              [string]$binary = $_
+              Test-Path -LiteralPath $binary -PathType Leaf && Write-Host "✅ $binary verified to exist"
+
+              $command = 'signtool sign /tr "http://timestamp.digicert.com" /td sha256 /fd sha256 /sha1 668feb4178afea4d3c4ae833459b09c2bcf6b64e "$binary"'
+              Write-Host "👉 running: $command"
+              Invoke-Expression $command
+            }
+            Write-Host "🎉 these binaries were signed. celebrate"
+          }
+          catch {
+            Write-Error "problem signing binaries"
+            throw
+          }
+
         workingDirectory: '$(Pipeline.Workspace)/cli'
         displayName: 'Sign Windows Executable'
         env:
           CLI_Version: $(CLI_Version)
 
-      - powershell: |
-          cd $(cliversion)
-          Get-FIleHash .\$(constants.cliname)-win-x64.exe -Algorithm SHA256 | Select -expand Hash | Out-File .\$(constants.cliname)-win-x64.exe-sha256.txt
-          Get-FIleHash .\$(constants.cliname)-win-x86.exe -Algorithm SHA256 | Select -expand Hash | Out-File .\$(constants.cliname)-win-x86.exe-sha256.txt
+      - pwsh: |
+          $X64Version = Join-Path $(cliversion) $(constants.cliname)-win-x64.exe
+          $X86Version = Join-Path $(cliversion) $(constants.cliname)-win-x86.exe
+
+          Get-FileHash $X64Version -Algorithm SHA256 | Select -expand Hash | Out-File "$X64Version-sha256.txt"
+          Get-FileHash $X86Version -Algorithm SHA256 | Select -expand Hash | Out-File "$X86Version-sha256.txt"
         workingDirectory: '$(Pipeline.Workspace)/cli'
         displayName: 'Regenerate Windows Hash'
 
@@ -259,6 +304,9 @@ jobs:
       demands: xcode
 
     steps:
+      - checkout: self
+        clean: ${{ parameters.clean }}
+
       - task: DownloadPipelineArtifact@2
         displayName: 'Download Unsigned Builds'
         inputs:
@@ -266,7 +314,7 @@ jobs:
           targetPath: '$(Pipeline.Workspace)/cli'
 
       - bash: |
-          version=$(git describe)
+          version=$(git describe --always --dirty --tags)
           echo "##vso[task.setvariable variable=cliversion]$version"
         workingDirectory: '$(System.DefaultWorkingDirectory)'
         displayName: 'Get version'

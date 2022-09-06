@@ -9,7 +9,7 @@ set -o pipefail
 PUBLIC_REPO="github.com/thycotic/dsv-cli.git"
 SYNC_GIT_USER_NAME="thycotic-rd"
 SYNC_GIT_USER_EMAIL="lightvaulttrack@thycotic.com"
-SYNC_GIT_TAG=$(git describe)
+SYNC_GIT_TAG=$(git describe --always --dirty --tags)
 SYNC_GIT_COMMIT=$(git rev-parse HEAD)
 
 WORKING_DIR=$(pwd)

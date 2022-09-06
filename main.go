@@ -89,6 +89,7 @@ func runCLI(args []string) (exitStatus int, err error) {
 		"cli-config clear":              cmd.GetCliConfigClearCmd,
 		"cli-config read":               cmd.GetCliConfigReadCmd,
 		"cli-config edit":               cmd.GetCliConfigEditCmd,
+		"cli-config use-profile":        cmd.GetCliConfigUseProfileCmd,
 		"config":                        cmd.GetConfigCmd,
 		"config read":                   cmd.GetConfigReadCmd,
 		"config update":                 cmd.GetConfigUpdateCmd,

@@ -130,8 +130,8 @@ func Erase(helper StoreHelper, reader io.Reader) error {
 	return helper.Delete(serverURL)
 }
 
-//List returns all the serverURLs of keys in
-//the OS store as a list of strings
+// List returns all the serverURLs of keys in
+// the OS store as a list of strings
 func List(helper StoreHelper, writer io.Writer) error {
 	accts, err := helper.List("")
 	if err != nil {

@@ -34,6 +34,7 @@ Usage:
 			{Name: cst.Path, Usage: "Path (optional)"},
 			{Name: cst.NounPrincipal, Usage: "Principal name (optional)"},
 			{Name: cst.DataAction, Usage: "Action performed (POST, GET, PUT, PATCH or DELETE) (optional)"},
+			{Name: cst.Sort, Usage: "Change result sorting order (asc|desc) [default: desc] when search field is specified (optional)"},
 		},
 		MinNumberArgs: 1,
 		RunFunc: func(args []string) int {
@@ -89,13 +90,26 @@ func handleAuditSearch(vcli vaultcli.CLI, args []string) int {
 	// Always add one day to the end date to include data for that day.
 	endDate = endDate.AddDate(0, 0, 1)
 	queryParams := map[string]string{
-		"startDate":        startDate.Format(layout),
-		"endDate":          endDate.Format(layout),
-		cst.NounPrincipal:  viper.GetString(cst.NounPrincipal),
-		cst.Path:           viper.GetString(cst.Path),
-		cst.DataAction[:6]: viper.GetString(cst.DataAction),
-		cst.Limit:          viper.GetString(cst.Limit),
-		cst.Cursor:         viper.GetString(cst.Cursor),
+		"startDate": startDate.Format(layout),
+		"endDate":   endDate.Format(layout),
+	}
+	if nounPrincipal := viper.GetString(cst.NounPrincipal); nounPrincipal != "" {
+		queryParams[cst.NounPrincipal] = nounPrincipal
+	}
+	if path := viper.GetString(cst.Path); path != "" {
+		queryParams[cst.Path] = path
+	}
+	if dataAction := viper.GetString(cst.DataAction); dataAction != "" {
+		queryParams[cst.DataAction[:6]] = dataAction
+	}
+	if limit := viper.GetString(cst.Limit); limit != "" {
+		queryParams[cst.Limit] = limit
+	}
+	if cursor := viper.GetString(cst.Cursor); cursor != "" {
+		queryParams[cst.Cursor] = cursor
+	}
+	if sort := viper.GetString(cst.Sort); sort != "" {
+		queryParams[cst.Sort] = sort
 	}
 	uri := paths.CreateURI("audit", queryParams)
 	data, err := vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)

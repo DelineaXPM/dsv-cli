@@ -12,7 +12,7 @@
 ENABLE_NONROOT_DOCKER=${1:-"true"}
 USERNAME=${2:-"automatic"}
 USE_MOBY=${3:-"true"}
-DOCKER_VERSION=${4:-"latest"}          # The Docker/Moby Engine + CLI should match in version
+DOCKER_VERSION=${4:-"latest"} # The Docker/Moby Engine + CLI should match in version
 DOCKER_DASH_COMPOSE_VERSION=${5:-"v1"} # v1 or v2
 MICROSOFT_GPG_KEYS_URI="https://packages.microsoft.com/keys/microsoft.asc"
 DOCKER_MOBY_ARCHIVE_VERSION_CODENAMES="buster bullseye bionic focal jammy"
@@ -41,7 +41,7 @@ if [ "${USERNAME}" = "auto" ] || [ "${USERNAME}" = "automatic" ]; then
     USERNAME=""
     POSSIBLE_USERS=("vscode" "node" "codespace" "$(awk -v val=1000 -F ":" '$3==val{print $1}' /etc/passwd)")
     for CURRENT_USER in ${POSSIBLE_USERS[@]}; do
-        if id -u ${CURRENT_USER} >/dev/null 2>&1; then
+        if id -u ${CURRENT_USER} > /dev/null 2>&1; then
             USERNAME=${CURRENT_USER}
             break
         fi
@@ -49,14 +49,14 @@ if [ "${USERNAME}" = "auto" ] || [ "${USERNAME}" = "automatic" ]; then
     if [ "${USERNAME}" = "" ]; then
         USERNAME=root
     fi
-elif [ "${USERNAME}" = "none" ] || ! id -u ${USERNAME} >/dev/null 2>&1; then
+elif [ "${USERNAME}" = "none" ] || ! id -u ${USERNAME} > /dev/null 2>&1; then
     USERNAME=root
 fi
 
 # Get central common setting
 get_common_setting() {
     if [ "${common_settings_file_loaded}" != "true" ]; then
-        curl -sfL "https://aka.ms/vscode-dev-containers/script-library/settings.env" -o /tmp/vsdc-settings.env 2>/dev/null || echo "Could not download settings file. Skipping."
+        curl -sfL "https://aka.ms/vscode-dev-containers/script-library/settings.env" 2>/dev/null -o /tmp/vsdc-settings.env || echo "Could not download settings file. Skipping."
         common_settings_file_loaded=true
     fi
     if [ -f "/tmp/vsdc-settings.env" ]; then
@@ -69,7 +69,8 @@ get_common_setting() {
 }
 
 # Function to run apt-get if needed
-apt_get_update_if_needed() {
+apt_get_update_if_needed()
+{
     if [ ! -d "/var/lib/apt/lists" ] || [ "$(ls /var/lib/apt/lists/ | wc -l)" = "0" ]; then
         echo "Running apt-get update..."
         apt-get update
@@ -80,7 +81,7 @@ apt_get_update_if_needed() {
 
 # Checks if packages are installed and installs them if not
 check_packages() {
-    if ! dpkg -s "$@" >/dev/null 2>&1; then
+    if ! dpkg -s "$@" > /dev/null 2>&1; then
         apt_get_update_if_needed
         apt-get -y install --no-install-recommends "$@"
     fi
@@ -94,7 +95,7 @@ find_version_from_git_tags() {
     local repository=$2
     local prefix=${3:-"tags/v"}
     local separator=${4:-"."}
-    local last_part_optional=${5:-"false"}
+    local last_part_optional=${5:-"false"}    
     if [ "$(echo "${requested_version}" | grep -o "." | wc -l)" != "2" ]; then
         local escaped_separator=${separator//./\\.}
         local last_part
@@ -109,11 +110,11 @@ find_version_from_git_tags() {
             declare -g ${variable_name}="$(echo "${version_list}" | head -n 1)"
         else
             set +e
-            declare -g ${variable_name}="$(echo "${version_list}" | grep -E -m 1 "^${requested_version//./\\.}([\\.\\s]|$)")"
+                declare -g ${variable_name}="$(echo "${version_list}" | grep -E -m 1 "^${requested_version//./\\.}([\\.\\s]|$)")"
             set -e
         fi
     fi
-    if [ -z "${!variable_name}" ] || ! echo "${version_list}" | grep "^${!variable_name//./\\.}$" >/dev/null 2>&1; then
+    if [ -z "${!variable_name}" ] || ! echo "${version_list}" | grep "^${!variable_name//./\\.}$" > /dev/null 2>&1; then
         err "Invalid ${variable_name} value: ${requested_version}\nValid values:\n${version_list}" >&2
         exit 1
     fi
@@ -126,6 +127,7 @@ find_version_from_git_tags() {
 
 # Ensure apt is in non-interactive to avoid prompts
 export DEBIAN_FRONTEND=noninteractive
+
 
 # Source /etc/os-release to get OS info
 . /etc/os-release
@@ -154,16 +156,18 @@ fi
 
 # Install dependencies
 check_packages apt-transport-https curl ca-certificates pigz iptables gnupg2 dirmngr
-if ! type git >/dev/null 2>&1; then
+if ! type git > /dev/null 2>&1; then
     apt_get_update_if_needed
     apt-get -y install git
 fi
 
 # Swap to legacy iptables for compatibility
-if type iptables-legacy >/dev/null 2>&1; then
+if type iptables-legacy > /dev/null 2>&1; then
     update-alternatives --set iptables /usr/sbin/iptables-legacy
     update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
 fi
+
+
 
 # Set up the necessary apt repos (either Microsoft's or Docker's)
 if [ "${USE_MOBY}" = "true" ]; then
@@ -174,16 +178,16 @@ if [ "${USE_MOBY}" = "true" ]; then
 
     # Import key safely and import Microsoft apt repo
     get_common_setting MICROSOFT_GPG_KEYS_URI
-    curl -sSL ${MICROSOFT_GPG_KEYS_URI} | gpg --dearmor >/usr/share/keyrings/microsoft-archive-keyring.gpg
-    echo "deb [arch=${architecture} signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/microsoft-${ID}-${VERSION_CODENAME}-prod ${VERSION_CODENAME} main" >/etc/apt/sources.list.d/microsoft.list
+    curl -sSL ${MICROSOFT_GPG_KEYS_URI} | gpg --dearmor > /usr/share/keyrings/microsoft-archive-keyring.gpg
+    echo "deb [arch=${architecture} signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/microsoft-${ID}-${VERSION_CODENAME}-prod ${VERSION_CODENAME} main" > /etc/apt/sources.list.d/microsoft.list
 else
     # Name of licensed engine/cli
     engine_package_name="docker-ce"
     cli_package_name="docker-ce-cli"
 
     # Import key safely and import Docker apt repo
-    curl -fsSL https://download.docker.com/linux/${ID}/gpg | gpg --dearmor >/usr/share/keyrings/docker-archive-keyring.gpg
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/${ID} ${VERSION_CODENAME} stable" >/etc/apt/sources.list.d/docker.list
+    curl -fsSL https://download.docker.com/linux/${ID}/gpg | gpg --dearmor > /usr/share/keyrings/docker-archive-keyring.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/${ID} ${VERSION_CODENAME} stable" > /etc/apt/sources.list.d/docker.list
 fi
 
 # Refresh apt lists
@@ -201,10 +205,10 @@ else
     # Regex needs to handle debian package version number format: https://www.systutorials.com/docs/linux/man/5-deb-version/
     docker_version_regex="^(.+:)?${docker_version_dot_plus_escaped}([\\.\\+ ~:-]|$)"
     set +e # Don't exit if finding version fails - will handle gracefully
-    cli_version_suffix="=$(apt-cache madison ${cli_package_name} | awk -F"|" '{print $2}' | sed -e 's/^[ \t]*//' | grep -E -m 1 "${docker_version_regex}")"
-    engine_version_suffix="=$(apt-cache madison ${engine_package_name} | awk -F"|" '{print $2}' | sed -e 's/^[ \t]*//' | grep -E -m 1 "${docker_version_regex}")"
+        cli_version_suffix="=$(apt-cache madison ${cli_package_name} | awk -F"|" '{print $2}' | sed -e 's/^[ \t]*//' | grep -E -m 1 "${docker_version_regex}")"
+        engine_version_suffix="=$(apt-cache madison ${engine_package_name} | awk -F"|" '{print $2}' | sed -e 's/^[ \t]*//' | grep -E -m 1 "${docker_version_regex}")"
     set -e
-    if [ -z "${engine_version_suffix}" ] || [ "${engine_version_suffix}" = "=" ] || [ -z "${cli_version_suffix}" ] || [ "${cli_version_suffix}" = "=" ]; then
+    if [ -z "${engine_version_suffix}" ] || [ "${engine_version_suffix}" = "=" ] || [ -z "${cli_version_suffix}" ] || [ "${cli_version_suffix}" = "=" ] ; then
         err "No full or partial Docker / Moby version match found for \"${DOCKER_VERSION}\" on OS ${ID} ${VERSION_CODENAME} (${architecture}). Available versions:"
         apt-cache madison ${cli_package_name} | awk -F"|" '{print $2}' | grep -oP '^(.+:)?\K.+'
         exit 1
@@ -214,17 +218,17 @@ else
 fi
 
 # Install Docker / Moby CLI if not already installed
-if type docker >/dev/null 2>&1 && type dockerd >/dev/null 2>&1; then
+if type docker > /dev/null 2>&1 && type dockerd > /dev/null 2>&1; then
     echo "Docker / Moby CLI and Engine already installed."
 else
     if [ "${USE_MOBY}" = "true" ]; then
         # Install engine
         set +e # Handle error gracefully
-        apt-get -y install --no-install-recommends moby-cli${cli_version_suffix} moby-buildx moby-engine${engine_version_suffix}
-        if [ $? -ne 0 ]; then
-            err "Packages for moby not available in OS ${ID} ${VERSION_CODENAME} (${architecture}). To resolve, either: (1) set feature option '\"moby\": false' , or (2) choose a compatible OS version (eg: 'ubuntu-20.04')."
-            exit 1
-        fi
+            apt-get -y install --no-install-recommends moby-cli${cli_version_suffix} moby-buildx moby-engine${engine_version_suffix}
+            if [ $? -ne 0 ]; then
+                err "Packages for moby not available in OS ${ID} ${VERSION_CODENAME} (${architecture}). To resolve, either: (1) set feature option '\"moby\": false' , or (2) choose a compatible OS version (eg: 'ubuntu-20.04')."
+                exit 1
+            fi
         set -e
 
         # Install compose
@@ -237,7 +241,7 @@ fi
 echo "Finished installing docker / moby!"
 
 # Install Docker Compose if not already installed and is on a supported architecture
-if type docker-compose >/dev/null 2>&1; then
+if type docker-compose > /dev/null 2>&1; then
     echo "Docker Compose v1 already installed."
 else
     target_compose_arch="${architecture}"
@@ -246,7 +250,7 @@ else
     fi
     if [ "${target_compose_arch}" != "x86_64" ]; then
         # Use pip to get a version that runs on this architecture
-        if ! dpkg -s python3-minimal python3-pip libffi-dev python3-venv >/dev/null 2>&1; then
+        if ! dpkg -s python3-minimal python3-pip libffi-dev python3-venv > /dev/null 2>&1; then
             apt_get_update_if_needed
             apt-get -y install python3-minimal python3-pip libffi-dev python3-venv
         fi
@@ -256,7 +260,7 @@ else
         export PYTHONUSERBASE=/tmp/pip-tmp
         export PIP_CACHE_DIR=/tmp/pip-tmp/cache
         pipx_bin=pipx
-        if ! type pipx >/dev/null 2>&1; then
+        if ! type pipx > /dev/null 2>&1; then
             pip3 install --disable-pip-version-check --no-cache-dir --user pipx
             pipx_bin=/tmp/pip-tmp/bin/pipx
         fi
@@ -274,7 +278,7 @@ fi
 # Install docker-compose switch if not already installed - https://github.com/docker/compose-switch#manual-installation
 current_v1_compose_path="$(which docker-compose)"
 target_v1_compose_path="$(dirname "${current_v1_compose_path}")/docker-compose-v1"
-if ! type compose-switch >/dev/null 2>&1; then
+if ! type compose-switch > /dev/null 2>&1; then
     echo "(*) Installing compose-switch..."
     compose_switch_version="latest"
     find_version_from_git_tags compose_switch_version "https://github.com/docker/compose-switch"
@@ -302,15 +306,15 @@ echo "docker-init doesnt exist, adding..."
 
 # Add user to the docker group
 if [ "${ENABLE_NONROOT_DOCKER}" = "true" ]; then
-    if ! getent group docker >/dev/null 2>&1; then
+    if ! getent group docker > /dev/null 2>&1; then
         groupadd docker
     fi
 
     usermod -aG docker ${USERNAME}
 fi
 
-tee /usr/local/share/docker-init.sh >/dev/null \
-    <<'EOF'
+tee /usr/local/share/docker-init.sh > /dev/null \
+<< 'EOF'
 #!/bin/sh
 #-------------------------------------------------------------------------------------------------------------
 # Copyright (c) Microsoft Corporation. All rights reserved.

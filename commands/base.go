@@ -43,7 +43,7 @@ func BasePredictorWrappers() []*predictor.Params {
 		{Name: cst.Beautify, Shorthand: "b", Usage: "Should beautify output", Global: true, ValueType: "bool", Hidden: true},
 		{Name: cst.Plain, Usage: "Should not beautify output", Global: true, ValueType: "bool"},
 		{Name: cst.Verbose, Shorthand: "v", Usage: "Verbose output [default:false]", Global: true, ValueType: "bool"},
-		{Name: cst.Config, Shorthand: "c", Usage: fmt.Sprintf("Config file path [default:%s%s.thy.yaml]", homePath, string(os.PathSeparator)), Global: true},
+		{Name: cst.Config, Shorthand: "c", Usage: fmt.Sprintf("Config file path [default:%s%s.dsv.yml]", homePath, string(os.PathSeparator)), Global: true},
 		{Name: cst.Filter, Shorthand: "f", Usage: "Filter in jq (stedolan.github.io/jq)", Global: true},
 		{Name: cst.Output, Shorthand: "o", Usage: "Output destination (stdout|clip|file:<fname>) [default:stdout]", Global: true, Predictor: predictor.OutputTypePredictor{}},
 
@@ -73,17 +73,16 @@ type CommandArgs struct {
 
 // NewCommand creates new baseCommand
 func NewCommand(args CommandArgs) (cli.Command, error) {
-	if args.Path == nil || len(args.Path) < 1 {
+	if len(args.Path) == 0 {
 		return nil, utils.NewMissingArgError(cst.Path)
 	}
 	cmd := &baseCommand{
-		path:              args.Path,
-		runFunc:           args.RunFunc,
-		helpText:          args.HelpText,
-		synopsisText:      args.SynopsisText,
-		authenticatorFunc: auth.NewAuthenticatorDefault,
-		noPreAuth:         args.NoPreAuth,
-		minNumberArgs:     args.MinNumberArgs,
+		path:          args.Path,
+		runFunc:       args.RunFunc,
+		helpText:      args.HelpText,
+		synopsisText:  args.SynopsisText,
+		noPreAuth:     args.NoPreAuth,
+		minNumberArgs: args.MinNumberArgs,
 	}
 
 	cmd.flagsPredictor = make(map[string]*predictor.Wrapper)
@@ -97,15 +96,11 @@ func NewCommand(args CommandArgs) (cli.Command, error) {
 	}
 
 	if args.ArgsPredictorFunc != nil {
-		cmd.AddArgsPredictorFunc(args.ArgsPredictorFunc)
+		cmd.argsPredictorFunc = func() complete.Predictor {
+			return complete.PredictFunc(args.ArgsPredictorFunc)
+		}
 	}
 	return cmd, nil
-}
-
-// AddArgsPredictorFunc adds custom args predictors
-func (c *baseCommand) AddArgsPredictorFunc(predictorFunc func(complete.Args) []string) *baseCommand {
-	c.argsPredictorFunc = func() complete.Predictor { return complete.PredictFunc(predictorFunc) }
-	return c
 }
 
 type baseCommand struct {
@@ -115,7 +110,6 @@ type baseCommand struct {
 	synopsisText      string
 	argsPredictorFunc func() complete.Predictor
 	flagsPredictor    map[string]*predictor.Wrapper
-	authenticatorFunc func() auth.Authenticator
 	noPreAuth         bool
 	minNumberArgs     int
 }
@@ -124,8 +118,6 @@ func (c *baseCommand) preRun(args []string) int {
 	if len(args) < c.minNumberArgs {
 		return cli.RunResultHelp
 	}
-
-	viper.Set(cst.MainCommand, c.path[0])
 
 	c.SetFlags()
 	setVerbosity()
@@ -150,9 +142,6 @@ func (c *baseCommand) preRun(args []string) int {
 	beautify := !viper.GetBool(cst.Plain)
 	viper.Set(cst.Beautify, beautify)
 
-	// Set profile name to lower case globally.
-	viper.Set(cst.Profile, strings.ToLower(viper.GetString(cst.Profile)))
-
 	if upd, err := version.CheckLatestVersion(); err != nil {
 		log.Println(err)
 	} else if upd != nil {
@@ -162,12 +151,12 @@ func (c *baseCommand) preRun(args []string) int {
 	}
 
 	if !c.noPreAuth {
-		if tr, err := c.authenticatorFunc().GetToken(); err != nil || tr == nil || tr.Token == "" {
+		tokenResponse, err := auth.NewAuthenticatorDefault().GetToken()
+		if err != nil || tokenResponse == nil || tokenResponse.Token == "" {
 			format.NewDefaultOutClient().WriteResponse(nil, err)
 			os.Exit(1)
-		} else {
-			viper.Set("token", tr.Token)
 		}
+		viper.Set("token", tokenResponse.Token)
 	}
 	return 0
 }

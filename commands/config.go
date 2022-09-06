@@ -163,7 +163,7 @@ type PostConfigModel struct {
 	Serialization string
 }
 
-//utf16toString decodes utf16 to utf8
+// utf16toString decodes utf16 to utf8
 func utf16toString(b []uint8) string {
 	if len(b)&1 != 0 {
 		return ""

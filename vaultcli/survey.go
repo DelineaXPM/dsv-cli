@@ -10,6 +10,16 @@ import (
 	"strings"
 )
 
+// List of validation errors.
+var (
+	errValueRequired    = errors.New("Value is required.")
+	errInvalidInteger   = errors.New("Please enter a valid integer.")
+	errInvalidPort      = errors.New("Please enter a valid port number.")
+	errFileNotFound     = errors.New("Cannot find file at given path.")
+	errUppercaseProfile = errors.New("Profile name can only use lowercase letters.")
+	errProfileExists    = errors.New("Profile with this name already exists in the config.")
+)
+
 // -----------------------------------------------------------------------//
 // Common functions for Question objects from AlecAivazis/survey library. //
 // -----------------------------------------------------------------------//
@@ -19,7 +29,7 @@ import (
 func SurveyRequired(ans interface{}) error {
 	answer := strings.TrimSpace(ans.(string))
 	if len(answer) == 0 {
-		return errors.New("Value is required.")
+		return errValueRequired
 	}
 	return nil
 }
@@ -29,7 +39,7 @@ func SurveyRequiredInt(ans interface{}) error {
 	answer := strings.TrimSpace(ans.(string))
 	_, err := strconv.Atoi(answer)
 	if err != nil {
-		return errors.New("Please enter a valid integer.")
+		return errInvalidInteger
 	}
 	return nil
 }
@@ -39,7 +49,7 @@ func SurveyRequiredPortNumber(ans interface{}) error {
 	answer := strings.TrimSpace(ans.(string))
 	num, err := strconv.Atoi(answer)
 	if err != nil || num > 65535 || num < 0 {
-		return errors.New("Please enter a valid port number.")
+		return errInvalidPort
 	}
 	return nil
 }
@@ -48,11 +58,11 @@ func SurveyRequiredPortNumber(ans interface{}) error {
 func SurveyRequiredFile(ans interface{}) error {
 	answer := strings.TrimSpace(ans.(string))
 	if len(answer) == 0 {
-		return errors.New("Value is required.")
+		return errValueRequired
 	}
 	_, err := os.Stat(answer)
 	if err != nil {
-		return errors.New("Cannot find file at given path.")
+		return errFileNotFound
 	}
 	return nil
 }
@@ -61,7 +71,7 @@ func SurveyRequiredFile(ans interface{}) error {
 func SurveyRequiredPath(ans interface{}) error {
 	answer := strings.TrimSpace(ans.(string))
 	if len(answer) == 0 {
-		return errors.New("Value is required.")
+		return errValueRequired
 	}
 	return ValidatePath(answer)
 }
@@ -70,9 +80,33 @@ func SurveyRequiredPath(ans interface{}) error {
 func SurveyRequiredName(ans interface{}) error {
 	answer := strings.TrimSpace(ans.(string))
 	if len(answer) == 0 {
-		return errors.New("Value is required.")
+		return errValueRequired
 	}
 	return ValidateName(answer)
+}
+
+// SurveyRequiredProfileName checks profile name.
+func SurveyRequiredProfileName(existingProfiles []string) func(ans interface{}) error {
+	return func(ans interface{}) error {
+		answer := strings.TrimSpace(ans.(string))
+		if len(answer) == 0 {
+			return errValueRequired
+		}
+		lowered := strings.ToLower(answer)
+		if lowered != answer {
+			return errUppercaseProfile
+		}
+		err := ValidateProfile(answer)
+		if err != nil {
+			return err
+		}
+		for _, p := range existingProfiles {
+			if answer == p {
+				return errProfileExists
+			}
+		}
+		return nil
+	}
 }
 
 // SurveyOptionalCIDR verifies that the answer is either empty or a valid CIDR.

@@ -1,26 +1,25 @@
 package cmd
 
 import (
-	"crypto/x509"
-	"encoding/base64"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
 	"thy/auth"
 	cst "thy/constants"
 	"thy/errors"
+	"thy/internal/pki"
 	"thy/internal/predictor"
 	"thy/paths"
 	"thy/store"
-	"thy/vaultcli"
-
 	"thy/utils"
+	"thy/vaultcli"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/mitchellh/cli"
@@ -29,9 +28,10 @@ import (
 
 func GetCliConfigCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path:      []string{cst.NounCliConfig},
-		HelpText:  "Execute an action on the cli config for " + cst.ProductName,
-		NoPreAuth: true,
+		Path:         []string{cst.NounCliConfig},
+		SynopsisText: "Manage the CLI configuration.",
+		HelpText:     "Execute an action on the cli config for " + cst.ProductName,
+		NoPreAuth:    true,
 		RunFunc: func(args []string) int {
 			return cli.RunResultHelp
 		},
@@ -39,13 +39,67 @@ func GetCliConfigCmd() (cli.Command, error) {
 }
 
 func GetCliConfigInitCmd() (cli.Command, error) {
+	homePath := "$HOME"
+	if runtime.GOOS == "windows" {
+		homePath = "%USERPROFILE%"
+	}
+	defaultConfigPath := filepath.Join(homePath, ".dsv.yml")
+
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounCliConfig, cst.Init},
-		SynopsisText: strings.Join([]string{cst.NounCliConfig, cst.Init}, " "),
-		HelpText:     "Initialize the cli config for " + cst.ProductName,
-		NoPreAuth:    true,
+		SynopsisText: "Initialize or add a new profile to the CLI configuration.",
+		HelpText: `Command 'init' is an alias for 'cli-config init'.
+For interactive mode provide no arguments.
+
+Examples:
+- Add profile that uses username/password for authentication:
+    • init \
+        --profile prof \
+        --tenant demo \
+        --domain secretsvaultcloud.com \
+        --store-type file \
+        --store-path ~/.thy \
+        --cache-strategy server \
+        --auth-type password \
+        --auth-username 'demouser' \
+        --auth-password 'demopassword'
+
+- Add profile that uses client credentials for authentication:
+    • init \
+        --profile prof \
+        --tenant demo \
+        --domain secretsvaultcloud.com \
+        --store-type file \
+        --store-path ~/.thy \
+        --cache-strategy server \
+        --auth-type clientcred \
+        --auth-client-id '11111111-2222-3333-4444-555555555555' \
+        --auth-client-secret 'abcdefghijklmnopqrstuvwxyz012345'
+`,
+		NoPreAuth: true,
 		FlagsPredictor: []*predictor.Params{
-			{Name: cst.Dev, Hidden: true, Usage: "Specify dev domain upon initialization"},
+			// Configuration path and profile name.
+			{Name: cst.Config, Shorthand: "c", Usage: fmt.Sprintf("Set config file path [default:%s]", defaultConfigPath)},
+			{Name: cst.Profile, Usage: "Profile name to add to the config file"},
+
+			// Tenant info.
+			{Name: cst.Tenant, Usage: "Name of the tenant to connect to"},
+			{Name: cst.DomainName, Usage: "Domain name, e.g. 'secretsvaultcloud.com'"},
+
+			// Storing and Caching.
+			{Name: cst.StoreType, Usage: "Store type (file|none|pass_linux|wincred)"},
+			{Name: cst.StorePath, Usage: "Path to directory where to store. Only if store type is 'file'"},
+			{Name: cst.CacheStrategy, Usage: "Cache strategy (server|server.cache|cache.server|cache.server.expired). Only if store type is not 'none'"},
+			{Name: cst.CacheAge, Usage: "Cache age in minutes. Only if cache strategy is not 'server'"},
+
+			// Authentication.
+			{Name: cst.AuthType, Usage: "Authentication type (password|clientcred|thyone|aws|azure|gcp|oidc|cert)."},
+			{Name: cst.Username, Usage: "Username for 'password' authentication type."},
+			{Name: cst.Password, Usage: "Password for 'password' authentication type."},
+			{Name: cst.AuthClientID, Usage: "Client ID for 'clientcred' authentication type."},
+			{Name: cst.AuthClientSecret, Usage: "Client Secret for 'clientcred' authentication type."},
+
+			{Name: cst.Dev, Hidden: true, Usage: "Specify dev domain upon initialization (ignored when '--domain' is used)"},
 		},
 		RunFunc: func(args []string) int {
 			return handleCliConfigInitCmd(vaultcli.New(), args)
@@ -62,7 +116,7 @@ func GetCliConfigUpdateCmd() (cli.Command, error) {
 Usage:
    • cli-config update --profile default --key auth.password --value *******
    • cli-config update profile2.auth.type clientcred --profile profile2
-		`,
+`,
 		NoPreAuth: true,
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Key, Usage: "Key of setting to be updated (required)"},
@@ -109,6 +163,87 @@ func GetCliConfigEditCmd() (cli.Command, error) {
 			return handleCliConfigEditCmd(vaultcli.New(), args)
 		},
 	})
+}
+
+func GetCliConfigUseProfileCmd() (cli.Command, error) {
+	return NewCommand(CommandArgs{
+		Path:         []string{cst.NounCliConfig, cst.UseProfile},
+		SynopsisText: "Set a profile name which will be used by default.",
+		HelpText: `Usage:
+   • cli-config use-profile admin
+   • cli-config use-profile role1
+
+For interactive mode provide no arguments:
+   • cli-config use-profile`,
+		NoPreAuth: true,
+		RunFunc: func(args []string) int {
+			return handleCliConfigUseProfileCmd(vaultcli.New(), args)
+		},
+	})
+}
+
+func handleCliConfigUseProfileCmd(vcli vaultcli.CLI, args []string) int {
+	cfgPath := viper.GetString(cst.Config)
+	cf, err := vaultcli.ReadConfigFile(cfgPath)
+	if err != nil {
+		vcli.Out().FailF("Error: failed to read config: %v.", err)
+		return 1
+	}
+	existingProfiles := cf.ListProfiles()
+	if len(existingProfiles) == 1 {
+		vcli.Out().FailS("Default profile cannot be changed since only one profile defined in the configuration file.")
+		return 0
+	}
+
+	log.Printf("Current profile used by default: %q.", cf.DefaultProfile)
+
+	var profile string
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		profile = args[0]
+		if _, ok := cf.GetProfile(profile); !ok {
+			vcli.Out().FailF("Error: profile %q not found in config.", profile)
+			return 1
+		}
+	} else {
+		profiles := make([]string, 0, len(existingProfiles))
+
+		for _, prof := range existingProfiles {
+			repr := fmt.Sprintf("%s (tenant: %s; auth type: %s)",
+				prof.Name, prof.Get(cst.Tenant), prof.Get(cst.NounAuth, cst.Type))
+
+			if prof.Name == cf.DefaultProfile {
+				profiles = append(profiles, repr+" <-- [current default]")
+			} else {
+				profiles = append(profiles, repr)
+			}
+		}
+
+		var profileID int
+		profilePrompt := &survey.Select{
+			Message:  "Please select default profile:",
+			Options:  profiles,
+			PageSize: 10,
+		}
+		err = survey.AskOne(profilePrompt, &profileID)
+		if err != nil {
+			vcli.Out().Fail(err)
+			return 1
+		}
+		profile = existingProfiles[profileID].Name
+	}
+
+	if profile == cf.DefaultProfile {
+		return 0
+	}
+
+	cf.DefaultProfile = profile
+
+	err = cf.Save()
+	if err != nil {
+		vcli.Out().FailF("Error: cannot save configuration: %v.", err)
+		return 1
+	}
+	return 0
 }
 
 func handleCliConfigUpdateCmd(vcli vaultcli.CLI, args []string) int {
@@ -182,7 +317,7 @@ func handleCliConfigUpdateCmd(vcli vaultcli.CLI, args []string) int {
 	} else {
 		prf.Del(keys...)
 	}
-	cf.UpdateProfile(prf)
+	cf.SetProfile(prf)
 	saveErr := cf.Save()
 	if saveErr != nil {
 		vcli.Out().FailF("Error: cannot save configuration: %v", saveErr)
@@ -296,7 +431,7 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 		// The `dsv init` command is the only command that allows path to a directory in `--config` flag.
 		info, err := os.Stat(cfgPath)
 		if err == nil && info != nil && info.IsDir() {
-			cfgPath = filepath.Join(cfgPath, cst.CliConfigName)
+			cfgPath = vaultcli.LookupConfigPath(cfgPath)
 		}
 	}
 
@@ -313,114 +448,114 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 	}
 	cfgExists := err == nil
 	if cfgExists {
-		ui.Warn(fmt.Sprintf("Found an existing cli-config located at '%s'", cf.GetPath()))
+		ui.Warn(fmt.Sprintf("Found an existing cli-config located at '%s'.", cf.GetPath()))
 	}
 
-	profile := strings.ToLower(viper.GetString(cst.Profile))
-	if !cfgExists {
-		if profile != "" && profile != cst.DefaultProfile {
-			// If config does not exist, and the user specified a non-default --profile name, then quit and ask to properly init.
-			ui.Info("Initial configuration is needed in order to add a custom profile.")
-			ui.Info(fmt.Sprintf("Create CLI config file manually or execute command '%s init' to initiate CLI configuration.", cst.CmdRoot))
+	profile := viper.GetString(cst.Profile)
+	if profile != "" {
+		lowered := strings.ToLower(profile)
+		if lowered != profile {
+			profile = lowered
+			ui.Warn(fmt.Sprintf("Profile name can only use lowercase letters. The name '%s' will be used instead.", profile))
+		}
+		if err := vaultcli.ValidateProfile(profile); err != nil {
+			ui.Info(err.Error())
 			return 1
 		}
-		profile = cst.DefaultProfile
-	} else {
-		if profile != "" {
+		if cfgExists {
 			// The user specified --profile [name], so the intent is to add a profile to the config.
-
-			if err := vaultcli.IsValidProfile(profile); err != nil {
-				ui.Info(err.Error())
-				return 1
-			}
 			if _, ok := cf.GetProfile(profile); ok {
 				msg := fmt.Sprintf("Profile %q already exists in the config.", profile)
 				ui.Info(msg)
 				return 1
 			}
-		} else {
-			var actionID int
-			actionPrompt := &survey.Select{
-				Message: "Select an option:",
-				Options: []string{
-					"Do nothing",
-					"Overwrite the config",
-					"Add a new profile to the config",
-				},
-			}
-			survErr := survey.AskOne(actionPrompt, &actionID)
-			if survErr != nil {
-				vcli.Out().WriteResponse(nil, errors.New(survErr))
-				return 1
-			}
-			switch actionID {
-			case 0: // "Do nothing".
-				ui.Info("Exiting.")
-				return 0
-
-			case 1: // "Overwrite the config".
-				cf, _ = vaultcli.NewConfigFile(cf.GetPath())
-				profile = cst.DefaultProfile
-
-			case 2: // "Add a new profile to the config".
-				profilePrompt := &survey.Input{Message: "Please enter profile name:"}
-				profileValidation := func(ans interface{}) error {
-					if err := vaultcli.SurveyRequired(ans); err != nil {
-						return err
-					}
-					answer := strings.TrimSpace(ans.(string))
-					if err := vaultcli.IsValidProfile(answer); err != nil {
-						return errors.New(err)
-					}
-					_, ok := cf.GetProfile(answer)
-					if ok {
-						return errors.NewS("Profile with this name already exists in the config.")
-					}
-					return nil
-				}
-				survErr := survey.AskOne(profilePrompt, &profile, survey.WithValidator(profileValidation))
-				if survErr != nil {
-					vcli.Out().WriteResponse(nil, errors.New(survErr))
-					return 1
-				}
-				profile = strings.TrimSpace(profile)
-			}
 		}
+	}
+	if !cfgExists && profile == "" {
+		// If configuration file does not exist and profile name was not provided
+		// then use default profile name to have better user experience with less
+		// questions to answer.
+		profile = cst.DefaultProfile
+	}
+
+	if cfgExists && profile == "" {
+		var actionID int
+		actionPrompt := &survey.Select{
+			Message: "Select an option:",
+			Options: []string{
+				"Do nothing",
+				"Overwrite the config",
+				"Add a new profile to the config",
+			},
+		}
+		survErr := survey.AskOne(actionPrompt, &actionID)
+		if survErr != nil {
+			vcli.Out().WriteResponse(nil, errors.New(survErr))
+			return 1
+		}
+		if actionID == 0 { // "Do nothing".
+			ui.Info("Exiting.")
+			return 0
+		}
+
+		var profilePrompt *survey.Input
+		switch actionID {
+		case 1: // "Overwrite the config".
+			cf, _ = vaultcli.NewConfigFile(cf.GetPath())
+			profilePrompt = &survey.Input{Message: "Please enter profile name:", Default: cst.DefaultProfile}
+
+		case 2: // "Add a new profile to the config".
+			profilePrompt = &survey.Input{Message: "Please enter profile name:"}
+		}
+
+		validationOpt := survey.WithValidator(vaultcli.SurveyRequiredProfileName(cf.ListProfilesNames()))
+		survErr = survey.AskOne(profilePrompt, &profile, validationOpt)
+		if survErr != nil {
+			vcli.Out().WriteResponse(nil, errors.New(survErr))
+			return 1
+		}
+		profile = strings.TrimSpace(profile)
 	}
 	prf := vaultcli.NewProfile(profile)
 	viper.Set(cst.Profile, profile)
 
-	// tenant
-	var tenant string
-	tenantPrompt := &survey.Input{Message: "Please enter tenant name:"}
-	survErr := survey.AskOne(tenantPrompt, &tenant, survey.WithValidator(vaultcli.SurveyRequired))
-	if survErr != nil {
-		vcli.Out().WriteResponse(nil, errors.New(survErr))
-		return utils.GetExecStatus(survErr)
+	// Tenant name.
+	tenant := viper.GetString(cst.Tenant)
+	if tenant == "" {
+		tenantPrompt := &survey.Input{Message: "Please enter tenant name:"}
+		survErr := survey.AskOne(tenantPrompt, &tenant, survey.WithValidator(vaultcli.SurveyRequired))
+		if survErr != nil {
+			vcli.Out().WriteResponse(nil, errors.New(survErr))
+			return utils.GetExecStatus(survErr)
+		}
+		tenant = strings.TrimSpace(tenant)
+		viper.Set(cst.Tenant, tenant)
 	}
-	tenant = strings.TrimSpace(tenant)
 
 	prf.Set(tenant, cst.Tenant)
-	viper.Set(cst.Tenant, tenant)
 
-	// domain
-	var domain string
+	// Domain.
+	domain := viper.GetString(cst.DomainName)
+
 	var isDevDomain bool
+	if domain == "" {
+		devDomain := viper.GetString(cst.Dev)
 
-	if devDomain := viper.GetString(cst.Dev); devDomain != "" {
-		isDevDomain = true
-		domain = devDomain
-	} else {
-		domain, err = promptDomain()
-		if err != nil {
-			vcli.Out().WriteResponse(nil, errors.New(err))
-			return 1
+		if devDomain != "" {
+			isDevDomain = true
+			domain = devDomain
+		} else {
+			domain, err = promptDomain()
+			if err != nil {
+				vcli.Out().WriteResponse(nil, errors.New(err))
+				return 1
+			}
 		}
+		viper.Set(cst.DomainKey, domain)
 	}
 	prf.Set(domain, cst.DomainKey)
-	viper.Set(cst.DomainKey, domain)
 
-	// check if tenant has been setup yet
+	// Check if tenant has been setup yet.
 	var setupRequired bool
 	heartbeatURI := paths.CreateURI("heartbeat", nil)
 	if respData, err := vcli.HTTPClient().DoRequest(http.MethodGet, heartbeatURI, nil); err != nil {
@@ -436,11 +571,14 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 		}
 	}
 
-	// store
-	storeType, err := promptStoreType()
-	if survErr != nil {
-		vcli.Out().WriteResponse(nil, errors.New(err))
-		return 1
+	// Store configuration.
+	storeType := viper.GetString(cst.StoreType)
+	if storeType == "" {
+		storeType, err = promptStoreType()
+		if err != nil {
+			vcli.Out().WriteResponse(nil, errors.New(err))
+			return 1
+		}
 	}
 	if err := store.ValidateCredentialStore(storeType); err != nil {
 		ui.Error(fmt.Sprintf("Failed to get store: %v.", err))
@@ -454,17 +592,19 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 	if storeType == store.File {
 		def := filepath.Join(utils.NewEnvProvider().GetHomeDir(), ".thy")
 
-		var fileStorePath string
-		fileStorePathPrompt := &survey.Input{
-			Message: "Please enter directory for file store:",
-			Default: def,
+		fileStorePath := viper.GetString(cst.StorePath)
+		if fileStorePath == "" {
+			fileStorePathPrompt := &survey.Input{
+				Message: "Please enter directory for file store:",
+				Default: def,
+			}
+			survErr := survey.AskOne(fileStorePathPrompt, &fileStorePath, survey.WithValidator(vaultcli.SurveyRequired))
+			if survErr != nil {
+				vcli.Out().WriteResponse(nil, errors.New(survErr))
+				return utils.GetExecStatus(survErr)
+			}
+			fileStorePath = strings.TrimSpace(fileStorePath)
 		}
-		survErr := survey.AskOne(fileStorePathPrompt, &fileStorePath, survey.WithValidator(vaultcli.SurveyRequired))
-		if survErr != nil {
-			vcli.Out().WriteResponse(nil, errors.New(survErr))
-			return utils.GetExecStatus(survErr)
-		}
-		fileStorePath = strings.TrimSpace(fileStorePath)
 
 		if fileStorePath != def {
 			prf.Set(fileStorePath, cst.Store, cst.Path)
@@ -472,41 +612,50 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 		}
 	}
 
-	//cache
+	// Caching strategy and cache age.
 	if storeType != store.None {
-		cacheStrategy, err := promptCacheStrategy()
-		if err != nil {
-			vcli.Out().WriteResponse(nil, errors.New(err))
-			return 1
+		cacheStrategy := viper.GetString(cst.CacheStrategy)
+		if cacheStrategy == "" {
+			cacheStrategy, err = promptCacheStrategy()
+			if err != nil {
+				vcli.Out().WriteResponse(nil, errors.New(err))
+				return 1
+			}
 		}
 
 		prf.Set(cacheStrategy, cst.Cache, cst.Strategy)
 
 		if cacheStrategy != cst.CacheStrategyNever {
-			var cacheAge string
-			cacheAgePrompt := &survey.Input{Message: "Please enter cache age (minutes until expiration):"}
-			cacheAgeValidation := func(ans interface{}) error {
-				if err := vaultcli.SurveyRequired(ans); err != nil {
-					return err
+			cacheAge := viper.GetString(cst.CacheAge)
+			if cacheAge == "" {
+				cacheAgePrompt := &survey.Input{Message: "Please enter cache age (minutes until expiration):"}
+				cacheAgeValidation := func(ans interface{}) error {
+					if err := vaultcli.SurveyRequired(ans); err != nil {
+						return err
+					}
+					answer := strings.TrimSpace(ans.(string))
+					if age, err := strconv.Atoi(answer); err != nil || age <= 0 {
+						return errors.NewS("Unable to parse age. Must be strictly positive int")
+					}
+					return nil
 				}
-				answer := strings.TrimSpace(ans.(string))
-				if age, err := strconv.Atoi(answer); err != nil || age <= 0 {
-					return errors.NewS("Unable to parse age. Must be strictly positive int")
+				survErr := survey.AskOne(cacheAgePrompt, &cacheAge, survey.WithValidator(cacheAgeValidation))
+				if survErr != nil {
+					vcli.Out().WriteResponse(nil, errors.New(survErr))
+					return utils.GetExecStatus(survErr)
 				}
-				return nil
+				cacheAge = strings.TrimSpace(cacheAge)
+			} else {
+				if age, err := strconv.Atoi(cacheAge); err != nil || age <= 0 {
+					vcli.Out().FailS("Unable to parse cache age. Must be strictly positive int")
+					return 1
+				}
 			}
-			survErr := survey.AskOne(cacheAgePrompt, &cacheAge, survey.WithValidator(cacheAgeValidation))
-			if survErr != nil {
-				vcli.Out().WriteResponse(nil, errors.New(survErr))
-				return utils.GetExecStatus(survErr)
-			}
-			cacheAge = strings.TrimSpace(cacheAge)
 			prf.Set(cacheAge, cst.Cache, cst.Age)
 		}
 	}
 
-	//auth
-	// allow overriding option with flag
+	// Authentication type and authentication data.
 	authType := viper.GetString(cst.AuthType)
 	if authType == "" {
 		authType, err = promptAuthType()
@@ -523,19 +672,24 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 
 	switch {
 	case (storeType != store.None && auth.AuthType(authType) == auth.Password):
-		if setupRequired {
-			user, password, err = promptInitialUsernamePassword(tenant)
-		} else {
-			user, password, err = promptUsernamePassword(tenant)
-		}
-		if err != nil {
-			vcli.Out().WriteResponse(nil, errors.New(err))
-			return 1
+		user = viper.GetString(cst.Username)
+		password = viper.GetString(cst.Password)
+
+		if user == "" || password == "" {
+			if setupRequired {
+				user, password, err = promptInitialUsernamePassword(tenant)
+			} else {
+				user, password, err = promptUsernamePassword(tenant)
+			}
+			if err != nil {
+				vcli.Out().WriteResponse(nil, errors.New(err))
+				return 1
+			}
+			viper.Set(cst.Username, user)
+			viper.Set(cst.Password, password)
 		}
 
 		prf.Set(user, cst.NounAuth, cst.DataUsername)
-		viper.Set(cst.Username, user)
-		viper.Set(cst.Password, password)
 
 		encryptionKeyFileName = auth.GetEncryptionKeyFilename(viper.GetString(cst.Tenant), user)
 
@@ -555,14 +709,19 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 		}
 
 	case (storeType != store.None && auth.AuthType(authType) == auth.ClientCredential):
-		clientID, clientSecret, err := promptClientCredentials()
-		if err != nil {
-			vcli.Out().WriteResponse(nil, errors.New(err))
-			return 1
+		clientID := viper.GetString(cst.AuthClientID)
+		clientSecret := viper.GetString(cst.AuthClientSecret)
+
+		if clientID == "" || clientSecret == "" {
+			clientID, clientSecret, err = promptClientCredentials()
+			if err != nil {
+				vcli.Out().WriteResponse(nil, errors.New(err))
+				return 1
+			}
+			viper.Set(cst.AuthClientID, clientID)
 		}
 
 		prf.Set(clientID, cst.NounAuth, cst.NounClient, cst.ID)
-		viper.Set(cst.AuthClientID, clientID)
 
 		if isSecureStore {
 			if err := store.StoreSecureSetting(strings.Join([]string{profile, cst.NounAuth, cst.NounClient, cst.NounSecret}, "."), clientSecret, storeType); err != nil {
@@ -708,7 +867,7 @@ Example:
 		}
 	}
 
-	cf.AddProfile(prf)
+	cf.SetProfile(prf)
 	saveErr := cf.Save()
 	if saveErr != nil {
 		vcli.Out().FailF("Error: could not save configuration at path %q: %v.", cf.GetPath(), err)
@@ -722,7 +881,13 @@ Example:
 // tryAuthenticate attempts to authenticate with the current state of all constants, such as auth type, username, password, etc.
 func tryAuthenticate() error {
 	authenticator := auth.NewAuthenticatorDefault()
-	_, apiError := authenticator.GetToken()
+
+	apiError := authenticator.WipeCachedTokens()
+	if apiError != nil {
+		return apiError
+	}
+
+	_, apiError = authenticator.GetToken()
 	if apiError != nil {
 		return apiError
 	}
@@ -973,6 +1138,9 @@ func promptCertificate() (string, error) {
 	if survErr != nil {
 		return "", survErr
 	}
+
+	var uncheckedCert string
+
 	answer := struct {
 		Cert string
 	}{}
@@ -989,7 +1157,7 @@ func promptCertificate() (string, error) {
 		if survErr != nil {
 			return "", survErr
 		}
-		return parseBase64EncodedCertificate(answer.Cert)
+		uncheckedCert = answer.Cert
 
 	case 1: // "Certificate file path".
 		qs := []*survey.Question{
@@ -1007,31 +1175,16 @@ func promptCertificate() (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("'%s' file cannot be read", answer.Cert)
 		}
-		// pem encoded certificate
-		if isPem, err := checkIsPem(fileData, "CERTIFICATE"); isPem {
-			return base64.StdEncoding.EncodeToString(fileData), nil
-		} else if err != nil {
-			return "", err
-		}
-		// der encoded certificate
-		cert, err := x509.ParseCertificate(fileData)
-		if err == nil {
-			out := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})
-			return base64.StdEncoding.EncodeToString(out), nil
-		}
-		// cli json output
+
 		body := cliCertificateOutput{}
 		if err := json.Unmarshal(fileData, &body); err == nil {
-			return parseBase64EncodedCertificate(body.Certificate)
+			uncheckedCert = body.Certificate
+		} else {
+			uncheckedCert = string(fileData)
 		}
-		// base64 encoded data
-		res, err := parseBase64EncodedCertificate(string(fileData))
-		if err != nil {
-			return "", fmt.Errorf("unknown certificate format. Please try .pem/.der/.json")
-		}
-		return res, nil
 	}
-	return "", fmt.Errorf("undefined option")
+
+	return pki.CertToBase64EncodedPEM(uncheckedCert)
 }
 
 func promptPrivateKey() (string, error) {
@@ -1047,6 +1200,9 @@ func promptPrivateKey() (string, error) {
 	if survErr != nil {
 		return "", survErr
 	}
+
+	var uncheckedPrivKey string
+
 	answer := struct {
 		PrivKey string
 	}{}
@@ -1063,17 +1219,7 @@ func promptPrivateKey() (string, error) {
 		if survErr != nil {
 			return "", survErr
 		}
-		content, err := base64.StdEncoding.DecodeString(answer.PrivKey)
-		if err != nil {
-			return "", fmt.Errorf("private key must be base64 encoded")
-		}
-		key, err := x509.ParsePKCS1PrivateKey(content)
-		if err == nil {
-			keyBytes := x509.MarshalPKCS1PrivateKey(key)
-			out := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: keyBytes})
-			return base64.StdEncoding.EncodeToString(out), nil
-		}
-		return parseBase64EncodedPrivKey(answer.PrivKey)
+		uncheckedPrivKey = answer.PrivKey
 
 	case 1: // "Private key file path".
 		qs := []*survey.Question{
@@ -1087,80 +1233,19 @@ func promptPrivateKey() (string, error) {
 		if survErr != nil {
 			return "", survErr
 		}
+
 		fileData, err := os.ReadFile(answer.PrivKey)
 		if err != nil {
 			return "", fmt.Errorf("'%s' file cannot be read", answer.PrivKey)
 		}
-		// pem encoded rsa private key
-		if isPem, err := checkIsPem(fileData, "RSA PRIVATE KEY"); isPem {
-			return base64.StdEncoding.EncodeToString(fileData), nil
-		} else if err != nil {
-			return "", err
-		}
-		// der encoded rsa private key
-		key, err := x509.ParsePKCS1PrivateKey(fileData)
-		if err == nil {
-			keyBytes := x509.MarshalPKCS1PrivateKey(key)
-			out := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: keyBytes})
-			return base64.StdEncoding.EncodeToString(out), nil
-		}
-		// cli json output
+
 		body := cliCertificateOutput{}
 		if err := json.Unmarshal(fileData, &body); err == nil {
-			return parseBase64EncodedPrivKey(body.PrivateKey)
+			uncheckedPrivKey = body.PrivateKey
+		} else {
+			uncheckedPrivKey = string(fileData)
 		}
-		// base64 encoded data
-		res, err := parseBase64EncodedPrivKey(string(fileData))
-		if err != nil {
-			return "", fmt.Errorf("unknown private key format. Please try .pem/.der/.json")
-		}
-		return res, nil
 	}
-	return "", fmt.Errorf("undefined option")
-}
 
-func parseBase64EncodedCertificate(cert string) (string, error) {
-	content, err := base64.StdEncoding.DecodeString(cert)
-	if err != nil {
-		return "", fmt.Errorf("raw certificate must be base64 encoded")
-	}
-	if isCert, err := x509.ParseCertificate(content); err == nil {
-		out := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: isCert.Raw})
-		return base64.StdEncoding.EncodeToString(out), nil
-	}
-	if isPem, err := checkIsPem(content, "CERTIFICATE"); isPem {
-		return cert, nil
-	} else if err != nil {
-		return "", err
-	}
-	return "", fmt.Errorf("certificate is malformed")
-}
-
-func parseBase64EncodedPrivKey(key string) (string, error) {
-	content, err := base64.StdEncoding.DecodeString(key)
-	if err != nil {
-		return "", fmt.Errorf("raw private key must be base64 encoded")
-	}
-	privKey, err := x509.ParsePKCS1PrivateKey(content)
-	if err == nil {
-		keyBytes := x509.MarshalPKCS1PrivateKey(privKey)
-		out := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: keyBytes})
-		return base64.StdEncoding.EncodeToString(out), nil
-	}
-	if isPem, err := checkIsPem(content, "RSA PRIVATE KEY"); isPem {
-		return key, nil
-	} else if err != nil {
-		return "", err
-	}
-	return "", fmt.Errorf("private key is malformed")
-}
-
-func checkIsPem(content []byte, blockType string) (bool, error) {
-	block, _ := pem.Decode(content)
-	if block != nil && block.Type == blockType {
-		return true, nil
-	} else if block != nil {
-		return false, fmt.Errorf("expected .pem encoded '%s', got .pem encoded '%s'", blockType, block.Type)
-	}
-	return false, nil
+	return pki.PrivateKeyToBase64EncodedPEM(uncheckedPrivKey)
 }

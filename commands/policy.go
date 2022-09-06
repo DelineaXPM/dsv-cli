@@ -399,31 +399,35 @@ func handlePolicySearchCmd(vcli vaultcli.CLI, args []string) int {
 
 // Helpers:
 
-func createPolicy(params map[string]string) (string, error) {
-	policy := defaultPolicy{
-		Description: params[cst.DataDescription],
-		Subjects:    utils.StringToSlice(params[cst.DataSubject]),
-		Effect:      params[cst.DataEffect],
-		Actions:     utils.StringToSlice(params[cst.DataAction]),
-	}
-	if resources := params[cst.DataResource]; resources != "" {
-		policy.Resources = utils.StringToSlice(params[cst.DataResource])
+func createPolicy(params []map[string]string) (string, error) {
+	defaultPolicies := make([]*defaultPolicy, 0)
+	for _, param := range params {
+		policy := defaultPolicy{
+			Description: param[cst.DataDescription],
+			Subjects:    utils.StringToSlice(param[cst.DataSubject]),
+			Effect:      param[cst.DataEffect],
+			Actions:     utils.StringToSlice(param[cst.DataAction]),
+		}
+		if resources := param[cst.DataResource]; resources != "" {
+			policy.Resources = utils.StringToSlice(param[cst.DataResource])
+		}
+
+		if param[cst.DataCidr] != "" {
+			if err := setCidrCondition(&policy, param[cst.DataCidr]); err != nil {
+				return "", err
+			}
+		}
+		defaultPolicies = append(defaultPolicies, &policy)
 	}
 
-	if params[cst.DataCidr] != "" {
-		if err := setCidrCondition(&policy, params[cst.DataCidr]); err != nil {
-			return "", err
-		}
-	}
 	doc := document{
-		PermissionDocument: []*defaultPolicy{
-			&policy,
-		},
+		PermissionDocument: defaultPolicies,
 	}
 	marshalled, err := json.Marshal(doc)
 	if err != nil {
 		return "", err
 	}
+
 	return string(marshalled), nil
 }
 
@@ -447,7 +451,7 @@ func policyBuildFromFlags() (string, *errors.ApiError) {
 		return "", err
 	}
 
-	data, e := createPolicy(params)
+	data, e := createPolicy([]map[string]string{params})
 	if e != nil {
 		return "", errors.New(e)
 	}
@@ -595,132 +599,154 @@ func handlePolicyUpdateWizard(vcli vaultcli.CLI, args []string) int {
 }
 
 func policyCollectDataWizard() (string, error) {
-	qs := []*survey.Question{
-		{
-			Name:      "Description",
-			Prompt:    &survey.Input{Message: "Description of policy:"},
-			Transform: vaultcli.SurveyTrimSpace,
-		},
-		{
-			Name: "Actions",
-			Prompt: &survey.MultiSelect{
-				Message: "Actions:",
-				Options: []string{"read", "update", "delete", "list", "assign"},
-			},
-		},
-		{
-			Name: "Effect",
-			Prompt: &survey.Select{
-				Message: "Effect:",
-				Options: []string{"allow", "deny"},
-			},
-		},
-	}
+	keyvalueslice := make([]map[string]string, 0)
 
-	answers := struct {
-		Description string
-		Actions     []string
-		Effect      string
-	}{}
-	survErr := survey.Ask(qs, &answers)
-	if survErr != nil {
-		return "", survErr
-	}
-
-	subjects := []string{}
 	for {
 		qs := []*survey.Question{
 			{
-				Name:   "Subject",
-				Prompt: &survey.Input{Message: "Subject:"},
-				Validate: func(ans interface{}) error {
-					answer := strings.TrimSpace(ans.(string))
-					if len(answer) == 0 && len(subjects) == 0 {
-						return errors.NewS("Must include at least one subject.")
-					}
-					return nil
-				},
+				Name:      "Description",
+				Prompt:    &survey.Input{Message: "Description of policy:"},
 				Transform: vaultcli.SurveyTrimSpace,
 			},
-			{Name: "addMore", Prompt: &survey.Confirm{Message: "Add more?", Default: true}},
+			{
+				Name: "Actions",
+				Prompt: &survey.MultiSelect{
+					Message: "Actions:",
+					Options: []string{"read", "update", "delete", "list", "assign"},
+				},
+			},
+			{
+				Name: "Effect",
+				Prompt: &survey.Select{
+					Message: "Effect:",
+					Options: []string{"allow", "deny"},
+				},
+			},
 		}
+
 		answers := struct {
-			Subject string
-			AddMore bool
+			Description string
+			Actions     []string
+			Effect      string
 		}{}
 		survErr := survey.Ask(qs, &answers)
 		if survErr != nil {
 			return "", survErr
 		}
-		if answers.Subject != "" {
-			subjects = append(subjects, answers.Subject)
-		}
-		if !answers.AddMore {
-			break
-		}
-	}
 
-	recources := []string{}
-
-	var resource string
-	resourcePrompt := &survey.Input{Message: "Resource:"}
-	survErr = survey.AskOne(resourcePrompt, &resource)
-	if survErr != nil {
-		return "", survErr
-	}
-	if resource != "" {
-		recources = append(recources, resource)
-
-		var confirm bool
-		confirmPrompt := &survey.Confirm{Message: "Add more?:", Default: true}
-		survErr = survey.AskOne(confirmPrompt, &confirm)
-		if survErr != nil {
-			return "", survErr
-		}
-
-		for confirm {
+		subjects := []string{}
+		for {
 			qs := []*survey.Question{
 				{
-					Name:      "Resource",
-					Prompt:    &survey.Input{Message: "Resource:"},
+					Name:   "Subject",
+					Prompt: &survey.Input{Message: "Subject:"},
+					Validate: func(ans interface{}) error {
+						answer := strings.TrimSpace(ans.(string))
+						if len(answer) == 0 && len(subjects) == 0 {
+							return errors.NewS("Must include at least one subject.")
+						}
+						return nil
+					},
 					Transform: vaultcli.SurveyTrimSpace,
 				},
-				{Name: "addMore", Prompt: &survey.Confirm{Message: "Add more?", Default: true}},
+				{Name: "addMore", Prompt: &survey.Confirm{Message: "Add another subject?", Default: true}},
 			}
 			answers := struct {
-				Resource string
-				AddMore  bool
+				Subject string
+				AddMore bool
 			}{}
 			survErr := survey.Ask(qs, &answers)
 			if survErr != nil {
 				return "", survErr
 			}
-			if answers.Resource != "" {
-				recources = append(recources, answers.Resource)
+			if answers.Subject != "" {
+				subjects = append(subjects, answers.Subject)
 			}
 			if !answers.AddMore {
 				break
 			}
 		}
+
+		recources := []string{}
+
+		var resource string
+		resourcePrompt := &survey.Input{Message: "Resource:"}
+		survErr = survey.AskOne(resourcePrompt, &resource)
+		if survErr != nil {
+			return "", survErr
+		}
+		if resource != "" {
+			recources = append(recources, resource)
+
+			var confirm bool
+			confirmPrompt := &survey.Confirm{Message: "Add more?:", Default: true}
+			survErr = survey.AskOne(confirmPrompt, &confirm)
+			if survErr != nil {
+				return "", survErr
+			}
+
+			for confirm {
+				qs := []*survey.Question{
+					{
+						Name:      "Resource",
+						Prompt:    &survey.Input{Message: "Resource:"},
+						Transform: vaultcli.SurveyTrimSpace,
+					},
+					{Name: "addMore", Prompt: &survey.Confirm{Message: "Add another resource?", Default: true}},
+				}
+				answers := struct {
+					Resource string
+					AddMore  bool
+				}{}
+				survErr := survey.Ask(qs, &answers)
+				if survErr != nil {
+					return "", survErr
+				}
+				if answers.Resource != "" {
+					recources = append(recources, answers.Resource)
+				}
+				if !answers.AddMore {
+					break
+				}
+			}
+		}
+
+		var cidr string
+		cidrPrompt := &survey.Input{Message: "CIDR range to lock down access to a specific IP range:"}
+		survErr = survey.AskOne(cidrPrompt, &cidr, survey.WithValidator(vaultcli.SurveyOptionalCIDR))
+		if survErr != nil {
+			return "", survErr
+		}
+
+		params := map[string]string{
+			cst.DataDescription: answers.Description,
+			cst.DataAction:      strings.Join(answers.Actions, ","),
+			cst.DataEffect:      answers.Effect,
+			cst.DataSubject:     strings.Join(subjects, ","),
+			cst.DataResource:    strings.Join(recources, ","),
+			cst.DataCidr:        strings.TrimSpace(cidr),
+		}
+
+		keyvalueslice = append(keyvalueslice, params)
+
+		qs2 := []*survey.Question{
+			{Name: "addMore", Prompt: &survey.Confirm{Message: "Add another permission?", Default: true}},
+		}
+		answers2 := struct {
+			AddMore bool
+		}{}
+		survErr2 := survey.Ask(qs2, &answers2)
+		if survErr2 != nil {
+			return "", survErr2
+		}
+
+		if !answers2.AddMore {
+			break
+		}
+
 	}
 
-	var cidr string
-	cidrPrompt := &survey.Input{Message: "CIDR range to lock down access to a specific IP range:"}
-	survErr = survey.AskOne(cidrPrompt, &cidr, survey.WithValidator(vaultcli.SurveyOptionalCIDR))
-	if survErr != nil {
-		return "", survErr
-	}
-
-	params := map[string]string{
-		cst.DataDescription: answers.Description,
-		cst.DataAction:      strings.Join(answers.Actions, ","),
-		cst.DataEffect:      answers.Effect,
-		cst.DataSubject:     strings.Join(subjects, ","),
-		cst.DataResource:    strings.Join(recources, ","),
-		cst.DataCidr:        strings.TrimSpace(cidr),
-	}
-
-	return createPolicy(params)
+	return createPolicy(keyvalueslice)
 }
 
 // API callers:

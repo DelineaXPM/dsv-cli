@@ -10,7 +10,7 @@ import (
 )
 
 func TestSecret(t *testing.T) {
-	e := newEnv(t)
+	e := newEnv()
 
 	cmd := []string{
 		"secret",

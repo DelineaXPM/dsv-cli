@@ -169,7 +169,7 @@ type environment struct {
 	tmpDirPath  string
 }
 
-func newEnv(t *testing.T) *environment {
+func newEnv() *environment {
 	e := &environment{
 		domain:      os.Getenv(domainEnvName),
 		tenant:      os.Getenv(tenantEnvName),
@@ -201,14 +201,19 @@ type consoleWithErrorHandling struct {
 func (c *consoleWithErrorHandling) ExpectString(s string) {
 	c.t.Helper()
 	c.t.Logf("Expecting %q", s)
-	if _, err := c.console.ExpectString(s); err != nil {
+	if buf, err := c.console.ExpectString(s); err != nil {
+		c.t.Logf("ExpectString(%q) buffer:\n%s", s, buf)
 		c.t.Fatalf("ExpectString(%q) = %v", s, err)
 	}
 }
 
 func (c *consoleWithErrorHandling) ExpectEOF() {
-	if _, err := c.console.ExpectEOF(); err != nil {
+	if buf, err := c.console.ExpectEOF(); err != nil {
 		c.t.Helper()
+		if strings.Contains(err.Error(), "use of closed file") {
+			return // Ignore.
+		}
+		c.t.Logf("ExpectEOF() buffer:\n%s", buf)
 		c.t.Fatalf("ExpectEOF() = %v", err)
 	}
 }
@@ -253,6 +258,7 @@ func prepCmd(t *testing.T, args []string) *exec.Cmd {
 	binArgs := append(
 		[]string{
 			fmt.Sprintf("-test.coverprofile=%s", covPath),
+			"-test.timeout=2m",
 		},
 		args...,
 	)
@@ -304,8 +310,8 @@ func runFlow(t *testing.T, command []string, flow func(c console)) {
 		expect.WithStdin(pty),
 		expect.WithStdout(term),
 		expect.WithCloser(pty, tty),
-		// 10 seconds should be enough even for high API response time.
-		expect.WithDefaultTimeout(10*time.Second),
+		// 15 seconds should be enough even for high API response time.
+		expect.WithDefaultTimeout(15*time.Second),
 	)
 	if err != nil {
 		t.Fatalf("failed to create console: %v", err)

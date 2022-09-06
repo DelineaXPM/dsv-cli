@@ -22,9 +22,10 @@ import (
 type GcpClient struct{}
 
 const (
-	GcpGceAuth   = "gce"
-	GcpIamAuth   = "iam"
-	googleIssuer = "https://accounts.google.com"
+	GcpGceAuth               = "gce"
+	GcpIamAuth               = "iam"
+	gcpDefaultServiceAccName = "default"
+	googleIssuer             = "https://accounts.google.com"
 )
 
 func (c *GcpClient) GetJwtToken(authType string) (string, error) {
@@ -38,26 +39,20 @@ func (c *GcpClient) GetJwtToken(authType string) (string, error) {
 	serviceAcctName := viper.GetString(cst.GcpServiceAccount)
 	projectId := viper.GetString(cst.GcpProject)
 
-	//const
-	header := map[string]string{"Metadata-Flavor": "Google"}
-	defaultServiceAcctName := "default"
-	metadataIdentityTemplate := "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/%s/identity?audience=%s&format=full"
-
 	audience := GetAudience()
-	var errPrimary error
-	var errSecondary error
+	var errPrimary, errSecondary error
+
 	if authType == GcpGceAuth {
+		metadataIdentityTemplate := "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/%s/identity?audience=%s&format=full"
 		if serviceAcctName == "" {
-			serviceAcctName = defaultServiceAcctName
+			serviceAcctName = gcpDefaultServiceAccName
 		}
 		tokenRequestURL := fmt.Sprintf(metadataIdentityTemplate, serviceAcctName, audience)
 		client := &http.Client{}
 		if req, err := http.NewRequest(http.MethodGet, tokenRequestURL, nil); err != nil {
 			errPrimary = err
 		} else {
-			for k, v := range header {
-				req.Header.Add(k, v)
-			}
+			req.Header.Add("Metadata-Flavor", "Google")
 			if resp, err := client.Do(req); err != nil {
 				errPrimary = err
 			} else {

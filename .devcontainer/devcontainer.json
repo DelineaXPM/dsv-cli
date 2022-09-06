@@ -1,38 +1,15 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
-// https://github.com/microsoft/vscode-dev-containers/tree/v0.241.1/containers/codespaces-linux
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.241.1/containers/kubernetes-helm-minikube
 {
-	"name": "devcontainer-thy",
+	"name": "dsv-k8s-codespace",
+	"dockerFile": "Dockerfile",
 	"build": {
-		"dockerfile": "Dockerfile"
-	},
-	// Configure tool-specific properties.
-	"customizations": {
-		// Configure properties specific to VS Code.
-		"vscode": {
-			// Set *default* container specific settings.json values on container create.
-			"settings": {
-				"go.toolsManagement.checkForUpdates": "local",
-				"go.useLanguageServer": true,
-				"go.gopath": "/go",
-				"files.watcherExclude": {
-					"**/target/**": true
-				}
-			},
-			// Add the IDs of extensions you want installed when the container is created.
-			"extensions": [
-				"sheldon-hull.extension-pack-go"
-			]
+		"args": {
+			"GO_VERSION": "1.19",
+			"GOPATH": "/home/codespace/go",
+			"GOROOT": "/usr/local/go"
 		}
 	},
-	"remoteUser": "codespace",
-	"overrideCommand": false,
-	"mounts": [
-		"source=codespaces-linux-var-lib-docker,target=/var/lib/docker,type=volume",
-		"source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/codespace/.ssh/,type=bind,consistency=cached", // support for SSH keys
-		"source=${localEnv:HOME}${localEnv:USERPROFILE}/.envrc,target=/home/codespace/.envrc,type=bind,consistency=cached", // envrc from home to allow direnv to mount credentials
-		"source=go-path,target=/home/codespace/go/,type=volume", // cache gopath directory to speed up rebuilds by not downloading deps each time
-		"source=zshcache,target=/home/codespace/.zsh.cache/,type=volume" // caching for zsh history, zoxide and others, allowing it to persist after rebuild.
-	],
 	"runArgs": [
 		"--cap-add=SYS_PTRACE",
 		"--security-opt",
@@ -40,15 +17,65 @@
 		"--privileged",
 		"--init"
 	],
-	"containerEnv": {
-		// should pull via dockerfile and direnv, but saving in case this doesn't work
-		// "GOROOT": "",
-		// "GOPATH": "/home/codespaces/go",
-		// "ASDF_DATA_DIR": "/home/codespaces/.asdf",
-		// "ENV ASDF_DIR": "/home/codespaces/.asdf"
+	"mounts": [
+		"source=minikube-var-lib-docker,target=/var/lib/docker,type=volume",
+		"source=minikube-config,target=/home/codespace/.minikube,type=volume",
+		"source=${localEnv:HOME}${localEnv:USERPROFILE}/.kube,target=/home/codespace/.kube/,type=bind,consistency=cached", // support for SSH keys
+		"source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/codespace/.ssh/,type=bind,consistency=cached", // support for SSH keys
+		"source=${localEnv:HOME}${localEnv:USERPROFILE}/.envrc,target=/home/codespace/.envrc,type=bind,consistency=cached", // envrc from home to allow direnv to mount credentials
+		// cache gopath directory
+		"source=go-path,target=/home/vscode/go/,type=volume",
+		// caching for zsh history, zoxide and others, allowing it to persist after rebuild.
+		"source=zshcache,target=/home/vscode/.zsh.cache/,type=volume"
+	],
+	"overrideCommand": false,
+	// Configure tool-specific properties.
+	"customizations": {
+		// Configure properties specific to VS Code.
+		"vscode": {
+			// Add the IDs of extensions you want installed when the container is created.
+			"extensions": [
+				"ms-azuretools.vscode-docker",
+				"ms-kubernetes-tools.vscode-kubernetes-tools",
+				"spmeesseman.vscode-taskexplorer",
+				"ms-kubernetes-tools.kind-vscode",
+				"trunk.io",
+				"GitHub.vscode-pull-request-github",
+				"yzhang.markdown-all-in-one",
+				"sheldon-hull.extension-pack-go",
+				"zvik.command-runner"
+			]
+		}
+	},
+	"settings": {
+		"terminal.integrated.profiles.linux": {
+			"zsh-login": {
+				"args": [
+					"-l"
+				],
+				"icon": "terminal-bash",
+				"path": "zsh"
+			}
+		},
+		"terminal.integrated.defaultProfile.linux": "zsh-login"
 	},
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
-	// "oryx build" will automatically install your dependencies and attempt to build your project
-	"postCreateCommand": "(mkdir -p /home/codespace/go || echo '❌ unable to create /home/codespace/go, does it already exist?') && sudo chown -R codespace /home/codespace/go && echo '⏳ initiating go mod download' && go mod download && echo '✅ postCreateCommand'"
+	// Use 'postCreateCommand' to run commands after the container is created.
+	"postCreateCommand": "echo '🔨 running go mod download' && go mod download && echo '✅ go mod download finished' && echo '🔨 downloading build tooling dependencies' && mage && echo '✅ build tooling dependencies complete' && (mkdir -p /home/codespace/go || echo '❌ unable to create /home/codespace/go, does it already exist?') && sudo chown -R codespace /home/codespace/go && echo '⏳ initiating go mod download' && go mod download && echo '✅ postCreateCommand'",
+	// Use 'postStartCommand' to run commands after the container is created like starting minikube.
+	// "postStartCommand": "nohup bash -c 'minikube start &' > minikube.log 2>&1",
+	// Minikube does not like running as root, so use a non-root user.
+	"remoteUser": "codespace",
+	"containerEnv": {
+		"GITHUB_OATH_TOKEN": "${env:GITHUB_OATH_TOKEN}",
+		"GOPATH": "/home/codespace/go/",
+		"GOROOT": "/usr/local/go"
+	},
+	"initializeCommand": [
+		".devcontainer/init"
+	],
+	"hostRequirements": {
+		"storage": "32gb"
+	}
 }
