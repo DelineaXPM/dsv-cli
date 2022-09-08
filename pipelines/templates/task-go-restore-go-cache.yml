@@ -1,0 +1,18 @@
+---
+parameters:
+  - name: WORKING_DIRECTORY
+    type: string
+    default: $(Build.SourcesDirectory)
+steps:
+  - task: Cache@2
+    displayName: Save/restore go mod cache
+    condition: and(succeeded(), eq(variables.VENDORED, '0' )) # Only proceed with caching if vendoring is false.
+    continueOnError: true
+    env:
+      SYSTEM_DEBUG: false
+    inputs:
+      # key: 'go | "$(Agent.OS)" | go.sum | go.mod'
+      key: go | "$(Agent.OS)" | ${{ parameters.WORKING_DIRECTORY }}/go.sum
+      restoreKeys: |
+        go | "$(Agent.OS)"
+      path: $(GOPATH)/pkg/mod

@@ -11,18 +11,21 @@ require (
 	github.com/aws/aws-sdk-go v1.40.37
 	github.com/creack/pty v1.1.18
 	github.com/danieljoos/wincred v1.0.1
+	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.13.0
 	github.com/gobuffalo/uuid v2.0.5+incompatible
 	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/hinshun/vt10x v0.0.0-20220301184237-5011da428d02
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
 	github.com/jarcoal/httpmock v1.2.0
+	github.com/magefile/mage v1.13.0
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.5.0
 	github.com/mitchellh/cli v1.1.4
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/peterbourgon/diskv/v3 v3.0.1
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
 	github.com/posener/complete v1.2.3
+	github.com/pterm/pterm v0.12.45
 	github.com/savaki/jq v0.0.0-20161209013833-0e6baecebbf8
 	github.com/sheldonhull/magetools v0.0.10
 	github.com/shurcooL/graphql v0.0.0-20200928012149-18c5c3165e3a
@@ -56,7 +59,6 @@ require (
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
-	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.2+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/gofrs/uuid v3.2.0+incompatible // indirect
@@ -75,7 +77,6 @@ require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/lithammer/fuzzysearch v1.1.5 // indirect
 	github.com/logrusorgru/aurora v2.0.3+incompatible // indirect
-	github.com/magefile/mage v1.13.0 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
@@ -87,7 +88,6 @@ require (
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/pterm/pterm v0.12.45 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/spf13/afero v1.8.2 // indirect

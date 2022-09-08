@@ -1,0 +1,27 @@
+---
+parameters:
+  - name: workingDirectory
+    type: string
+    default: $(System.DefaultWorkingDirectory)
+steps:
+  - pwsh: |
+      Write-Host "##vso[task.prependpath]$(GOBIN)"
+      go install github.com/magefile/mage@latest
+      echo "Compile mage for speedy invocation in pipelines with local binary"
+      &(Join-Path $ENV:GOBIN 'mage') -f -debug -compile ./magec
+      # Write-Host "##vso[task.setvariable variable=MAGEPRECOMPILEDPATH]$(Resolve-Path ./magec -ErrorAction SilentlyContinue)"
+    displayName: install-mage-windows
+    name: InstallMageWindows
+    workingDirectory: ${{ parameters.workingDirectory }}
+    condition: eq(variables['Agent.OS'], 'Windows_NT')
+
+  - bash: |
+      go install github.com/magefile/mage@latest
+      echo "Compile mage for speedy invocation in pipelines with local binary"
+      $(GOBIN)/mage -f -debug -compile ${{ parameters.workingDirectory }}/magec
+      echo "./magec realpath: $(realpath ./magec)"
+      echo "##vso[task.setvariable variable=MAGEPRECOMPILEDPATH]$(realpath ./magec)"
+    displayName: install-mage-linux-and-darwin
+    name: InstallMageLinuxDarwin
+    workingDirectory: ${{ parameters.workingDirectory }}
+    condition: ne(variables['Agent.OS'], 'Windows_NT')

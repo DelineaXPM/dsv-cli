@@ -1,4 +1,7 @@
 PKGNAME := dsv
+ARTIFACT_DIRECTORY := .artifacts/builds/
+BIN_DIRECTORY := .artifacts/builds/bin/
+TEST_DIRECTORY :=.artifacts/test/
 ifneq ($(CONSTANTS_CLINAME),)
 	PKGNAME = $(CONSTANTS_CLINAME)
 endif
@@ -23,7 +26,10 @@ LDFLAGS_REL = $(LDFLAGS) -s -w
 .DEFAULT_GOAL := build
 
 clean:
-	rm -rf bin
+	rm -rf "$(BIN_DIRECTORY)"
+	rm -rf "$(TEST_DIRECTORY)"
+	mkdir -p "$(BIN_DIRECTORY)" || echo "✔️ $(BIN_DIRECTORY) already exists"
+	mkdir -p "$(TEST_DIRECTORY)" || echo "✔️ $(TEST_DIRECTORY) already exists"
 
 test:
 	go test -v ./...
@@ -33,24 +39,24 @@ e2e-test:
 	go test -v -tags=endtoend ./tests/e2e
 
 build:
-	CGO_ENABLED=0 GO111MODULE=on go build -ldflags="$(LDFLAGS)" -o $(PKGNAME)$(EXE_SUFFIX)
+	CGO_ENABLED=0 GO111MODULE=on go build -ldflags="$(LDFLAGS)" -o $(BIN_DIRECTORY)$(PKGNAME)$(EXE_SUFFIX)
 
 build-test:
-	CGO_ENABLED=0 GO111MODULE=on go test -c -covermode=count -coverpkg ./... -o $(PKGNAME)$(EXE_SUFFIX).test
+	CGO_ENABLED=0 GO111MODULE=on go test -c -covermode=count -coverpkg ./... -o $(BIN_DIRECTORY)$(PKGNAME)$(EXE_SUFFIX).test
 
 build-release:
-	CGO_ENABLED=0 GO111MODULE=on go build -ldflags="$(LDFLAGS_REL)" -o $(PKGNAME)$(EXE_SUFFIX)
+	CGO_ENABLED=0 GO111MODULE=on go build -ldflags="$(LDFLAGS_REL)" -o $(BIN_DIRECTORY)$(PKGNAME)$(EXE_SUFFIX)
 
-build-release-all:
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 GO111MODULE=on go build -ldflags="$(LDFLAGS_REL)" -o bin/$(VERSION)/$(PKGNAME)-win-x64.exe
-	CGO_ENABLED=0 GOOS=windows GOARCH=386   GO111MODULE=on go build -ldflags="$(LDFLAGS_REL)" -o bin/$(VERSION)/$(PKGNAME)-win-x86.exe
-	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 GO111MODULE=on go build -ldflags="$(LDFLAGS_REL)" -o bin/$(VERSION)/$(PKGNAME)-linux-x64
-	CGO_ENABLED=0 GOOS=linux   GOARCH=386   GO111MODULE=on go build -ldflags="$(LDFLAGS_REL)" -o bin/$(VERSION)/$(PKGNAME)-linux-x86
-	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 GO111MODULE=on go build -ldflags="$(LDFLAGS_REL)" -o bin/$(VERSION)/$(PKGNAME)-darwin-x64
-	CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 GO111MODULE=on go build -ldflags="$(LDFLAGS_REL)" -o bin/$(VERSION)/$(PKGNAME)-darwin-arm64
+build-release-all: status
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 GO111MODULE=on go build -ldflags="$(LDFLAGS_REL)" -o "$(BIN_DIRECTORY)$(VERSION)/$(PKGNAME)-win-x64.exe"
+	CGO_ENABLED=0 GOOS=windows GOARCH=386   GO111MODULE=on go build -ldflags="$(LDFLAGS_REL)" -o "$(BIN_DIRECTORY)$(VERSION)/$(PKGNAME)-win-x86.exe"
+	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 GO111MODULE=on go build -ldflags="$(LDFLAGS_REL)" -o "$(BIN_DIRECTORY)$(VERSION)/$(PKGNAME)-linux-x64"
+	CGO_ENABLED=0 GOOS=linux   GOARCH=386   GO111MODULE=on go build -ldflags="$(LDFLAGS_REL)" -o "$(BIN_DIRECTORY)$(VERSION)/$(PKGNAME)-linux-x86"
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 GO111MODULE=on go build -ldflags="$(LDFLAGS_REL)" -o "$(BIN_DIRECTORY)$(VERSION)/$(PKGNAME)-darwin-x64"
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 GO111MODULE=on go build -ldflags="$(LDFLAGS_REL)" -o "$(BIN_DIRECTORY)$(VERSION)/$(PKGNAME)-darwin-arm64"
 
 create-checksum:
-	$(shell cd bin/$(VERSION); for file in *; do sha256sum $$file > $$file-sha256.txt; done)
+	$(shell cd $(BIN_DIRECTORY)$(VERSION); for file in *; do sha256sum $$file > $$file-sha256.txt; done)
 
 TEMPLATE = '{"latest":"$(VERSION)","links":\
 {"darwin/amd64":"https://dsv.secretsvaultcloud.com/downloads/cli/$(VERSION)/$(PKGNAME)-darwin-x64",\
@@ -61,8 +67,11 @@ TEMPLATE = '{"latest":"$(VERSION)","links":\
 "windows/386":"https://dsv.secretsvaultcloud.com/downloads/cli/$(VERSION)/$(PKGNAME)-win-x86.exe"}}'
 
 capture-latest-version:
-	echo $(TEMPLATE) > bin/cli-version.json
-
+	echo $(TEMPLATE) > $(BIN_DIRECTORY)cli-version.json
+status:
+	echo "---------- GIT STATUS ----------"
+	git status
+	echo "--------------------------------"
 .PHONY: clean test e2e-test \
 		build build-test build-release build-release-all \
-		create-checksum capture-latest-version
+		create-checksum capture-latest-version status

@@ -1,0 +1,16 @@
+---
+parameters:
+  - name: workingDirectory
+    type: string
+    default: $(Build.SourcesDirectory)
+steps:
+  - pwsh: |
+      go mod download -x
+    displayName: go-mod-download
+    # condition: and(succeeded(), eq(variables.VENDORED, '0' )) # Only proceed with caching if vendoring is false
+    workingDirectory: ${{ parameters.WorkingDirectory }}
+  - pwsh: |
+      go get -t -x -tags mage,build,integration -v ./...
+    displayName: go-get
+    # condition: and(succeeded(), eq(variables.VENDORED, '0' )) # Only proceed with caching if vendoring is false
+    workingDirectory: ${{ parameters.WorkingDirectory }}

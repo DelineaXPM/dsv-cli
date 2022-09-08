@@ -1,0 +1,24 @@
+version: 0.1
+actions:
+  disabled:
+    - trunk-check-pre-push
+    - trunk-fmt-pre-commit
+cli:
+  version: 0.17.0-beta
+plugins:
+  sources:
+    - id: trunk
+      ref: v0.0.3
+      uri: https://github.com/trunk-io/plugins
+lint:
+  enabled:
+    - actionlint@1.6.17
+    - git-diff-check@SYSTEM
+    - gitleaks@8.12.0
+    - gofmt@1.16.7
+    - golangci-lint@1.46.2
+    - hadolint@2.10.0
+    - markdownlint@0.32.2
+    - prettier@2.7.1
+    - shellcheck@0.8.0
+    - shfmt@3.5.0

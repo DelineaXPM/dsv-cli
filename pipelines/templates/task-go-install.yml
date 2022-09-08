@@ -1,0 +1,35 @@
+---
+steps:
+  - task: GoTool@0
+    displayName: install go $(GO_VERSION)
+    inputs:
+      version: $(GO_VERSION)
+      goPath: $(GOPATH)
+      goBin: $(GOBIN)
+  # Prepend path: https://github.com/microsoft/azure-pipelines-tasks/blob/master/docs/authoring/commands.md
+  - pwsh: |
+      New-Item -Path "$(GOBIN)" -ItemType Directory -Force -ErrorAction SilentlyContinue
+      &go env
+      $ENV:PATH += ";$(GOBIN)"
+      Write-Host "##vso[task.prependpath]$(GOBIN)"
+      Write-Host "=========================== PATH CONFIG ==========================="
+      Write-Host $ENV:PATH
+      Write-Host "=========================== END PATH CONFIG ==========================="
+    displayName: configure-go-env-var-windows
+    condition: eq(variables['Agent.OS'], 'Windows_NT')
+
+  - bash: |
+      echo "=========================== GO CONFIG ==========================="
+      go env
+      echo "=========================== END GO CONFIG ==========================="
+      GOBINARIES="$(go env GOPATH)/bin"
+      echo "✅ using vscode task.prepend path to ensure go binaries are available to subquent tasks"
+      echo "##vso[task.prependpath]$GOBINARIES"
+      echo "=========================== PATH CONFIG ==========================="
+      echo $PATH
+      echo "=========================== END PATH CONFIG ==========================="
+    displayName: configure-go-env-var-linux-and-darwin
+    condition: ne(variables['Agent.OS'], 'Windows_NT')
+# NOTE: I stripped out the package restore from cache from this task since already have a template for that called install-go.yml
+# ORIGINAL SOURCE: https://github.com/signalfx/signalfx-agent/blob/main/.azure-pipelines/install-go.yml
+# Used with Apache 2 License, allowing reuse as long as noticed provided

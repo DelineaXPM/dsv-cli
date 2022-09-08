@@ -21,12 +21,16 @@ variables:
   - group: 'CLI_integration_test'
   - group: 'CLi-pipeline-variables'
   - group: 'CLI End-to-End tests'
-  - name: GO_VERSION
-    value: 1.18.4
+  - template: templates/vars.go.yml
+  - name: ARTIFACT_DOWNLOAD_DIRECTORY
+    value: $(System.DefaultWorkingDirectory)/.artifacts/builds/
+  - name: ARTIFACT_TEST_DIRECTORY
+    value: $(System.DefaultWorkingDirectory)/.artifacts/test/
 trigger:
   branches:
     include:
       - master
+      - refs/tags/
   paths:
     exclude:
       - .devcontainer/*
@@ -44,7 +48,8 @@ schedules:
 jobs:
   - job: Build_All_Platforms
     pool:
-      name: DSV-Golang-AWS
+      vmImage: ubuntu-latest
+      # name: DSV-Golang-AWS
 
     steps:
       - checkout: self
@@ -58,43 +63,39 @@ jobs:
           ClientSecret: '$(ClientSecret)'
           SecretPath: ado/cli
 
-      - task: GoTool@0
-        displayName: 'Use Go $(GO_VERSION)'
-        inputs:
-          version: $(GO_VERSION)
+      - template: templates/task-go-install.yml
+      - template: templates/task-go-detect-vendoring.yml
+      - template: templates/task-go-restore-go-cache.yml
+      - template: templates/task-go-mod-download.yml
+      - template: templates/task-go-install-mage.yml
 
       - task: WhiteSource@21
         condition: ne(${{ parameters.yolo }}, 'true')
         inputs:
           cwd: '$(System.DefaultWorkingDirectory)'
           scanReportTimeout: '3'
-
       - bash: |
-          go mod download
-        displayName: 'Download dependencies'
-
-      - bash: |
-          # echo "[---] Install editor (nano)"
-          # sudo apt-get install nano
-          echo "[---] Install hansboder/gocovmerge"
-          go install -v github.com/hansboder/gocovmerge@latest
-          echo "[---] Finished."
-        displayName: 'Install tools'
+          $(GOBIN)/mage init
+        displayName: mage-init
         condition: ne(${{ parameters.yolo }}, 'true')
+        env:
+          MAGEFILE_HASHFAST: 1
 
       - bash: |
+          echo "---- GIT STATUS -----"
+          make status
           echo "[---] git describe: $(git describe --always --dirty --tags)"
           go test -v -p 1 -covermode=count -coverprofile=./coverage.out ./... | tee test.out
           rm -f cli-config/.thy.yml
           echo "[---] Merging coverage."
-          ~/go/bin/gocovmerge -dir coverage -pattern "\.out" > ./coverage-integration.out
+          $(GOBIN)/gocovmerge -dir coverage -pattern "\.out" > ./coverage-integration.out
           rm -rf coverage
           echo "[---] Finished."
         displayName: 'Run tests'
         condition: ne(${{ parameters.yolo }}, 'true')
 
       - bash: |
-          cat test.out | ~/go/bin/go-junit-report -set-exit-code > ./report.xml
+          cat test.out | $(GOBIN)/go-junit-report -set-exit-code > ./report.xml
         displayName: 'Generate report'
         condition: ne(${{ parameters.yolo }}, 'true')
 
@@ -105,7 +106,7 @@ jobs:
           make e2e-test | tee test-e2e.out
 
           echo "[---] Merging E2E coverage results into one file."
-          ~/go/bin/gocovmerge -dir ./tests/e2e/coverage -pattern "\.out" > ./coverage-e2e.out
+          $(GOBIN)/gocovmerge -dir ./tests/e2e/coverage -pattern "\.out" > ./coverage-e2e.out
           rm -rf ./tests/e2e/coverage
 
           echo "[---] Finished."
@@ -113,16 +114,16 @@ jobs:
         displayName: '[E2E] Run tests'
 
       - bash: |
-          cat test-e2e.out | ~/go/bin/go-junit-report -set-exit-code > ./report-e2e.xml
+          cat test-e2e.out | $(GOBIN)/go-junit-report -set-exit-code > ./report-e2e.xml
         displayName: '[E2E] Generate report'
         condition: ne(${{ parameters.yolo }}, 'true')
 
       - bash: |
           echo "[---] Merging coverage.out, coverage-e2e.out and coverage-integration.out files."
-          ~/go/bin/gocovmerge coverage.out coverage-e2e.out coverage-integration.out > ./coverage-all.out
+          $(GOBIN)/gocovmerge coverage.out coverage-e2e.out coverage-integration.out > ./coverage-all.out
 
           echo "[---] Converting coverage-all.out to codecoverage.xml file."
-          ~/go/bin/gocov convert coverage-all.out | ~/go/bin/gocov-xml > ./codecoverage.xml
+          $(GOBIN)/gocov convert coverage-all.out | $(GOBIN)/gocov-xml > ./codecoverage.xml
 
           echo "[---] Finished."
         displayName: 'Prepare coverage'
@@ -153,16 +154,16 @@ jobs:
           make clean build-release-all create-checksum capture-latest-version
 
           version=$(git describe --always --dirty --tags)
-          echo "##vso[task.setvariable variable=CLI_Version;]$version"
+          echo "##vso[task.setvariable variable=CLI_VERSION;]$version"
 
           mkdir $(Build.ArtifactStagingDirectory)/version
-          mv bin/cli-version.json $(Build.ArtifactStagingDirectory)/version
+          mv $(ARTIFACT_DOWNLOAD_DIRECTORY)bin/cli-version.json $(Build.ArtifactStagingDirectory)/version
         displayName: 'Make - Release Builds'
 
       - task: CopyFiles@2
         displayName: 'Copy Unsigned Builds To Staging Directory'
         inputs:
-          SourceFolder: '$(System.DefaultWorkingDirectory)/bin/'
+          SourceFolder: $(ARTIFACT_DOWNLOAD_DIRECTORY)bin
           TargetFolder: '$(Build.ArtifactStagingDirectory)/bin/'
           CleanTargetFolder: true
           OverWrite: true
@@ -197,10 +198,11 @@ jobs:
       - checkout: self
         clean: ${{ parameters.clean }}
 
-      - task: GoTool@0
-        displayName: 'Use Go $(GO_VERSION)'
-        inputs:
-          version: $(GO_VERSION)
+      - template: templates/task-go-install.yml
+      - template: templates/task-go-detect-vendoring.yml
+      - template: templates/task-go-restore-go-cache.yml
+      - template: templates/task-go-mod-download.yml
+      - template: templates/task-go-install-mage.yml
 
       - pwsh: |
           Write-Host "[---] Deleting test cache."
@@ -219,7 +221,25 @@ jobs:
           ClientId: '$(ClientId)'
           ClientSecret: '$(ClientSecret)'
           SecretPath: 'ado/cli '
-
+      - task: DownloadSecureFile@1
+        name: signCert
+        displayName: download-cert
+        inputs:
+          secureFile: $(certSecureFile)
+      # NOTE: Disabled as using directly in SignTool.exe cli args. Leaving here in case need to revert back to installation for any other reason, and will remove later if not required - 2022-09
+      # - pwsh: |
+      #     Import-PfxCertificate -FilePath '$(signCert.secureFilePath)' -Password $('$(cert.password)' | ConvertTo-SecureString -AsPlainText -Force) -CertStoreLocation 'cert:\localmachine\root'
+      #     Write-Host "Start adding the PFX file to the certificate store."
+      #     $pfxpath = '$(signCert.secureFilePath)'
+      #     $password = '$(cert.password)'
+      #     Add-Type -AssemblyName System.Security
+      #     $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
+      #     $cert.Import($pfxpath, $password, [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]"PersistKeySet")
+      #     $store = new-object system.security.cryptography.X509Certificates.X509Store -argumentlist "MY", CurrentUser
+      #     $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]"ReadWrite")
+      #     $store.Add($cert)
+      #     $store.Close()
+      #   displayName: import-cert
       - pwsh: |
           # Clean out old builds from cli dir
           $CLIDirectory = Join-Path $ENV:SYSTEM_DEFAULTWORKINGDIRECTORY 'cli'
@@ -234,66 +254,57 @@ jobs:
         displayName: 'Download Unsigned Builds'
         inputs:
           artifactName: 'ReleaseBuilds-Unsigned'
-          targetPath: '$(Pipeline.Workspace)/cli'
+          targetPath: $(ARTIFACT_DOWNLOAD_DIRECTORY)
 
       - pwsh: |
+          Write-Host "---- GIT STATUS -----"
+          &git status
           $version = &git describe --always --dirty --tags
-          Write-Host "##vso[task.setvariable variable=cliversion]$version"
+          Write-Host "##vso[task.setvariable variable=CLI_VERSION]$version"
         workingDirectory: '$(System.DefaultWorkingDirectory)'
         displayName: 'Get Version'
 
       - pwsh: |
-          Remove-Item (Join-Path '$(cliversion)' '$(constants.cliname)-darwin-arm64') -ErrorAction SilentlyContinue
-          Remove-Item (Join-Path '$(cliversion)' '$(constants.cliname)-darwin-arm64-sha256.txt') -ErrorAction SilentlyContinue
-          Remove-Item (Join-Path '$(cliversion)' '$(constants.cliname)-darwin-x64') -ErrorAction SilentlyContinue
-          Remove-Item (Join-Path '$(cliversion)' '$(constants.cliname)-darwin-x64-sha256.txt') -ErrorAction SilentlyContinue
-          Write-Host (Get-ChildItem '$(cliversion)' -ErrorAction SilentlyContinue | Format-Table -Autosize -Wrap | Out-String)
-        workingDirectory: '$(Pipeline.Workspace)/cli'
+          Remove-Item (Join-Path '$(CLI_VERSION)' '$(constants.cliname)-darwin-arm64') -ErrorAction SilentlyContinue
+          Remove-Item (Join-Path '$(CLI_VERSION)' '$(constants.cliname)-darwin-arm64-sha256.txt') -ErrorAction SilentlyContinue
+          Remove-Item (Join-Path '$(CLI_VERSION)' '$(constants.cliname)-darwin-x64') -ErrorAction SilentlyContinue
+          Remove-Item (Join-Path '$(CLI_VERSION)' '$(constants.cliname)-darwin-x64-sha256.txt') -ErrorAction SilentlyContinue
+          Write-Host (Get-ChildItem '$(CLI_VERSION)' -ErrorAction SilentlyContinue | Format-Table -Autosize -Wrap | Out-String)
+        workingDirectory: $(ARTIFACT_DOWNLOAD_DIRECTORY)
         displayName: 'Clear Unused Files'
+      - pwsh: |
+          # Since MSBuild can't seem to access SignTool.exe from it's existing
+          # path, make a local copy (if none already exists):
+          $signToolPath = "C:\Program Files (x86)\Microsoft SDKs\ClickOnce\SignTool\SignTool.exe"
+          Write-Host "SignTool exists: '$(test-path "$pathToCheck" -PathType Leaf)'"
+          Write-Host "##vso[task.prependpath]C:\Program Files (x86)\Microsoft SDKs\ClickOnce\SignTool"
+        displayName: find-signtool
 
       - pwsh: |
-          Write-Host $(cliversion)
-          Get-ChildItem -Recurse
-
-          $X64Version = Resolve-Path (Join-Path $(cliversion) $(constants.cliname)-win-x64.exe)
-          $X86Version = Resolve-Path (Join-Path $(cliversion) $(constants.cliname)-win-x86.exe)
-
-          try {
-            Test-Path -LiteralPath $X86Version -PathType Leaf && Write-Host "✅ $X86Version verified to exist"
-
-            @($X64Version, $X86Version)  | ForEach-Object {
-              [string]$binary = $_
-              Test-Path -LiteralPath $binary -PathType Leaf && Write-Host "✅ $binary verified to exist"
-
-              $command = 'signtool sign /tr "http://timestamp.digicert.com" /td sha256 /fd sha256 /sha1 668feb4178afea4d3c4ae833459b09c2bcf6b64e "$binary"'
-              Write-Host "👉 running: $command"
-              Invoke-Expression $command
-            }
-            Write-Host "🎉 these binaries were signed. celebrate"
-          }
-          catch {
-            Write-Error "problem signing binaries"
-            throw
-          }
-
-        workingDirectory: '$(Pipeline.Workspace)/cli'
-        displayName: 'Sign Windows Executable'
+          $MageBinary = Join-Path $ENV:GOBIN 'mage'
+          Write-Host "MageBinary: [$(Test-Path $MageBinary -PathType Leaf -Verbose)]"
+          Invoke-Expression "$MageBinary sign"
+        displayName: mage sign
         env:
-          CLI_Version: $(CLI_Version)
+          CLI_VERSION: $(CLI_VERSION)
+          CLI_NAME: $(constants.cliname)
+          CERT_PATH: $(signCert.secureFilePath)
+          CERT_PASS: $(cert.password)
+          MAGEFILE_HASHFAST: 1
 
       - pwsh: |
-          $X64Version = Join-Path $(cliversion) $(constants.cliname)-win-x64.exe
-          $X86Version = Join-Path $(cliversion) $(constants.cliname)-win-x86.exe
+          $X64Version = Join-Path $(CLI_VERSION) $(constants.cliname)-win-x64.exe
+          $X86Version = Join-Path $(CLI_VERSION) $(constants.cliname)-win-x86.exe
 
           Get-FileHash $X64Version -Algorithm SHA256 | Select -expand Hash | Out-File "$X64Version-sha256.txt"
           Get-FileHash $X86Version -Algorithm SHA256 | Select -expand Hash | Out-File "$X86Version-sha256.txt"
-        workingDirectory: '$(Pipeline.Workspace)/cli'
+        workingDirectory: $(ARTIFACT_DOWNLOAD_DIRECTORY)
         displayName: 'Regenerate Windows Hash'
 
       - task: PublishBuildArtifacts@1
         displayName: 'Build Artifact: ReleaseBuilds'
         inputs:
-          PathtoPublish: '$(Pipeline.Workspace)/cli'
+          PathtoPublish: $(ARTIFACT_DOWNLOAD_DIRECTORY)
           ArtifactName: ReleaseBuilds
 
   - job: Sign_Mac_OS_Binary
@@ -311,11 +322,19 @@ jobs:
         displayName: 'Download Unsigned Builds'
         inputs:
           artifactName: 'ReleaseBuilds-Unsigned'
-          targetPath: '$(Pipeline.Workspace)/cli'
+          targetPath: $(ARTIFACT_DOWNLOAD_DIRECTORY)
+
+      - template: templates/task-go-install.yml
+      - template: templates/task-go-detect-vendoring.yml
+      - template: templates/task-go-restore-go-cache.yml
+      - template: templates/task-go-mod-download.yml
+      - template: templates/task-go-install-mage.yml
 
       - bash: |
+          echo "---- GIT STATUS -----"
+          echo $(git status)
           version=$(git describe --always --dirty --tags)
-          echo "##vso[task.setvariable variable=cliversion]$version"
+          echo "##vso[task.setvariable variable=CLI_VERSION]$version"
         workingDirectory: '$(System.DefaultWorkingDirectory)'
         displayName: 'Get version'
 
@@ -327,10 +346,10 @@ jobs:
           setUpPartitionIdACLForPrivateKey: false
 
       - bash: |
-          echo $(cliversion)
-          cd $(cliversion)
+          echo $(CLI_VERSION)
+          cd $(CLI_VERSION)
           ls
-          ls ~/Library/Keychains
+          ls $HOME/Library/Keychains
 
           #Clear unused files
           rm ./$(constants.cliname)-linux-x64
@@ -348,20 +367,20 @@ jobs:
           echo "[---] Signing arm64 binary."
           codesign -s 'Thycotic Software' ./$(constants.cliname)-darwin-arm64
           echo "[---] Finished."
-        workingDirectory: '$(Pipeline.Workspace)/cli'
+        workingDirectory: $(ARTIFACT_DOWNLOAD_DIRECTORY)
         displayName: 'Sign macOS binaries'
 
       - bash: |
           brew install coreutils
           sudo ln -s /usr/local/bin/gsha256sum /usr/local/bin/sha256sum
-          cd $(cliversion)
+          cd $(CLI_VERSION)
           sha256sum ./$(constants.cliname)-darwin-x64 > ./$(constants.cliname)-darwin-x64-sha256.txt
           sha256sum ./$(constants.cliname)-darwin-arm64 > ./$(constants.cliname)-darwin-arm64-sha256.txt
-        workingDirectory: '$(Pipeline.Workspace)/cli'
+        workingDirectory: $(ARTIFACT_DOWNLOAD_DIRECTORY)
         displayName: 'Regenerate macOS Hash'
 
       - task: PublishBuildArtifacts@1
         displayName: 'Build Artifact: ReleaseBuilds'
         inputs:
-          PathtoPublish: '$(Pipeline.Workspace)/cli'
+          PathtoPublish: $(ARTIFACT_DOWNLOAD_DIRECTORY)
           ArtifactName: ReleaseBuilds
