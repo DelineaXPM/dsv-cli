@@ -15,7 +15,7 @@ import (
 func GetHomeCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounHome},
-		SynopsisText: "home (<path> | --path|-r)",
+		SynopsisText: "Manage Home Vault secrets",
 		HelpText: fmt.Sprintf(`Work with secrets in a personal user space
 
 Usage:

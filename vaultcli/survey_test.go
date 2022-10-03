@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/AlecAivazis/survey/v2/core"
 )
 
 func TestSurveyRequired(t *testing.T) {
@@ -175,6 +177,23 @@ func TestSurveyRequiredProfileName(t *testing.T) {
 	tcase("UpperCaseName", true)
 	tcase("aa", true) // Already defined in existing profiles list.
 	tcase("val1d_name", false)
+}
+
+func TestSurveySelectAtLeastOne(t *testing.T) {
+	tcase := func(in interface{}, wantError bool) {
+		t.Helper()
+		got := SurveySelectAtLeastOne(in)
+		if wantError && got == nil {
+			t.Errorf("Expected error SurveySelectAtLeastOne(%s), but <nil> returned", in)
+		} else if !wantError && got != nil {
+			t.Errorf("Unexpected error SurveySelectAtLeastOne(%s): %v", in, got)
+		}
+	}
+
+	tcase([]core.OptionAnswer{{"a", 1}, {"b", 2}}, false)
+	tcase([]core.OptionAnswer{{"a", 1}}, false)
+	tcase([]core.OptionAnswer{}, true)
+	tcase("test test", true)
 }
 
 func TestSurveyOptionalCIDR(t *testing.T) {

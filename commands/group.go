@@ -22,7 +22,7 @@ import (
 func GetGroupCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounGroup},
-		SynopsisText: "group (<group-name> | --group-name)",
+		SynopsisText: "Manage groups",
 		HelpText: fmt.Sprintf(`Execute an action on a %s from %s
 
 Usage:

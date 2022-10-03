@@ -1,5 +1,156 @@
 package auth
 
+import (
+	"errors"
+	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"os"
+	"text/template"
+	"time"
+
+	cst "thy/constants"
+	"thy/paths"
+
+	"github.com/mitchellh/cli"
+	"github.com/pkg/browser"
+)
+
+const (
+	callbackTimeout = 5 * time.Minute
+)
+
+type authResponse struct {
+	state    string
+	authCode string
+	err      error
+}
+
+type redirectRequest struct {
+	Provider    string `json:"provider"`
+	CallbackUrl string `json:"callback_url"`
+}
+
+type redirectResponse struct {
+	RedirectUrl string `json:"redirect_url"`
+}
+
+func (a *authenticator) buildOIDCParams(at AuthType, provider string, callback string) (*requestBody, error) {
+	if callback == "" {
+		callback = cst.DefaultCallback
+	}
+
+	ui := cli.BasicUi{
+		Writer:      os.Stdout,
+		Reader:      os.Stdin,
+		ErrorWriter: os.Stderr,
+	}
+
+	uri := paths.CreateURI("oidc/auth", nil)
+
+	var redirectResp redirectResponse
+	redirectReq := &redirectRequest{
+		Provider:    provider,
+		CallbackUrl: fmt.Sprintf("http://%s/callback", callback),
+	}
+	reqErr := a.requestClient.DoRequestOut(http.MethodPost, uri, redirectReq, &redirectResp)
+	if reqErr != nil {
+		return nil, errors.New(reqErr.Error())
+	}
+	callbackListener, err := net.Listen("tcp", callback)
+	if err != nil {
+		return nil, fmt.Errorf("unable to open callback listener: %v", err)
+	}
+	defer callbackListener.Close()
+
+	authChannel := make(chan authResponse)
+	http.HandleFunc("/callback", handleOidcAuth(at, authChannel))
+
+	go func() {
+		err := http.Serve(callbackListener, nil)
+		if err != nil && err != http.ErrServerClosed {
+			authChannel <- authResponse{err: err}
+		}
+	}()
+
+	if err = browser.OpenURL(redirectResp.RedirectUrl); err != nil {
+		ui.Info(fmt.Sprintf("Unable to open browser, complete login process here:\n %s", redirectResp.RedirectUrl))
+	}
+
+	data := &requestBody{
+		GrantType: authTypeToGrantType[at],
+		Provider:  provider,
+	}
+
+	select {
+	case ar := <-authChannel:
+		if ar.err != nil {
+			return nil, ar.err
+		}
+		data.State = ar.state
+		data.AuthorizationCode = ar.authCode
+		ui.Info(fmt.Sprintf("Received response from %s provider, submitting authorization code to %s", at, cst.ProductName))
+
+	case <-time.After(callbackTimeout):
+		ui.Info(fmt.Sprintf("Timeout occurred waiting for callback from %s provider", at))
+		return nil, errors.New("no callback occurred after redirect")
+	}
+
+	return data, nil
+}
+
+// handleOidcAuth handles OIDC and Thycotic One auths.
+func handleOidcAuth(at AuthType, doneCh chan<- authResponse) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		b, err := io.ReadAll(req.Body)
+		if err != nil {
+			w.Write([]byte(err.Error()))
+			doneCh <- authResponse{err: fmt.Errorf("reading body: %w", err)}
+		}
+
+		code := req.URL.Query().Get("code")
+		state := req.URL.Query().Get("state")
+
+		if code == "" {
+			doneCh <- authResponse{
+				err: errors.New("missing values in callback, authorization code is empty"),
+			}
+			w.Write(b)
+			return
+		}
+		if state == "" {
+			doneCh <- authResponse{
+				err: errors.New("missing values in callback, authorization state is empty"),
+			}
+			w.Write(b)
+			return
+		}
+
+		tmpl, err := template.New("youDidIt").Parse(youDidIt)
+		if err != nil {
+			w.Write([]byte(err.Error()))
+			doneCh <- authResponse{err: fmt.Errorf("template parsing: %w", err)}
+		}
+
+		vars := map[string]interface{}{
+			"providerName": string(at),
+		}
+
+		err = tmpl.Execute(w, vars)
+		if err != nil {
+			w.Write([]byte(err.Error()))
+			doneCh <- authResponse{err: fmt.Errorf("template execution: %w", err)}
+		}
+
+		doneCh <- authResponse{
+			err:      nil,
+			authCode: code,
+			state:    state,
+		}
+	}
+}
+
 const youDidIt = `<!DOCTYPE html>
 <html lang="en">
 

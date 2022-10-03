@@ -16,7 +16,7 @@ import (
 func GetWhoAmICmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounWhoAmI},
-		SynopsisText: cst.NounWhoAmI,
+		SynopsisText: "Show current identity",
 		HelpText:     fmt.Sprintf("%s returns the current user identity, accounting for config, env, and flags", cst.NounWhoAmI),
 		NoPreAuth:    true,
 		RunFunc: func(args []string) int {
@@ -28,7 +28,7 @@ func GetWhoAmICmd() (cli.Command, error) {
 func GetEvaluateFlagCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.EvaluateFlag},
-		SynopsisText: cst.EvaluateFlag,
+		SynopsisText: "Inspect environment and configuration values",
 		HelpText:     fmt.Sprintf("%s returns the value of the variable, accounting for config, env, and flags", cst.EvaluateFlag),
 		NoPreAuth:    true,
 		RunFunc: func(args []string) int {

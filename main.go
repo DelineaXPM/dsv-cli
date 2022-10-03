@@ -184,6 +184,7 @@ func runCLI(args []string) (exitStatus int, err error) {
 		"crypto manual key-restore":     cmd.GetManualKeyRestoreCmd,
 		"crypto manual encrypt":         cmd.GetManualKeyEncryptCmd,
 		"crypto manual decrypt":         cmd.GetManualKeyDecryptCmd,
+		"report":                        cmd.GetReportCmd,
 		"report secret":                 cmd.GetSecretReportCmd,
 		"report group":                  cmd.GetGroupReportCmd,
 		"breakglass":                    cmd.GetBreakGlassCmd,

@@ -20,7 +20,7 @@ import (
 func GetUsageCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounUsage},
-		SynopsisText: "usage",
+		SynopsisText: "Fetch API usage info",
 		HelpText:     fmt.Sprintf("Fetch the number of API calls used daily from %s", cst.ProductName),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.StartDate, Shorthand: "s", Usage: "Start date from which to fetch usage data (required)"},

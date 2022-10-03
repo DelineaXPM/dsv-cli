@@ -85,20 +85,15 @@ func TestSIEM_CRUD(t *testing.T) {
 		fmt.Sprintf("--domain=%s", e.domain),
 	}
 
-	// update
+	// Update port in SIEM config.
 	siemPort = "3030"
-	siemAuth = "9876"
-	siemPool = "pool71"
-	siemType = "splunk"
-	siemLoggingFormat = "json"
-	siemProtocol = "https"
-	siemSendToEngine = "true"
 
 	runFlow(t, cmd, func(c console) {
 		c.ExpectString("Select SIEM type")
-		c.SendKeyArrowDown()
 		c.SendKeyEnter()
-		c.ExpectString("Select protocol for splunk SIEM type")
+		c.ExpectString("Select protocol for syslog SIEM type")
+		c.SendKeyArrowDown()
+		c.SendKeyArrowDown()
 		c.SendKeyEnter()
 		c.ExpectString("Host")
 		c.SendLine(siemHost)
@@ -113,9 +108,7 @@ func TestSIEM_CRUD(t *testing.T) {
 		c.ExpectString("Select logging format")
 		c.SendKeyEnter()
 		c.ExpectString("Route through DSV engine")
-		c.SendLine("y")
-		c.ExpectString("Engine pool")
-		c.SendLine(siemPool)
+		c.SendKeyEnter()
 
 		c.ExpectEOF()
 	})

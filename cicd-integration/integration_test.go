@@ -260,7 +260,7 @@ func init() {
 		{"secret-describe-1-pass", []string{"secret", "describe", "--path", secret1Name, "-f", ".description"}, outputIs(secret1Desc)},
 		{"secret-read-1-pass", []string{"secret", "read", "--path", secret1Name, "-f", ".data"}, outputPattern(secret1DataFmt)},
 		{"secret-read-implicit-pass", []string{"secret", secret1Name, "-f", ".data"}, outputPattern(secret1DataFmt)},
-		{"secret-search-none-pass", []string{"secret", "search", "hjkl"}, outputPattern(`"data": null`)},
+		{"secret-search-none-pass", []string{"secret", "search", "hjkl"}, outputPattern(`"data": \[\]`)},
 		{"secret-soft-delete", []string{"secret", "delete", secret1Name}, outputPattern("will be removed")},
 		{"secret-read-fail", []string{"secret", "read", secret1Name}, outputPattern("will be removed")},
 		{"secret-restore", []string{"secret", "restore", secret1Name}, outputEmpty()},
@@ -291,7 +291,7 @@ func init() {
 		{"user-read-implicit-pass", []string{"user", user1}, outputPattern(`"userName": "mrmittens"`)},
 		{"user-create-fail", []string{"user", "create", "--username", user1, "--password", user1Pass}, outputPattern(`"code": 400`)},
 		//{"user-search-find-pass", []string{"user", "search", user1[:3], "-f", "'data.[0].userName'"}, outputPattern(user1)},
-		{"user-search-none-pass", []string{"user", "search", "erkjwr"}, outputPattern(`"data": null`)},
+		{"user-search-none-pass", []string{"user", "search", "erkjwr"}, outputPattern(`"data": \[\]`)},
 		{"user-soft-delete", []string{"user", "delete", user1}, outputPattern("will be removed")},
 		{"user-read-fail", []string{"user", "read", user1}, outputPattern("will be removed")},
 		{"user-restore", []string{"user", "restore", user1}, outputEmpty()},
@@ -320,9 +320,9 @@ func init() {
 		// delegated access operations
 		{"user-auth-pass", []string{"auth", "-u", user1, "-p", user1Pass}, outputPattern(`"accessToken":\s*"[^"]+",\s*"expiresIn"`)},
 		{"user-auth-pass-failed", []string{"auth", "-u", user1, "-p", "user1fail"}, outputPattern(`{"code":401,"message":"unable to authenticate"}`)},
-		{"user-access-pass", []string{"secret", "read", secret1Name, "-u", user1, "-p", " "}, outputPattern(secret1DataFmt)},
-		{"user-access-fail-action", []string{"secret", "update", secret1Name, "-u", user1, "-p", " ", "-d", `{"field":"updated secret 1"}`}, outputPattern("Invalid permissions")},
-		{"user-access-fail-resource", []string{"secret", "read", "secret-idonthavepermissionon", "-u", user1, "-p", " ", "-f", ".data"}, outputPattern("Invalid permissions")},
+		{"user-access-pass", []string{"secret", "read", secret1Name, "-u", user1, "-p", user1Pass}, outputPattern(secret1DataFmt)},
+		{"user-access-fail-action", []string{"secret", "update", secret1Name, "-u", user1, "-p", user1Pass, "-d", `{"field":"updated secret 1"}`}, outputPattern("Invalid permissions")},
+		{"user-access-fail-resource", []string{"secret", "read", "secret-idonthavepermissionon", "-u", user1, "-p", user1Pass, "-f", ".data"}, outputPattern("Invalid permissions")},
 
 		// cli-config operations
 		{"cli-config-help", []string{"cli-config", ""}, outputPattern(`Execute an action on the cli config.*`)},

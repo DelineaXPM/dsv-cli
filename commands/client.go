@@ -21,7 +21,7 @@ import (
 func GetClientCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounClient},
-		SynopsisText: "client (<client-id> | --client-id)",
+		SynopsisText: "Manage client credentials",
 		HelpText: fmt.Sprintf(`Execute an action on a %[1]s in %[2]s
 
 Usage:

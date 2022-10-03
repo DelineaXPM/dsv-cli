@@ -39,10 +39,10 @@ e2e-test:
 	go test -v -tags=endtoend ./tests/e2e
 
 build:
-	CGO_ENABLED=0 GO111MODULE=on go build -ldflags="$(LDFLAGS)" -o $(BIN_DIRECTORY)$(PKGNAME)$(EXE_SUFFIX)
+	CGO_ENABLED=0 GO111MODULE=on go build -ldflags="$(LDFLAGS)" -o $(PKGNAME)$(EXE_SUFFIX)
 
 build-test:
-	CGO_ENABLED=0 GO111MODULE=on go test -c -covermode=count -coverpkg ./... -o $(BIN_DIRECTORY)$(PKGNAME)$(EXE_SUFFIX).test
+	CGO_ENABLED=0 GO111MODULE=on go test -c -covermode=count -coverpkg ./... -o $(PKGNAME)$(EXE_SUFFIX).test
 
 build-release:
 	CGO_ENABLED=0 GO111MODULE=on go build -ldflags="$(LDFLAGS_REL)" -o $(BIN_DIRECTORY)$(PKGNAME)$(EXE_SUFFIX)

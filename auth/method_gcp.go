@@ -3,7 +3,7 @@ package auth
 import (
 	"context"
 	"encoding/json"
-	serrors "errors"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -19,6 +19,27 @@ import (
 	"google.golang.org/api/option"
 )
 
+func buildGcpParams(token string, gcpAuthType string) (*requestBody, error) {
+	if token == "" {
+		if gcpAuthType == "" {
+			gcpAuthType = GcpGceAuth
+		}
+		gcp := GcpClient{}
+
+		var err error
+		token, err = gcp.GetJwtToken(gcpAuthType)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	data := &requestBody{
+		GrantType: authTypeToGrantType[FederatedGcp],
+		Jwt:       token,
+	}
+	return data, nil
+}
+
 type GcpClient struct{}
 
 const (
@@ -29,9 +50,6 @@ const (
 )
 
 func (c *GcpClient) GetJwtToken(authType string) (string, error) {
-	if authType == "" {
-		authType = GcpGceAuth
-	}
 	if authType != GcpGceAuth && authType != GcpIamAuth {
 		return "", fmt.Errorf("invalid GCP auth type: %s", authType)
 	}
@@ -70,7 +88,7 @@ func (c *GcpClient) GetJwtToken(authType string) (string, error) {
 		scopes := []string{iam.CloudPlatformScope}
 		creds, err := google.FindDefaultCredentials(ctx, scopes...)
 		if err != nil || creds == nil {
-			return "", serrors.New("unable to find default gcp credentials for iam authentication")
+			return "", errors.New("unable to find default gcp credentials for iam authentication")
 		}
 		if projectId == "" {
 			projectId = creds.ProjectID
@@ -89,7 +107,7 @@ func (c *GcpClient) GetJwtToken(authType string) (string, error) {
 			if accountEmail != "" {
 				serviceAcctName = accountEmail
 			} else {
-				err = serrors.New("Did not find service account identifier (email or uniqueId)")
+				err = errors.New("Did not find service account identifier (email or uniqueId)")
 			}
 		}
 
@@ -133,11 +151,10 @@ func ParseMetadataIdentityResponse(resp *http.Response) (string, error) {
 	}
 	defer resp.Body.Close()
 	respData, err := io.ReadAll(resp.Body)
-	respString := string(respData)
 	if err != nil {
 		return "", err
 	}
-	return respString, nil
+	return string(respData), nil
 }
 
 func GetAudience() string {

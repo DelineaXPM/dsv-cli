@@ -24,7 +24,7 @@ import (
 func GetConfigCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounConfig},
-		SynopsisText: "config",
+		SynopsisText: "Manage main config or auth providers",
 		HelpText: fmt.Sprintf(`Execute an action on the %[2]s in %[3]s
 
 Usage:

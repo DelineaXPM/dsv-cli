@@ -25,7 +25,7 @@ import (
 func GetPkiCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounPki},
-		SynopsisText: "pki (<action>)",
+		SynopsisText: "Manage certificates",
 		HelpText:     "Work with certificates",
 		RunFunc:      func(args []string) int { return cli.RunResultHelp },
 	})

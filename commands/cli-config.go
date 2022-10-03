@@ -29,7 +29,7 @@ import (
 func GetCliConfigCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounCliConfig},
-		SynopsisText: "Manage the CLI configuration.",
+		SynopsisText: "Manage the CLI configuration",
 		HelpText:     "Execute an action on the cli config for " + cst.ProductName,
 		NoPreAuth:    true,
 		RunFunc: func(args []string) int {
@@ -47,12 +47,12 @@ func GetCliConfigInitCmd() (cli.Command, error) {
 
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounCliConfig, cst.Init},
-		SynopsisText: "Initialize or add a new profile to the CLI configuration.",
+		SynopsisText: "Initialize or add a new profile to the CLI configuration",
 		HelpText: `Command 'init' is an alias for 'cli-config init'.
 For interactive mode provide no arguments.
 
 Examples:
-- Add profile that uses username/password for authentication:
+- Add a profile that uses username/password for authentication:
     • init \
         --profile prof \
         --tenant demo \
@@ -64,7 +64,7 @@ Examples:
         --auth-username 'demouser' \
         --auth-password 'demopassword'
 
-- Add profile that uses client credentials for authentication:
+- Add a profile that uses client credentials for authentication:
     • init \
         --profile prof \
         --tenant demo \
@@ -75,6 +75,28 @@ Examples:
         --auth-type clientcred \
         --auth-client-id '11111111-2222-3333-4444-555555555555' \
         --auth-client-secret 'abcdefghijklmnopqrstuvwxyz012345'
+
+- Add a profile that uses thycotic one for authentication:
+    • init \
+        --profile prof \
+        --tenant demo \
+        --domain secretsvaultcloud.com \
+        --store-type file \
+        --store-path ~/.thy \
+        --cache-strategy server \
+        --auth-type thy-one
+
+- Add a profile that uses certificate for authentication:
+    • init \
+        --profile prof \
+        --tenant demo \
+        --domain secretsvaultcloud.com \
+        --store-type file \
+        --store-path ~/.thy \
+        --cache-strategy server \
+        --auth-type cert \
+        --auth-certificate '@./path/to/certificate' \
+        --auth-privateKey '@./path/to/private_key'
 `,
 		NoPreAuth: true,
 		FlagsPredictor: []*predictor.Params{
@@ -93,11 +115,15 @@ Examples:
 			{Name: cst.CacheAge, Usage: "Cache age in minutes. Only if cache strategy is not 'server'"},
 
 			// Authentication.
-			{Name: cst.AuthType, Usage: "Authentication type (password|clientcred|thyone|aws|azure|gcp|oidc|cert)."},
-			{Name: cst.Username, Usage: "Username for 'password' authentication type."},
-			{Name: cst.Password, Usage: "Password for 'password' authentication type."},
-			{Name: cst.AuthClientID, Usage: "Client ID for 'clientcred' authentication type."},
-			{Name: cst.AuthClientSecret, Usage: "Client Secret for 'clientcred' authentication type."},
+			{Name: cst.AuthType, Usage: "Authentication type (password|clientcred|thy-one|aws|azure|gcp|oidc|cert)"},
+			{Name: cst.Username, Usage: "Username for 'password' authentication type"},
+			{Name: cst.Password, Usage: "Password for 'password' authentication type"},
+			{Name: cst.AuthClientID, Usage: "Client ID for 'clientcred' authentication type"},
+			{Name: cst.AuthClientSecret, Usage: "Client Secret for 'clientcred' authentication type"},
+			{Name: cst.AwsProfile, Usage: "AWS profile name for 'aws' authentication type"},
+			{Name: cst.AuthProvider, Usage: "Authentication provider name for 'oidc' authentication type"},
+			{Name: cst.AuthCert, Usage: "Certificate for 'cert' auth type. Prefix with '@' to denote filepath"},
+			{Name: cst.AuthPrivateKey, Usage: "Private key for 'cert' auth type. Prefix with '@' to denote filepath"},
 
 			{Name: cst.Dev, Hidden: true, Usage: "Specify dev domain upon initialization (ignored when '--domain' is used)"},
 		},
@@ -590,10 +616,10 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 	viper.Set(cst.StoreType, storeType)
 
 	if storeType == store.File {
-		def := filepath.Join(utils.NewEnvProvider().GetHomeDir(), ".thy")
-
 		fileStorePath := viper.GetString(cst.StorePath)
+
 		if fileStorePath == "" {
+			def := filepath.Join(utils.NewEnvProvider().GetHomeDir(), ".thy")
 			fileStorePathPrompt := &survey.Input{
 				Message: "Please enter directory for file store:",
 				Default: def,
@@ -606,10 +632,14 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 			fileStorePath = strings.TrimSpace(fileStorePath)
 		}
 
-		if fileStorePath != def {
-			prf.Set(fileStorePath, cst.Store, cst.Path)
-			viper.Set(cst.StorePath, fileStorePath)
+		fileStorePath, err = filepath.Abs(fileStorePath)
+		if err != nil {
+			vcli.Out().FailF("Failed to resolve absolute path: %v", err)
+			return utils.GetExecStatus(err)
 		}
+
+		prf.Set(fileStorePath, cst.Store, cst.Path)
+		viper.Set(cst.StorePath, fileStorePath)
 	}
 
 	// Caching strategy and cache age.
@@ -667,8 +697,9 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 	}
 	prf.Set(authType, cst.NounAuth, cst.Type)
 
-	var user, password, passwordKey, authProvider, encryptionKeyFileName string
-	authProvider = viper.GetString(cst.AuthProvider)
+	var user, password, passwordKey, encryptionKeyFileName string
+
+	authProvider := viper.GetString(cst.AuthProvider)
 
 	switch {
 	case (storeType != store.None && auth.AuthType(authType) == auth.Password):
@@ -734,19 +765,21 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 		}
 
 	case auth.AuthType(authType) == auth.FederatedAws:
-		var awsProfile string
-		awsProfilePrompt := &survey.Input{
-			Message: "Please enter aws profile for federated aws auth:",
-			Default: "default",
+		awsProfile := viper.GetString(cst.AwsProfile)
+		if awsProfile == "" {
+			awsProfilePrompt := &survey.Input{
+				Message: "Please enter aws profile for federated aws auth:",
+				Default: "default",
+			}
+			survErr := survey.AskOne(awsProfilePrompt, &awsProfile, survey.WithValidator(vaultcli.SurveyRequired))
+			if survErr != nil {
+				vcli.Out().WriteResponse(nil, errors.New(survErr))
+				return utils.GetExecStatus(survErr)
+			}
+			awsProfile = strings.TrimSpace(awsProfile)
+			viper.Set(cst.AwsProfile, awsProfile)
 		}
-		survErr := survey.AskOne(awsProfilePrompt, &awsProfile, survey.WithValidator(vaultcli.SurveyRequired))
-		if survErr != nil {
-			vcli.Out().WriteResponse(nil, errors.New(survErr))
-			return utils.GetExecStatus(survErr)
-		}
-		awsProfile = strings.TrimSpace(awsProfile)
 		prf.Set(awsProfile, cst.NounAuth, cst.NounAwsProfile)
-		viper.Set(cst.AwsProfile, awsProfile)
 
 	case auth.AuthType(authType) == auth.Oidc || auth.AuthType(authType) == auth.FederatedThyOne:
 		if auth.AuthType(authType) == auth.Oidc {
@@ -763,19 +796,21 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 				authProvider = strings.TrimSpace(authProvider)
 			}
 		} else {
-			authProvider = cst.DefaultThyOneName
-
 			if isDevDomain {
-				authProviderPrompt := &survey.Input{
-					Message: "Thycotic One authentication provider name:",
-					Default: cst.DefaultThyOneName,
+				if authProvider == "" {
+					authProviderPrompt := &survey.Input{
+						Message: "Thycotic One authentication provider name:",
+						Default: cst.DefaultThyOneName,
+					}
+					survErr := survey.AskOne(authProviderPrompt, &authProvider, survey.WithValidator(vaultcli.SurveyRequired))
+					if survErr != nil {
+						vcli.Out().WriteResponse(nil, errors.New(survErr))
+						return utils.GetExecStatus(survErr)
+					}
+					authProvider = strings.TrimSpace(authProvider)
 				}
-				survErr := survey.AskOne(authProviderPrompt, &authProvider, survey.WithValidator(vaultcli.SurveyRequired))
-				if survErr != nil {
-					vcli.Out().WriteResponse(nil, errors.New(survErr))
-					return utils.GetExecStatus(survErr)
-				}
-				authProvider = strings.TrimSpace(authProvider)
+			} else {
+				authProvider = cst.DefaultThyOneName
 			}
 		}
 
@@ -791,22 +826,25 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 		viper.Set(cst.Callback, callback)
 
 	case auth.AuthType(authType) == auth.Certificate:
-		clientCert, err := promptCertificate()
-		if err != nil {
-			vcli.Out().WriteResponse(nil, errors.New(err))
-			return 1
-		}
-		clientPrivKey, err := promptPrivateKey()
-		if err != nil {
-			vcli.Out().WriteResponse(nil, errors.New(err))
-			return 1
-		}
+		clientCert := viper.GetString(cst.AuthCert)
+		clientPrivKey := viper.GetString(cst.AuthPrivateKey)
 
-		prf.Set(clientCert, cst.NounAuth, cst.NounCert)
-		prf.Set(clientPrivKey, cst.NounAuth, cst.NounPrivateKey)
+		clientCert, err = parseClientCertificate(clientCert)
+		if err != nil {
+			vcli.Out().WriteResponse(nil, errors.New(err))
+			return 1
+		}
+		clientPrivKey, err = parseClientPrivKey(clientPrivKey)
+		if err != nil {
+			vcli.Out().WriteResponse(nil, errors.New(err))
+			return 1
+		}
 
 		viper.Set(cst.AuthCert, clientCert)
 		viper.Set(cst.AuthPrivateKey, clientPrivKey)
+
+		prf.Set(clientCert, cst.NounAuth, cst.NounCert)
+		prf.Set(clientPrivKey, cst.NounAuth, cst.NounPrivateKey)
 	}
 
 	if setupRequired {
@@ -1119,10 +1157,63 @@ func promptClientCredentials() (string, string, error) {
 	return answers.ClientID, answers.ClientSecret, nil
 }
 
+func parseClientCertificate(cert string) (string, error) {
+	if cert == "" {
+		var err error
+		cert, err = promptCertificate()
+		if err != nil {
+			return "", err
+		}
+	}
+
+	if strings.HasPrefix(cert, cst.CmdFilePrefix) {
+		filePath := strings.TrimPrefix(cert, cst.CmdFilePrefix)
+		fileData, err := os.ReadFile(filePath)
+		if err != nil {
+			return "", err
+		}
+
+		body := cliCertificateOutput{}
+		if err := json.Unmarshal(fileData, &body); err == nil {
+			cert = body.Certificate
+		} else {
+			cert = string(fileData)
+		}
+	}
+
+	return pki.CertToBase64EncodedPEM(cert)
+}
+
+func parseClientPrivKey(pk string) (string, error) {
+	if pk == "" {
+		var err error
+		pk, err = promptPrivateKey()
+		if err != nil {
+			return "", err
+		}
+	}
+
+	if strings.HasPrefix(pk, cst.CmdFilePrefix) {
+		filePath := strings.TrimPrefix(pk, cst.CmdFilePrefix)
+		fileData, err := os.ReadFile(filePath)
+		if err != nil {
+			return "", err
+		}
+
+		body := cliCertificateOutput{}
+		if err := json.Unmarshal(fileData, &body); err == nil {
+			pk = body.PrivateKey
+		} else {
+			pk = string(fileData)
+		}
+	}
+
+	return pki.PrivateKeyToBase64EncodedPEM(pk)
+}
+
 type cliCertificateOutput struct {
-	Certificate  string `json:"certificate"`
-	PrivateKey   string `json:"privateKey"`
-	SSHPublicKey string `json:"sshPublicKey"`
+	Certificate string `json:"certificate"`
+	PrivateKey  string `json:"privateKey"`
 }
 
 func promptCertificate() (string, error) {
@@ -1139,52 +1230,28 @@ func promptCertificate() (string, error) {
 		return "", survErr
 	}
 
-	var uncheckedCert string
-
-	answer := struct {
-		Cert string
-	}{}
 	switch actionID {
 	case 0: // "Raw certificate".
-		qs := []*survey.Question{
-			{
-				Name:     "Cert",
-				Prompt:   &survey.Input{Message: "Raw certificate:"},
-				Validate: vaultcli.SurveyRequired,
-			},
-		}
-		survErr := survey.Ask(qs, &answer)
+		var rawCert string
+		rawCertPrompt := &survey.Input{Message: "Raw certificate:"}
+		survErr := survey.AskOne(rawCertPrompt, &rawCert, survey.WithValidator(vaultcli.SurveyRequired))
 		if survErr != nil {
 			return "", survErr
 		}
-		uncheckedCert = answer.Cert
+		return rawCert, nil
 
 	case 1: // "Certificate file path".
-		qs := []*survey.Question{
-			{
-				Name:     "Cert",
-				Prompt:   &survey.Input{Message: "Certificate file path:"},
-				Validate: vaultcli.SurveyRequired,
-			},
-		}
-		survErr := survey.Ask(qs, &answer)
+		var filePath string
+		filePrompt := &survey.Input{Message: "Certificate file path:"}
+		survErr := survey.AskOne(filePrompt, &filePath, survey.WithValidator(vaultcli.SurveyRequired))
 		if survErr != nil {
 			return "", survErr
 		}
-		fileData, err := os.ReadFile(answer.Cert)
-		if err != nil {
-			return "", fmt.Errorf("'%s' file cannot be read", answer.Cert)
-		}
+		return cst.CmdFilePrefix + filePath, nil
 
-		body := cliCertificateOutput{}
-		if err := json.Unmarshal(fileData, &body); err == nil {
-			uncheckedCert = body.Certificate
-		} else {
-			uncheckedCert = string(fileData)
-		}
+	default:
+		return "", fmt.Errorf("Unhandled case for certificate prompting flow (id %d)", actionID)
 	}
-
-	return pki.CertToBase64EncodedPEM(uncheckedCert)
 }
 
 func promptPrivateKey() (string, error) {
@@ -1201,51 +1268,27 @@ func promptPrivateKey() (string, error) {
 		return "", survErr
 	}
 
-	var uncheckedPrivKey string
-
-	answer := struct {
-		PrivKey string
-	}{}
 	switch actionID {
 	case 0: // "Raw private key".
-		qs := []*survey.Question{
-			{
-				Name:     "PrivKey",
-				Prompt:   &survey.Password{Message: "Private key:"},
-				Validate: vaultcli.SurveyRequired,
-			},
-		}
-		survErr := survey.Ask(qs, &answer)
+		var rawPrivKey string
+		rawPrivKeyPrompt := &survey.Password{Message: "Private key:"}
+		survErr := survey.AskOne(rawPrivKeyPrompt, &rawPrivKey, survey.WithValidator(vaultcli.SurveyRequired))
 		if survErr != nil {
 			return "", survErr
 		}
-		uncheckedPrivKey = answer.PrivKey
+		return rawPrivKey, nil
 
 	case 1: // "Private key file path".
-		qs := []*survey.Question{
-			{
-				Name:     "PrivKey",
-				Prompt:   &survey.Input{Message: "Private key file path:"},
-				Validate: vaultcli.SurveyRequired,
-			},
-		}
-		survErr := survey.Ask(qs, &answer)
+		var filePath string
+		filePrompt := &survey.Input{Message: "Private key file path:"}
+		survErr := survey.AskOne(filePrompt, &filePath, survey.WithValidator(vaultcli.SurveyRequired))
 		if survErr != nil {
 			return "", survErr
 		}
 
-		fileData, err := os.ReadFile(answer.PrivKey)
-		if err != nil {
-			return "", fmt.Errorf("'%s' file cannot be read", answer.PrivKey)
-		}
+		return cst.CmdFilePrefix + filePath, nil
 
-		body := cliCertificateOutput{}
-		if err := json.Unmarshal(fileData, &body); err == nil {
-			uncheckedPrivKey = body.PrivateKey
-		} else {
-			uncheckedPrivKey = string(fileData)
-		}
+	default:
+		return "", fmt.Errorf("Unhandled case for private key prompting flow (id %d)", actionID)
 	}
-
-	return pki.PrivateKeyToBase64EncodedPEM(uncheckedPrivKey)
 }

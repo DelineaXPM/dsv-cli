@@ -8,6 +8,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/AlecAivazis/survey/v2/core"
 )
 
 // List of validation errors.
@@ -18,6 +20,7 @@ var (
 	errFileNotFound     = errors.New("Cannot find file at given path.")
 	errUppercaseProfile = errors.New("Profile name can only use lowercase letters.")
 	errProfileExists    = errors.New("Profile with this name already exists in the config.")
+	errAtLeastOne       = errors.New("Please select at least one item.")
 )
 
 // -----------------------------------------------------------------------//
@@ -107,6 +110,18 @@ func SurveyRequiredProfileName(existingProfiles []string) func(ans interface{}) 
 		}
 		return nil
 	}
+}
+
+// SurveySelectAtLeastOne requires the answer is a list with at least one item.
+func SurveySelectAtLeastOne(ans interface{}) error {
+	list, ok := ans.([]core.OptionAnswer)
+	if !ok {
+		return fmt.Errorf("unexpected type %T", ans)
+	}
+	if len(list) == 0 {
+		return errAtLeastOne
+	}
+	return nil
 }
 
 // SurveyOptionalCIDR verifies that the answer is either empty or a valid CIDR.

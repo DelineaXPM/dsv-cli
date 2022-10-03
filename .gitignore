@@ -77,3 +77,5 @@ mage_output_file.go
 **/bin/**
 # compiled temporary binary
 magec
+dsv.test
+coverage/

@@ -27,15 +27,15 @@ var (
 func GetUserCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounUser},
-		SynopsisText: "user (<username> | --username)",
+		SynopsisText: "Manage users",
 		HelpText: fmt.Sprintf(`Execute an action on a %s from %s
 
 Usage:
    • user %[3]s
    • user --username %[3]s
-		`, cst.NounUser, cst.ProductName, cst.ExampleUser),
+`, cst.NounUser, cst.ProductName, cst.ExampleUser),
 		FlagsPredictor: []*predictor.Params{
-			{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to fetch (required)", strings.Title(cst.DataUsername), cst.NounUser)},
+			{Name: cst.DataUsername, Usage: "Username of user to fetch (required)"},
 			{Name: cst.Version, Usage: "List the current and last (n) versions"},
 		},
 		MinNumberArgs: 1,
@@ -63,7 +63,7 @@ Usage:
    • user %[1]s --username %[4]s
 		`, cst.Read, cst.NounUser, cst.ProductName, cst.ExampleUser),
 		FlagsPredictor: []*predictor.Params{
-			{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to fetch (required)", strings.Title(cst.DataUsername), cst.NounUser)},
+			{Name: cst.DataUsername, Usage: "Username of user to fetch (required)"},
 			{Name: cst.Version, Usage: "List the current and last (n) versions"},
 		},
 		MinNumberArgs: 1,

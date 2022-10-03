@@ -1,6 +1,10 @@
 package constants
 
-// Constants used for ducomentation
+const (
+	ProductName = "DevOps Secrets Vault"
+)
+
+// Constants used for documentation.
 const (
 	ExamplePath             = "databases/mongo-db01"
 	ExamplePolicyPath       = "secrets/databases/mongo-db01"

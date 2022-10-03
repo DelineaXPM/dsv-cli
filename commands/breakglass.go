@@ -21,7 +21,7 @@ import (
 func GetBreakGlassCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounBreakGlass},
-		SynopsisText: "breakglass <action>",
+		SynopsisText: "Manage Break-Glass setup",
 		HelpText:     "Initiate restoration of admin users",
 		RunFunc: func(args []string) int {
 			return cli.RunResultHelp

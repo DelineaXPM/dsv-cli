@@ -123,8 +123,7 @@ func (c *baseCommand) preRun(args []string) int {
 	setVerbosity()
 
 	if viper.GetBool(cst.Verbose) {
-		log.Printf("%s CLI", cst.ProductName)
-		log.Printf("\t- version:   %s", version.Version)
+		log.Printf("DSV CLI version %s", version.Version)
 		log.Printf("\t- platform:  %s/%s", runtime.GOOS, runtime.GOARCH)
 		log.Printf("\t- gitCommit: %s", version.GitCommit)
 		log.Printf("\t- buildDate: %s", version.GetBuildDate())
@@ -190,6 +189,14 @@ func (c *baseCommand) SetFlags() {
 				}
 			} else {
 				viper.Set(v.Name, val)
+			}
+
+			// HACK: There should be a better way to tell authenticator not to read from
+			// cache and not to save to cache. This hack uses viper as a global storage
+			// and passes configuration to authenticator through it.
+			// This hack helps to skip cache when global auth related flag used.
+			if e.Global && strings.HasPrefix(v.Name, cst.NounAuth) {
+				viper.Set(cst.AuthSkipCache, true)
 			}
 		}
 	}

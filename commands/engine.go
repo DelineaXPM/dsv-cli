@@ -21,7 +21,7 @@ import (
 func GetEngineCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounEngine},
-		SynopsisText: "engine (<action>)",
+		SynopsisText: "Manage engines",
 		HelpText:     "Work with engines",
 		RunFunc: func(args []string) int {
 			path := viper.GetString(cst.Path)
@@ -89,7 +89,8 @@ func GetEngineCreateCmd() (cli.Command, error) {
 		SynopsisText: "Create a new engine",
 		HelpText: fmt.Sprintf(`
 Usage:
-   • %[1]s %[2]s --%[3]s myengine --pool-name mypool`, cst.NounEngine, cst.Create, cst.DataName),
+   • %[1]s %[2]s --%[3]s myengine --pool-name mypool
+   • %[1]s %[2]s --%[3]s myengine --pool-name mypool --auth-signing-type ed25519`, cst.NounEngine, cst.Create, cst.DataName),
 		FlagsPredictor: []*predictor.Params{
 			{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounEngine)},
 			{Name: cst.DataPoolName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounPool)},

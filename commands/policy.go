@@ -23,13 +23,13 @@ import (
 func GetPolicyCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounPolicy},
-		SynopsisText: "policy (<path> | --path|-r)",
-		HelpText: fmt.Sprintf(`Execute an action on a %[1]s at a path
+		SynopsisText: "Manage policies",
+		HelpText: fmt.Sprintf(`Execute an action on a policy at a path
 
 Usage:
-   • %[1]s %[2]s
-   • %[1]s --path %[2]s
-		`, cst.NounPolicy, cst.ExamplePolicyPath),
+   • policy %[1]s
+   • policy --path %[1]s
+`, cst.ExamplePolicyPath),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s", cst.Path, cst.NounPolicy)},
 			{Name: cst.Version, Usage: "List the current and last (n) versions"},
@@ -51,13 +51,13 @@ Usage:
 func GetPolicyReadCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounPolicy, cst.Read},
-		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r)", cst.NounPolicy, cst.Read),
-		HelpText: fmt.Sprintf(`Read a %[1]s
+		SynopsisText: "policy read (<path> | (--path | -r) <path>) [--version <n>]",
+		HelpText: fmt.Sprintf(`Read a policy
 
 Usage:
-   • %[1]s %[3]s %[2]s
-   • %[1]s %[3]s --path %[2]s
-		`, cst.NounPolicy, cst.ExamplePolicyPath, cst.Read),
+   • policy read %[1]s
+   • policy read --path %[1]s
+`, cst.ExamplePolicyPath),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s", cst.Path, cst.NounPolicy)},
 			{Name: cst.Version, Usage: "List the current and last (n) versions"},
@@ -72,13 +72,13 @@ Usage:
 func GetPolicyEditCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounPolicy, cst.Edit},
-		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r)", cst.NounPolicy, cst.Edit),
-		HelpText: fmt.Sprintf(`Edit a %[1]s
+		SynopsisText: "policy edit (<path> | (--path | -r) <path>)",
+		HelpText: fmt.Sprintf(`Edit a policy
 
 Usage:
-   • %[1]s %[3]s %[2]s
-   • %[1]s %[3]s --path %[2]s
-		`, cst.NounPolicy, cst.ExamplePolicyPath, cst.Edit),
+   • policy edit %[1]s
+   • policy edit --path %[1]s
+`, cst.ExamplePolicyPath),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s", cst.Path, cst.NounPolicy)},
 		},
@@ -92,13 +92,13 @@ Usage:
 func GetPolicyDeleteCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounPolicy, cst.Delete},
-		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r)", cst.NounPolicy, cst.Delete),
-		HelpText: fmt.Sprintf(`Delete %[1]s
+		SynopsisText: "policy delete (<path> | (--path | -r) <path>) [--force]",
+		HelpText: fmt.Sprintf(`Delete policy
 
 Usage:
-   • %[1]s %[3]s %[2]s
-   • %[1]s %[3]s --path %[2]s --force
-		`, cst.NounPolicy, cst.ExamplePolicyPath, cst.Delete),
+   • policy delete %[1]s
+   • policy delete --path %[1]s --force
+`, cst.ExamplePolicyPath),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s (required)", cst.Path)},
 			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s", cst.NounPolicy), ValueType: "bool"},
@@ -112,13 +112,13 @@ Usage:
 
 func GetPolicyRestoreCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path:         []string{cst.NounPolicy, cst.Read},
-		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r)", cst.NounPolicy, cst.Restore),
-		HelpText: fmt.Sprintf(`Restore a deleted %[2]s from %[3]s
+		Path:         []string{cst.NounPolicy, cst.Restore},
+		SynopsisText: "policy restore (<path> | (--path | -r) <path>)",
+		HelpText: fmt.Sprintf(`Restore a deleted policy
 
 Usage:
-   • policy %[1]s %[4]s
-		`, cst.Restore, cst.NounPolicy, cst.ProductName, cst.ExamplePath),
+   • policy restore %[1]s
+`, cst.ExamplePolicyPath),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s", cst.Path, cst.NounPolicy)},
 		},
@@ -132,13 +132,13 @@ Usage:
 func GetPolicyCreateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounPolicy, cst.Create},
-		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r) ((--data|-d) | --subjects --actions --effect[default:allow] --desc --cidr  --resources)", cst.NounPolicy, cst.Create),
-		HelpText: fmt.Sprintf(`Add a %[1]s
+		SynopsisText: "policy create (<path> | --path|-r) ((--data|-d) | --subjects --actions --effect[default:allow] --resources [--desc] [--cidr])",
+		HelpText: fmt.Sprintf(`Add a policy
 
 Usage:
-   • %[1]s %[3]s %[2]s --subjects 'users:<kadmin|groups:admin>',users:userA --actions create,update --cidr 192.168.0.15/24
-   • %[1]s %[3]s --path %[2]s --data %[4]s
-		`, cst.NounPolicy, cst.ExamplePolicyPath, cst.Create, cst.ExampleDataPath),
+   • policy create %[1]s --subjects '<users:kadmin|groups:admin>',users:userA --actions create,update --cidr 10.10.0.15/24
+   • policy create --path %[1]s --data %[2]s
+`, cst.ExamplePolicyPath, cst.ExampleDataPath),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in a %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), cst.NounPolicy), Predictor: predictor.NewPrefixFilePredictor("*")},
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounPolicy)},
@@ -161,14 +161,15 @@ Usage:
 func GetPolicyUpdateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounPolicy, cst.Update},
-		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r )  ((--data|-d) | --subjects --actions --effect[default:allow] --desc --cidr --resources)", cst.NounPolicy, cst.Update),
-		HelpText: fmt.Sprintf(`Update a %[1]s
+		SynopsisText: "policy update (<path> | (--path | -r) <path>) ((--data|-d) | --subjects --actions --effect[default:allow] --resources [--desc] [--cidr])",
+		HelpText: fmt.Sprintf(`Update a policy
+
+Policy Updates are all or nothing, so required fields must be included in the update and if optional fields are not included, they are deleted or go to default.
 
 Usage:
-   • Policy Updates are all or nothing, so required fields must be included in the update and if optional fields are not included, they are deleted or go to default
-   • %[1]s %[3]s %[2]s --subjects 'users:<kadmin|groups:admin>',users:userA --actions update --cidr 192.168.0.15/24
-   • %[1]s %[3]s --path %[2]s --data %[4]s
-		`, cst.NounPolicy, cst.ExamplePolicyPath, cst.Update, cst.ExampleDataPath),
+   • policy update %[1]s --subjects 'users:<kadmin|groups:admin>',users:userA --actions update --cidr 192.168.0.15/24
+   • policy update --path %[1]s --data %[2]s
+`, cst.ExamplePolicyPath, cst.ExampleDataPath),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in a %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), cst.NounPolicy), Predictor: predictor.NewPrefixFilePredictor("*")},
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounPolicy)},
@@ -191,15 +192,15 @@ Usage:
 func GetPolicyRollbackCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounPolicy, cst.Rollback},
-		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r)", cst.NounPolicy, cst.Rollback),
-		HelpText: fmt.Sprintf(`Rollback a %[1]s
+		SynopsisText: "policy rollback (<path> | (--path | -r) <path>) [--version <n>]",
+		HelpText: fmt.Sprintf(`Rollback a policy
 
 Usage:
-   • %[1]s %[3]s %[2]s --%[4]s 1
-   • %[1]s %[3]s --path %[2]s
-		`, cst.NounPolicy, cst.ExamplePolicyPath, cst.Rollback, cst.Version),
+   • policy rollback %[1]s --version 1
+   • policy rollback --path %[1]s
+`, cst.ExamplePolicyPath),
 		FlagsPredictor: []*predictor.Params{
-			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret)},
+			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounPolicy)},
 			{Name: cst.Version, Usage: "The version to which to rollback"},
 		},
 		MinNumberArgs: 1,
@@ -212,13 +213,13 @@ Usage:
 func GetPolicySearchCommand() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounPolicy, cst.Search},
-		SynopsisText: fmt.Sprintf("%s (<query> | --query)", cst.Search),
-		HelpText: fmt.Sprintf(`Search for a %[1]s
+		SynopsisText: "policy search (<query> | (--query | -q) <query>) [(--limit | -l) <n>] [--cursor <cursor>]",
+		HelpText: fmt.Sprintf(`Search for a policy
 
 Usage:
-   • %[1]s %[2]s %[3]s
-   • %[1]s %[2]s --query %[3]s
-		`, cst.NounPolicy, cst.Search, cst.ExamplePolicySearch),
+   • policy search %[1]s
+   • policy search --query %[1]s
+`, cst.ExamplePolicySearch),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("Filter %s of items to fetch (required)", strings.Title(cst.Query))},
 			{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
@@ -400,13 +401,13 @@ func handlePolicySearchCmd(vcli vaultcli.CLI, args []string) int {
 // Helpers:
 
 func createPolicy(params []map[string]string) (string, error) {
-	defaultPolicies := make([]*defaultPolicy, 0)
+	permissions := make([]*defaultPolicy, 0, len(params))
 	for _, param := range params {
 		policy := defaultPolicy{
 			Description: param[cst.DataDescription],
-			Subjects:    utils.StringToSlice(param[cst.DataSubject]),
 			Effect:      param[cst.DataEffect],
 			Actions:     utils.StringToSlice(param[cst.DataAction]),
+			Subjects:    utils.StringToSlice(param[cst.DataSubject]),
 		}
 		if resources := param[cst.DataResource]; resources != "" {
 			policy.Resources = utils.StringToSlice(param[cst.DataResource])
@@ -417,11 +418,11 @@ func createPolicy(params []map[string]string) (string, error) {
 				return "", err
 			}
 		}
-		defaultPolicies = append(defaultPolicies, &policy)
+		permissions = append(permissions, &policy)
 	}
 
-	doc := document{
-		PermissionDocument: defaultPolicies,
+	doc := map[string][]*defaultPolicy{
+		"permissionDocument": permissions,
 	}
 	marshalled, err := json.Marshal(doc)
 	if err != nil {
@@ -479,18 +480,14 @@ type jsonCondition struct {
 	Options json.RawMessage `json:"options"`
 }
 
-type document struct {
-	PermissionDocument []*defaultPolicy `json:"permissionDocument"`
-}
-
 type defaultPolicy struct {
-	ID          string                   `json:"id" gorethink:"id"`
-	Description string                   `json:"description" gorethink:"description"`
-	Subjects    []string                 `json:"subjects" gorethink:"subjects"`
-	Effect      string                   `json:"effect" gorethink:"effect"`
-	Resources   []string                 `json:"resources" gorethink:"resources"`
-	Actions     []string                 `json:"actions" gorethink:"actions"`
-	Conditions  map[string]jsonCondition `json:"conditions" gorethink:"conditions"`
+	ID          string                   `json:"id"`
+	Description string                   `json:"description"`
+	Subjects    []string                 `json:"subjects"`
+	Effect      string                   `json:"effect"`
+	Resources   []string                 `json:"resources"`
+	Actions     []string                 `json:"actions"`
+	Conditions  map[string]jsonCondition `json:"conditions"`
 }
 
 func setCidrCondition(policy *defaultPolicy, cidr string) *errors.ApiError {
@@ -599,7 +596,7 @@ func handlePolicyUpdateWizard(vcli vaultcli.CLI, args []string) int {
 }
 
 func policyCollectDataWizard() (string, error) {
-	keyvalueslice := make([]map[string]string, 0)
+	permissions := make([]map[string]string, 0)
 
 	for {
 		qs := []*survey.Question{
@@ -612,15 +609,13 @@ func policyCollectDataWizard() (string, error) {
 				Name: "Actions",
 				Prompt: &survey.MultiSelect{
 					Message: "Actions:",
-					Options: []string{"read", "update", "delete", "list", "assign"},
+					Options: []string{"create", "read", "update", "delete", "list", "assign"},
 				},
+				Validate: vaultcli.SurveySelectAtLeastOne,
 			},
 			{
-				Name: "Effect",
-				Prompt: &survey.Select{
-					Message: "Effect:",
-					Options: []string{"allow", "deny"},
-				},
+				Name:   "Effect",
+				Prompt: &survey.Select{Message: "Effect:", Options: []string{"allow", "deny"}},
 			},
 		}
 
@@ -727,26 +722,20 @@ func policyCollectDataWizard() (string, error) {
 			cst.DataCidr:        strings.TrimSpace(cidr),
 		}
 
-		keyvalueslice = append(keyvalueslice, params)
+		permissions = append(permissions, params)
 
-		qs2 := []*survey.Question{
-			{Name: "addMore", Prompt: &survey.Confirm{Message: "Add another permission?", Default: true}},
+		var addMore bool
+		addMorePrompt := &survey.Confirm{Message: "Add another permission?", Default: true}
+		survErr = survey.AskOne(addMorePrompt, &addMore)
+		if survErr != nil {
+			return "", survErr
 		}
-		answers2 := struct {
-			AddMore bool
-		}{}
-		survErr2 := survey.Ask(qs2, &answers2)
-		if survErr2 != nil {
-			return "", survErr2
-		}
-
-		if !answers2.AddMore {
+		if !addMore {
 			break
 		}
-
 	}
 
-	return createPolicy(keyvalueslice)
+	return createPolicy(permissions)
 }
 
 // API callers:

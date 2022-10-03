@@ -28,7 +28,7 @@ linters-settings:
     require-specific: true
   gofumpt:
     # Select the Go version to target. The default is `1.15`.
-    lang-version: "1.18"
+    lang-version: '1.18'
     # Choose whether or not to use the extra rules that are disabled
     # by default
     extra-rules: true
@@ -68,7 +68,7 @@ linters-settings:
       - ^github.com/go-redis/redis$: Use v8 github.com/go-redis/redis/v8 to ensure no version conflicts
       - log: Use standardized zerolog - see sheldon for details
       - gopkg.in/redis.v5: Probably imported in error. Should ensure you are using github.com/go-redis/redis/v8
-      - io/ioutil: "io/ioutil was deprecated in Go 1.16: https://tip.golang.org/doc/go1.16#ioutil"
+      - io/ioutil: 'io/ioutil was deprecated in Go 1.16: https://tip.golang.org/doc/go1.16#ioutil'
     # improved go mod checks
     gomodguard:
       blocked:
@@ -85,7 +85,7 @@ linters-settings:
         # Version constraint, see https://github.com/Masterminds/semver#basic-comparisons
         versions:
           - github.com/go-redis/redis:
-            version: ">= 8.0"
+            version: '>= 8.0'
             reason: v8 required for new functionality, prior versions will not work
         local_replace_directives: false # Set to true to raise lint issues for packages that are loaded from a local path via replace directive
   wrapcheck:
@@ -218,6 +218,7 @@ linters:
     - varcheck # abandoned
     - deadcode # abandoned
     - ifshort # abandoned
+    - godot # causes conflicts with trunk and other tool
 # VSCode sets golangci-lint fast flag to avoid IDE issues in this project.
 # Disabled and instead scoping lint on save to current package.
 # To check everything run command Lint: Workspace
@@ -270,7 +271,7 @@ issues:
     - linters:
         - govet
         - revive
-      text: "shadow: declaration of .err. shadows declaration" # err shadowing is a normal practice, don't worry about this
+      text: 'shadow: declaration of .err. shadows declaration' # err shadowing is a normal practice, don't worry about this
     - path: mocks
       linters:
         - godot

@@ -30,7 +30,7 @@ trigger:
   branches:
     include:
       - master
-      - refs/tags/
+      - refs/tags/*
   paths:
     exclude:
       - .devcontainer/*

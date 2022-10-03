@@ -47,7 +47,7 @@ func GetSearchOpWrappers() []*predictor.Params {
 func GetSecretCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounSecret},
-		SynopsisText: "secret (<path> | --path|-r)",
+		SynopsisText: "Manage secrets",
 		HelpText: fmt.Sprintf(`Execute an action on a %s from %s
 
 Usage:

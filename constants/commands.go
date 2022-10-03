@@ -209,6 +209,11 @@ const (
 	YamlShort = "yml"
 )
 
+// Control authentication cache usage.
+const (
+	AuthSkipCache = "auth.skip.cache"
+)
+
 func GetShortFlag(flag string) string {
 	switch flag {
 	case Tenant:

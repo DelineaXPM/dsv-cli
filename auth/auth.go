@@ -1,22 +1,11 @@
 package auth
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/sha512"
-	"crypto/x509"
-	"encoding/base64"
-	"encoding/json"
-	"encoding/pem"
 	"fmt"
-	"io"
 	"log"
-	"net"
 	"net/http"
-	"os"
 	"reflect"
 	"strings"
-	"text/template"
 	"time"
 
 	cst "thy/constants"
@@ -26,13 +15,6 @@ import (
 	"thy/store"
 	"thy/utils"
 
-	"github.com/Azure/go-autorest/autorest"
-	azure "github.com/Azure/go-autorest/autorest/azure/auth"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/mitchellh/cli"
-	"github.com/pkg/browser"
 	"github.com/spf13/viper"
 )
 
@@ -55,12 +37,25 @@ const (
 	Refresh          = AuthType("refresh")
 	ClientCredential = AuthType("clientcred")
 	Certificate      = AuthType("cert")
-	FederatedThyOne  = AuthType(cst.DefaultThyOneName)
+	FederatedThyOne  = AuthType("thy-one")
 	FederatedAws     = AuthType("aws")
 	FederatedAzure   = AuthType("azure")
 	FederatedGcp     = AuthType("gcp")
 	Oidc             = AuthType("oidc")
 )
+
+// authTypeToGrantType maps authentication type to grant type which will be sent to DSV.
+var authTypeToGrantType = map[AuthType]string{
+	Password:         "password",
+	Refresh:          "refresh_token",
+	ClientCredential: "client_credentials",
+	Certificate:      "certificate",
+	FederatedThyOne:  "oidc",
+	FederatedAws:     "aws_iam",
+	FederatedAzure:   "azure",
+	FederatedGcp:     "gcp",
+	Oidc:             "oidc",
+}
 
 // authTypeToCachePrefix maps authentication type to cache key prefix.
 // Note: prefix must start with "token".
@@ -76,34 +71,15 @@ var authTypeToCachePrefix = map[AuthType]string{
 	Oidc:             "token-oidc-",
 }
 
-// authTypeToGrantType maps authentication type to grant type which will be sent to DSV.
-var authTypeToGrantType = map[AuthType]string{
-	Password:         "password",
-	Refresh:          "refresh_token",
-	ClientCredential: "client_credentials",
-	Certificate:      "certificate",
-	FederatedThyOne:  "oidc",
-	FederatedAws:     "aws_iam",
-	FederatedAzure:   "azure",
-	FederatedGcp:     "gcp",
-	Oidc:             "oidc",
-}
-
-// GetTokenCacheKey gets the key for the auth type.
-func (a AuthType) GetTokenCacheKey(tenant string, profile string) (string, *errors.ApiError) {
-	prefix, ok := authTypeToCachePrefix[a]
-	if !ok {
-		return "", errors.NewF("unexpected authentication type %s", a)
-	}
-
+func getTokenCacheKey(a AuthType, tenant string, profile string) string {
+	prefix := authTypeToCachePrefix[a]
 	key := prefix + tenant + "-" + profile
-	return key, nil
+	return key
 }
 
 // Authenticator is the interface used for authentication funcs.
 type Authenticator interface {
 	GetToken() (*TokenResponse, *errors.ApiError)
-	GetTokenCacheOverride(authType string, useCache bool) (*TokenResponse, *errors.ApiError)
 	WipeCachedTokens() *errors.ApiError
 }
 
@@ -130,17 +106,31 @@ func NewAuthenticator(store store.Store, client requests.Client) Authenticator {
 func (a *authenticator) GetToken() (*TokenResponse, *errors.ApiError) {
 	authType := viper.GetString(cst.AuthType)
 
-	if AuthType(authType) == Password && strings.TrimSpace(viper.GetString(cst.Password)) != "" {
-		return a.GetTokenCacheOverride(authType, false)
-	}
-	return a.GetTokenCacheOverride(authType, true)
-}
+	at := Password
+	if authType != "" {
+		at = AuthType(authType)
 
-func (a *authenticator) GetTokenCacheOverride(authType string, useCache bool) (*TokenResponse, *errors.ApiError) {
-	if authType == "" {
-		return a.getTokenForAuthType(Password, useCache)
+		if _, ok := authTypeToGrantType[at]; !ok {
+			return nil, errors.NewF("unknown authentication type %q", authType)
+		}
+
+		if _, ok := authTypeToCachePrefix[at]; !ok {
+			return nil, errors.NewF("unknown authentication type %q", authType)
+		}
 	}
-	return a.getTokenForAuthType(AuthType(authType), useCache)
+
+	skipCache := viper.GetBool(cst.AuthSkipCache)
+	var cacheKey string
+	if !skipCache {
+		tenant := viper.GetString(cst.Tenant)
+		profile := viper.GetString(cst.Profile)
+		if profile == "" {
+			profile = cst.DefaultProfile
+		}
+		cacheKey = getTokenCacheKey(at, tenant, profile)
+	}
+
+	return a.getToken(at, cacheKey)
 }
 
 // WipeCachedTokens removes all cached tokens for the current profile.
@@ -164,403 +154,74 @@ func (a *authenticator) WipeCachedTokens() *errors.ApiError {
 	return nil
 }
 
-func (a *authenticator) getTokenForAuthType(at AuthType, useCache bool) (*TokenResponse, *errors.ApiError) {
-	tenant := viper.GetString(cst.Tenant)
-	profile := viper.GetString(cst.Profile)
-	if profile == "" {
-		profile = cst.DefaultProfile
-	}
-	keyToken, err := at.GetTokenCacheKey(tenant, profile)
-	if err != nil {
-		return nil, err
-	}
-
-	var data requestBody
-	var tr *TokenResponse
-
-	if useCache {
-		if err := a.store.Get(keyToken, &tr); err != nil {
+func (a *authenticator) getToken(at AuthType, cacheKey string) (*TokenResponse, *errors.ApiError) {
+	if cacheKey != "" {
+		tr := &TokenResponse{}
+		err := a.store.Get(cacheKey, tr)
+		if err != nil {
 			return nil, err
-		} else if tr != nil && !tr.IsNil() {
-			if tr.SecondsRemainingToken() > 0 {
+		}
+
+		if !tr.IsNil() {
+			// lifetime defines how many seconds passed since token was fetched.
+			lifetime := int64(time.Now().UTC().Sub(tr.Granted).Seconds())
+
+			// Add some space for actions.
+			lifetime = lifetime + leewaySecondsTokenExp
+
+			// If access token is still valid, return it.
+			if (lifetime - tr.ExpiresIn) <= 0 {
 				return tr, nil
-			} else if tr.SecondsRemainingRefreshToken() > 0 {
-				log.Printf("Token expired but valid refresh token. Attempting to refresh. Token cache key: '%s'\n", keyToken)
-				at = Refresh
-				data = requestBody{
-					GrantType:    authTypeToGrantType[at],
+			}
+
+			// If refresh token is present and still valid, use it to get a new token.
+			if tr.RefreshToken != "" && ((lifetime - refreshTokenLifeSeconds) <= 0) {
+				log.Print("Token expired but valid refresh token found. Attempting to refresh.")
+
+				data := &requestBody{
+					GrantType:    authTypeToGrantType[Refresh],
 					RefreshToken: tr.RefreshToken,
 				}
 
-			} else {
-				log.Printf("Refresh token expired. Attempting to reauthenticate. Token cache key: '%s'\n", keyToken)
-			}
-		}
-	}
-	if at == FederatedAws {
-		if headers, body, err := buildAwsParams(); err != nil {
-			return nil, err
-		} else {
-			data = requestBody{
-				GrantType:  authTypeToGrantType[at],
-				AwsBody:    body,
-				AwsHeaders: headers,
-			}
-		}
-	}
-	if at == FederatedAzure {
-		// NOTE : NH - this is a little awkward but better than splitting out token
-		// provider factory (logic currently done by authorizer)
-		resource := "https://management.azure.com/"
-		authorizer, err := azure.NewAuthorizerFromEnvironmentWithResource(resource)
-		if err != nil {
-			return nil, errors.New(err).Grow("Failed to create azure authorizer")
-		}
-		r := http.Request{}
-		p := authorizer.WithAuthorization()
-		if r, err := autorest.CreatePreparer(p).Prepare(&r); err != nil {
-			return nil, errors.New(err).Grow("Failed to generate azure auth token")
-		} else {
-			qualifiedBearer := r.Header.Get("Authorization")
-			lenPrefix := len("Bearer ")
-			if len(qualifiedBearer) < lenPrefix {
-				return nil, errors.NewS("Received invalid bearer token")
-			}
-			bearer := qualifiedBearer[lenPrefix:]
-			data = requestBody{
-				GrantType: authTypeToGrantType[at],
-				Jwt:       bearer,
-			}
-		}
-	}
-
-	if at == FederatedGcp {
-		var err error
-		token := viper.GetString(cst.GcpToken)
-		if token == "" {
-			gcpAuthType := viper.GetString(cst.GcpAuthType)
-			gcp := GcpClient{}
-			token, err = gcp.GetJwtToken(gcpAuthType)
-			if err != nil {
-				return nil, errors.New(err).Grow("Failed to fetch token for gcp")
-			}
-			log.Printf("Gcp Token:\n%s\n", token)
-		}
-		data = requestBody{
-			GrantType: authTypeToGrantType[at],
-			Jwt:       token,
-		}
-	}
-
-	if data.GrantType == "" {
-		data = requestBody{
-			GrantType: authTypeToGrantType[at],
-		}
-		if at == Password {
-			err := setupDataForPasswordAuth(&data)
-			if err != nil {
-				return nil, errors.New(err)
-			}
-		} else if at == ClientCredential {
-			data.AuthClientID = viper.GetString(cst.AuthClientID)
-			if secret, err := store.GetSecureSetting(cst.AuthClientSecret); err != nil || secret == "" {
-				if err == nil {
-					err = errors.NewS("auth-client-secret setting is empty")
-				}
-				return nil, err.Grow("Failed to retrieve secure setting: " + strings.Replace(cst.AuthClientSecret, ".", "-", -1))
-			} else {
-				data.AuthClientSecret = secret
-			}
-		} else if at == Refresh {
-			refreshToken := viper.GetString(cst.RefreshToken)
-			if data.RefreshToken == "" {
-				if refreshToken == "" {
-					return nil, errors.NewS("Refresh authentication failed: refreshtoken flag must be set")
-				}
-				data.RefreshToken = refreshToken
-			}
-		} else if at == Oidc || at == FederatedThyOne {
-			data.Provider = viper.GetString(cst.AuthProvider)
-
-			callback := viper.GetString(cst.Callback)
-			if callback == "" {
-				callback = cst.DefaultCallback
-			}
-
-			data.CallbackHost = callback
-			data.CallbackUrl = fmt.Sprintf("http://%s/callback", callback)
-		} else if at == Certificate {
-			challengeID, challenge, err := a.initiateCertAuth(
-				viper.GetString(cst.AuthCert),
-				viper.GetString(cst.AuthPrivateKey),
-			)
-			if err != nil {
-				return nil, err
-			}
-			data.CertChallengeID = challengeID
-			data.DecryptedChallenge = challenge
-		}
-	}
-
-	if tr, err := a.fetchTokenVault(at, data); err != nil {
-		if at == Refresh {
-			log.Printf("Refresh authentication failed: %s\n", err.Error())
-			if pass, err := store.GetSecureSetting(cst.Password); err == nil && pass != "" && viper.GetString(cst.Username) != "" {
-				log.Println("Username and password set. Attempt password authentication")
-				return a.getTokenForAuthType(Password, false)
-			} else {
-				if err == nil {
-					if viper.GetString(cst.Username) == "" {
-						err = utils.NewMissingArgError(cst.Username)
-					} else if pass == "" {
-						return a.getTokenForAuthType(Password, false)
+				if tr, err := a.fetchTokenVault(Refresh, data); err != nil {
+					log.Printf("Refresh authentication failed: %s", err.Error())
+				} else {
+					log.Printf("Refresh authentication succeeded.")
+					if err := a.store.Store(cacheKey, tr); err != nil {
+						return nil, err.Grow("Failed caching token.")
 					}
+					return tr, nil
 				}
-				return nil, errors.New(err).Grow("Refresh authentication failed. Please re-authenticate with password or other supported authentication type")
+			} else {
+				log.Printf("Refresh token expired. Attempting to reauthenticate.")
 			}
 		}
-		return tr, err.Grow(fmt.Sprintf("Failed to authenticate with auth type '%s'. Please check parameters and try again", at))
-	} else {
-		log.Printf("%s authentication succeeded.\n", strings.Title(string(at)))
-		if err := a.store.Store(keyToken, tr); err != nil {
-			return nil, err.Grow("Failed caching token")
-		}
-		return tr, nil
 	}
-}
 
-type RedirectResponse struct {
-	RedirectUrl string `json:"redirect_url"`
-}
+	reqBody, stdErr := a.newRequestBody(at)
+	if stdErr != nil {
+		return nil, errors.New(stdErr).Grow(
+			fmt.Sprintf("Failed to build token request for %s based auth:", at),
+		)
+	}
 
-type AuthResponse struct {
-	state    string
-	authCode string
-	message  string
-	err      *errors.ApiError
-}
-
-func (a *authenticator) fetchTokenVault(at AuthType, data requestBody) (*TokenResponse, *errors.ApiError) {
-	if err := data.ValidateForAuthType(at); err != nil {
+	if err := reqBody.validate(at); err != nil {
 		return nil, errors.New(err)
 	}
-	if at == Oidc || at == FederatedThyOne {
-		ui := cli.BasicUi{
-			Writer:      os.Stdout,
-			Reader:      os.Stdin,
-			ErrorWriter: os.Stderr,
-		}
 
-		var redirectResponse RedirectResponse
-		uri := paths.CreateURI("oidc/auth", nil)
-
-		if err := a.requestClient.DoRequestOut(http.MethodPost, uri, data, &redirectResponse); err != nil {
-			return nil, err
-		}
-		callbackListener, err := net.Listen("tcp", data.CallbackHost)
-		if err != nil {
-			return nil, errors.NewF("unable to open callback listener: %v", err)
-		}
-		defer callbackListener.Close()
-
-		authChannel := make(chan AuthResponse)
-		http.HandleFunc("/callback", a.handleOidcAuth(authChannel))
-
-		go func() {
-			err := http.Serve(callbackListener, nil)
-			if err != nil && err != http.ErrServerClosed {
-				authChannel <- AuthResponse{
-					message: "login failed",
-					err:     errors.New(err),
-				}
-			}
-		}()
-
-		if err = browser.OpenURL(redirectResponse.RedirectUrl); err != nil {
-			ui.Info(fmt.Sprintf("Unable to open browser, complete login process here:\n %s", redirectResponse.RedirectUrl))
-		}
-
-		select {
-		case ar := <-authChannel:
-			if ar.err != nil {
-				return nil, ar.err
-			}
-			data.State = ar.state
-			data.AuthorizationCode = ar.authCode
-			ui.Info(fmt.Sprintf("Received response from %s provider, submitting authorization code to %s", at, cst.ProductName))
-		case <-time.After(5 * time.Minute):
-			ui.Info(fmt.Sprintf("Timeout occurred waiting for callback from %s provider", at))
-			return nil, errors.NewS("no callback occurred after redirect")
-		}
-	}
-
-	var response TokenResponse
-	uri := paths.CreateURI(cst.NounToken, nil)
-	if err := a.requestClient.DoRequestOut(http.MethodPost, uri, data, &response); err != nil {
-		return nil, err
-	} else if response.IsNil() {
-		return nil, errors.NewS("Empty token")
-	}
-	response.Granted = time.Now().UTC()
-	return &response, nil
-}
-
-// handleOidcAuth handles OIDC and Thycotic One auths
-func (a *authenticator) handleOidcAuth(doneCh chan<- AuthResponse) http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		b, err := io.ReadAll(req.Body)
-		if err != nil {
-			w.Write([]byte(err.Error()))
-			doneCh <- AuthResponse{
-				err:     errors.New(err),
-				message: "error in callback",
-			}
-		}
-
-		code := req.URL.Query().Get("code")
-		state := req.URL.Query().Get("state")
-
-		if code == "" || state == "" {
-			doneCh <- AuthResponse{
-				err: errors.NewS("missing values in callback, authorization code or state are empty"),
-			}
-			w.Write(b)
-			return
-		}
-
-		tmpl, err := template.New("youDidIt").Parse(youDidIt)
-		if err != nil {
-			w.Write([]byte(err.Error()))
-			doneCh <- AuthResponse{
-				err:     errors.New(err),
-				message: "error in html parse template",
-			}
-		}
-
-		vars := map[string]interface{}{
-			"providerName": viper.GetString(cst.AuthType),
-		}
-
-		err = tmpl.Execute(w, vars)
-		if err != nil {
-			w.Write([]byte(err.Error()))
-			doneCh <- AuthResponse{
-				err:     errors.New(err),
-				message: "error in html template execute",
-			}
-		}
-
-		doneCh <- AuthResponse{
-			err:      nil,
-			message:  "success",
-			authCode: code,
-			state:    state,
-		}
-	}
-}
-
-// initiateCertAuth makes initial request and prepares info for final token request.
-func (a *authenticator) initiateCertAuth(cert, privKey string) (string, string, *errors.ApiError) {
-	log.Println("Reading private key.")
-	der, err := base64.StdEncoding.DecodeString(privKey)
+	tr, err := a.fetchTokenVault(at, reqBody)
 	if err != nil {
-		return "", "", errors.NewF("unable to read private key: %v", err)
-	}
-	block, _ := pem.Decode(der)
-	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-	if err != nil {
-		return "", "", errors.NewF("unable to parse private key: %v", err)
+		return tr, err.Grow(fmt.Sprintf("Failed to authenticate with auth type '%s'. Please check parameters and try again", at))
 	}
 
-	request := struct {
-		Cert string `json:"client_certificate"`
-	}{
-		Cert: cert,
-	}
-	response := struct {
-		ID        string `json:"cert_challenge_id"`
-		Encrypted string `json:"encrypted"`
-	}{}
+	log.Printf("%s authentication succeeded.\n", strings.Title(string(at)))
 
-	log.Println("Requesting challenge for certificate authentication.")
-	uri := paths.CreateURI("certificate/auth", nil)
-	requestErr := a.requestClient.DoRequestOut(http.MethodPost, uri, request, &response)
-	if requestErr != nil {
-		return "", "", requestErr
-	}
-	encrypted, err := base64.StdEncoding.DecodeString(response.Encrypted)
-	if err != nil {
-		return "", "", errors.NewF("unable to read challenge: %v", err)
-	}
-
-	log.Println("Decrypting challenge using private key.")
-	plaintext, err := rsa.DecryptOAEP(sha512.New(), rand.Reader, privateKey, encrypted, nil)
-	if err != nil {
-		return "", "", errors.NewF("unable to decrypt challenge: %v", err)
-	}
-
-	decrypted := base64.StdEncoding.EncodeToString(plaintext)
-	return response.ID, decrypted, nil
-}
-
-// setupDataForPasswordAuth prepares the requestBody object with data for password auth.
-// It should be used in the authentication workflow, not on its own.
-func setupDataForPasswordAuth(data *requestBody) error {
-	userName := viper.GetString(cst.Username)
-	data.Username = userName
-	data.Provider = viper.GetString(cst.AuthProvider)
-
-	// If plaintext Password exists, that means Viper retrieves it from memory. Use this Password to authenticate.
-	// If it is an empty string, look for SecurePassword, which Viper gets only from config. Get the corresponding
-	// key file and use it to decrypt SecurePassword.
-	if data.Password = viper.GetString(cst.Password); data.Password == "" {
-		passSetting := cst.SecurePassword
-		storeType := viper.GetString(cst.StoreType)
-		if storeType == store.WinCred || storeType == store.PassLinux {
-			passSetting = cst.Password
-		}
-		if pass, err := store.GetSecureSetting(passSetting); err == nil && pass != "" {
-			if passSetting == cst.SecurePassword {
-				keyPath := GetEncryptionKeyFilename(viper.GetString(cst.Tenant), userName)
-				key, err := store.ReadFileInDefaultPath(keyPath)
-				if err != nil || key == "" {
-					return KeyfileNotFoundError
-				}
-				decrypted, decryptionErr := Decrypt(pass, key)
-				if decryptionErr != nil {
-					return errors.NewS("Failed to decrypt the password with key.")
-				} else {
-					data.Password = decrypted
-				}
-			} else {
-				data.Password = pass
-			}
+	if cacheKey != "" {
+		if err := a.store.Store(cacheKey, tr); err != nil {
+			return nil, err.Grow("Failed caching token")
 		}
 	}
-	return nil
-}
-
-func buildAwsParams() (headers string, body string, err *errors.ApiError) {
-	opts := session.Options{
-		SharedConfigState:       session.SharedConfigEnable,
-		AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
-	}
-	awsProfile := viper.GetString(cst.AwsProfile)
-	if awsProfile != "" {
-		opts.Profile = awsProfile
-	}
-	if sess, err := session.NewSessionWithOptions(opts); err != nil {
-		return "", "", errors.New(err).Grow("Failed to create aws session")
-	} else {
-		stsClient := sts.New(sess)
-		r, _ := stsClient.GetCallerIdentityRequest(nil)
-		r.Sign()
-		headers, err1 := json.Marshal(r.HTTPRequest.Header)
-		body, err2 := io.ReadAll(r.HTTPRequest.Body)
-		hString := base64.StdEncoding.EncodeToString(headers)
-		bString := base64.StdEncoding.EncodeToString(body)
-		return hString, bString, errors.New(err1).Or(errors.New(err2))
-	}
+	return tr, nil
 }
 
 type requestBody struct {
@@ -575,11 +236,66 @@ type requestBody struct {
 	AwsHeaders         string `json:"aws_headers,omitempty"`
 	Jwt                string `json:"jwt,omitempty"`
 	AuthorizationCode  string `json:"authorization_code,omitempty"`
-	CallbackHost       string `json:"-"`
 	CallbackUrl        string `json:"callback_url,omitempty"`
 	State              string `json:"state,omitempty"`
 	CertChallengeID    string `json:"cert_challenge_id,omitempty"`
 	DecryptedChallenge string `json:"decrypted_challenge,omitempty"`
+}
+
+func (a *authenticator) newRequestBody(at AuthType) (*requestBody, error) {
+	var data *requestBody
+	var stdErr error
+	switch at {
+	case Password:
+		data, stdErr = buildPasswordParams()
+
+	case ClientCredential:
+		data, stdErr = buildClientcredParams()
+
+	case Certificate:
+		cert := viper.GetString(cst.AuthCert)
+		privKey := viper.GetString(cst.AuthPrivateKey)
+		data, stdErr = a.buildCertParams(cert, privKey)
+
+	case FederatedThyOne:
+		fallthrough
+	case Oidc:
+		provider := viper.GetString(cst.AuthProvider)
+		callback := viper.GetString(cst.Callback)
+		data, stdErr = a.buildOIDCParams(at, provider, callback)
+
+	case FederatedAws:
+		awsProfile := viper.GetString(cst.AwsProfile)
+		data, stdErr = buildAwsParams(awsProfile)
+
+	case FederatedAzure:
+		data, stdErr = buildAzureParams()
+
+	case FederatedGcp:
+		token := viper.GetString(cst.GcpToken)
+		gcpAuthType := viper.GetString(cst.GcpAuthType)
+		data, stdErr = buildGcpParams(token, gcpAuthType)
+
+	default:
+		stdErr = fmt.Errorf("unexpected authentication type %q", at)
+	}
+
+	if stdErr != nil {
+		return nil, stdErr
+	}
+	return data, nil
+}
+
+func (a *authenticator) fetchTokenVault(at AuthType, data *requestBody) (*TokenResponse, *errors.ApiError) {
+	response := &TokenResponse{}
+	uri := paths.CreateURI(cst.NounToken, nil)
+	if err := a.requestClient.DoRequestOut(http.MethodPost, uri, data, response); err != nil {
+		return nil, err
+	} else if response.IsNil() {
+		return nil, errors.NewS("Empty token")
+	}
+	response.Granted = time.Now().UTC()
+	return response, nil
 }
 
 type TokenResponse struct {
@@ -590,30 +306,14 @@ type TokenResponse struct {
 	Granted      time.Time `json:"granted"`
 }
 
-func (r *TokenResponse) SecondsRemainingToken() int64 {
-	remaining := int64(r.Granted.Sub(time.Now().UTC()).Seconds()) + r.ExpiresIn - leewaySecondsTokenExp
-	return remaining
-}
-
-func (r *TokenResponse) SecondsRemainingRefreshToken() int64 {
-	if r.RefreshToken != "" {
-		remaining := int64(r.Granted.Sub(time.Now().UTC()).Seconds()) + refreshTokenLifeSeconds - leewaySecondsTokenExp
-		return remaining
-	}
-	return 0
-}
-
 func (r *TokenResponse) IsNil() bool {
 	return r.Token == "" && r.RefreshToken == ""
 }
 
-func (r *requestBody) ValidateForAuthType(at AuthType) error {
-	ref := reflect.ValueOf(r)
+func (r *requestBody) validate(at AuthType) error {
+	ref := reflect.Indirect(reflect.ValueOf(r))
 	for _, k := range paramSpecDict[at] {
-		if !k.RequestVar {
-			continue
-		}
-		f := reflect.Indirect(ref).FieldByName(k.PropName)
+		f := ref.FieldByName(k.PropName)
 		if f.String() == "" {
 			return utils.NewMissingArgError(k.ArgName)
 		}
@@ -622,89 +322,26 @@ func (r *requestBody) ValidateForAuthType(at AuthType) error {
 }
 
 type paramSpec struct {
-	PropName   string
-	ArgName    string
-	IsKey      bool
-	RequestVar bool
+	PropName string
+	ArgName  string
 }
 
 var paramSpecDict = map[AuthType][]paramSpec{
 	Password: {
-		{PropName: "Password",
-			ArgName:    cst.Password,
-			RequestVar: true,
-		},
-		{PropName: "Username",
-			ArgName:    cst.Username,
-			RequestVar: true,
-		},
-		{PropName: "Provider",
-			ArgName:    cst.AuthProvider,
-			RequestVar: false,
-		},
-	},
-	FederatedThyOne: {
-		{PropName: "AuthType",
-			ArgName:    cst.AuthType,
-			RequestVar: false,
-		},
+		{PropName: "Password", ArgName: cst.Password},
+		{PropName: "Username", ArgName: cst.Username},
 	},
 	ClientCredential: {
-		{PropName: "AuthClientID",
-			ArgName:    cst.AuthClientID,
-			RequestVar: true,
-		},
-		{PropName: "AuthClientSecret",
-			ArgName:    cst.AuthClientSecret,
-			RequestVar: true,
-		},
-	},
-	Certificate: {
-		{PropName: "CertificatePath",
-			ArgName:    cst.CertPath,
-			RequestVar: false,
-		},
+		{PropName: "AuthClientID", ArgName: cst.AuthClientID},
+		{PropName: "AuthClientSecret", ArgName: cst.AuthClientSecret},
 	},
 	FederatedAws: {
-		{PropName: "Profile",
-			ArgName:    cst.AwsProfile,
-			RequestVar: false,
-		},
-		{PropName: "AwsBody",
-			ArgName:    "",
-			RequestVar: true,
-		},
-		{PropName: "AwsHeaders",
-			ArgName:    "",
-			RequestVar: true,
-		},
+		{PropName: "AwsBody", ArgName: ""},
+		{PropName: "AwsHeaders", ArgName: ""},
 	},
 	Refresh: {
-		{PropName: "RefreshToken",
-			ArgName:    cst.RefreshToken,
-			RequestVar: true,
-		},
+		{PropName: "RefreshToken", ArgName: cst.RefreshToken},
 	},
-	FederatedAzure: {
-		{PropName: "JwtToken",
-			ArgName:    "jwt",
-			RequestVar: true,
-		},
-	},
-	FederatedGcp: {
-		{PropName: "JwtToken",
-			ArgName:    "jwt",
-			RequestVar: true,
-		},
-		{PropName: "Service",
-			ArgName:    "Service",
-			RequestVar: false,
-		},
-	},
-	Oidc: {
-		{PropName: "AuthType",
-			ArgName:    cst.AuthType,
-			RequestVar: false,
-		},
-	},
+	FederatedAzure: {{PropName: "JwtToken", ArgName: "jwt"}},
+	FederatedGcp:   {{PropName: "JwtToken", ArgName: "jwt"}},
 }

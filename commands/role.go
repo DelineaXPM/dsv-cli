@@ -21,7 +21,7 @@ import (
 func GetRoleCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounRole},
-		SynopsisText: "role (<name> | --name|-n)",
+		SynopsisText: "Manage roles",
 		HelpText: fmt.Sprintf(`Execute an action on a role in %[1]s
 
 Usage:

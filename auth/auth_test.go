@@ -6,14 +6,17 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 
 	"thy/auth"
 	cst "thy/constants"
 	"thy/errors"
 	"thy/requests"
 	"thy/store"
+	"thy/tests/fake"
 	"thy/utils/test_helpers"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -46,33 +49,163 @@ var (
 	}
 )
 
-func TestGetTokenCacheKey(t *testing.T) {
-	const tenantName = "dev"
-	const profileName = "admin"
-
-	cases := []struct {
-		authType string
-		expected string
-	}{
-		{"refresh", "token-password-dev-admin"},
-		{"password", "token-password-dev-admin"},
-		{"clientcred", "token-clientcred-dev-admin"},
-		{"thy-one", "token-thy-one-dev-admin"},
-		{"aws", "token-aws-dev-admin"},
-		{"azure", "token-azure-dev-admin"},
-		{"gcp", "token-gcp-dev-admin"},
-		{"oidc", "token-oidc-dev-admin"},
+func getAuthenticator(t *testing.T) auth.Authenticator {
+	t.Helper()
+	st, err := store.GetStore("none")
+	if err != nil {
+		t.Fatalf("error getting store got :: %v", err)
 	}
 
-	for _, tc := range cases {
-		au := auth.AuthType(tc.authType)
-		key, err := au.GetTokenCacheKey(tenantName, profileName)
-		if err != nil {
-			t.Fatalf("Unexpected error: %v", key)
+	return auth.NewAuthenticator(st, requests.NewHttpClient())
+}
+
+func TestNewAuthenticatorDefault(t *testing.T) {
+	viper.Reset()
+	viper.Set(cst.StoreType, "none")
+
+	a := auth.NewAuthenticatorDefault()
+	if a == nil {
+		t.Fatal("Unexpected returned value: <nil>")
+	}
+}
+
+func TestWipeCachedTokens(t *testing.T) {
+	st := &fake.FakeStore{}
+
+	st.ListStub = func(s string) ([]string, *errors.ApiError) {
+		return []string{"token-a-profilename", "token-b-differentprofile", "b"}, nil
+	}
+
+	deleteCalledFor := []string{}
+	st.DeleteStub = func(s string) *errors.ApiError {
+		deleteCalledFor = append(deleteCalledFor, s)
+		return nil
+	}
+
+	a := auth.NewAuthenticator(st, nil)
+
+	viper.Reset()
+	viper.Set(cst.Profile, "profilename")
+
+	err := a.WipeCachedTokens()
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if len(deleteCalledFor) != 1 {
+		t.Fatalf("Unexpected length: %d", len(deleteCalledFor))
+	}
+	if deleteCalledFor[0] != "token-a-profilename" {
+		t.Fatalf("Unexpected deleted token: %s", deleteCalledFor[0])
+	}
+}
+
+func TestGetToken_UnknownMethod(t *testing.T) {
+	a := auth.NewAuthenticator(nil, nil)
+
+	viper.Reset()
+	viper.Set(cst.AuthType, "unknown-auth")
+
+	_, err := a.GetToken()
+	if err == nil {
+		t.Fatal("Expected an error, but got <nil>")
+	}
+}
+
+func TestGetToken_CachedToken(t *testing.T) {
+	st := &fake.FakeStore{}
+
+	var usedCacheKey string
+	st.GetStub = func(s string, out interface{}) *errors.ApiError {
+		usedCacheKey = s
+
+		tr := out.(*auth.TokenResponse)
+		*tr = auth.TokenResponse{
+			Token:        "aaa-token-bbb",
+			RefreshToken: "aaa-refreshtoken-bbb",
+			Granted:      time.Now(),
+			ExpiresIn:    3600,
 		}
-		if key != tc.expected {
-			t.Fatalf("Expected: %q, got: %q", tc.expected, key)
+
+		return nil
+	}
+
+	a := auth.NewAuthenticator(st, nil)
+
+	viper.Reset()
+	viper.Set(cst.Profile, "profilename")
+	viper.Set(cst.Tenant, "tenantname")
+
+	tr, err := a.GetToken()
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if tr == nil {
+		t.Fatal("Unexpected returned value: <nil>")
+	}
+	if tr.Token != "aaa-token-bbb" {
+		t.Fatalf("Unexpected token: %s", tr.Token)
+	}
+	if usedCacheKey != "token-password-tenantname-profilename" {
+		t.Fatalf("Unexpected token cache key: %s", usedCacheKey)
+	}
+}
+
+func TestGetToken_CachedRefreshToken(t *testing.T) {
+	st := &fake.FakeStore{}
+
+	var usedCacheKey string
+	st.GetStub = func(s string, out interface{}) *errors.ApiError {
+		usedCacheKey = s
+
+		tr := out.(*auth.TokenResponse)
+		*tr = auth.TokenResponse{
+			Token:        "aaa-token-bbb",
+			RefreshToken: "aaa-refreshtoken-bbb",
+			Granted:      time.Now().AddDate(0, 0, -1),
+			ExpiresIn:    3600,
 		}
+
+		return nil
+	}
+
+	httpClient := &fake.FakeClient{}
+
+	var usedHTTPMethod string
+	httpClient.DoRequestOutStub = func(s1, s2 string, i1, i2 interface{}) *errors.ApiError {
+		usedHTTPMethod = s1
+
+		tr := i2.(*auth.TokenResponse)
+		*tr = auth.TokenResponse{
+			Token:        "aaa-new-token-bbb",
+			RefreshToken: "aaa-new-refreshtoken-bbb",
+			Granted:      time.Now().AddDate(0, 0, -1),
+			ExpiresIn:    3600,
+		}
+
+		return nil
+	}
+
+	a := auth.NewAuthenticator(st, httpClient)
+
+	viper.Reset()
+	viper.Set(cst.Profile, "profilename")
+	viper.Set(cst.Tenant, "tenantname")
+
+	tr, err := a.GetToken()
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if tr == nil {
+		t.Fatal("Unexpected returned value: <nil>")
+	}
+	if tr.Token != "aaa-new-token-bbb" {
+		t.Fatalf("Unexpected token: %s", tr.Token)
+	}
+	if usedCacheKey != "token-password-tenantname-profilename" {
+		t.Fatalf("Unexpected token cache key: %s", usedCacheKey)
+	}
+	if usedHTTPMethod != "POST" {
+		t.Fatalf("Unexpected HTTP method used: %s", usedHTTPMethod)
 	}
 }
 
@@ -93,7 +226,9 @@ func TestGetToken(t *testing.T) {
 	}
 
 	for _, tt := range testCases {
-		authDef := auth.NewAuthenticatorDefault()
+		authDef := getAuthenticator(t)
+
+		viper.Reset()
 		viper.Set("auth.type", tt.auth)
 		rsp, err := authDef.GetToken()
 
@@ -108,8 +243,6 @@ func TestGetToken(t *testing.T) {
 }
 
 func TestGetToken_Password(t *testing.T) {
-	const storeType = "none"
-
 	testCases := []struct {
 		name           string
 		auth           string
@@ -150,23 +283,13 @@ func TestGetToken_Password(t *testing.T) {
 			btr,
 			errors.NewS("failed to find the encryption key"),
 		},
-		{
-			"should fail on invalid auth type",
-			"fastword",
-			"somePass12#",
-			"",
-			btr,
-			errors.NewS("unexpected authentication type fastword"),
-		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			st, err := store.GetStore(storeType)
-			if err != nil {
-				t.Fatalf("error getting store got :: %v", err)
-			}
-			authDef := auth.NewAuthenticator(st, requests.NewHttpClient())
+			authDef := getAuthenticator(t)
+
+			viper.Reset()
 			viper.Set("auth.type", tc.auth)
 			viper.Set("auth.username", "admin")
 			viper.Set("auth.password", tc.password)
@@ -179,7 +302,7 @@ func TestGetToken_Password(t *testing.T) {
 
 			registerResponse(tokenEndpoint, tc.apiResponse["status"].(int), http.MethodPost, tc.apiResponse["response"].(map[string]interface{}))
 
-			rsp, err := authDef.GetTokenCacheOverride(tc.auth, false)
+			rsp, err := authDef.GetToken()
 
 			if tc.expectedError != nil && err == nil || err != nil && tc.expectedError == nil {
 				t.Fatalf("Failed. Expected: %v, got: %v", tc.expectedError, err)
@@ -200,174 +323,73 @@ func TestGetToken_Password(t *testing.T) {
 }
 
 func TestGetToken_SecurePassword(t *testing.T) {
-	storeType := "file"
+	path, err := os.MkdirTemp("", "dsv-testing-*")
+	if err != nil {
+		t.Fatalf("os.MkdirTemp: %v", err)
+	}
+	defer os.RemoveAll(path)
 
-	expiredResponse := map[string]interface{}{
-		"status": 200,
-		"response": map[string]interface{}{
-			"accessToken":  at,
-			"tokenType":    "bearer",
-			"expiresIn":    3,
-			"refreshToken": rt,
-		},
+	t.Log("Temp dir path:", path)
+	viper.Reset()
+	viper.Set("store.path", path)
+	viper.Set("domain", domain)
+	viper.Set("tenant", "tenantname")
+	viper.Set("auth.type", "password")
+	viper.Set("auth.username", "testuser")
+
+	filename := auth.GetEncryptionKeyFilename("tenantname", "testuser")
+	securePass, key, err := auth.StorePassword(filename, "testpassword")
+	if err != nil {
+		t.Fatalf("auth.StorePassword: %v", err)
 	}
 
-	testCases := []struct {
-		name          string
-		auth          string
-		clearStore    bool
-		password      string
-		apiResponse   map[string]interface{}
-		expectedError *errors.ApiError
-	}{
-		{
-			"should decrypt secure password",
-			"password",
-			true,
-			"someSecureEncryptedPass12",
-			expiredResponse,
-			nil,
-		},
-		{
-			"should get refresh token from cache",
-			"password",
-			false,
-			"someSecureEncryptedPass12",
-			vtr,
-			nil,
-		},
-		{
-			"should get access refresh token from cache",
-			"password",
-			false,
-			"someSecureEncryptedPass12",
-			vtr,
-			nil,
-		},
+	os.WriteFile(filepath.Join(path, filename), []byte(key), 0644)
+	t.Log("Encryption file:", filepath.Join(path, filename))
+
+	viper.Set("auth.securePassword", securePass)
+
+	st := &fake.FakeStore{}
+	st.GetStub = func(s string, i interface{}) *errors.ApiError {
+		t.Logf("fakeStore.Get(%s)", s)
+		return nil
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			st, err := store.GetStore(storeType)
-			if err != nil {
-				t.Fatalf("error getting store got :: %v", err)
-			}
-			if tc.clearStore {
-				_ = st.Wipe(cst.TokenRoot + "-password-" + tn)
-			}
-			userName := "mock-user-soup"
-			viper.Set("auth.type", tc.auth)
-			viper.Set("auth.username", userName)
-			viper.Set("domain", domain)
-			viper.Set("tenant", tn)
+	httpClient := &fake.FakeClient{}
 
-			authDef := auth.NewAuthenticator(st, requests.NewHttpClient())
-			_ = test_helpers.AddEncryptionKey(tn, userName, tc.password)
-			securePass, passErr := auth.EncipherPassword(tc.password)
-			assert.NoError(t, passErr)
+	var usedHTTPMethod string
+	httpClient.DoRequestOutStub = func(s1, s2 string, i1, i2 interface{}) *errors.ApiError {
+		t.Logf("fakeHTTPClient.DoRequestOut(%s, %s, ...)", s1, s2)
+		usedHTTPMethod = s1
 
-			viper.Set("auth.password", "")
-			viper.Set("auth.securePassword", securePass)
+		tr := i2.(*auth.TokenResponse)
+		*tr = auth.TokenResponse{
+			Token:        "aaa-new-token-bbb",
+			RefreshToken: "aaa-new-refreshtoken-bbb",
+			Granted:      time.Now().AddDate(0, 0, -1),
+			ExpiresIn:    3600,
+		}
 
-			httpmock.Activate()
-			defer httpmock.DeactivateAndReset()
-
-			registerResponse(tokenEndpoint, tc.apiResponse["status"].(int), http.MethodPost, tc.apiResponse["response"].(map[string]interface{}))
-
-			rsp, err := authDef.GetToken()
-
-			if tc.expectedError != nil && err == nil || err != nil && tc.expectedError == nil {
-				t.Fatalf("Failed got  expected :: %v, got :: %v", tc.expectedError, err)
-			}
-
-			if tc.expectedError != nil {
-				assert.Contains(t, err.Error(), tc.expectedError.Error())
-			}
-
-			if err == nil {
-				expectedResponse := tc.apiResponse["response"].(map[string]interface{})
-				assert.Equal(t, expectedResponse["accessToken"], rsp.Token)
-				assert.Equal(t, expectedResponse["refreshToken"], rsp.RefreshToken)
-				assert.Equal(t, int64(expectedResponse["expiresIn"].(int)), rsp.ExpiresIn)
-			}
-		})
-	}
-}
-
-func TestGetToken_RefreshToken(t *testing.T) {
-	storeType := "none"
-
-	testCases := []struct {
-		name          string
-		auth          string
-		refreshToken  string
-		apiResponse   map[string]interface{}
-		expectedError *errors.ApiError
-	}{
-		{
-			"refresh token should succeed",
-			"refresh",
-			rt,
-			vtr,
-			nil,
-		},
-		{
-			"bad response should error",
-			"refresh",
-			"bad-token",
-			btr,
-			errors.NewF("Refresh authentication failed. Please re-authenticate with password or other supported authentication type"),
-		},
-		{
-			"refresh token should fail if not set",
-			"refresh",
-			"",
-			vtr,
-			errors.NewF("Refresh authentication failed: refreshtoken flag must be set"),
-		},
+		return nil
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			st, err := store.GetStore(storeType)
-			if err != nil {
-				t.Fatalf("error getting store got :: %v", err)
-			}
-			authDef := auth.NewAuthenticator(st, requests.NewHttpClient())
-			viper.Set("auth.username", "")
-			viper.Set("auth.password", "")
-			viper.Set("auth.type", tc.auth)
-			viper.Set("refreshtoken", tc.refreshToken)
-			viper.Set("domain", domain)
-			viper.Set("tenant", tn)
+	authDef := auth.NewAuthenticator(st, httpClient)
 
-			httpmock.Activate()
-			defer httpmock.DeactivateAndReset()
-
-			registerResponse(tokenEndpoint, tc.apiResponse["status"].(int), http.MethodPost, tc.apiResponse["response"].(map[string]interface{}))
-
-			rsp, err := authDef.GetTokenCacheOverride(tc.auth, false)
-
-			if tc.expectedError != nil && err == nil || err != nil && tc.expectedError == nil {
-				t.Fatalf("Failed got  expected :: %v, got :: %v", tc.expectedError, err)
-			}
-
-			if tc.expectedError != nil {
-				assert.Contains(t, err.Error(), tc.expectedError.Error())
-			}
-
-			if err == nil {
-				expectedResponse := tc.apiResponse["response"].(map[string]interface{})
-				assert.Equal(t, expectedResponse["accessToken"], rsp.Token)
-				assert.Equal(t, expectedResponse["refreshToken"], rsp.RefreshToken)
-				assert.Equal(t, int64(expectedResponse["expiresIn"].(int)), rsp.ExpiresIn)
-			}
-		})
+	tr, authErr := authDef.GetToken()
+	if authErr != nil {
+		t.Fatalf("Unexpected error: %v", authErr)
+	}
+	if tr == nil {
+		t.Fatal("Unexpected returned value: <nil>")
+	}
+	if tr.Token != "aaa-new-token-bbb" {
+		t.Fatalf("Unexpected token: %s", tr.Token)
+	}
+	if usedHTTPMethod != "POST" {
+		t.Fatalf("Unexpected HTTP method used: %s", usedHTTPMethod)
 	}
 }
 
 func TestGetToken_Azure(t *testing.T) {
-	storeType := "none"
 	msiEndpoint := "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fmanagement.azure.com%2F"
 
 	msiResponse := map[string]interface{}{
@@ -396,16 +418,14 @@ func TestGetToken_Azure(t *testing.T) {
 			"not-even-a-valid-url",
 			msiResponse,
 			vtr,
-			errors.NewF("Failed to create azure authorizer"),
+			errors.NewF("Failed to build token request for azure based auth:"),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			st, err := store.GetStore(storeType)
-			if err != nil {
-				t.Fatalf("error getting store got :: %v", err)
-			}
+			authDef := getAuthenticator(t)
+
 			defer func() {
 				_ = os.Remove("MSI_SECRET")
 				_ = os.Remove("MSI_ENDPOINT")
@@ -414,11 +434,9 @@ func TestGetToken_Azure(t *testing.T) {
 			_ = os.Setenv("MSI_SECRET", tc.msiSecret)
 			_ = os.Setenv("MSI_ENDPOINT", tc.msiEndpoint)
 			_ = os.Setenv("AZURE_ENVIRONMENT", tc.azureEnv)
-			authDef := auth.NewAuthenticator(st, requests.NewHttpClient())
-			viper.Set("auth.username", "")
-			viper.Set("auth.password", "")
+
+			viper.Reset()
 			viper.Set("auth.type", tc.auth)
-			viper.Set("refreshtoken", "")
 			viper.Set("domain", domain)
 			viper.Set("tenant", tn)
 
@@ -427,7 +445,7 @@ func TestGetToken_Azure(t *testing.T) {
 			registerResponse(tokenEndpoint, tc.apiResponse["status"].(int), http.MethodPost, tc.apiResponse["response"].(map[string]interface{}))
 			registerResponse(msiEndpoint, tc.msiResponse["status"].(int), http.MethodGet, tc.msiResponse["response"].(map[string]interface{}))
 
-			rsp, err := authDef.GetTokenCacheOverride(tc.auth, false)
+			rsp, err := authDef.GetToken()
 
 			if tc.expectedError != nil && err == nil || err != nil && tc.expectedError == nil {
 				t.Fatalf("Failed got  expected :: %v, got :: %v", tc.expectedError, err)
@@ -446,7 +464,6 @@ func TestGetToken_Azure(t *testing.T) {
 }
 
 func TestGetToken_GCP(t *testing.T) {
-	storeType := "none"
 	testCases := []struct {
 		name          string
 		auth          string
@@ -472,16 +489,11 @@ func TestGetToken_GCP(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			st, err := store.GetStore(storeType)
-			if err != nil {
-				t.Fatalf("error getting store got :: %v", err)
-			}
-			authDef := auth.NewAuthenticator(st, requests.NewHttpClient())
-			viper.Set("auth.username", "")
-			viper.Set("auth.password", "")
+			authDef := getAuthenticator(t)
+
+			viper.Reset()
 			viper.Set("auth.type", tc.auth)
 			viper.Set("auth.gcp.token", tc.gcpToken)
-			viper.Set("refreshtoken", "")
 			viper.Set("domain", domain)
 			viper.Set("tenant", tn)
 
@@ -489,10 +501,10 @@ func TestGetToken_GCP(t *testing.T) {
 			defer httpmock.DeactivateAndReset()
 			registerResponse(tokenEndpoint, tc.apiResponse["status"].(int), http.MethodPost, tc.apiResponse["response"].(map[string]interface{}))
 
-			rsp, err := authDef.GetTokenCacheOverride(tc.auth, false)
+			rsp, err := authDef.GetToken()
 
 			if tc.expectedError != nil && err == nil || err != nil && tc.expectedError == nil {
-				t.Fatalf("Failed got  expected :: %v, got :: %v", tc.expectedError, err)
+				t.Fatalf("Expected: %v, got: %v", tc.expectedError, err)
 			}
 
 			if tc.expectedError != nil {
@@ -558,6 +570,7 @@ func TestToken_GcpSignJwt(t *testing.T) {
 				os.Remove("GOOGLE_APPLICATION_CREDENTIALS")
 			}()
 
+			viper.Reset()
 			viper.Set("domain", domain)
 			viper.Set("tenant", tn)
 

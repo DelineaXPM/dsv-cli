@@ -21,7 +21,7 @@ import (
 func GetSiemCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounSiem},
-		SynopsisText: "siem (<action>)",
+		SynopsisText: "Manage SIEM endpoints",
 		HelpText:     "Work with SIEM endpoints",
 		RunFunc: func(args []string) int {
 			path := viper.GetString(cst.Path)
@@ -149,17 +149,18 @@ func handleSiemCreate(vcli vaultcli.CLI, args []string) int {
 		return utils.GetExecStatus(err)
 	}
 	data, apiError := siemCreate(vcli, &siemCreateRequest{
-		Name:          name,
-		SIEMType:      answers.SIEMType,
-		Host:          answers.Host,
-		Port:          answers.Port,
-		Protocol:      answers.Protocol,
-		Endpoint:      answers.Endpoint,
-		LoggingFormat: answers.LoggingFormat,
-		AuthMethod:    answers.AuthMethod,
-		Auth:          answers.Auth,
-		SendToEngine:  answers.SendToEngine,
-		Pool:          answers.Pool,
+		Name:            name,
+		SIEMType:        answers.SIEMType,
+		Host:            answers.Host,
+		Port:            answers.Port,
+		Protocol:        answers.Protocol,
+		Endpoint:        answers.Endpoint,
+		LoggingFormat:   answers.LoggingFormat,
+		AuthMethod:      answers.AuthMethod,
+		Auth:            answers.Auth,
+		SendToEngine:    answers.SendToEngine,
+		Pool:            answers.Pool,
+		AllowSelfSigned: answers.AllowSelfSigned,
 	})
 	vcli.Out().WriteResponse(data, apiError)
 	return utils.GetExecStatus(apiError)
@@ -299,6 +300,13 @@ func promptSiemData(vcli vaultcli.CLI) (*siemUpdateRequest, error) {
 			return nil, errors.New(survErr)
 		}
 	}
+	if answers.Protocol == "https" {
+		allowSelfSignedPrompt := &survey.Confirm{Message: "Allow self signed (for https):", Default: false}
+		survErr := survey.AskOne(allowSelfSignedPrompt, &answers.AllowSelfSigned)
+		if survErr != nil {
+			return nil, errors.New(survErr)
+		}
+	}
 	return &answers, nil
 }
 
@@ -333,17 +341,18 @@ func handleSiemDelete(vcli vaultcli.CLI, args []string) int {
 // API callers:
 
 type siemCreateRequest struct {
-	SIEMType      string `json:"siemType"`
-	Name          string `json:"name"`
-	Host          string `json:"host"`
-	Port          int    `json:"port"`
-	Protocol      string `json:"protocol"`
-	Endpoint      string `json:"endpoint"`
-	LoggingFormat string `json:"loggingFormat"`
-	AuthMethod    string `json:"authMethod"`
-	Auth          string `json:"auth"`
-	SendToEngine  bool   `json:"sendToEngine"`
-	Pool          string `json:"pool"`
+	SIEMType        string `json:"siemType"`
+	Name            string `json:"name"`
+	Host            string `json:"host"`
+	Port            int    `json:"port"`
+	Protocol        string `json:"protocol"`
+	Endpoint        string `json:"endpoint"`
+	LoggingFormat   string `json:"loggingFormat"`
+	AuthMethod      string `json:"authMethod"`
+	Auth            string `json:"auth"`
+	SendToEngine    bool   `json:"sendToEngine"`
+	Pool            string `json:"pool"`
+	AllowSelfSigned bool   `json:"allowSelfSigned"`
 }
 
 func siemCreate(vcli vaultcli.CLI, body *siemCreateRequest) ([]byte, *errors.ApiError) {
@@ -353,16 +362,17 @@ func siemCreate(vcli vaultcli.CLI, body *siemCreateRequest) ([]byte, *errors.Api
 }
 
 type siemUpdateRequest struct {
-	SIEMType      string `json:"siemType"`
-	Host          string `json:"host"`
-	Port          int    `json:"port"`
-	Protocol      string `json:"protocol"`
-	Endpoint      string `json:"endpoint"`
-	LoggingFormat string `json:"loggingFormat"`
-	AuthMethod    string `json:"authMethod"`
-	Auth          string `json:"auth"`
-	SendToEngine  bool   `json:"sendToEngine"`
-	Pool          string `json:"pool"`
+	SIEMType        string `json:"siemType"`
+	Host            string `json:"host"`
+	Port            int    `json:"port"`
+	Protocol        string `json:"protocol"`
+	Endpoint        string `json:"endpoint"`
+	LoggingFormat   string `json:"loggingFormat"`
+	AuthMethod      string `json:"authMethod"`
+	Auth            string `json:"auth"`
+	SendToEngine    bool   `json:"sendToEngine"`
+	Pool            string `json:"pool"`
+	AllowSelfSigned bool   `json:"allowSelfSigned"`
 }
 
 func siemUpdate(vcli vaultcli.CLI, name string, body *siemUpdateRequest) ([]byte, *errors.ApiError) {

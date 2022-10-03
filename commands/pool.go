@@ -21,7 +21,7 @@ import (
 func GetPoolCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounPool},
-		SynopsisText: "pool (<action>)",
+		SynopsisText: "Manage engine pools",
 		HelpText:     "Work with engine pools",
 		RunFunc: func(args []string) int {
 			path := viper.GetString(cst.Path)

@@ -24,7 +24,7 @@ func GetAuthCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounAuth},
 		NoPreAuth:    true,
-		SynopsisText: cst.NounAuth,
+		SynopsisText: "Get auth token, manage auth cache or change password",
 		HelpText: fmt.Sprintf(`Authenticate with %[2]s
 
 Usage:

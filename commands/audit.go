@@ -18,7 +18,7 @@ import (
 func GetAuditSearchCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounAudit},
-		SynopsisText: "audit search",
+		SynopsisText: "Show audit records",
 		HelpText: `Search audit records
 
 Usage:

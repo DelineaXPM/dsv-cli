@@ -11,16 +11,22 @@ import (
 	"thy/utils"
 	"thy/vaultcli"
 
-	"github.com/shurcooL/graphql"
-
-	"github.com/spf13/viper"
-
 	"github.com/mitchellh/cli"
+	"github.com/shurcooL/graphql"
+	"github.com/spf13/viper"
 )
+
+func GetReportCmd() (cli.Command, error) {
+	return NewCommand(CommandArgs{
+		Path:         []string{cst.NounReport},
+		SynopsisText: "Show report records for secrets and groups",
+		RunFunc:      func(args []string) int { return cli.RunResultHelp },
+	})
+}
 
 func GetSecretReportCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path:         []string{cst.NounReport},
+		Path:         []string{cst.NounReport, cst.NounSecret},
 		SynopsisText: "report secret",
 		HelpText: fmt.Sprintf(`Read secret report records
 
@@ -45,7 +51,7 @@ Usage:
 
 func GetGroupReportCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path:         []string{cst.NounReport},
+		Path:         []string{cst.NounReport, cst.NounGroup},
 		SynopsisText: "report group",
 		HelpText: fmt.Sprintf(`Read group report records
 
