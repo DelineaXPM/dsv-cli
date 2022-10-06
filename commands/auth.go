@@ -31,9 +31,9 @@ Usage:
    • auth --profile staging
    • auth --auth-username %[3]s --auth-password %[4]s
    • auth --auth-type %[5]s --auth-client-id %[6]s --domain %[7]s --auth-client-secret %[8]s 
-		`, cst.NounAuth, cst.ProductName, cst.ExampleUser, cst.ExamplePassword, cst.ExampleAuthType, cst.ExampleAuthClientID, cst.ExampleDomain, cst.ExampleAuthClientSecret, string(auth.FederatedAws)),
-		RunFunc: func(args []string) int {
-			return handleAuth(vaultcli.New(), args)
+`, cst.NounAuth, cst.ProductName, cst.ExampleUser, cst.ExamplePassword, cst.ExampleAuthType, cst.ExampleAuthClientID, cst.ExampleDomain, cst.ExampleAuthClientSecret, string(auth.FederatedAws)),
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleAuth(vcli, args)
 		},
 	})
 }
@@ -46,10 +46,10 @@ func GetAuthClearCmd() (cli.Command, error) {
 
 Usage:
    • auth clear
-		`, cst.NounAuth, cst.ProductName, cst.NounToken),
+`, cst.NounAuth, cst.ProductName, cst.NounToken),
 		NoPreAuth: true,
-		RunFunc: func(args []string) int {
-			return handleAuthClear(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleAuthClear(vcli, args)
 		},
 	})
 }
@@ -62,10 +62,10 @@ func GetAuthListCmd() (cli.Command, error) {
 
 Usage:
    • auth list
-		`, cst.NounAuth, cst.ProductName, cst.NounToken),
+`, cst.NounAuth, cst.ProductName, cst.NounToken),
 		NoPreAuth: true,
-		RunFunc: func(args []string) int {
-			return handleAuthList(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleAuthList(vcli, args)
 		},
 	})
 }
@@ -78,8 +78,8 @@ func GetAuthChangePasswordCmd() (cli.Command, error) {
 
 Usage:
    • auth change-password`,
-		RunFunc: func(args []string) int {
-			return handleAuthChangePassword(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleAuthChangePassword(vcli, args)
 		},
 	})
 }

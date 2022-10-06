@@ -206,14 +206,15 @@ func (cf *ConfigFile) ListProfilesNames() []string {
 }
 
 func (cf *ConfigFile) RawUpdate(b []byte) error {
-	var dataMap map[string]map[string]interface{}
-	err := yaml.Unmarshal(b, &dataMap)
+	version, defaultProfile, profiles, err := parseRawConfig(b)
 	if err != nil {
-		return fmt.Errorf("invalid configuration: %v", err)
+		return err
 	}
 
+	cf.version = version
+	cf.DefaultProfile = defaultProfile
+	cf.profiles = profiles
 	cf.raw = b
-	cf.profiles = dataMap
 	return nil
 }
 
@@ -266,59 +267,15 @@ func (cf *ConfigFile) read() error {
 		return err
 	}
 
-	var dataMap map[string]interface{}
-	err = yaml.Unmarshal(bytes, &dataMap)
+	version, defaultProfile, profiles, err := parseRawConfig(bytes)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal CLI configuration file: %v", err)
+		return err
 	}
 
-	if ver, ok := dataMap["version"]; !ok {
-		cf.version = v1
-	} else {
-		cf.version, ok = ver.(string)
-		if !ok {
-			return fmt.Errorf("invalid version: unexpected type %T", ver)
-		}
-	}
-
-	profiles := make(map[string]map[string]interface{})
-	switch cf.version {
-	case v1:
-		var ok bool
-		for k, v := range dataMap {
-			profiles[k], ok = v.(map[string]interface{})
-			if !ok {
-				return fmt.Errorf("failed to read profiles: invalid profile %s", k)
-			}
-		}
-		cf.DefaultProfile = cst.DefaultProfile
-
-	case v2:
-		rawProfiles, ok := dataMap["profiles"].(map[string]interface{})
-		if !ok {
-			return errors.New("invalid configration file: missing profiles or profiles defined in unexpected format")
-		}
-		for k, v := range rawProfiles {
-			profiles[k], ok = v.(map[string]interface{})
-			if !ok {
-				return fmt.Errorf("failed to read profiles: invalid profile %s", k)
-			}
-		}
-		prof, ok := dataMap["defaultProfile"]
-		if !ok {
-			return errors.New("invalid configration file: missing defaultProfile")
-		}
-		cf.DefaultProfile, ok = prof.(string)
-		if !ok {
-			return fmt.Errorf("invalid defaultProfile: unexpected type %T", prof)
-		}
-
-	default:
-		return fmt.Errorf("unsupported version: %s", cf.version)
-	}
-
-	cf.raw = bytes
+	cf.version = version
+	cf.DefaultProfile = defaultProfile
 	cf.profiles = profiles
+	cf.raw = bytes
 	return nil
 }
 
@@ -337,4 +294,70 @@ func (cf *ConfigFile) save() error {
 		return err
 	}
 	return nil
+}
+
+// parseRawConfig reads configuration bytes and returns version, default profile and list of profiles.
+func parseRawConfig(b []byte) (string, string, map[string]map[string]interface{}, error) {
+	if len(b) == 0 {
+		return "", "", nil, nil
+	}
+
+	var dataMap map[string]interface{}
+	err := yaml.Unmarshal(b, &dataMap)
+	if err != nil {
+		return "", "", nil, fmt.Errorf("failed to unmarshal CLI configuration: %v", err)
+	}
+
+	version := ""
+	if ver, ok := dataMap["version"]; !ok {
+		version = v1
+	} else {
+		version, ok = ver.(string)
+		if !ok {
+			return "", "", nil, fmt.Errorf("invalid version: unexpected type %T", ver)
+		}
+	}
+
+	defaultProfile := ""
+	profiles := make(map[string]map[string]interface{})
+	switch version {
+	case v1:
+		var ok bool
+		for k, v := range dataMap {
+			profiles[k], ok = v.(map[string]interface{})
+			if !ok {
+				return "", "", nil, fmt.Errorf("failed to read profiles: invalid profile %s", k)
+			}
+		}
+		defaultProfile = cst.DefaultProfile
+
+	case v2:
+		rawProfiles, ok := dataMap["profiles"].(map[string]interface{})
+		if !ok {
+			return "", "", nil, errors.New("invalid configration file: missing profiles or profiles defined in unexpected format")
+		}
+		for k, v := range rawProfiles {
+			profiles[k], ok = v.(map[string]interface{})
+			if !ok {
+				return "", "", nil, fmt.Errorf("failed to read profiles: invalid profile %s", k)
+			}
+		}
+		prof, ok := dataMap["defaultProfile"]
+		if !ok {
+			return "", "", nil, errors.New("invalid configration file: missing defaultProfile")
+		}
+		defaultProfile, ok = prof.(string)
+		if !ok {
+			return "", "", nil, fmt.Errorf("invalid defaultProfile: unexpected type %T", prof)
+		}
+
+	default:
+		return "", "", nil, fmt.Errorf("unsupported version: %s", version)
+	}
+
+	if _, ok := profiles[defaultProfile]; !ok {
+		return "", "", nil, fmt.Errorf("default profile %q is not defined", defaultProfile)
+	}
+
+	return version, defaultProfile, profiles, nil
 }

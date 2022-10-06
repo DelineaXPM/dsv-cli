@@ -27,13 +27,13 @@ func GetRoleCmd() (cli.Command, error) {
 Usage:
    • role %[2]s
    • role --name %[2]s
-		`, cst.ProductName, cst.ExampleRoleName),
+`, cst.ProductName, cst.ExampleRoleName),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataName, Shorthand: "n", Usage: "Name of the role"},
 			{Name: cst.Version, Usage: "List the current and last (n) versions"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			name := viper.GetString(cst.DataName)
 			if name == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 				name = args[0]
@@ -41,7 +41,7 @@ Usage:
 			if name == "" {
 				return cli.RunResultHelp
 			}
-			return handleRoleReadCmd(vaultcli.New(), args)
+			return handleRoleReadCmd(vcli, args)
 		},
 	})
 }
@@ -56,14 +56,14 @@ Usage:
    • role read %[2]s
    • role read --name %[2]s
    • role read --name %[2]s  --version
-		`, cst.ProductName, cst.ExampleRoleName),
+`, cst.ProductName, cst.ExampleRoleName),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataName, Shorthand: "n", Usage: "Name of the role"},
 			{Name: cst.Version, Usage: "List the current and last (n) versions"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleRoleReadCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleRoleReadCmd(vcli, args)
 		},
 	})
 }
@@ -77,14 +77,14 @@ func GetRoleSearchCmd() (cli.Command, error) {
 Usage:
    • role search %[2]s
    • role search --query %[2]s
-		`, cst.ProductName, cst.ExampleUserSearch),
+`, cst.ProductName, cst.ExampleUserSearch),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Query, Shorthand: "q", Usage: "Query of roles to fetch (optional)"},
 			{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
 			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 		},
-		RunFunc: func(args []string) int {
-			return handleRoleSearchCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleRoleSearchCmd(vcli, args)
 		},
 	})
 }
@@ -98,14 +98,14 @@ func GetRoleDeleteCmd() (cli.Command, error) {
 Usage:
    • role delete %[2]s
    • role delete --name %[2]s --force
-		`, cst.ProductName, cst.ExampleRoleName),
+`, cst.ProductName, cst.ExampleRoleName),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataName, Shorthand: "n", Usage: "Name of the role"},
 			{Name: cst.Force, Usage: "Immediately delete the role", ValueType: "bool"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleRoleDeleteCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleRoleDeleteCmd(vcli, args)
 		},
 	})
 }
@@ -118,13 +118,13 @@ func GetRoleRestoreCmd() (cli.Command, error) {
 
 Usage:
    • role restore %[2]s
-		`, cst.ProductName, cst.ExampleRoleName),
+`, cst.ProductName, cst.ExampleRoleName),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataName, Shorthand: "n", Usage: "Name of the role"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleRoleRestoreCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleRoleRestoreCmd(vcli, args)
 		},
 	})
 }
@@ -137,16 +137,16 @@ func GetRoleUpdateCmd() (cli.Command, error) {
 
 Usage:
    • role update --name %[2]s --desc "msa for prod gcp"
-		`, cst.ProductName, cst.ExampleRoleName),
+`, cst.ProductName, cst.ExampleRoleName),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataName, Shorthand: "n", Usage: "Name of the role (required)"},
 			{Name: cst.DataDescription, Usage: "Description of the role"},
 		},
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			if OnlyGlobalArgs(args) {
-				return handleRoleUpdateWizard(vaultcli.New(), args)
+				return handleRoleUpdateWizard(vcli, args)
 			}
-			return handleRoleUpdateCmd(vaultcli.New(), args)
+			return handleRoleUpdateCmd(vcli, args)
 		},
 	})
 }
@@ -159,18 +159,18 @@ func GetRoleCreateCmd() (cli.Command, error) {
 
 Usage:
    • role create --name %[2]s --external-id msa-1@happy-emu-172.iam.gsa.com --provider ProdGcp --desc "msa for prod gcp"
-		`, cst.ProductName, cst.ExampleRoleName),
+`, cst.ProductName, cst.ExampleRoleName),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataName, Shorthand: "n", Usage: "Name of the role (required)"},
 			{Name: cst.DataDescription, Usage: "Description of the role"},
 			{Name: cst.DataExternalID, Usage: "External Id for the role"},
 			{Name: cst.DataProvider, Usage: "Provider for the role"},
 		},
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			if OnlyGlobalArgs(args) {
-				return handleRoleWorkflow(vaultcli.New(), args)
+				return handleRoleWorkflow(vcli, args)
 			}
-			return handleRoleCreateCmd(vaultcli.New(), args)
+			return handleRoleCreateCmd(vcli, args)
 		},
 	})
 }

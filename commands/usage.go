@@ -27,8 +27,8 @@ func GetUsageCmd() (cli.Command, error) {
 			{Name: cst.EndDate, Usage: "End date to which to fetch usage data (optional)"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleGetUsageCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleGetUsageCmd(vcli, args)
 		},
 	})
 }

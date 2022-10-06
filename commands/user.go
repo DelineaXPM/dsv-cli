@@ -39,7 +39,7 @@ Usage:
 			{Name: cst.Version, Usage: "List the current and last (n) versions"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			userData := viper.GetString(cst.DataUsername)
 			if userData == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 				userData = args[0]
@@ -47,7 +47,7 @@ Usage:
 			if userData == "" {
 				return cli.RunResultHelp
 			}
-			return handleUserReadCmd(vaultcli.New(), args)
+			return handleUserReadCmd(vcli, args)
 		},
 	})
 }
@@ -55,20 +55,20 @@ Usage:
 func GetUserReadCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounUser, cst.Read},
-		SynopsisText: fmt.Sprintf("%s (<username> | --username)", cst.Read),
-		HelpText: fmt.Sprintf(`Read a %[2]s from %[3]s
+		SynopsisText: "user read (<username> | --username)",
+		HelpText: fmt.Sprintf(`Read a %[1]s from %[2]s
 
 Usage:
-   • user %[1]s %[4]s
-   • user %[1]s --username %[4]s
-		`, cst.Read, cst.NounUser, cst.ProductName, cst.ExampleUser),
+   • user read %[3]s
+   • user read --username %[3]s
+`, cst.NounUser, cst.ProductName, cst.ExampleUser),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataUsername, Usage: "Username of user to fetch (required)"},
 			{Name: cst.Version, Usage: "List the current and last (n) versions"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleUserReadCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleUserReadCmd(vcli, args)
 		},
 	})
 }
@@ -76,20 +76,20 @@ Usage:
 func GetUserSearchCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounUser, cst.Search},
-		SynopsisText: fmt.Sprintf("%s (<query> | --query)", cst.Search),
-		HelpText: fmt.Sprintf(`Search for a %[2]s from %[3]s
+		SynopsisText: "user search (<query> | --query)",
+		HelpText: fmt.Sprintf(`Search for a %[1]s from %[2]s
 
 Usage:
-   • user %[1]s %[4]s
-   • user %[1]s --query %[4]s
-		`, cst.Search, cst.NounUser, cst.ProductName, cst.ExampleUserSearch),
+   • user search %[3]s
+   • user search --query %[3]s
+`, cst.NounUser, cst.ProductName, cst.ExampleUserSearch),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("%s of %ss to fetch (optional)", strings.Title(cst.Query), cst.NounUser)},
 			{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
 			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 		},
-		RunFunc: func(args []string) int {
-			return handleUserSearchCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleUserSearchCmd(vcli, args)
 		},
 	})
 }
@@ -97,39 +97,39 @@ Usage:
 func GetUserDeleteCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounUser, cst.Delete},
-		SynopsisText: fmt.Sprintf("%s (<username> | --username)", cst.Delete),
-		HelpText: fmt.Sprintf(`Delete a %[2]s from %[3]s
+		SynopsisText: "user delete (<username> | --username)",
+		HelpText: fmt.Sprintf(`Delete a %[1]s from %[2]s
 
 Usage:
-   • user %[1]s %[4]s
-   • user %[1]s --username %[4]s --force
-		`, cst.Delete, cst.NounUser, cst.ProductName, cst.ExampleUser),
+   • user delete %[3]s
+   • user delete --username %[3]s --force
+`, cst.NounUser, cst.ProductName, cst.ExampleUser),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to fetch (required)", strings.Title(cst.DataUsername), cst.NounUser)},
 			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s", cst.NounUser), ValueType: "bool"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleUserDeleteCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleUserDeleteCmd(vcli, args)
 		},
 	})
 }
 
 func GetUserRestoreCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path:         []string{cst.NounUser, cst.Read},
-		SynopsisText: fmt.Sprintf("%s %s (<username> | --username)", cst.NounUser, cst.Restore),
-		HelpText: fmt.Sprintf(`Restore a deleted %[2]s in %[3]s
+		Path:         []string{cst.NounUser, cst.Restore},
+		SynopsisText: "user restore (<username> | --username)",
+		HelpText: fmt.Sprintf(`Restore a deleted %[1]s in %[2]s
 Usage:
-   • user %[1]s %[4]s
-   • user %[1]s --username %[4]s
-		`, cst.Restore, cst.NounUser, cst.ProductName, cst.ExamplePath),
+   • user restore %[3]s
+   • user restore --username %[3]s
+`, cst.NounUser, cst.ProductName, cst.ExampleUser),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to fetch (required)", strings.Title(cst.DataUsername), cst.NounUser)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleUserRestoreCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleUserRestoreCmd(vcli, args)
 		},
 	})
 }
@@ -137,13 +137,13 @@ Usage:
 func GetUserCreateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounUser, cst.Create},
-		SynopsisText: fmt.Sprintf("%s (<username> <password> | --username --password)", cst.Create),
-		HelpText: fmt.Sprintf(`Create a %[2]s in %[3]s
+		SynopsisText: "user create (<username> <password> | --username --password)",
+		HelpText: fmt.Sprintf(`Create a %[1]s in %[2]s
 
 Usage:
-   • user %[1]s --username %[4]s --password %[5]s
-   • user %[1]s --username %[4]s --external-id svc1@project1.iam.gserviceaccount.com --provider project1.gcloud --password %[5]s
-		`, cst.Create, cst.NounUser, cst.ProductName, cst.ExampleUser, cst.ExamplePassword),
+   • user create --username %[3]s --password %[4]s
+   • user create --username %[3]s --external-id svc1@project1.iam.gserviceaccount.com --provider project1.gcloud --password %[4]s
+`, cst.NounUser, cst.ProductName, cst.ExampleUser, cst.ExamplePassword),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to be updated (required)", strings.Title(cst.DataUsername), cst.NounUser)},
 			{Name: cst.DataDisplayname, Usage: fmt.Sprintf("%s of %s to be updated", strings.Title(cst.DataDisplayname), cst.NounUser)},
@@ -151,11 +151,11 @@ Usage:
 			{Name: cst.DataExternalID, Usage: fmt.Sprintf("%s of %s to be updated", strings.Title(strings.Replace(cst.DataExternalID, ".", " ", -1)), cst.NounUser)},
 			{Name: cst.DataProvider, Usage: fmt.Sprintf("External %s of %s to be updated", strings.Title(cst.DataProvider), cst.NounUser)},
 		},
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			if OnlyGlobalArgs(args) {
-				return handleUserCreateWorkflow(vaultcli.New(), args)
+				return handleUserCreateWorkflow(vcli, args)
 			}
-			return handleUserCreateCmd(vaultcli.New(), args)
+			return handleUserCreateCmd(vcli, args)
 		},
 	})
 }
@@ -163,22 +163,22 @@ Usage:
 func GetUserUpdateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounUser, cst.Update},
-		SynopsisText: fmt.Sprintf("%s (<username> <password> | (--username) --password)", cst.Update),
-		HelpText: fmt.Sprintf(`Update a %[2]s's password in %[3]s
+		SynopsisText: "user update (<username> <password> | (--username) --password)",
+		HelpText: fmt.Sprintf(`Update a %[1]s's password in %[2]s
 
 Usage:
-   • user %[1]s --username %[4]s --password %[5]s
-		`, cst.Update, cst.NounUser, cst.ProductName, cst.ExampleUser, cst.ExamplePassword),
+   • user update --username %[3]s --password %[4]s
+`, cst.NounUser, cst.ProductName, cst.ExampleUser, cst.ExamplePassword),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataPassword, Usage: fmt.Sprintf("%s of %s to be updated (required)", strings.Title(cst.Password), cst.NounUser)},
 			{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to be updated (required)", strings.Title(cst.DataUsername), cst.NounUser)},
 			{Name: cst.DataDisplayname, Usage: fmt.Sprintf("%s of %s to be updated", strings.Title(cst.DataDisplayname), cst.NounUser)},
 		},
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			if OnlyGlobalArgs(args) {
-				return handleUserUpdateWorkflow(vaultcli.New(), args)
+				return handleUserUpdateWorkflow(vcli, args)
 			}
-			return handleUserUpdateCmd(vaultcli.New(), args)
+			return handleUserUpdateCmd(vcli, args)
 		},
 	})
 }

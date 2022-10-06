@@ -28,7 +28,7 @@ func GetCryptoCmd() (cli.Command, error) {
 		Path:         []string{cst.NounEncryption},
 		SynopsisText: "Encryption-as-a-Service",
 		HelpText:     "Encryption-as-a-Service",
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			return cli.RunResultHelp
 		},
 	})
@@ -41,13 +41,13 @@ func GetAutoKeyCreateCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s %[3]s --%[4]s mykeys/key1
-		`, cst.NounEncryption, cst.NounKey, cst.Create, cst.Path),
+`, cst.NounEncryption, cst.NounKey, cst.Create, cst.Path),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounKey), Predictor: predictor.NewSecretPathPredictorDefault()},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleCreateAutoKey(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleCreateAutoKey(vcli, args)
 		},
 	})
 }
@@ -60,7 +60,7 @@ func GetEncryptionRotateCmd() (cli.Command, error) {
 Usage:
    • %[1]s %[2]s --%[3]s "mykeys/key1 --%[4]s '$fh9d87g' --%[5]s 4"
    • %[1]s %[2]s --%[3]s "mykeys/key1 --%[4]s @cipher.enc --%[5]s 0 --%[6]s 3"
-		`, cst.NounEncryption, cst.Rotate, cst.Path, cst.Data, cst.VersionStart, cst.VersionEnd),
+`, cst.NounEncryption, cst.Rotate, cst.Path, cst.Data, cst.VersionStart, cst.VersionEnd),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounKey), Predictor: predictor.NewSecretPathPredictorDefault()},
 			{Name: cst.Data, Shorthand: "d", Usage: "Ciphertext to be re-encrypted. Pass a string literal in quotes or specify a filepath prefixed with '@' (required)", Predictor: predictor.NewPrefixFilePredictor("*")},
@@ -69,8 +69,8 @@ Usage:
 			{Name: cst.Output, Usage: "Output file for encrypted value and metadata"},
 		},
 		MinNumberArgs: 5,
-		RunFunc: func(args []string) int {
-			return handleRotate(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleRotate(vcli, args)
 		},
 	})
 }
@@ -82,13 +82,13 @@ func GetAutoKeyReadMetadataCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s %[3]s --%[4]s mykeys/key1
-		`, cst.NounEncryption, cst.NounKey, cst.Read, cst.Path),
+`, cst.NounEncryption, cst.NounKey, cst.Read, cst.Path),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounKey), Predictor: predictor.NewSecretPathPredictorDefault()},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleReadAutoKey(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleReadAutoKey(vcli, args)
 		},
 	})
 }
@@ -100,14 +100,14 @@ func GetAutoKeyDeleteCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s %[3]s --%[4]s mykeys/key1
-		`, cst.NounEncryption, cst.NounKey, cst.Delete, cst.Path),
+`, cst.NounEncryption, cst.NounKey, cst.Delete, cst.Path),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounKey), Predictor: predictor.NewSecretPathPredictorDefault()},
 			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s and all its versions", cst.NounKey), ValueType: "bool"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleDeleteAutoKey(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleDeleteAutoKey(vcli, args)
 		},
 	})
 }
@@ -119,13 +119,13 @@ func GetAutoKeyRestoreCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s %[3]s --%[4]s mykeys/key1
-		`, cst.NounEncryption, cst.NounKey, cst.Restore, cst.Path),
+`, cst.NounEncryption, cst.NounKey, cst.Restore, cst.Path),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounKey), Predictor: predictor.NewSecretPathPredictorDefault()},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleRestoreAutoKey(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleRestoreAutoKey(vcli, args)
 		},
 	})
 }
@@ -138,7 +138,7 @@ func GetEncryptCmd() (cli.Command, error) {
 Usage:
    • %[1]s %[2]s --%[3]s 'hello world' --%[4]s mykeys/key1
    • %[1]s %[2]s --%[3]s @mysecret.txt --%[4]s mykeys/key1
-		`, cst.NounEncryption, cst.Encrypt, cst.Data, cst.Path),
+`, cst.NounEncryption, cst.Encrypt, cst.Data, cst.Path),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounKey), Predictor: predictor.NewSecretPathPredictorDefault()},
 			{Name: cst.Version, Usage: fmt.Sprintf("Version of the %s used for encryption/decryption", cst.NounKey)},
@@ -146,8 +146,8 @@ Usage:
 			{Name: cst.Output, Usage: "Output file for encrypted value and metadata"},
 		},
 		MinNumberArgs: 4,
-		RunFunc: func(args []string) int {
-			return handleEncrypt(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleEncrypt(vcli, args)
 		},
 	})
 }
@@ -160,7 +160,7 @@ func GetDecryptCmd() (cli.Command, error) {
 Usage:
    • %[1]s %[2]s --%[3]s 'hello world' --%[4]s mykeys/key1
    • %[1]s %[2]s --%[3]s @mysecret.txt"
-		`, cst.NounEncryption, cst.Decrypt, cst.Data, cst.Path, cst.Version),
+`, cst.NounEncryption, cst.Decrypt, cst.Data, cst.Path, cst.Version),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s", cst.Path, cst.NounKey), Predictor: predictor.NewSecretPathPredictorDefault()},
 			{Name: cst.Version, Usage: fmt.Sprintf("Version of the %s used for encryption/decryption", cst.NounKey)},
@@ -168,8 +168,8 @@ Usage:
 			{Name: cst.Output, Usage: "Output file for decrypted value and metadata"},
 		},
 		MinNumberArgs: 2,
-		RunFunc: func(args []string) int {
-			return handleDecrypt(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleDecrypt(vcli, args)
 		},
 	})
 }

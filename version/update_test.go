@@ -27,6 +27,7 @@ func TestIsVersionOutdated(t *testing.T) {
 		{target: "2.0.0", latest: "1.0.0"},
 		{target: "12.0.0", latest: "2.0.0"},
 		{target: "undefined", latest: "1.9.1"},
+		{target: "1.38.0", latest: "1.37.5"},
 	}
 
 	for _, tc := range cases {

@@ -23,7 +23,7 @@ func GetBreakGlassCmd() (cli.Command, error) {
 		Path:         []string{cst.NounBreakGlass},
 		SynopsisText: "Manage Break-Glass setup",
 		HelpText:     "Initiate restoration of admin users",
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			return cli.RunResultHelp
 		},
 	})
@@ -37,8 +37,8 @@ func GetBreakGlassGetStatusCmd() (cli.Command, error) {
 Usage:
    • %[1]s %[2]s
    `, cst.NounBreakGlass, cst.Status),
-		RunFunc: func(args []string) int {
-			return handleBreakGlassGetStatusCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleBreakGlassGetStatusCmd(vcli, args)
 		},
 	})
 }
@@ -55,11 +55,11 @@ Usage:
 			{Name: cst.NewAdmins, Usage: "New admins list (required)"},
 			{Name: cst.MinNumberOfShares, Usage: "Minimum number of shares to apply (required)"},
 		},
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			if OnlyGlobalArgs(args) {
-				return handleBreakGlassGenerateWizard(vaultcli.New(), args)
+				return handleBreakGlassGenerateWizard(vcli, args)
 			}
-			return handleBreakGlassGenerateCmd(vaultcli.New(), args)
+			return handleBreakGlassGenerateCmd(vcli, args)
 		},
 	})
 }
@@ -75,11 +75,11 @@ Usage:
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Shares, Usage: "List of shares to apply Break Glass action (required)"},
 		},
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			if OnlyGlobalArgs(args) {
-				return handleBreakGlassApplyWizard(vaultcli.New(), args)
+				return handleBreakGlassApplyWizard(vcli, args)
 			}
-			return handleBreakGlassApplyCmd(vaultcli.New(), args)
+			return handleBreakGlassApplyCmd(vcli, args)
 		},
 	})
 }

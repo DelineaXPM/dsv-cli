@@ -62,7 +62,7 @@ func BasePredictorWrappers() []*predictor.Params {
 
 type CommandArgs struct {
 	Path              []string
-	RunFunc           func(args []string) int
+	RunFunc           func(vcli vaultcli.CLI, args []string) int
 	HelpText          string
 	SynopsisText      string
 	ArgsPredictorFunc func(complete.Args) []string
@@ -105,7 +105,7 @@ func NewCommand(args CommandArgs) (cli.Command, error) {
 
 type baseCommand struct {
 	path              []string
-	runFunc           func(args []string) int
+	runFunc           func(vcli vaultcli.CLI, args []string) int
 	helpText          string
 	synopsisText      string
 	argsPredictorFunc func() complete.Predictor
@@ -208,7 +208,9 @@ func (c *baseCommand) Run(args []string) int {
 	if sig != 0 {
 		return sig
 	}
-	return c.runFunc(args)
+
+	vcli := vaultcli.New()
+	return c.runFunc(vcli, args)
 }
 
 // Help satisfies cli.Command interface.

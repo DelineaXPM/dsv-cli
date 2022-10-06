@@ -23,7 +23,7 @@ func GetSiemCmd() (cli.Command, error) {
 		Path:         []string{cst.NounSiem},
 		SynopsisText: "Manage SIEM endpoints",
 		HelpText:     "Work with SIEM endpoints",
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			path := viper.GetString(cst.Path)
 			if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 				path = args[0]
@@ -31,7 +31,7 @@ func GetSiemCmd() (cli.Command, error) {
 			if path == "" {
 				return cli.RunResultHelp
 			}
-			return handleSiemRead(vaultcli.New(), args)
+			return handleSiemRead(vcli, args)
 		},
 	})
 }
@@ -43,8 +43,8 @@ func GetSiemCreateCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s`, cst.NounSiem, cst.Create),
-		RunFunc: func(args []string) int {
-			return handleSiemCreate(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleSiemCreate(vcli, args)
 		},
 	})
 }
@@ -60,8 +60,8 @@ Usage:
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Usage: "Path to existing SIEM"},
 		},
-		RunFunc: func(args []string) int {
-			return handleSiemUpdate(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleSiemUpdate(vcli, args)
 		},
 	})
 }
@@ -78,8 +78,8 @@ Usage:
 			{Name: cst.Path, Usage: "Path to existing SIEM"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleSiemRead(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleSiemRead(vcli, args)
 		},
 	})
 }
@@ -96,8 +96,8 @@ Usage:
 			{Name: cst.Path, Usage: "Path to existing SIEM"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleSiemDelete(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleSiemDelete(vcli, args)
 		},
 	})
 }
@@ -109,14 +109,14 @@ func GetSiemSearchCommand() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`Usage:
    • %[1]s %[2]s %[3]s
    • %[1]s %[2]s --query %[3]s
-		`, cst.NounSiem, cst.Search, cst.ExampleSiemSearch),
+`, cst.NounSiem, cst.Search, cst.ExampleSiemSearch),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("Filter %s of items to fetch (required)", cst.Query)},
 			{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
 			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 		},
-		RunFunc: func(args []string) int {
-			return handleSiemSearchCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleSiemSearchCmd(vcli, args)
 		},
 	})
 }

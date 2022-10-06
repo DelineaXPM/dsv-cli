@@ -24,7 +24,7 @@ func GetCryptoManualCmd() (cli.Command, error) {
 		Path:         []string{cst.NounEncryption, cst.Manual},
 		SynopsisText: "Encryption-as-a-Service with a Manual Key",
 		HelpText:     "Encryption-as-a-Service with a Manual Key",
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			return cli.RunResultHelp
 		},
 	})
@@ -37,7 +37,7 @@ func GetManualKeyUploadCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s %[3]s --%[4]s mykeys/key1 --%[5]s %[6]s --%[7]s %[8]s --%[9]s %[10]s
-		`, cst.NounEncryption, cst.Manual, cst.NounKey+"-"+cst.Upload, cst.Path,
+`, cst.NounEncryption, cst.Manual, cst.NounKey+"-"+cst.Upload, cst.Path,
 			cst.Scheme, "symmetric", cst.PrivateKey, cst.ExamplePrivateKey, cst.Nonce, cst.ExampleNonce),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounKey), Predictor: predictor.NewSecretPathPredictorDefault()},
@@ -47,8 +47,8 @@ Usage:
 			{Name: cst.Metadata, Usage: "Metadata as a JSON object (optional)"},
 		},
 		MinNumberArgs: 6,
-		RunFunc: func(args []string) int {
-			return handleUploadManualKey(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleUploadManualKey(vcli, args)
 		},
 	})
 }
@@ -60,7 +60,7 @@ func GetManualKeyUpdateCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s %[3]s --%[4]s mykeys/key1 --%[5]s %[6]s
-		`, cst.NounEncryption, cst.Manual, cst.NounKey+"-"+cst.Update, cst.Path,
+`, cst.NounEncryption, cst.Manual, cst.NounKey+"-"+cst.Update, cst.Path,
 			cst.PrivateKey, cst.ExamplePrivateKey),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounKey), Predictor: predictor.NewSecretPathPredictorDefault()},
@@ -69,8 +69,8 @@ Usage:
 			{Name: cst.Metadata, Usage: "Metadata as a JSON object (optional)"},
 		},
 		MinNumberArgs: 4,
-		RunFunc: func(args []string) int {
-			return handleUpdateManualKey(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleUpdateManualKey(vcli, args)
 		},
 	})
 }
@@ -82,13 +82,13 @@ func GetManualKeyReadCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s %[3]s --%[4]s mykeys/key1
-		`, cst.NounEncryption, cst.NounKey, cst.Read, cst.Path),
+`, cst.NounEncryption, cst.NounKey, cst.Read, cst.Path),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounKey), Predictor: predictor.NewSecretPathPredictorDefault()},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleReadManualKey(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleReadManualKey(vcli, args)
 		},
 	})
 }
@@ -100,14 +100,14 @@ func GetManualKeyDeleteCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s %[3]s --%[4]s mykeys/key1
-		`, cst.NounEncryption, cst.Manual, cst.Delete, cst.Path),
+`, cst.NounEncryption, cst.Manual, cst.Delete, cst.Path),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounKey), Predictor: predictor.NewSecretPathPredictorDefault()},
 			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s and all its versions", cst.NounKey), ValueType: "bool"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleDeleteManualKey(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleDeleteManualKey(vcli, args)
 		},
 	})
 }
@@ -119,13 +119,13 @@ func GetManualKeyRestoreCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s %[3]s --%[4]s mykeys/key1
-		`, cst.NounEncryption, cst.NounKey, cst.Restore, cst.Path),
+`, cst.NounEncryption, cst.NounKey, cst.Restore, cst.Path),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounKey), Predictor: predictor.NewSecretPathPredictorDefault()},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleRestoreManualKey(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleRestoreManualKey(vcli, args)
 		},
 	})
 }
@@ -138,7 +138,7 @@ func GetManualKeyEncryptCmd() (cli.Command, error) {
 Usage:
    • %[1]s %[2]s %[3]s --%[4]s 'hello world' --%[5]s mykeys/key1
    • %[1]s %[2]s %[3]s --%[4]s @mysecret.txt --%[5]s mykeys/key1
-		`, cst.NounEncryption, cst.Manual, cst.Encrypt, cst.Data, cst.Path),
+`, cst.NounEncryption, cst.Manual, cst.Encrypt, cst.Data, cst.Path),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounKey), Predictor: predictor.NewSecretPathPredictorDefault()},
 			{Name: cst.Version, Usage: fmt.Sprintf("Version of the %s used for encryption/decryption", cst.NounKey)},
@@ -146,8 +146,8 @@ Usage:
 			{Name: cst.Output, Usage: "Output file for encrypted value and metadata"},
 		},
 		MinNumberArgs: 4,
-		RunFunc: func(args []string) int {
-			return handleManualKeyEncrypt(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleManualKeyEncrypt(vcli, args)
 		},
 	})
 }
@@ -160,7 +160,7 @@ func GetManualKeyDecryptCmd() (cli.Command, error) {
 Usage:
    • %[1]s %[2]s %[3]s --%[4]s 'hello world' --%[5]s mykeys/key1
    • %[1]s %[2]s %[3]s --%[4]s @mysecret.txt"
-		`, cst.NounEncryption, cst.Manual, cst.Decrypt, cst.Data, cst.Path, cst.Version),
+`, cst.NounEncryption, cst.Manual, cst.Decrypt, cst.Data, cst.Path, cst.Version),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s", cst.Path, cst.NounKey), Predictor: predictor.NewSecretPathPredictorDefault()},
 			{Name: cst.Version, Usage: fmt.Sprintf("Version of the %s used for encryption/decryption", cst.NounKey)},
@@ -168,8 +168,8 @@ Usage:
 			{Name: cst.Output, Usage: "Output file for decrypted value and metadata"},
 		},
 		MinNumberArgs: 2,
-		RunFunc: func(args []string) int {
-			return handleManualKeyDecrypt(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleManualKeyDecrypt(vcli, args)
 		},
 	})
 }

@@ -27,7 +27,7 @@ func GetPkiCmd() (cli.Command, error) {
 		Path:         []string{cst.NounPki},
 		SynopsisText: "Manage certificates",
 		HelpText:     "Work with certificates",
-		RunFunc:      func(args []string) int { return cli.RunResultHelp },
+		RunFunc:      func(vcli vaultcli.CLI, args []string) int { return cli.RunResultHelp },
 	})
 }
 
@@ -38,7 +38,7 @@ func GetPkiRegisterCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s --%[3]s @cert.pem --%[4]s @key.pem --%[5]s myroot --%[6]s google.com,yahoo.com --%[7]s 1000
-		`, cst.NounPki, cst.Register, cst.CertPath, cst.PrivKeyPath, cst.RootCAPath, cst.Domains, cst.MaxTTL),
+`, cst.NounPki, cst.Register, cst.CertPath, cst.PrivKeyPath, cst.RootCAPath, cst.Domains, cst.MaxTTL),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.CertPath, Usage: "Path to a file containing the root certificate (required)"},
 			{Name: cst.PrivKeyPath, Usage: "Path to a file containing the private key (required)"},
@@ -47,8 +47,8 @@ Usage:
 			{Name: cst.MaxTTL, Usage: "Maximum number of hours for which a signed certificate on behalf of the root CA can be valid (required)"},
 			{Name: cst.CRL, Usage: "URL of the CRL from which the revocation of leaf certificates can be checked"},
 		},
-		RunFunc: func(args []string) int {
-			return handleRegisterRootCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleRegisterRootCmd(vcli, args)
 		},
 	})
 }
@@ -60,7 +60,7 @@ func GetPkiSignCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s --%[3]s myroot --%[4]s @csr.pem --%[5]s google.com,android.com --%[6]s 1000h
-		`, cst.NounPki, cst.Sign, cst.RootCAPath, cst.CSRPath, cst.SubjectAltNames, cst.TTL),
+`, cst.NounPki, cst.Sign, cst.RootCAPath, cst.CSRPath, cst.SubjectAltNames, cst.TTL),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.CSRPath, Usage: "Path to a file containing the CSR (required)"},
 			{Name: cst.RootCAPath, Usage: "Path to a secret which contains the registered root certificate with private key (required)"},
@@ -68,8 +68,8 @@ Usage:
 			{Name: cst.TTL, Usage: "Number of hours for which a signed certificate on behalf of the root CA can be valid"},
 			{Name: cst.Chain, Usage: "Include root certificate in response", ValueType: "bool"},
 		},
-		RunFunc: func(args []string) int {
-			return handleSignCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleSignCmd(vcli, args)
 		},
 	})
 }
@@ -82,7 +82,7 @@ func GetPkiLeafCmd() (cli.Command, error) {
 Usage:
    • %[1]s %[2]s --%[3]s myroot --%[4]s myleafcert --%[5]s delinea.com --%[6]s Delinea --%[7]s US --%[8]s DC --%[9]s Washington --%[10]s 100d
    • %[1]s %[2]s --%[3]s myroot --%[5]s delinea.com
-		`, cst.NounPki, cst.Leaf, cst.RootCAPath, cst.PkiStorePath, cst.CommonName, cst.Organization, cst.Country, cst.State, cst.Locality, cst.TTL),
+`, cst.NounPki, cst.Leaf, cst.RootCAPath, cst.PkiStorePath, cst.CommonName, cst.Organization, cst.Country, cst.State, cst.Locality, cst.TTL),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.CommonName, Usage: "Domain for which a certificate is generated (required)"},
 			{Name: cst.Organization, Usage: ""},
@@ -97,8 +97,8 @@ Usage:
 			{Name: cst.TTL, Usage: "Number of hours for which a signed certificate on behalf of the root CA can be valid"},
 			{Name: cst.Chain, Usage: "Include root certificate in response", ValueType: "bool"},
 		},
-		RunFunc: func(args []string) int {
-			return handleLeafCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleLeafCmd(vcli, args)
 		},
 	})
 }
@@ -111,7 +111,7 @@ func GetPkiGenerateRootCmd() (cli.Command, error) {
 Usage:
    • %[1]s %[2]s --%[3]s myroot --%[4]s google.org,golang.org --%[5]s delinea.com --%[6]s Delinea --%[7]s US --%[8]s DC --%[9]s Washington --%[10]s 42d
    • %[1]s %[2]s --%[3]s myroot --%[4]s google.org,golang.org --%[5]s delinea.com --%[10]s 52w
-		`, cst.NounPki, cst.GenerateRoot, cst.RootCAPath, cst.Domains, cst.CommonName, cst.Organization, cst.Country, cst.State, cst.Locality, cst.MaxTTL),
+`, cst.NounPki, cst.GenerateRoot, cst.RootCAPath, cst.Domains, cst.CommonName, cst.Organization, cst.Country, cst.State, cst.Locality, cst.MaxTTL),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.CommonName, Usage: "The domain name of the root CA (required)"},
 			{Name: cst.Organization, Usage: ""},
@@ -126,8 +126,8 @@ Usage:
 			{Name: cst.MaxTTL, Usage: "Number of hours for which a generated root certificate can be valid (required)"},
 			{Name: cst.CRL, Usage: "URL of the CRL from which the revocation of leaf certificates can be checked"},
 		},
-		RunFunc: func(args []string) int {
-			return handleGenerateRootCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleGenerateRootCmd(vcli, args)
 		},
 	})
 }
@@ -139,7 +139,7 @@ func GetPkiSSHCertCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s --%[3]s myroot --%[4]s myleaf --%[5]s root,ubuntu --%[6]s 1000
-		`, cst.NounPki, cst.SSHCert, cst.RootCAPath, cst.LeafCAPath, cst.Principals, cst.TTL),
+`, cst.NounPki, cst.SSHCert, cst.RootCAPath, cst.LeafCAPath, cst.Principals, cst.TTL),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.RootCAPath, Usage: "Path to a secret which contains the registered root certificate with private key (required)"},
 			{Name: cst.LeafCAPath, Usage: "Path to a secret which contains the leaf certificate with SSH-compatible public key (required)"},
@@ -147,8 +147,8 @@ Usage:
 			{Name: cst.TTL, Usage: "Number of hours for which a signed certificate can be valid (required)"},
 		},
 		MinNumberArgs: 8,
-		RunFunc: func(args []string) int {
-			return handleGetSSHCertificateCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleGetSSHCertificateCmd(vcli, args)
 		},
 	})
 }

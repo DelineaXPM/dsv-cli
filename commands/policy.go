@@ -35,7 +35,7 @@ Usage:
 			{Name: cst.Version, Usage: "List the current and last (n) versions"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			path := viper.GetString(cst.Path)
 			if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 				path = args[0]
@@ -43,7 +43,7 @@ Usage:
 			if path == "" {
 				return cli.RunResultHelp
 			}
-			return handlePolicyReadCmd(vaultcli.New(), args)
+			return handlePolicyReadCmd(vcli, args)
 		},
 	})
 }
@@ -63,8 +63,8 @@ Usage:
 			{Name: cst.Version, Usage: "List the current and last (n) versions"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handlePolicyReadCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handlePolicyReadCmd(vcli, args)
 		},
 	})
 }
@@ -83,8 +83,8 @@ Usage:
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s", cst.Path, cst.NounPolicy)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handlePolicyEditCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handlePolicyEditCmd(vcli, args)
 		},
 	})
 }
@@ -104,8 +104,8 @@ Usage:
 			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s", cst.NounPolicy), ValueType: "bool"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handlePolicyDeleteCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handlePolicyDeleteCmd(vcli, args)
 		},
 	})
 }
@@ -123,8 +123,8 @@ Usage:
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s", cst.Path, cst.NounPolicy)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handlePolicyRestoreCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handlePolicyRestoreCmd(vcli, args)
 		},
 	})
 }
@@ -149,11 +149,11 @@ Usage:
 			{Name: cst.DataCidr, Usage: fmt.Sprintf("Policy CIDR condition remote IP to be stored in a %s ", cst.NounPolicy)},
 			{Name: cst.DataResource, Usage: fmt.Sprintf("Policy resources to be stored in a %s. Defaults to the path plus all paths below (<.*>) ", cst.NounPolicy)},
 		},
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			if OnlyGlobalArgs(args) {
-				return handlePolicyCreateWizard(vaultcli.New(), args)
+				return handlePolicyCreateWizard(vcli, args)
 			}
-			return handlePolicyCreateCmd(vaultcli.New(), args)
+			return handlePolicyCreateCmd(vcli, args)
 		},
 	})
 }
@@ -180,11 +180,11 @@ Usage:
 			{Name: cst.DataCidr, Usage: fmt.Sprintf("Policy CIDR condition remote IP to be stored in a %s ", cst.NounPolicy)},
 			{Name: cst.DataResource, Usage: fmt.Sprintf("Policy resources to be stored in a %s. Defaults to the path plus all paths below (<.*>) ", cst.NounPolicy)},
 		},
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			if OnlyGlobalArgs(args) {
-				return handlePolicyUpdateWizard(vaultcli.New(), args)
+				return handlePolicyUpdateWizard(vcli, args)
 			}
-			return handlePolicyUpdateCmd(vaultcli.New(), args)
+			return handlePolicyUpdateCmd(vcli, args)
 		},
 	})
 }
@@ -204,8 +204,8 @@ Usage:
 			{Name: cst.Version, Usage: "The version to which to rollback"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handlePolicyRollbackCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handlePolicyRollbackCmd(vcli, args)
 		},
 	})
 }
@@ -225,8 +225,8 @@ Usage:
 			{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
 			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 		},
-		RunFunc: func(args []string) int {
-			return handlePolicySearchCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handlePolicySearchCmd(vcli, args)
 		},
 	})
 }

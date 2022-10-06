@@ -37,8 +37,8 @@ Usage:
 			{Name: cst.Sort, Usage: "Change result sorting order (asc|desc) [default: desc] when search field is specified (optional)"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleAuditSearch(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleAuditSearch(vcli, args)
 		},
 	})
 }

@@ -19,8 +19,8 @@ func GetWhoAmICmd() (cli.Command, error) {
 		SynopsisText: "Show current identity",
 		HelpText:     fmt.Sprintf("%s returns the current user identity, accounting for config, env, and flags", cst.NounWhoAmI),
 		NoPreAuth:    true,
-		RunFunc: func(args []string) int {
-			return handleWhoAmICmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleWhoAmICmd(vcli, args)
 		},
 	})
 }
@@ -31,8 +31,8 @@ func GetEvaluateFlagCmd() (cli.Command, error) {
 		SynopsisText: "Inspect environment and configuration values",
 		HelpText:     fmt.Sprintf("%s returns the value of the variable, accounting for config, env, and flags", cst.EvaluateFlag),
 		NoPreAuth:    true,
-		RunFunc: func(args []string) int {
-			return handleEvaluateFlag(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleEvaluateFlag(vcli, args)
 		},
 	})
 }

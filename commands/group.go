@@ -28,12 +28,12 @@ func GetGroupCmd() (cli.Command, error) {
 Usage:
    • group %[3]s
    • group --group-name %[3]s
-		`, cst.NounGroup, cst.ProductName, cst.ExampleGroup),
+`, cst.NounGroup, cst.ProductName, cst.ExampleGroup),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataGroupName, Usage: fmt.Sprintf("%s of %s (required)", strings.Title(cst.DataName), cst.NounGroup)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			groupData := viper.GetString(cst.DataGroupName)
 			if groupData == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 				groupData = args[0]
@@ -41,7 +41,7 @@ Usage:
 			if groupData == "" {
 				return cli.RunResultHelp
 			}
-			return handleGroupReadCmd(vaultcli.New(), args)
+			return handleGroupReadCmd(vcli, args)
 		},
 	})
 }
@@ -55,12 +55,12 @@ func GetGroupReadCmd() (cli.Command, error) {
 Usage:
    • group %[1]s %[4]s
    • group %[1]s --group-name %[4]s
-		`, cst.Read, cst.NounGroup, cst.ProductName, cst.ExampleGroup),
+`, cst.Read, cst.NounGroup, cst.ProductName, cst.ExampleGroup),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataGroupName, Usage: fmt.Sprintf("%s of %s (required)", strings.Title(cst.DataName), cst.NounGroup)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			groupData := viper.GetString(cst.DataGroupName)
 			if groupData == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 				groupData = args[0]
@@ -68,7 +68,7 @@ Usage:
 			if groupData == "" {
 				return cli.RunResultHelp
 			}
-			return handleGroupReadCmd(vaultcli.New(), args)
+			return handleGroupReadCmd(vcli, args)
 		},
 	})
 }
@@ -83,17 +83,17 @@ Usage:
    • group %[1]s --group-name %[6]s --members user1,user2
    • group %[1]s --data %[4]s
    • group %[1]s --data %[5]s
-		`, cst.Create, cst.NounGroup, cst.ProductName, cst.ExampleGroupCreate, cst.ExampleDataPath, cst.ExampleGroup),
+`, cst.Create, cst.NounGroup, cst.ProductName, cst.ExampleGroupCreate, cst.ExampleDataPath, cst.ExampleGroup),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("Group name and members to add to or delete from the %s. Prefix with '@' to denote filepath (subsumes other arguments)", cst.NounGroup), Predictor: predictor.NewPrefixFilePredictor("*")},
 			{Name: cst.DataGroupName, Usage: fmt.Sprintf("%s of %s (required)", strings.Title(cst.DataName), cst.NounGroup)},
 			{Name: cst.Members, Usage: "Group members (comma-separated, optional)"},
 		},
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			if OnlyGlobalArgs(args) {
-				return handleGroupCreateWizard(vaultcli.New(), args)
+				return handleGroupCreateWizard(vcli, args)
 			}
-			return handleGroupCreateCmd(vaultcli.New(), args)
+			return handleGroupCreateCmd(vcli, args)
 		},
 	})
 }
@@ -107,14 +107,14 @@ func GetGroupDeleteCmd() (cli.Command, error) {
 Usage:
    • group %[1]s %[4]s
    • group %[1]s --group-name %[4]s --force
-		`, cst.Delete, cst.NounGroup, cst.ProductName, cst.ExampleGroup),
+`, cst.Delete, cst.NounGroup, cst.ProductName, cst.ExampleGroup),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataGroupName, Usage: fmt.Sprintf("%s of %s (required)", strings.Title(cst.DataName), cst.NounGroup)},
 			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s", cst.NounGroup), ValueType: "bool"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleGroupDeleteCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleGroupDeleteCmd(vcli, args)
 		},
 	})
 }
@@ -128,13 +128,13 @@ func GetGroupRestoreCmd() (cli.Command, error) {
 Usage:
    • group %[1]s %[4]s
    • group %[1]s --group-name %[4]s
-		`, cst.Restore, cst.NounGroup, cst.ProductName, cst.ExampleGroup),
+`, cst.Restore, cst.NounGroup, cst.ProductName, cst.ExampleGroup),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataGroupName, Usage: fmt.Sprintf("%s of %s (required)", strings.Title(cst.DataName), cst.NounGroup)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleGroupRestoreCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleGroupRestoreCmd(vcli, args)
 		},
 	})
 }
@@ -149,15 +149,15 @@ Usage:
    • group %[1]s --group-name %[6]s --members user3,user4
    • group %[1]s --group-name %[6]s --data %[4]s
    • group %[1]s --group-name %[6]s --data %[5]s
-		`, cst.AddMember, cst.NounGroup, cst.ProductName, cst.ExampleGroupAddMembers, cst.ExampleDataPath, cst.ExampleGroup),
+`, cst.AddMember, cst.NounGroup, cst.ProductName, cst.ExampleGroupAddMembers, cst.ExampleDataPath, cst.ExampleGroup),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Data, Shorthand: "d", Usage: "Group name and members to add to or delete from the group. Prefix with '@' to denote filepath (subsumes other arguments)", Predictor: predictor.NewPrefixFilePredictor("*")},
 			{Name: cst.DataGroupName, Usage: fmt.Sprintf("%s of %s (required)", strings.Title(cst.DataName), cst.NounGroup)},
 			{Name: cst.Members, Usage: "Group members (comma-separated, optional)"},
 		},
 		MinNumberArgs: 2,
-		RunFunc: func(args []string) int {
-			return handleAddMembersCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleAddMembersCmd(vcli, args)
 		},
 	})
 }
@@ -172,15 +172,15 @@ Usage:
    • group %[1]s --group-name %[6]s --members member1,member2
    • group %[1]s --group-name %[6]s --data %[4]s
    • group %[1]s --group-name %[6]s --data %[5]s
-		`, cst.DeleteMember, cst.NounGroup, cst.ProductName, cst.ExampleGroupAddMembers, cst.ExampleDataPath, cst.ExampleGroup),
+`, cst.DeleteMember, cst.NounGroup, cst.ProductName, cst.ExampleGroupAddMembers, cst.ExampleDataPath, cst.ExampleGroup),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("Group name and members to add to or delete from the %s. Prefix with '@' to denote filepath (subsumes other arguments)", cst.NounGroup), Predictor: predictor.NewPrefixFilePredictor("*")},
 			{Name: cst.DataGroupName, Usage: fmt.Sprintf("%s of %s (required)", strings.Title(cst.DataName), cst.NounGroup)},
 			{Name: cst.Members, Usage: "Group members (comma-separated, optional)"},
 		},
 		MinNumberArgs: 2,
-		RunFunc: func(args []string) int {
-			return handleDeleteMembersCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleDeleteMembersCmd(vcli, args)
 		},
 	})
 }
@@ -193,13 +193,13 @@ func GetMemberGroupsCmd() (cli.Command, error) {
 
 Usage:
    • user %[1]ss --username %[4]s
-		`, cst.NounGroup, cst.NounUser, cst.ProductName, cst.ExampleUser),
+`, cst.NounGroup, cst.NounUser, cst.ProductName, cst.ExampleUser),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s (required)", strings.Title(cst.DataUsername), cst.NounUser)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleUsersGroupReadCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleUsersGroupReadCmd(vcli, args)
 		},
 	})
 }
@@ -213,14 +213,14 @@ func GetGroupSearchCmd() (cli.Command, error) {
 Usage:
    • group %[1]s %[4]s
    • group %[1]s --query %[4]s
-		`, cst.Search, cst.NounGroup, cst.ProductName, cst.ExampleUserSearch),
+`, cst.Search, cst.NounGroup, cst.ProductName, cst.ExampleUserSearch),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("%s of %ss to fetch (optional)", strings.Title(cst.Query), cst.NounGroup)},
 			{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
 			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 		},
-		RunFunc: func(args []string) int {
-			return handleGroupSearchCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleGroupSearchCmd(vcli, args)
 		},
 	})
 }

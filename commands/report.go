@@ -20,7 +20,7 @@ func GetReportCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounReport},
 		SynopsisText: "Show report records for secrets and groups",
-		RunFunc:      func(args []string) int { return cli.RunResultHelp },
+		RunFunc:      func(vcli vaultcli.CLI, args []string) int { return cli.RunResultHelp },
 	})
 }
 
@@ -43,8 +43,8 @@ Usage:
 			{Name: cst.OffSet, Usage: "Offset for the next secrets (optional)"},
 			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 		},
-		RunFunc: func(args []string) int {
-			return handleSecretReport(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleSecretReport(vcli, args)
 		},
 	})
 }
@@ -64,8 +64,8 @@ Usage:
 			{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
 			{Name: cst.OffSet, Usage: "Offset for the next groups (optional)"},
 		},
-		RunFunc: func(args []string) int {
-			return handleGroupReport(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleGroupReport(vcli, args)
 		},
 	})
 }

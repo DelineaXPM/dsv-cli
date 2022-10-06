@@ -6,6 +6,127 @@ import (
 	"testing"
 )
 
+func TestParseRawConfig_emptyFile(t *testing.T) {
+	version, defaultProfile, profiles, err := parseRawConfig(nil)
+	if err != nil {
+		t.Fatalf("unexpected error parsing <nil> config: %v", err)
+	}
+	if version != "" {
+		t.Fatalf("unexpected version, want <empty string>, got %s", version)
+	}
+
+	if defaultProfile != "" {
+		t.Fatalf("unexpected default profile, want <empty string>, got %s", defaultProfile)
+	}
+
+	if len(profiles) != 0 {
+		t.Fatalf("unexpected length of profiles, want 0, got %d", len(profiles))
+	}
+
+	version, defaultProfile, profiles, err = parseRawConfig([]byte(``))
+	if err != nil {
+		t.Fatalf("unexpected error parsing empty config: %v", err)
+	}
+	if version != "" {
+		t.Fatalf("unexpected version, want <empty string>, got %s", version)
+	}
+
+	if defaultProfile != "" {
+		t.Fatalf("unexpected default profile, want <empty string>, got %s", defaultProfile)
+	}
+
+	if len(profiles) != 0 {
+		t.Fatalf("unexpected length of profiles, want 0, got %d", len(profiles))
+	}
+}
+
+func TestParseRawConfig_parsingIssues(t *testing.T) {
+	_, _, _, err := parseRawConfig([]byte(`aa`))
+	if err == nil {
+		t.Fatalf("error should not be nil if parsing invalid YAML config")
+	}
+}
+
+func TestParseRawConfig_unsupportedVersion(t *testing.T) {
+	_, _, _, err := parseRawConfig([]byte(`version: v222
+defaultProfile: p1
+profiles:
+    p1:
+        example: example
+`))
+	if err == nil {
+		t.Fatalf("error should not be nil if version is not supported")
+	}
+}
+
+func TestParseRawConfig_v2Format(t *testing.T) {
+	version, defaultProfile, profiles, err := parseRawConfig([]byte(`version: v2
+defaultProfile: p1
+profiles:
+    p1:
+        example: example
+    p2:
+        example: example
+`))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if version != "v2" {
+		t.Fatalf("unexpected version, want v2, got %s", version)
+	}
+
+	if defaultProfile != "p1" {
+		t.Fatalf("unexpected default profile, want p1, got %s", defaultProfile)
+	}
+
+	if len(profiles) != 2 {
+		t.Fatalf("unexpected length of profiles, want 2, got %d", len(profiles))
+	}
+}
+
+func TestParseRawConfig_v2MissingDefault(t *testing.T) {
+	_, _, _, err := parseRawConfig([]byte(`version: v2
+defaultProfile: p3
+profiles:
+    p1:
+        example: example
+`))
+	if err == nil {
+		t.Fatalf("error should not be nil if default profile is missing in profiles")
+	}
+}
+
+func TestParseRawConfig_v1Format(t *testing.T) {
+	version, defaultProfile, profiles, err := parseRawConfig([]byte(`default:
+    example: example
+p2:
+    example: example
+`))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if version != "v1" {
+		t.Fatalf("unexpected version, want v1, got %s", version)
+	}
+
+	if defaultProfile != "default" {
+		t.Fatalf("unexpected default profile, want default, got %s", defaultProfile)
+	}
+
+	if len(profiles) != 2 {
+		t.Fatalf("unexpected length of profiles, want 2, got %d", len(profiles))
+	}
+}
+
+func TestParseRawConfig_v1MissingDefault(t *testing.T) {
+	_, _, _, err := parseRawConfig([]byte(`p1:
+    example: example
+`))
+	if err == nil {
+		t.Fatalf("error should not be nil if default profile is missing in profiles")
+	}
+}
+
 func TestLookupConfigPath(t *testing.T) {
 	tmpdir, err := os.MkdirTemp("", "")
 	if err != nil {

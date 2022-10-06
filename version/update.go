@@ -152,11 +152,12 @@ func isVersionOutdated(target, latest string) bool {
 	t := strings.Split(target, ".")
 	l := strings.Split(latest, ".")
 	for i := range t {
+		if t[i] == l[i] {
+			continue
+		}
 		n1, _ := strconv.Atoi(t[i])
 		n2, _ := strconv.Atoi(l[i])
-		if n1 < n2 {
-			return true
-		}
+		return n1 < n2
 	}
 	return false
 }

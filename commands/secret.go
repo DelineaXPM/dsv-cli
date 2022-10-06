@@ -23,6 +23,13 @@ import (
 	"github.com/spf13/viper"
 )
 
+func DescribeOpWrappers(targetEntity string) []*predictor.Params {
+	return []*predictor.Params{
+		{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, targetEntity), Predictor: predictor.NewSecretPathPredictorDefault()},
+		{Name: cst.ID, Shorthand: "i", Usage: fmt.Sprintf("Target %s for a %s", cst.ID, targetEntity)},
+	}
+}
+
 func GetNoDataOpWrappers(targetEntity string) []*predictor.Params {
 	return []*predictor.Params{
 		{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, targetEntity), Predictor: predictor.NewSecretPathPredictorDefault()},
@@ -56,7 +63,7 @@ Usage:
 `, cst.NounSecret, cst.ProductName, cst.ExamplePath),
 		FlagsPredictor: GetNoDataOpWrappers(cst.NounSecret),
 		MinNumberArgs:  1,
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			id := viper.GetString(cst.ID)
 			path := viper.GetString(cst.Path)
 			if path == "" && id == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
@@ -65,7 +72,7 @@ Usage:
 			if path == "" && id == "" {
 				return cli.RunResultHelp
 			}
-			return handleSecretReadCmd(vaultcli.New(), cst.NounSecret, args)
+			return handleSecretReadCmd(vcli, cst.NounSecret, args)
 		},
 	})
 }
@@ -84,8 +91,8 @@ Usage:
 		FlagsPredictor:    GetNoDataOpWrappers(cst.NounSecret),
 		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
 		MinNumberArgs:     1,
-		RunFunc: func(args []string) int {
-			return handleSecretReadCmd(vaultcli.New(), cst.NounSecret, args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleSecretReadCmd(vcli, cst.NounSecret, args)
 		},
 	})
 }
@@ -100,11 +107,11 @@ Usage:
    • secret %[1]s %[4]s
    • secret %[1]s --path %[4]s -f id
 `, cst.Describe, cst.NounSecret, cst.ProductName, cst.ExamplePath),
-		FlagsPredictor:    GetNoDataOpWrappers(cst.NounSecret),
+		FlagsPredictor:    DescribeOpWrappers(cst.NounSecret),
 		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
 		MinNumberArgs:     1,
-		RunFunc: func(args []string) int {
-			return handleSecretDescribeCmd(vaultcli.New(), cst.NounSecret, args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleSecretDescribeCmd(vcli, cst.NounSecret, args)
 		},
 	})
 }
@@ -126,8 +133,8 @@ Usage:
 		},
 		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
 		MinNumberArgs:     1,
-		RunFunc: func(args []string) int {
-			return handleSecretDeleteCmd(vaultcli.New(), cst.NounSecret, args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleSecretDeleteCmd(vcli, cst.NounSecret, args)
 		},
 	})
 }
@@ -147,8 +154,8 @@ Usage:
 		},
 		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
 		MinNumberArgs:     1,
-		RunFunc: func(args []string) int {
-			return handleSecretRestoreCmd(vaultcli.New(), cst.NounSecret, args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleSecretRestoreCmd(vcli, cst.NounSecret, args)
 		},
 	})
 }
@@ -173,8 +180,8 @@ Usage:
 			{Name: cst.ID, Shorthand: "i", Usage: fmt.Sprintf("Target %s for a %s", cst.ID, cst.NounSecret)},
 		},
 		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
-		RunFunc: func(args []string) int {
-			return handleSecretUpsertCmd(vaultcli.New(), cst.NounSecret, cst.Update, args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleSecretUpsertCmd(vcli, cst.NounSecret, cst.Update, args)
 		},
 	})
 }
@@ -196,8 +203,8 @@ Usage:
 		},
 		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
 		MinNumberArgs:     1,
-		RunFunc: func(args []string) int {
-			return handleSecretRollbackCmd(vaultcli.New(), cst.NounSecret, args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleSecretRollbackCmd(vcli, cst.NounSecret, args)
 		},
 	})
 }
@@ -218,8 +225,8 @@ Usage:
 		},
 		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
 		MinNumberArgs:     1,
-		RunFunc: func(args []string) int {
-			return handleSecretEditCmd(vaultcli.New(), cst.NounSecret, args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleSecretEditCmd(vcli, cst.NounSecret, args)
 		},
 	})
 }
@@ -241,8 +248,8 @@ Usage:
 			{Name: cst.DataDescription, Usage: fmt.Sprintf("Description of a %s", cst.NounSecret)},
 			{Name: cst.DataAttributes, Usage: fmt.Sprintf("Attributes of a %s", cst.NounSecret)},
 		},
-		RunFunc: func(args []string) int {
-			return handleSecretUpsertCmd(vaultcli.New(), cst.NounSecret, cst.Create, args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleSecretUpsertCmd(vcli, cst.NounSecret, cst.Create, args)
 		},
 	})
 }
@@ -256,8 +263,8 @@ func GetSecretBustCacheCmd() (cli.Command, error) {
 Usage:
    • secret bustcache
 `,
-		RunFunc: func(args []string) int {
-			return handleBustCacheCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleBustCacheCmd(vcli, args)
 		},
 	})
 }
@@ -277,8 +284,8 @@ Usage:
     • secret %[1]s --query production --search-field attributes.stage --search-comparison equal
 `, cst.Search, cst.NounSecret, cst.ProductName, cst.ExampleUserSearch),
 		FlagsPredictor: GetSearchOpWrappers(),
-		RunFunc: func(args []string) int {
-			return handleSecretSearchCmd(vaultcli.New(), cst.NounSecret, args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleSecretSearchCmd(vcli, cst.NounSecret, args)
 		},
 	})
 }
@@ -309,12 +316,7 @@ func handleSecretDescribeCmd(vcli vaultcli.CLI, secretType string, args []string
 	if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		path = args[0]
 	}
-	suffix := cst.SuffixDescription
-	if version := strings.TrimSpace(viper.GetString(cst.Version)); version != "" {
-		suffix = fmt.Sprint(suffix, "/", cst.Version, "/", version)
-	}
-	resp, err := getSecret(vcli, secretType, path, id, suffix)
-
+	resp, err := getSecret(vcli, secretType, path, id, cst.SuffixDescription)
 	vcli.Out().WriteResponse(resp, err)
 	return 0
 }

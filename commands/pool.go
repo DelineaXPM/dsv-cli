@@ -23,7 +23,7 @@ func GetPoolCmd() (cli.Command, error) {
 		Path:         []string{cst.NounPool},
 		SynopsisText: "Manage engine pools",
 		HelpText:     "Work with engine pools",
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			path := viper.GetString(cst.Path)
 			if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 				path = args[0]
@@ -31,7 +31,7 @@ func GetPoolCmd() (cli.Command, error) {
 			if path == "" {
 				return cli.RunResultHelp
 			}
-			return handlePoolRead(vaultcli.New(), args)
+			return handlePoolRead(vcli, args)
 		},
 	})
 }
@@ -46,11 +46,11 @@ Usage:
 		FlagsPredictor: []*predictor.Params{
 			{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounPool)},
 		},
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			if OnlyGlobalArgs(args) {
-				return handlePoolCreateWizard(vaultcli.New())
+				return handlePoolCreateWizard(vcli)
 			}
-			return handlePoolCreate(vaultcli.New(), args)
+			return handlePoolCreate(vcli, args)
 		},
 	})
 }
@@ -66,8 +66,8 @@ Usage:
 			{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounPool)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handlePoolRead(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handlePoolRead(vcli, args)
 		},
 	})
 }
@@ -79,8 +79,8 @@ func GetPoolListCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s`, cst.NounPool, cst.List),
-		RunFunc: func(args []string) int {
-			return handlePoolList(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handlePoolList(vcli, args)
 		},
 	})
 }
@@ -96,8 +96,8 @@ Usage:
 			{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounPool)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handlePoolDelete(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handlePoolDelete(vcli, args)
 		},
 	})
 }

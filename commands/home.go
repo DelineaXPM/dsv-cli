@@ -21,13 +21,13 @@ func GetHomeCmd() (cli.Command, error) {
 Usage:
    • home %[3]s
    • home --path %[3]s
-		`, cst.NounHome, cst.ProductName, cst.ExamplePath),
+`, cst.NounHome, cst.ProductName, cst.ExamplePath),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret), Predictor: predictor.NewSecretPathPredictorDefault()},
 			{Name: cst.Version, Usage: "List the current and last (n) versions"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			path := viper.GetString(cst.Path)
 			if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 				path = args[0]
@@ -35,7 +35,7 @@ Usage:
 			if path == "" {
 				return cli.RunResultHelp
 			}
-			return handleHomeRead(vaultcli.New(), args)
+			return handleHomeRead(vcli, args)
 		},
 	})
 }
@@ -54,8 +54,8 @@ Usage:
 		},
 		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
 		MinNumberArgs:     1,
-		RunFunc: func(args []string) int {
-			return handleHomeRead(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleHomeRead(vcli, args)
 		},
 	})
 }
@@ -69,7 +69,7 @@ Usage:
    • %[2]s %[1]s %[4]s %[5]s
    • %[2]s %[1]s --path %[4]s --data %[5]s
    • %[2]s %[1]s --path %[4]s --data %[6]s
-		`, cst.Create, cst.NounHome, cst.ProductName, cst.ExamplePath, cst.ExampleDataJSON, cst.ExampleDataPath),
+`, cst.Create, cst.NounHome, cst.ProductName, cst.ExamplePath, cst.ExampleDataJSON, cst.ExampleDataPath),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in a %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), cst.NounSecret), Predictor: predictor.NewPrefixFilePredictor("*")},
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret), Predictor: predictor.NewSecretPathPredictorDefault()},
@@ -77,8 +77,8 @@ Usage:
 			{Name: cst.DataAttributes, Usage: fmt.Sprintf("Attributes of a %s", cst.NounSecret)},
 		},
 		MinNumberArgs: 2,
-		RunFunc: func(args []string) int {
-			return handleHomeCreate(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleHomeCreate(vcli, args)
 		},
 	})
 }
@@ -97,8 +97,8 @@ Usage:
 			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s", cst.NounSecret), ValueType: "bool"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleHomeDelete(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleHomeDelete(vcli, args)
 		},
 	})
 }
@@ -110,13 +110,13 @@ func GetHomeRestoreCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s %[3]s
-		`, cst.NounHome, cst.Restore, cst.ExamplePath),
+`, cst.NounHome, cst.Restore, cst.ExamplePath),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounHome), Predictor: predictor.NewSecretPathPredictorDefault()},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleHomeRestore(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleHomeRestore(vcli, args)
 		},
 	})
 }
@@ -139,8 +139,8 @@ Usage:
 			{Name: cst.Overwrite, Usage: fmt.Sprintf("Overwrite all the contents of %s data", cst.NounSecret), ValueType: "bool"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleHomeUpdate(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleHomeUpdate(vcli, args)
 		},
 	})
 }
@@ -153,14 +153,14 @@ func GetHomeRollbackCmd() (cli.Command, error) {
 Usage:
    • %[3]s %[1]s %[4]s --%[5]s 4
    • %[3]s %[1]s --path %[4]s
-		`, cst.Rollback, cst.NounSecret, cst.NounHome, cst.ExamplePath, cst.Version),
+`, cst.Rollback, cst.NounSecret, cst.NounHome, cst.ExamplePath, cst.Version),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s secret (required)", cst.Path, cst.NounHome), Predictor: predictor.NewSecretPathPredictorDefault()},
 			{Name: cst.Version, Usage: "The version to which to rollback"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleHomeRollback(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleHomeRollback(vcli, args)
 		},
 	})
 }
@@ -179,9 +179,9 @@ Usage:
    • %[2]s %[1]s --query aws --search-field attributes.type
    • %[2]s %[1]s --query 900 --search-field attributes.ttl --search-type number
    • %[2]s %[1]s --query production --search-field attributes.stage --search-comparison equal
-		`, cst.Search, cst.NounHome, cst.ProductName, cst.ExampleUserSearch),
-		RunFunc: func(args []string) int {
-			return handleHomeSearch(vaultcli.New(), args)
+`, cst.Search, cst.NounHome, cst.ProductName, cst.ExampleUserSearch),
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleHomeSearch(vcli, args)
 		},
 	})
 }
@@ -199,8 +199,8 @@ Usage:
    • %[1]s %[2]s --%[3]s %[4]s
 `, cst.NounHome, cst.Describe, cst.Path, cst.ExamplePath),
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleHomeDescribe(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleHomeDescribe(vcli, args)
 		},
 	})
 }
@@ -218,8 +218,8 @@ Usage:
    • %[1]s %[2]s --%[3]s %[4]s
 `, cst.NounHome, cst.Edit, cst.Path, cst.ExamplePath),
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleHomeEdit(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleHomeEdit(vcli, args)
 		},
 	})
 }

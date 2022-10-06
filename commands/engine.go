@@ -23,7 +23,7 @@ func GetEngineCmd() (cli.Command, error) {
 		Path:         []string{cst.NounEngine},
 		SynopsisText: "Manage engines",
 		HelpText:     "Work with engines",
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			path := viper.GetString(cst.Path)
 			if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 				path = args[0]
@@ -31,7 +31,7 @@ func GetEngineCmd() (cli.Command, error) {
 			if path == "" {
 				return cli.RunResultHelp
 			}
-			return handleEngineReadCmd(vaultcli.New(), args)
+			return handleEngineReadCmd(vcli, args)
 		},
 	})
 }
@@ -47,8 +47,8 @@ Usage:
 			{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounEngine)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleEngineReadCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleEngineReadCmd(vcli, args)
 		},
 	})
 }
@@ -60,8 +60,8 @@ func GetEngineListCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s`, cst.NounEngine, cst.List),
-		RunFunc: func(args []string) int {
-			return handleEngineListCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleEngineListCmd(vcli, args)
 		},
 	})
 }
@@ -77,8 +77,8 @@ Usage:
 			{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounEngine)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleEngineDeleteCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleEngineDeleteCmd(vcli, args)
 		},
 	})
 }
@@ -89,14 +89,13 @@ func GetEngineCreateCmd() (cli.Command, error) {
 		SynopsisText: "Create a new engine",
 		HelpText: fmt.Sprintf(`
 Usage:
-   • %[1]s %[2]s --%[3]s myengine --pool-name mypool
-   • %[1]s %[2]s --%[3]s myengine --pool-name mypool --auth-signing-type ed25519`, cst.NounEngine, cst.Create, cst.DataName),
+   • %[1]s %[2]s --%[3]s myengine --pool-name mypool`, cst.NounEngine, cst.Create, cst.DataName),
 		FlagsPredictor: []*predictor.Params{
 			{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounEngine)},
 			{Name: cst.DataPoolName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounPool)},
 		},
-		RunFunc: func(args []string) int {
-			return handleEngineCreateCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleEngineCreateCmd(vcli, args)
 		},
 	})
 }
@@ -112,8 +111,8 @@ Usage:
 			{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounEngine)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleEnginePingCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleEnginePingCmd(vcli, args)
 		},
 	})
 }

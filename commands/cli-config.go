@@ -32,7 +32,7 @@ func GetCliConfigCmd() (cli.Command, error) {
 		SynopsisText: "Manage the CLI configuration",
 		HelpText:     "Execute an action on the cli config for " + cst.ProductName,
 		NoPreAuth:    true,
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			return cli.RunResultHelp
 		},
 	})
@@ -127,8 +127,8 @@ Examples:
 
 			{Name: cst.Dev, Hidden: true, Usage: "Specify dev domain upon initialization (ignored when '--domain' is used)"},
 		},
-		RunFunc: func(args []string) int {
-			return handleCliConfigInitCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleCliConfigInitCmd(vcli, args)
 		},
 	})
 }
@@ -149,8 +149,8 @@ Usage:
 			{Name: cst.Value, Usage: "Value of setting to be udpated (required)"},
 		},
 		MinNumberArgs: 2,
-		RunFunc: func(args []string) int {
-			return handleCliConfigUpdateCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleCliConfigUpdateCmd(vcli, args)
 		},
 	})
 }
@@ -161,8 +161,8 @@ func GetCliConfigClearCmd() (cli.Command, error) {
 		SynopsisText: strings.Join([]string{cst.NounCliConfig, cst.Clear}, " "),
 		HelpText:     "Clear the cli config for " + cst.ProductName,
 		NoPreAuth:    true,
-		RunFunc: func(args []string) int {
-			return handleCliConfigClearCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleCliConfigClearCmd(vcli, args)
 		},
 	})
 }
@@ -173,8 +173,8 @@ func GetCliConfigReadCmd() (cli.Command, error) {
 		SynopsisText: strings.Join([]string{cst.NounCliConfig, cst.Read}, " "),
 		HelpText:     "Read the cli config for " + cst.ProductName,
 		NoPreAuth:    true,
-		RunFunc: func(args []string) int {
-			return handleCliConfigReadCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleCliConfigReadCmd(vcli, args)
 		},
 	})
 }
@@ -185,8 +185,8 @@ func GetCliConfigEditCmd() (cli.Command, error) {
 		SynopsisText: strings.Join([]string{cst.NounCliConfig, cst.Edit}, " "),
 		HelpText:     "Edit the cli config for " + cst.ProductName,
 		NoPreAuth:    true,
-		RunFunc: func(args []string) int {
-			return handleCliConfigEditCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleCliConfigEditCmd(vcli, args)
 		},
 	})
 }
@@ -202,8 +202,8 @@ func GetCliConfigUseProfileCmd() (cli.Command, error) {
 For interactive mode provide no arguments:
    • cli-config use-profile`,
 		NoPreAuth: true,
-		RunFunc: func(args []string) int {
-			return handleCliConfigUseProfileCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleCliConfigUseProfileCmd(vcli, args)
 		},
 	})
 }
@@ -404,6 +404,9 @@ func handleCliConfigEditCmd(vcli vaultcli.CLI, args []string) int {
 	}
 
 	_, err := vcli.Edit(cf.Bytes(), saveFunc)
+	if err != nil {
+		err.Grow("Invalid configuration:")
+	}
 
 	vcli.Out().WriteResponse(nil, err)
 	return utils.GetExecStatus(err)

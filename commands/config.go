@@ -30,9 +30,9 @@ func GetConfigCmd() (cli.Command, error) {
 Usage:
    • config %[1]s
    • config %[4]s --data %[5]s
-		`, cst.Read, cst.NounConfig, cst.ProductName, cst.Update, cst.ExampleConfigPath),
-		RunFunc: func(args []string) int {
-			return handleConfigReadCmd(vaultcli.New(), args)
+`, cst.Read, cst.NounConfig, cst.ProductName, cst.Update, cst.ExampleConfigPath),
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleConfigReadCmd(vcli, args)
 		},
 	})
 }
@@ -44,12 +44,12 @@ func GetConfigReadCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`Read the %[2]s from %[3]s
 Usage:
    • config %[1]s
-		`, cst.Read, cst.NounConfig, cst.ProductName),
+`, cst.Read, cst.NounConfig, cst.ProductName),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Version, Usage: "List the current and last (n) versions"},
 		},
-		RunFunc: func(args []string) int {
-			return handleConfigReadCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleConfigReadCmd(vcli, args)
 		},
 	})
 }
@@ -63,13 +63,13 @@ Usage:
    • config %[1]s --data %[4]s --encoding yml
    • config %[1]s @/tmp/conf.json
    • config %[1]s "{\"tenantName: \"ambarco\"...}\" --encoding json
-		`, cst.Update, cst.NounConfig, cst.ProductName, cst.ExampleConfigPath),
+`, cst.Update, cst.NounConfig, cst.ProductName, cst.ExampleConfigPath),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in the %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), cst.Config), Predictor: predictor.NewPrefixFilePredictor("*")},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleConfigUpdateCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleConfigUpdateCmd(vcli, args)
 		},
 	})
 }
@@ -82,9 +82,9 @@ func GetConfigEditCmd() (cli.Command, error) {
 Usage:
    • config edit
    • config edit --encoding yml
-		`, cst.NounConfig, cst.ProductName),
-		RunFunc: func(args []string) int {
-			return handleConfigEditCmd(vaultcli.New(), args)
+`, cst.NounConfig, cst.ProductName),
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleConfigEditCmd(vcli, args)
 		},
 	})
 }

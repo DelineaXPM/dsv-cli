@@ -31,7 +31,7 @@ func GetAuthProviderCmd() (cli.Command, error) {
 			{Name: cst.Version, Usage: "List the current and last (n) versions"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			name := viper.GetString(cst.DataName)
 			if name == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 				name = args[0]
@@ -39,7 +39,7 @@ func GetAuthProviderCmd() (cli.Command, error) {
 			if name == "" {
 				return cli.RunResultHelp
 			}
-			return handleAuthProviderReadCmd(vaultcli.New(), args)
+			return handleAuthProviderReadCmd(vcli, args)
 		},
 	})
 }
@@ -53,14 +53,14 @@ func GetAuthProviderReadCmd() (cli.Command, error) {
 Usage:
    • %[1]s %[2]s %[4]s %[3]s
    • %[1]s %[2]s %[4]s --name %[3]s
-		`, cst.NounConfig, cst.NounAuthProvider, cst.ExampleAuthProviderName, cst.Read),
+`, cst.NounConfig, cst.NounAuthProvider, cst.ExampleAuthProviderName, cst.Read),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataName, Shorthand: "n", Usage: fmt.Sprintf("Target %s to an %s", cst.Path, cst.NounAuthProvider)},
 			{Name: cst.Version, Usage: "List the current and last (n) versions"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleAuthProviderReadCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleAuthProviderReadCmd(vcli, args)
 		},
 	})
 }
@@ -74,14 +74,14 @@ func GetAuthProviderDeleteCmd() (cli.Command, error) {
 Usage:
    • %[1]s %[2]s %[3]s %[4]s --all
    • %[1]s %[2]s %[3]s --name %[4]s --force
-		`, cst.NounConfig, cst.NounAuthProvider, cst.Delete, cst.ExampleAuthProviderName),
+`, cst.NounConfig, cst.NounAuthProvider, cst.Delete, cst.ExampleAuthProviderName),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataName, Shorthand: "n", Usage: fmt.Sprintf("Target %s to an %s", cst.Path, cst.NounAuthProvider)},
 			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s", cst.NounAuthProvider), ValueType: "bool"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleAuthProviderDeleteCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleAuthProviderDeleteCmd(vcli, args)
 		},
 	})
 }
@@ -95,13 +95,13 @@ func GetAuthProviderRestoreCmd() (cli.Command, error) {
 Usage:
    • %[1]s %[2]s %[3]s %[4]s
    • %[1]s %[2]s %[3]s --name %[4]s
-		`, cst.NounConfig, cst.NounAuthProvider, cst.Restore, cst.ExampleAuthProviderName),
+`, cst.NounConfig, cst.NounAuthProvider, cst.Restore, cst.ExampleAuthProviderName),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataName, Shorthand: "n", Usage: fmt.Sprintf("Target %s to an %s", cst.Path, cst.NounAuthProvider)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleAuthProviderRestoreCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleAuthProviderRestoreCmd(vcli, args)
 		},
 	})
 }
@@ -119,7 +119,7 @@ Usage:
    • %[1]s %[2]s %[4]s --data %[5]s
 
  %[6]s
-		`, cst.NounConfig, cst.NounAuthProvider, cst.ExampleAuthProviderName, cst.Create, cst.ExampleDataPath, cst.GCPNote),
+`, cst.NounConfig, cst.NounAuthProvider, cst.ExampleAuthProviderName, cst.Create, cst.ExampleDataPath, cst.GCPNote),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in an auth provider. Prefix with '@' to denote filepath", strings.Title(cst.Data)), Predictor: predictor.NewPrefixFilePredictor("*")},
 			{Name: cst.DataType, Usage: "Auth provider type (azure,aws,gcp,thycoticone)", Predictor: predictor.AuthTypePredictor{}},
@@ -132,11 +132,11 @@ Usage:
 			{Name: cst.ThyOneAuthClientSecret, Usage: "Thycotic One client secret"},
 			{Name: cst.SendWelcomeEmail, Usage: "Whether to send welcome email for thycotic-one users linked to the auth provider (true or false)"},
 		},
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			if OnlyGlobalArgs(args) {
-				return handleAuthProviderCreateWizard(vaultcli.New())
+				return handleAuthProviderCreateWizard(vcli)
 			}
-			return handleAuthProviderCreate(vaultcli.New(), args)
+			return handleAuthProviderCreate(vcli, args)
 		},
 	})
 }
@@ -152,7 +152,7 @@ Usage:
    • %[1]s %[2]s %[4]s --name azure-prod --azure-tenant-id 164543 --type azure
    • %[1]s %[2]s %[4]s --name GCP-prod --gcp-project-id test-proj --type gcp
    • %[1]s %[2]s %[4]s --data %[5]s
-		`, cst.NounConfig, cst.NounAuthProvider, cst.ExampleAuthProviderName, cst.Update, cst.ExampleDataPath),
+`, cst.NounConfig, cst.NounAuthProvider, cst.ExampleAuthProviderName, cst.Update, cst.ExampleDataPath),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in an auth provider. Prefix with '@' to denote filepath", strings.Title(cst.Data)), Predictor: predictor.NewPrefixFilePredictor("*")},
 			{Name: cst.DataType, Usage: "Auth provider type (azure,aws,gcp,thycoticone)", Predictor: predictor.AuthTypePredictor{}},
@@ -165,11 +165,11 @@ Usage:
 			{Name: cst.ThyOneAuthClientSecret, Usage: "Thycotic One client secret"},
 			{Name: cst.SendWelcomeEmail, Usage: "Whether to send welcome email for thycotic-one users linked to the auth provider (true or false)"},
 		},
-		RunFunc: func(args []string) int {
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			if OnlyGlobalArgs(args) {
-				return handleAuthProviderUpdateWizard(vaultcli.New())
+				return handleAuthProviderUpdateWizard(vcli)
 			}
-			return handleAuthProviderUpdate(vaultcli.New(), args)
+			return handleAuthProviderUpdate(vcli, args)
 		},
 	})
 }
@@ -183,13 +183,13 @@ func GetAuthProviderEditCmd() (cli.Command, error) {
 Usage:
    • %[1]s %[2]s %[4]s %[3]s
    • %[1]s %[2]s %[4]s --name %[3]s
-		`, cst.NounConfig, cst.NounAuthProvider, cst.ExampleAuthProviderName, cst.Edit),
+`, cst.NounConfig, cst.NounAuthProvider, cst.ExampleAuthProviderName, cst.Edit),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataName, Shorthand: "n", Usage: fmt.Sprintf("Target %s to an %s", cst.Path, cst.NounAuthProvider)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleAuthProviderEdit(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleAuthProviderEdit(vcli, args)
 		},
 	})
 }
@@ -203,14 +203,14 @@ func GetAuthProviderRollbackCmd() (cli.Command, error) {
 Usage:
    • %[1]s %[2]s %[4]s %[3]s
    • %[1]s %[2]s %[4]s --version %[5]s 1
-		`, cst.NounConfig, cst.NounAuthProvider, cst.ExampleAuthProviderName, cst.Rollback, cst.Version),
+`, cst.NounConfig, cst.NounAuthProvider, cst.ExampleAuthProviderName, cst.Rollback, cst.Version),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataName, Shorthand: "n", Usage: fmt.Sprintf("Target %s to an %s", cst.Path, cst.NounAuthProvider)},
 			{Name: cst.Version, Usage: "The version to which to rollback"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(args []string) int {
-			return handleAuthProviderRollbackCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleAuthProviderRollbackCmd(vcli, args)
 		},
 	})
 }
@@ -224,15 +224,15 @@ func GetAuthProviderSearchCmd() (cli.Command, error) {
 Usage:
    • %[1]s %[2]s %[3]s %[4]s
    • %[1]s %[2]s %[3]s --query %[4]s
-		`, cst.NounConfig, cst.NounAuthProvider, cst.Search, cst.ExampleAuthProviderName),
+`, cst.NounConfig, cst.NounAuthProvider, cst.Search, cst.ExampleAuthProviderName),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("Filter %s of items to fetch (required)", strings.Title(cst.Query))},
 			{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
 			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 		},
 		MinNumberArgs: 0,
-		RunFunc: func(args []string) int {
-			return handleAuthProviderSearchCmd(vaultcli.New(), args)
+		RunFunc: func(vcli vaultcli.CLI, args []string) int {
+			return handleAuthProviderSearchCmd(vcli, args)
 		},
 	})
 }
