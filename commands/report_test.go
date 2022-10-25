@@ -13,6 +13,21 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestGetReportCmd(t *testing.T) {
+	_, err := GetReportCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetSecretReportCmd(t *testing.T) {
+	_, err := GetSecretReportCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetGroupReportCmd(t *testing.T) {
+	_, err := GetGroupReportCmd()
+	assert.Nil(t, err)
+}
+
 func TestHandleSecretReport(t *testing.T) {
 	testCase := []struct {
 		name        string
@@ -65,9 +80,6 @@ func TestHandleSecretReport(t *testing.T) {
 			errors.New(e.New("error")),
 		},
 	}
-
-	_, err := GetSecretReportCmd()
-	assert.Nil(t, err)
 
 	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {
@@ -153,9 +165,6 @@ func TestHandleGroupReport(t *testing.T) {
 			errors.New(e.New("error")),
 		},
 	}
-
-	_, err := GetSecretReportCmd()
-	assert.Nil(t, err)
 
 	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {

@@ -31,9 +31,7 @@ Usage:
    • config %[1]s
    • config %[4]s --data %[5]s
 `, cst.Read, cst.NounConfig, cst.ProductName, cst.Update, cst.ExampleConfigPath),
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleConfigReadCmd(vcli, args)
-		},
+		RunFunc: handleConfigReadCmd,
 	})
 }
 
@@ -48,9 +46,7 @@ Usage:
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Version, Usage: "List the current and last (n) versions"},
 		},
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleConfigReadCmd(vcli, args)
-		},
+		RunFunc: handleConfigReadCmd,
 	})
 }
 
@@ -68,9 +64,7 @@ Usage:
 			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in the %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), cst.Config), Predictor: predictor.NewPrefixFilePredictor("*")},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleConfigUpdateCmd(vcli, args)
-		},
+		RunFunc:       handleConfigUpdateCmd,
 	})
 }
 
@@ -83,9 +77,7 @@ Usage:
    • config edit
    • config edit --encoding yml
 `, cst.NounConfig, cst.ProductName),
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleConfigEditCmd(vcli, args)
-		},
+		RunFunc: handleConfigEditCmd,
 	})
 }
 

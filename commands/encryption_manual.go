@@ -24,9 +24,8 @@ func GetCryptoManualCmd() (cli.Command, error) {
 		Path:         []string{cst.NounEncryption, cst.Manual},
 		SynopsisText: "Encryption-as-a-Service with a Manual Key",
 		HelpText:     "Encryption-as-a-Service with a Manual Key",
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return cli.RunResultHelp
-		},
+		NoConfigRead: true,
+		NoPreAuth:    true,
 	})
 }
 
@@ -47,9 +46,7 @@ Usage:
 			{Name: cst.Metadata, Usage: "Metadata as a JSON object (optional)"},
 		},
 		MinNumberArgs: 6,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleUploadManualKey(vcli, args)
-		},
+		RunFunc:       handleUploadManualKey,
 	})
 }
 
@@ -69,9 +66,7 @@ Usage:
 			{Name: cst.Metadata, Usage: "Metadata as a JSON object (optional)"},
 		},
 		MinNumberArgs: 4,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleUpdateManualKey(vcli, args)
-		},
+		RunFunc:       handleUpdateManualKey,
 	})
 }
 
@@ -87,9 +82,7 @@ Usage:
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounKey), Predictor: predictor.NewSecretPathPredictorDefault()},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleReadManualKey(vcli, args)
-		},
+		RunFunc:       handleReadManualKey,
 	})
 }
 
@@ -106,9 +99,7 @@ Usage:
 			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s and all its versions", cst.NounKey), ValueType: "bool"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleDeleteManualKey(vcli, args)
-		},
+		RunFunc:       handleDeleteManualKey,
 	})
 }
 
@@ -124,9 +115,7 @@ Usage:
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounKey), Predictor: predictor.NewSecretPathPredictorDefault()},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleRestoreManualKey(vcli, args)
-		},
+		RunFunc:       handleRestoreManualKey,
 	})
 }
 
@@ -146,9 +135,7 @@ Usage:
 			{Name: cst.Output, Usage: "Output file for encrypted value and metadata"},
 		},
 		MinNumberArgs: 4,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleManualKeyEncrypt(vcli, args)
-		},
+		RunFunc:       handleManualKeyEncrypt,
 	})
 }
 
@@ -168,9 +155,7 @@ Usage:
 			{Name: cst.Output, Usage: "Output file for decrypted value and metadata"},
 		},
 		MinNumberArgs: 2,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleManualKeyDecrypt(vcli, args)
-		},
+		RunFunc:       handleManualKeyDecrypt,
 	})
 }
 

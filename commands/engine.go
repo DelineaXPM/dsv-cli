@@ -47,9 +47,7 @@ Usage:
 			{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounEngine)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleEngineReadCmd(vcli, args)
-		},
+		RunFunc:       handleEngineReadCmd,
 	})
 }
 
@@ -60,9 +58,7 @@ func GetEngineListCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s`, cst.NounEngine, cst.List),
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleEngineListCmd(vcli, args)
-		},
+		RunFunc: handleEngineListCmd,
 	})
 }
 
@@ -77,9 +73,7 @@ Usage:
 			{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounEngine)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleEngineDeleteCmd(vcli, args)
-		},
+		RunFunc:       handleEngineDeleteCmd,
 	})
 }
 
@@ -94,9 +88,8 @@ Usage:
 			{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounEngine)},
 			{Name: cst.DataPoolName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounPool)},
 		},
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleEngineCreateCmd(vcli, args)
-		},
+		RunFunc:    handleEngineCreateCmd,
+		WizardFunc: handleEngineCreateWizard,
 	})
 }
 
@@ -111,9 +104,7 @@ Usage:
 			{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounEngine)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleEnginePingCmd(vcli, args)
-		},
+		RunFunc:       handleEnginePingCmd,
 	})
 }
 
@@ -172,10 +163,6 @@ func handleEnginePingCmd(vcli vaultcli.CLI, args []string) int {
 }
 
 func handleEngineCreateCmd(vcli vaultcli.CLI, args []string) int {
-	if OnlyGlobalArgs(args) {
-		return handleEngineCreateWizard(vcli, args)
-	}
-
 	engineName := viper.GetString(cst.DataName)
 	poolName := viper.GetString(cst.DataPoolName)
 	if engineName == "" || poolName == "" {
@@ -195,7 +182,7 @@ func handleEngineCreateCmd(vcli vaultcli.CLI, args []string) int {
 
 // Wizards:
 
-func handleEngineCreateWizard(vcli vaultcli.CLI, args []string) int {
+func handleEngineCreateWizard(vcli vaultcli.CLI) int {
 	qs := []*survey.Question{
 		{
 			Name:   "EngineName",

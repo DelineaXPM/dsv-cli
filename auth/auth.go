@@ -13,7 +13,6 @@ import (
 	"thy/paths"
 	"thy/requests"
 	"thy/store"
-	"thy/utils"
 
 	"github.com/spf13/viper"
 )
@@ -315,7 +314,7 @@ func (r *requestBody) validate(at AuthType) error {
 	for _, k := range paramSpecDict[at] {
 		f := ref.FieldByName(k.PropName)
 		if f.String() == "" {
-			return utils.NewMissingArgError(k.ArgName)
+			return errors.NewF("--%s must be set", k.ArgName)
 		}
 	}
 	return nil

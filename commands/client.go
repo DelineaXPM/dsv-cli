@@ -29,11 +29,11 @@ Usage:
    • %[1]s --client-id %[3]s
 `, cst.NounClient, cst.ProductName, cst.ExampleClientID),
 		FlagsPredictor: []*predictor.Params{
-			{Name: cst.ClientID, Usage: fmt.Sprintf("ID of the %s ", cst.NounClient)},
+			{Name: cst.ClientID, Usage: "ID of the client"},
 		},
 		MinNumberArgs: 1,
 		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			name := viper.GetString(cst.DataName)
+			name := viper.GetString(cst.ClientID)
 			if name == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 				name = args[0]
 			}
@@ -56,12 +56,10 @@ Usage:
    • %[1]s %[4]s --client-id %[3]s
 `, cst.NounClient, cst.ProductName, cst.ExampleClientID, cst.Read),
 		FlagsPredictor: []*predictor.Params{
-			{Name: cst.ClientID, Usage: fmt.Sprintf("ID of the %s ", cst.NounClient)},
+			{Name: cst.ClientID, Usage: "ID of the client"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleClientReadCmd(vcli, args)
-		},
+		RunFunc:       handleClientReadCmd,
 	})
 }
 
@@ -76,13 +74,11 @@ Usage:
    • %[1]s %[4]s --client-id %[3]s --force
 `, cst.NounClient, cst.ProductName, cst.ExampleClientID, cst.Delete),
 		FlagsPredictor: []*predictor.Params{
-			{Name: cst.ClientID, Usage: fmt.Sprintf("ID of the %s ", cst.NounClient)},
+			{Name: cst.ClientID, Usage: "ID of the client"},
 			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s", cst.NounClient), ValueType: "bool"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleClientDeleteCmd(vcli, args)
-		},
+		RunFunc:       handleClientDeleteCmd,
 	})
 }
 
@@ -96,12 +92,10 @@ Usage:
    • %[1]s %[4]s %[3]s
 `, cst.NounClient, cst.ProductName, cst.ExampleClientID, cst.Restore),
 		FlagsPredictor: []*predictor.Params{
-			{Name: cst.ClientID, Usage: fmt.Sprintf("ID of the %s ", cst.NounClient)},
+			{Name: cst.ClientID, Usage: "ID of the client"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleClientRestoreCmd(vcli, args)
-		},
+		RunFunc:       handleClientRestoreCmd,
 	})
 }
 
@@ -123,12 +117,8 @@ Usage:
 			{Name: cst.NounClientDesc, Usage: "Client credential description (optional)"},
 			{Name: cst.NounClientTTL, Usage: "How long until the client credential expires. If set to 0, it can be used indefinitely. Default is 0 (optional)"},
 		},
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			if OnlyGlobalArgs(args) {
-				return handleClientCreateWizard(vcli, args)
-			}
-			return handleClientCreateCmd(vcli, args)
-		},
+		RunFunc:    handleClientCreateCmd,
+		WizardFunc: handleClientCreateWizard,
 	})
 }
 
@@ -144,13 +134,11 @@ Usage:
 `, cst.NounClient, cst.ProductName, cst.ExampleRoleName, cst.Search, cst.NounRole),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.NounRole, Usage: "Role that has attached clients (required)"},
-			{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
+			{Name: cst.Limit, Shorthand: "l", Usage: cst.LimitHelpMessage},
 			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleClientSearchCmd(vcli, args)
-		},
+		RunFunc:       handleClientSearchCmd,
 	})
 }
 
@@ -245,7 +233,7 @@ func handleClientSearchCmd(vcli vaultcli.CLI, args []string) int {
 
 // Wizards:
 
-func handleClientCreateWizard(vcli vaultcli.CLI, args []string) int {
+func handleClientCreateWizard(vcli vaultcli.CLI) int {
 	qs := []*survey.Question{
 		{
 			Name:   "Role",

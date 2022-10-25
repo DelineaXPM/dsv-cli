@@ -48,20 +48,18 @@ func GetAuthProviderReadCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.Config, cst.NounAuthProvider, cst.Read},
 		SynopsisText: fmt.Sprintf("%s %s %s (<name> | --name|-n)", cst.NounConfig, cst.NounAuthProvider, cst.Read),
-		HelpText: fmt.Sprintf(`Read a %[1]s
+		HelpText: `Read an authentication provider
 
 Usage:
-   • %[1]s %[2]s %[4]s %[3]s
-   • %[1]s %[2]s %[4]s --name %[3]s
-`, cst.NounConfig, cst.NounAuthProvider, cst.ExampleAuthProviderName, cst.Read),
+   • config auth-provider read aws-dev
+   • config auth-provider read --name aws-dev
+`,
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataName, Shorthand: "n", Usage: fmt.Sprintf("Target %s to an %s", cst.Path, cst.NounAuthProvider)},
 			{Name: cst.Version, Usage: "List the current and last (n) versions"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleAuthProviderReadCmd(vcli, args)
-		},
+		RunFunc:       handleAuthProviderReadCmd,
 	})
 }
 
@@ -69,20 +67,18 @@ func GetAuthProviderDeleteCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.Config, cst.NounAuthProvider, cst.Delete},
 		SynopsisText: fmt.Sprintf("%s %s %s (<name> | --name|-n)", cst.Config, cst.NounAuthProvider, cst.Delete),
-		HelpText: fmt.Sprintf(`Delete %[1]s
+		HelpText: `Delete an authentication provider
 
 Usage:
-   • %[1]s %[2]s %[3]s %[4]s --all
-   • %[1]s %[2]s %[3]s --name %[4]s --force
-`, cst.NounConfig, cst.NounAuthProvider, cst.Delete, cst.ExampleAuthProviderName),
+   • config auth-provider delete aws-dev
+   • config auth-provider delete --name aws-dev --force
+`,
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataName, Shorthand: "n", Usage: fmt.Sprintf("Target %s to an %s", cst.Path, cst.NounAuthProvider)},
 			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s", cst.NounAuthProvider), ValueType: "bool"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleAuthProviderDeleteCmd(vcli, args)
-		},
+		RunFunc:       handleAuthProviderDeleteCmd,
 	})
 }
 
@@ -90,39 +86,38 @@ func GetAuthProviderRestoreCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.Config, cst.NounAuthProvider, cst.Restore},
 		SynopsisText: fmt.Sprintf("%s %s %s (<name> | --name|-n)", cst.Config, cst.NounAuthProvider, cst.Restore),
-		HelpText: fmt.Sprintf(`Restore %[1]s
+		HelpText: `Restore an authentication provider
 
 Usage:
-   • %[1]s %[2]s %[3]s %[4]s
-   • %[1]s %[2]s %[3]s --name %[4]s
-`, cst.NounConfig, cst.NounAuthProvider, cst.Restore, cst.ExampleAuthProviderName),
+   • config auth-provider restore aws-dev
+   • config auth-provider restore --name aws-dev
+`,
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataName, Shorthand: "n", Usage: fmt.Sprintf("Target %s to an %s", cst.Path, cst.NounAuthProvider)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleAuthProviderRestoreCmd(vcli, args)
-		},
+		RunFunc:       handleAuthProviderRestoreCmd,
 	})
 }
 
 func GetAuthProviderCreateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path:         []string{cst.NounAuthProvider, cst.Create},
-		SynopsisText: fmt.Sprintf("%s %s %s (<name> | --name|-n) (--type) ((--data|-d) | --aws-account-id | --azure-tenant-id | --gcp-project-id | --root-ca-path | --assumed-role)", cst.NounConfig, cst.NounAuthProvider, cst.Create),
-		HelpText: fmt.Sprintf(`Add %[1]s provider
+		Path:         []string{cst.Config, cst.NounAuthProvider, cst.Create},
+		SynopsisText: fmt.Sprintf("%s %s %s (<name> | --name|-n) (--type) ((--data|-d) | --aws-account-id | --azure-tenant-id | --gcp-project-id)", cst.NounConfig, cst.NounAuthProvider, cst.Create),
+		HelpText: `Add an authentication provider
 
 Usage:
-   • %[1]s %[2]s %[4]s %[3]s --aws-account-id 11652944433808  --type aws
-   • %[1]s %[2]s %[4]s --name azure-prod --azure-tenant-id 164543 --type azure
-   • %[1]s %[2]s %[4]s --name GCP-prod --gcp-project-id test-proj --type gcp
-   • %[1]s %[2]s %[4]s --data %[5]s
+   • config auth-provider create aws-dev --aws-account-id 11652944433808  --type aws
+   • config auth-provider create --name azure-prod --azure-tenant-id 164543 --type azure
+   • config auth-provider create --name GCP-prod --gcp-project-id test-proj --type gcp
+   • config auth-provider create --data @/tmp/data.json
 
- %[6]s
-`, cst.NounConfig, cst.NounAuthProvider, cst.ExampleAuthProviderName, cst.Create, cst.ExampleDataPath, cst.GCPNote),
+GCP GCE metadata auth provider can be created in the command line, but a GCP Service Account must be done using a file.
+See the Authentication:GCP portion of the documentation.
+`,
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in an auth provider. Prefix with '@' to denote filepath", strings.Title(cst.Data)), Predictor: predictor.NewPrefixFilePredictor("*")},
-			{Name: cst.DataType, Usage: "Auth provider type (azure,aws,gcp,thycoticone)", Predictor: predictor.AuthTypePredictor{}},
+			{Name: cst.DataType, Usage: "Auth provider type (azure,aws,gcp,thycoticone)", Predictor: predictor.AuthProviderTypePredictor{}},
 			{Name: cst.DataName, Shorthand: "n", Usage: "Auth provider friendly name"},
 			{Name: cst.DataTenantID, Usage: "Azure Tenant ID"},
 			{Name: cst.DataAccountID, Usage: "AWS Account ID"},
@@ -132,30 +127,26 @@ Usage:
 			{Name: cst.ThyOneAuthClientSecret, Usage: "Thycotic One client secret"},
 			{Name: cst.SendWelcomeEmail, Usage: "Whether to send welcome email for thycotic-one users linked to the auth provider (true or false)"},
 		},
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			if OnlyGlobalArgs(args) {
-				return handleAuthProviderCreateWizard(vcli)
-			}
-			return handleAuthProviderCreate(vcli, args)
-		},
+		RunFunc:    handleAuthProviderCreate,
+		WizardFunc: handleAuthProviderCreateWizard,
 	})
 }
 
 func GetAuthProviderUpdateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.Config, cst.NounAuthProvider, cst.Update},
-		SynopsisText: fmt.Sprintf("%s %s %s (<name> | --name|-n) (--type) ((--data|-d) | --aws-account-id | --azure-tenant-id | --gcp-project-id | --root-ca-path | --assumed-role)", cst.NounConfig, cst.NounAuthProvider, cst.Update),
-		HelpText: fmt.Sprintf(`Update %[1]s properties
+		SynopsisText: fmt.Sprintf("%s %s %s (<name> | --name|-n) (--type) ((--data|-d) | --aws-account-id | --azure-tenant-id | --gcp-project-id)", cst.NounConfig, cst.NounAuthProvider, cst.Update),
+		HelpText: `Update an authentication provider
 
 Usage:
-   • %[1]s %[2]s %[4]s %[3]s --aws-account-id 11652944433808  --type aws
-   • %[1]s %[2]s %[4]s --name azure-prod --azure-tenant-id 164543 --type azure
-   • %[1]s %[2]s %[4]s --name GCP-prod --gcp-project-id test-proj --type gcp
-   • %[1]s %[2]s %[4]s --data %[5]s
-`, cst.NounConfig, cst.NounAuthProvider, cst.ExampleAuthProviderName, cst.Update, cst.ExampleDataPath),
+   • config auth-provider update aws-dev --aws-account-id 11652944433808  --type aws
+   • config auth-provider update --name azure-prod --azure-tenant-id 164543 --type azure
+   • config auth-provider update --name GCP-prod --gcp-project-id test-proj --type gcp
+   • config auth-provider update --data @/tmp/data.json
+`,
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in an auth provider. Prefix with '@' to denote filepath", strings.Title(cst.Data)), Predictor: predictor.NewPrefixFilePredictor("*")},
-			{Name: cst.DataType, Usage: "Auth provider type (azure,aws,gcp,thycoticone)", Predictor: predictor.AuthTypePredictor{}},
+			{Name: cst.DataType, Usage: "Auth provider type (azure,aws,gcp,thycoticone)", Predictor: predictor.AuthProviderTypePredictor{}},
 			{Name: cst.DataName, Shorthand: "n", Usage: "Auth provider friendly name"},
 			{Name: cst.DataTenantID, Usage: "Azure Tenant ID"},
 			{Name: cst.DataAccountID, Usage: "AWS Account ID"},
@@ -165,12 +156,8 @@ Usage:
 			{Name: cst.ThyOneAuthClientSecret, Usage: "Thycotic One client secret"},
 			{Name: cst.SendWelcomeEmail, Usage: "Whether to send welcome email for thycotic-one users linked to the auth provider (true or false)"},
 		},
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			if OnlyGlobalArgs(args) {
-				return handleAuthProviderUpdateWizard(vcli)
-			}
-			return handleAuthProviderUpdate(vcli, args)
-		},
+		RunFunc:    handleAuthProviderUpdate,
+		WizardFunc: handleAuthProviderUpdateWizard,
 	})
 }
 
@@ -178,19 +165,17 @@ func GetAuthProviderEditCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.Config, cst.NounAuthProvider, cst.Edit},
 		SynopsisText: fmt.Sprintf("%s %s %s (<name> | --name|-n)", cst.NounConfig, cst.NounAuthProvider, cst.Edit),
-		HelpText: fmt.Sprintf(`Edit an auth provider
+		HelpText: `Edit an authentication provider
 
 Usage:
-   • %[1]s %[2]s %[4]s %[3]s
-   • %[1]s %[2]s %[4]s --name %[3]s
-`, cst.NounConfig, cst.NounAuthProvider, cst.ExampleAuthProviderName, cst.Edit),
+   • config auth-provider edit aws-dev
+   • config auth-provider edit --name aws-dev
+`,
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataName, Shorthand: "n", Usage: fmt.Sprintf("Target %s to an %s", cst.Path, cst.NounAuthProvider)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleAuthProviderEdit(vcli, args)
-		},
+		RunFunc:       handleAuthProviderEdit,
 	})
 }
 
@@ -198,20 +183,18 @@ func GetAuthProviderRollbackCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.Config, cst.NounAuthProvider, cst.Rollback},
 		SynopsisText: fmt.Sprintf("%s %s %s (<name> | --name|-n)", cst.NounConfig, cst.NounAuthProvider, cst.Rollback),
-		HelpText: fmt.Sprintf(`Rollback %[1]s properties
+		HelpText: `Rollback an authentication provider
 
 Usage:
-   • %[1]s %[2]s %[4]s %[3]s
-   • %[1]s %[2]s %[4]s --version %[5]s 1
-`, cst.NounConfig, cst.NounAuthProvider, cst.ExampleAuthProviderName, cst.Rollback, cst.Version),
+   • config auth-provider rollback aws-dev
+   • config auth-provider rollback --name aws-dev --version 1
+`,
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataName, Shorthand: "n", Usage: fmt.Sprintf("Target %s to an %s", cst.Path, cst.NounAuthProvider)},
 			{Name: cst.Version, Usage: "The version to which to rollback"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleAuthProviderRollbackCmd(vcli, args)
-		},
+		RunFunc:       handleAuthProviderRollbackCmd,
 	})
 }
 
@@ -219,64 +202,61 @@ func GetAuthProviderSearchCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.Config, cst.NounAuthProvider, cst.Search},
 		SynopsisText: fmt.Sprintf("%s %s %s (<query> | --query)", cst.NounConfig, cst.NounAuthProvider, cst.Search),
-		HelpText: fmt.Sprintf(`Search for a %[1]s
+		HelpText: `Search for an authentication provider
 
 Usage:
-   • %[1]s %[2]s %[3]s %[4]s
-   • %[1]s %[2]s %[3]s --query %[4]s
-`, cst.NounConfig, cst.NounAuthProvider, cst.Search, cst.ExampleAuthProviderName),
+   • config auth-provider search aws-dev
+   • config auth-provider search --query aws-dev
+`,
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("Filter %s of items to fetch (required)", strings.Title(cst.Query))},
-			{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
+			{Name: cst.Limit, Shorthand: "l", Usage: cst.LimitHelpMessage},
 			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 		},
-		MinNumberArgs: 0,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleAuthProviderSearchCmd(vcli, args)
-		},
+		RunFunc: handleAuthProviderSearchCmd,
 	})
 }
 
 func handleAuthProviderReadCmd(vcli vaultcli.CLI, args []string) int {
-	path, status := getAuthProviderParams(args)
-	if status != 0 {
-		return status
+	name := getAuthProviderName(args)
+	if name == "" {
+		return cli.RunResultHelp
 	}
-	path = paths.ProcessResource(path)
+	name = paths.ProcessResource(name)
 	ver := viper.GetString(cst.Version)
 	if strings.TrimSpace(ver) != "" {
-		path = fmt.Sprint(path, "/", cst.Version, "/", ver)
+		name = fmt.Sprint(name, "/", cst.Version, "/", ver)
 	}
 
-	data, apiErr := authProviderRead(vcli, path)
+	data, apiErr := authProviderRead(vcli, name)
 	vcli.Out().WriteResponse(data, apiErr)
 	return utils.GetExecStatus(apiErr)
 }
 
 func handleAuthProviderDeleteCmd(vcli vaultcli.CLI, args []string) int {
-	path, status := getAuthProviderParams(args)
-	if status != 0 {
-		return status
+	name := getAuthProviderName(args)
+	if name == "" {
+		return cli.RunResultHelp
 	}
-	data, apiErr := authProviderDelete(vcli, path, viper.GetBool(cst.Force))
+	data, apiErr := authProviderDelete(vcli, name, viper.GetBool(cst.Force))
 	vcli.Out().WriteResponse(data, apiErr)
 	return utils.GetExecStatus(apiErr)
 }
 
 func handleAuthProviderRestoreCmd(vcli vaultcli.CLI, args []string) int {
-	path, status := getAuthProviderParams(args)
-	if status != 0 {
-		return status
+	name := getAuthProviderName(args)
+	if name == "" {
+		return cli.RunResultHelp
 	}
-	data, apiErr := authProviderRestore(vcli, path)
+	data, apiErr := authProviderRestore(vcli, name)
 	vcli.Out().WriteResponse(data, apiErr)
 	return utils.GetExecStatus(apiErr)
 }
 
 func handleAuthProviderCreate(vcli vaultcli.CLI, args []string) int {
-	name, status := getAuthProviderParams(args)
-	if status != 0 {
-		return status
+	name := getAuthProviderName(args)
+	if name == "" {
+		return cli.RunResultHelp
 	}
 
 	var model authProviderCreateRequest
@@ -315,9 +295,9 @@ func handleAuthProviderCreate(vcli vaultcli.CLI, args []string) int {
 }
 
 func handleAuthProviderUpdate(vcli vaultcli.CLI, args []string) int {
-	name, status := getAuthProviderParams(args)
-	if status != 0 {
-		return status
+	name := getAuthProviderName(args)
+	if name == "" {
+		return cli.RunResultHelp
 	}
 
 	var model authProviderUpdateRequest
@@ -355,16 +335,16 @@ func handleAuthProviderUpdate(vcli vaultcli.CLI, args []string) int {
 }
 
 func handleAuthProviderRollbackCmd(vcli vaultcli.CLI, args []string) int {
-	path, status := getAuthProviderParams(args)
-	if status != 0 {
-		return status
+	name := getAuthProviderName(args)
+	if name == "" {
+		return cli.RunResultHelp
 	}
 	version := viper.GetString(cst.Version)
 
 	// If version is not provided, get the current auth-provider item and parse the version from it.
 	// Submit a request for a version that's previous relative to the one found.
 	if version == "" {
-		data, apiErr := authProviderRead(vcli, path)
+		data, apiErr := authProviderRead(vcli, name)
 		if apiErr != nil {
 			vcli.Out().WriteResponse(data, apiErr)
 			return utils.GetExecStatus(apiErr)
@@ -378,7 +358,7 @@ func handleAuthProviderRollbackCmd(vcli vaultcli.CLI, args []string) int {
 		version = v
 	}
 
-	data, apiErr := authProviderRollback(vcli, path, version)
+	data, apiErr := authProviderRollback(vcli, name, version)
 	vcli.Out().WriteResponse(data, apiErr)
 	return utils.GetExecStatus(apiErr)
 }
@@ -398,12 +378,12 @@ func handleAuthProviderSearchCmd(vcli vaultcli.CLI, args []string) int {
 }
 
 func handleAuthProviderEdit(vcli vaultcli.CLI, args []string) int {
-	path, status := getAuthProviderParams(args)
-	if status != 0 {
-		return status
+	name := getAuthProviderName(args)
+	if name == "" {
+		return cli.RunResultHelp
 	}
 
-	data, apiErr := authProviderRead(vcli, paths.ProcessResource(path))
+	data, apiErr := authProviderRead(vcli, paths.ProcessResource(name))
 	if apiErr != nil {
 		vcli.Out().WriteResponse(data, apiErr)
 		return utils.GetExecStatus(apiErr)
@@ -414,7 +394,7 @@ func handleAuthProviderEdit(vcli vaultcli.CLI, args []string) int {
 		if mErr := json.Unmarshal(data, &model); mErr != nil {
 			return nil, errors.New(mErr).Grow("invalid format for auth provider")
 		}
-		_, apiErr := authProviderUpdate(vcli, paths.ProcessResource(path), &model)
+		_, apiErr := authProviderUpdate(vcli, paths.ProcessResource(name), &model)
 		return nil, apiErr
 	}
 
@@ -639,16 +619,12 @@ func authProviderThycoticOneWizard() (*AuthProviderProperties, error) {
 
 // Helpers:
 
-func getAuthProviderParams(args []string) (name string, status int) {
-	status = 0
-	name = viper.GetString(cst.DataName)
+func getAuthProviderName(args []string) string {
+	name := viper.GetString(cst.DataName)
 	if name == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		name = args[0]
 	}
-	if name == "" {
-		status = cli.RunResultHelp
-	}
-	return name, status
+	return name
 }
 
 type authProvider struct {

@@ -40,18 +40,15 @@ func GetPoolCreateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounPool, cst.Create},
 		SynopsisText: "Create a new empty pool of engines",
-		HelpText: fmt.Sprintf(`
+		HelpText: `
 Usage:
-   • %[1]s %[2]s --%[3]s mypool`, cst.NounPool, cst.Create, cst.DataName),
+   • pool create --name mypool
+`,
 		FlagsPredictor: []*predictor.Params{
 			{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounPool)},
 		},
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			if OnlyGlobalArgs(args) {
-				return handlePoolCreateWizard(vcli)
-			}
-			return handlePoolCreate(vcli, args)
-		},
+		RunFunc:    handlePoolCreate,
+		WizardFunc: handlePoolCreateWizard,
 	})
 }
 
@@ -59,16 +56,15 @@ func GetPoolReadCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounPool, cst.Read},
 		SynopsisText: "Get information on an existing pool of engines",
-		HelpText: fmt.Sprintf(`
+		HelpText: `
 Usage:
-   • %[1]s %[2]s --%[3]s mypool`, cst.NounPool, cst.Read, cst.DataName),
+   • pool read --name mypool
+`,
 		FlagsPredictor: []*predictor.Params{
 			{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounPool)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handlePoolRead(vcli, args)
-		},
+		RunFunc:       handlePoolRead,
 	})
 }
 
@@ -76,12 +72,11 @@ func GetPoolListCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounPool, cst.List},
 		SynopsisText: "List the names of all existing pools",
-		HelpText: fmt.Sprintf(`
+		HelpText: `
 Usage:
-   • %[1]s %[2]s`, cst.NounPool, cst.List),
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handlePoolList(vcli, args)
-		},
+   • pool list
+`,
+		RunFunc: handlePoolList,
 	})
 }
 
@@ -89,16 +84,15 @@ func GetPoolDeleteCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounPool, cst.Delete},
 		SynopsisText: "Delete an existing pool of engines",
-		HelpText: fmt.Sprintf(`
+		HelpText: `
 Usage:
-   • %[1]s %[2]s --%[3]s mypool`, cst.NounPool, cst.Delete, cst.DataName),
+   • pool delete --name mypool
+`,
 		FlagsPredictor: []*predictor.Params{
 			{Shorthand: "n", Name: cst.DataName, Usage: fmt.Sprintf("Name of the %s (required)", cst.NounPool)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handlePoolDelete(vcli, args)
-		},
+		RunFunc:       handlePoolDelete,
 	})
 }
 

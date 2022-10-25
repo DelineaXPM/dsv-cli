@@ -62,9 +62,7 @@ Usage:
 			{Name: cst.Version, Usage: "List the current and last (n) versions"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleRoleReadCmd(vcli, args)
-		},
+		RunFunc:       handleRoleReadCmd,
 	})
 }
 
@@ -80,12 +78,10 @@ Usage:
 `, cst.ProductName, cst.ExampleUserSearch),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Query, Shorthand: "q", Usage: "Query of roles to fetch (optional)"},
-			{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
+			{Name: cst.Limit, Shorthand: "l", Usage: cst.LimitHelpMessage},
 			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 		},
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleRoleSearchCmd(vcli, args)
-		},
+		RunFunc: handleRoleSearchCmd,
 	})
 }
 
@@ -104,9 +100,7 @@ Usage:
 			{Name: cst.Force, Usage: "Immediately delete the role", ValueType: "bool"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleRoleDeleteCmd(vcli, args)
-		},
+		RunFunc:       handleRoleDeleteCmd,
 	})
 }
 
@@ -123,9 +117,7 @@ Usage:
 			{Name: cst.DataName, Shorthand: "n", Usage: "Name of the role"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleRoleRestoreCmd(vcli, args)
-		},
+		RunFunc:       handleRoleRestoreCmd,
 	})
 }
 
@@ -142,12 +134,8 @@ Usage:
 			{Name: cst.DataName, Shorthand: "n", Usage: "Name of the role (required)"},
 			{Name: cst.DataDescription, Usage: "Description of the role"},
 		},
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			if OnlyGlobalArgs(args) {
-				return handleRoleUpdateWizard(vcli, args)
-			}
-			return handleRoleUpdateCmd(vcli, args)
-		},
+		RunFunc:    handleRoleUpdateCmd,
+		WizardFunc: handleRoleUpdateWizard,
 	})
 }
 
@@ -166,12 +154,8 @@ Usage:
 			{Name: cst.DataExternalID, Usage: "External Id for the role"},
 			{Name: cst.DataProvider, Usage: "Provider for the role"},
 		},
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			if OnlyGlobalArgs(args) {
-				return handleRoleWorkflow(vcli, args)
-			}
-			return handleRoleCreateCmd(vcli, args)
-		},
+		RunFunc:    handleRoleCreateCmd,
+		WizardFunc: handleRoleCreateWizard,
 	})
 }
 
@@ -288,7 +272,7 @@ func handleRoleUpdateCmd(vcli vaultcli.CLI, args []string) int {
 
 // Wizards:
 
-func handleRoleWorkflow(vcli vaultcli.CLI, args []string) int {
+func handleRoleCreateWizard(vcli vaultcli.CLI) int {
 	providers, apiError := listAuthProviders(vcli)
 	if apiError != nil {
 		httpResp := apiError.HttpResponse()
@@ -382,7 +366,7 @@ func handleRoleWorkflow(vcli vaultcli.CLI, args []string) int {
 	return utils.GetExecStatus(apiErr)
 }
 
-func handleRoleUpdateWizard(vcli vaultcli.CLI, args []string) int {
+func handleRoleUpdateWizard(vcli vaultcli.CLI) int {
 	var roleName string
 	namePrompt := &survey.Input{Message: "Role name:"}
 	survErr := survey.AskOne(namePrompt, &roleName, survey.WithValidator(vaultcli.SurveyRequired))

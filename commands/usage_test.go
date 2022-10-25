@@ -15,6 +15,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestGetUsageCmd(t *testing.T) {
+	_, err := GetUsageCmd()
+	assert.Nil(t, err)
+}
+
 func TestHandleGetUsageCmd(t *testing.T) {
 	today := fmt.Sprintf("--%s=%s", cst.StartDate, time.Now().Format("2006-01-02"))
 	cases := []struct {
@@ -37,9 +42,6 @@ func TestHandleGetUsageCmd(t *testing.T) {
 			errors.New(e.New("error: must specify " + cst.StartDate)),
 		},
 	}
-
-	_, err := GetUsageCmd()
-	assert.Nil(t, err)
 
 	viper.Set(cst.Version, "v1")
 	for _, tt := range cases {

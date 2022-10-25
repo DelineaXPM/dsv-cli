@@ -40,12 +40,11 @@ func GetSiemCreateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounSiem, cst.Create},
 		SynopsisText: "Create a new SIEM endpoint",
-		HelpText: fmt.Sprintf(`
+		HelpText: `
 Usage:
-   • %[1]s %[2]s`, cst.NounSiem, cst.Create),
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleSiemCreate(vcli, args)
-		},
+   • siem create
+`,
+		RunFunc: handleSiemCreate,
 	})
 }
 
@@ -55,14 +54,13 @@ func GetSiemUpdateCmd() (cli.Command, error) {
 		SynopsisText: "Update an existing SIEM endpoint",
 		HelpText: fmt.Sprintf(`
 Usage:
-   • %[1]s %[2]s %[4]s
-   • %[1]s %[2]s --%[3]s %[4]s`, cst.NounSiem, cst.Update, cst.Path, cst.ExampleSIEM),
+   • siem update %[1]s
+   • siem update --path %[1]s
+`, cst.ExampleSIEM),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Usage: "Path to existing SIEM"},
 		},
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleSiemUpdate(vcli, args)
-		},
+		RunFunc: handleSiemUpdate,
 	})
 }
 
@@ -72,15 +70,14 @@ func GetSiemReadCmd() (cli.Command, error) {
 		SynopsisText: "Read an existing SIEM endpoint",
 		HelpText: fmt.Sprintf(`
 Usage:
-   • %[1]s %[2]s %[4]s
-   • %[1]s %[2]s --%[3]s %[4]s`, cst.NounSiem, cst.Read, cst.Path, cst.ExampleSIEM),
+   • siem read %[1]s
+   • siem read --path %[1]s
+`, cst.ExampleSIEM),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Usage: "Path to existing SIEM"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleSiemRead(vcli, args)
-		},
+		RunFunc:       handleSiemRead,
 	})
 }
 
@@ -90,19 +87,18 @@ func GetSiemDeleteCmd() (cli.Command, error) {
 		SynopsisText: "Delete an existing SIEM endpoint",
 		HelpText: fmt.Sprintf(`
 Usage:
-   • %[1]s %[2]s %[4]s
-   • %[1]s %[2]s --%[3]s %[4]s`, cst.NounSiem, cst.Delete, cst.Path, cst.ExampleSIEM),
+   • siem delete %[1]s
+   • siem delete --path %[1]s
+`, cst.ExampleSIEM),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Usage: "Path to existing SIEM"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleSiemDelete(vcli, args)
-		},
+		RunFunc:       handleSiemDelete,
 	})
 }
 
-func GetSiemSearchCommand() (cli.Command, error) {
+func GetSiemSearchCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounSiem, cst.Search},
 		SynopsisText: `Search for SIEM endpoints`,
@@ -112,12 +108,10 @@ func GetSiemSearchCommand() (cli.Command, error) {
 `, cst.NounSiem, cst.Search, cst.ExampleSiemSearch),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("Filter %s of items to fetch (required)", cst.Query)},
-			{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
+			{Name: cst.Limit, Shorthand: "l", Usage: cst.LimitHelpMessage},
 			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 		},
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleSiemSearchCmd(vcli, args)
-		},
+		RunFunc: handleSiemSearchCmd,
 	})
 }
 

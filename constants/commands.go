@@ -188,6 +188,7 @@ const (
 // Common Help Messages
 const (
 	CursorHelpMessage = "Next cursor for additional results. The cursor is provided at the end of each body response (\"cursor\": \"MQ==\") (optional)"
+	LimitHelpMessage  = "Maximum number of results per cursor (optional)"
 )
 
 // Security

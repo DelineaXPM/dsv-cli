@@ -67,9 +67,7 @@ Usage:
 			{Name: cst.Version, Usage: "List the current and last (n) versions"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleUserReadCmd(vcli, args)
-		},
+		RunFunc:       handleUserReadCmd,
 	})
 }
 
@@ -85,12 +83,10 @@ Usage:
 `, cst.NounUser, cst.ProductName, cst.ExampleUserSearch),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("%s of %ss to fetch (optional)", strings.Title(cst.Query), cst.NounUser)},
-			{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
+			{Name: cst.Limit, Shorthand: "l", Usage: cst.LimitHelpMessage},
 			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 		},
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleUserSearchCmd(vcli, args)
-		},
+		RunFunc: handleUserSearchCmd,
 	})
 }
 
@@ -109,9 +105,7 @@ Usage:
 			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s", cst.NounUser), ValueType: "bool"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleUserDeleteCmd(vcli, args)
-		},
+		RunFunc:       handleUserDeleteCmd,
 	})
 }
 
@@ -128,9 +122,7 @@ Usage:
 			{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to fetch (required)", strings.Title(cst.DataUsername), cst.NounUser)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleUserRestoreCmd(vcli, args)
-		},
+		RunFunc:       handleUserRestoreCmd,
 	})
 }
 
@@ -151,12 +143,8 @@ Usage:
 			{Name: cst.DataExternalID, Usage: fmt.Sprintf("%s of %s to be updated", strings.Title(strings.Replace(cst.DataExternalID, ".", " ", -1)), cst.NounUser)},
 			{Name: cst.DataProvider, Usage: fmt.Sprintf("External %s of %s to be updated", strings.Title(cst.DataProvider), cst.NounUser)},
 		},
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			if OnlyGlobalArgs(args) {
-				return handleUserCreateWorkflow(vcli, args)
-			}
-			return handleUserCreateCmd(vcli, args)
-		},
+		RunFunc:    handleUserCreateCmd,
+		WizardFunc: handleUserCreateWizard,
 	})
 }
 
@@ -174,12 +162,8 @@ Usage:
 			{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to be updated (required)", strings.Title(cst.DataUsername), cst.NounUser)},
 			{Name: cst.DataDisplayname, Usage: fmt.Sprintf("%s of %s to be updated", strings.Title(cst.DataDisplayname), cst.NounUser)},
 		},
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			if OnlyGlobalArgs(args) {
-				return handleUserUpdateWorkflow(vcli, args)
-			}
-			return handleUserUpdateCmd(vcli, args)
-		},
+		RunFunc:    handleUserUpdateCmd,
+		WizardFunc: handleUserUpdateWizard,
 	})
 }
 
@@ -320,7 +304,7 @@ func handleUserUpdateCmd(vcli vaultcli.CLI, args []string) int {
 
 // Wizards:
 
-func handleUserCreateWorkflow(vcli vaultcli.CLI, args []string) int {
+func handleUserCreateWizard(vcli vaultcli.CLI) int {
 	providers, apiError := listAuthProviders(vcli)
 	if apiError != nil {
 		httpResp := apiError.HttpResponse()
@@ -418,7 +402,7 @@ func handleUserCreateWorkflow(vcli vaultcli.CLI, args []string) int {
 	return utils.GetExecStatus(apiError)
 }
 
-func handleUserUpdateWorkflow(vcli vaultcli.CLI, args []string) int {
+func handleUserUpdateWizard(vcli vaultcli.CLI) int {
 	var username string
 	usernamePrompt := &survey.Input{Message: "Username:"}
 	survErr := survey.AskOne(usernamePrompt, &username, survey.WithValidator(vaultcli.SurveyRequired))

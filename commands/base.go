@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	stderrors "errors"
 	"fmt"
 	"io"
 	"log"
@@ -16,7 +17,6 @@ import (
 	"thy/auth"
 	cst "thy/constants"
 	"thy/errors"
-	"thy/format"
 	"thy/internal/predictor"
 	"thy/utils"
 	"thy/vaultcli"
@@ -34,7 +34,7 @@ func BasePredictorWrappers() []*predictor.Params {
 		homePath = "%USERPROFILE%"
 	}
 	return []*predictor.Params{
-		{Name: cst.Callback, Usage: fmt.Sprintf("Callback URL for oidc authentication [default: %s", cst.DefaultCallback), Global: true, Hidden: true},
+		{Name: cst.Callback, Usage: fmt.Sprintf("Callback URL for oidc authentication [default: %s]", cst.DefaultCallback), Global: true, Hidden: true},
 		{Name: cst.AuthProvider, Usage: "Authentication provider name for federated authentication", Global: true, Hidden: true},
 		{Name: cst.Profile, Usage: "Configuration Profile [default:default]", Global: true},
 		{Name: cst.Tenant, Shorthand: "t", Usage: "Tenant used for auth", Global: true},
@@ -61,72 +61,107 @@ func BasePredictorWrappers() []*predictor.Params {
 }
 
 type CommandArgs struct {
-	Path              []string
-	RunFunc           func(vcli vaultcli.CLI, args []string) int
-	HelpText          string
-	SynopsisText      string
-	ArgsPredictorFunc func(complete.Args) []string
-	FlagsPredictor    []*predictor.Params
-	NoPreAuth         bool
-	MinNumberArgs     int
+	Path           []string
+	RunFunc        func(vcli vaultcli.CLI, args []string) int
+	WizardFunc     func(vcli vaultcli.CLI) int
+	HelpText       string
+	SynopsisText   string
+	ArgsPredictor  complete.Predictor
+	FlagsPredictor []*predictor.Params
+	NoConfigRead   bool
+	NoPreAuth      bool
+	MinNumberArgs  int
 }
 
-// NewCommand creates new baseCommand
 func NewCommand(args CommandArgs) (cli.Command, error) {
 	if len(args.Path) == 0 {
-		return nil, utils.NewMissingArgError(cst.Path)
-	}
-	cmd := &baseCommand{
-		path:          args.Path,
-		runFunc:       args.RunFunc,
-		helpText:      args.HelpText,
-		synopsisText:  args.SynopsisText,
-		noPreAuth:     args.NoPreAuth,
-		minNumberArgs: args.MinNumberArgs,
+		return nil, fmt.Errorf("command path must be defined")
 	}
 
-	cmd.flagsPredictor = make(map[string]*predictor.Wrapper)
+	runFunc := args.RunFunc
+	if runFunc == nil {
+		// Show help by default.
+		runFunc = func(vcli vaultcli.CLI, args []string) int { return cli.RunResultHelp }
+	}
+
+	cmd := &baseCommand{
+		path:           args.Path,
+		runFunc:        runFunc,
+		wizardFunc:     args.WizardFunc,
+		helpText:       args.HelpText,
+		synopsisText:   args.SynopsisText,
+		noConfigRead:   args.NoConfigRead,
+		noPreAuth:      args.NoPreAuth,
+		minNumberArgs:  args.MinNumberArgs,
+		argsPredictor:  args.ArgsPredictor,
+		flagsPredictor: make(map[string]*predictor.Wrapper),
+	}
+
 	for _, v := range BasePredictorWrappers() {
 		w := predictor.New(v)
-		cmd.flagsPredictor["--"+w.FriendlyName] = w
+		cmd.flagsPredictor[w.FriendlyName] = w
 	}
 	for _, v := range args.FlagsPredictor {
 		w := predictor.New(v)
-		cmd.flagsPredictor["--"+w.FriendlyName] = w
+		cmd.flagsPredictor[w.FriendlyName] = w
 	}
 
-	if args.ArgsPredictorFunc != nil {
-		cmd.argsPredictorFunc = func() complete.Predictor {
-			return complete.PredictFunc(args.ArgsPredictorFunc)
-		}
-	}
 	return cmd, nil
 }
 
 type baseCommand struct {
-	path              []string
-	runFunc           func(vcli vaultcli.CLI, args []string) int
-	helpText          string
-	synopsisText      string
-	argsPredictorFunc func() complete.Predictor
-	flagsPredictor    map[string]*predictor.Wrapper
-	noPreAuth         bool
-	minNumberArgs     int
+	path           []string
+	runFunc        func(vcli vaultcli.CLI, args []string) int
+	wizardFunc     func(vcli vaultcli.CLI) int
+	helpText       string
+	synopsisText   string
+	argsPredictor  complete.Predictor
+	flagsPredictor map[string]*predictor.Wrapper
+	noConfigRead   bool
+	noPreAuth      bool
+	minNumberArgs  int
 }
 
-func (c *baseCommand) preRun(args []string) int {
+// Synopsis satisfies cli.Command interface.
+func (c *baseCommand) Synopsis() string { return c.synopsisText }
+
+// Run satisfies cli.Command interface.
+func (c *baseCommand) Run(args []string) int {
 	if len(args) < c.minNumberArgs {
 		return cli.RunResultHelp
 	}
 
-	c.SetFlags()
-	setVerbosity()
+	onlyGlobalFlags, err := c.parseFlags()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Flags error: %v.\n", err)
+		fmt.Fprintf(os.Stderr, "See %s %s --help.\n", os.Args[0], strings.Join(c.path, " "))
+		return 1
+	}
 
-	if viper.GetBool(cst.Verbose) {
-		log.Printf("DSV CLI version %s", version.Version)
-		log.Printf("\t- platform:  %s/%s", runtime.GOOS, runtime.GOARCH)
-		log.Printf("\t- gitCommit: %s", version.GitCommit)
-		log.Printf("\t- buildDate: %s", version.GetBuildDate())
+	doVerbose := viper.GetBool(cst.Verbose)
+
+	if doVerbose {
+		log.SetOutput(os.Stderr)
+
+		fmt.Fprintf(os.Stderr, "DSV CLI version %s\n", version.Version)
+		fmt.Fprintf(os.Stderr, "\t- platform:  %s/%s\n", runtime.GOOS, runtime.GOARCH)
+		fmt.Fprintf(os.Stderr, "\t- gitCommit: %s\n", version.GitCommit)
+		fmt.Fprintf(os.Stderr, "\t- buildDate: %s\n\n", version.GetBuildDate())
+	}
+
+	vcli := vaultcli.New()
+
+	if !c.noConfigRead {
+		err := vaultcli.ViperInit()
+		// If tenant is set then probably it is ok to run without configuration file.
+		if err != nil && viper.GetString(cst.Tenant) == "" {
+			if stderrors.Is(err, vaultcli.ErrFileNotFound) {
+				vcli.Out().FailS("Run 'dsv init' to initiate CLI configuration - cannot find config.")
+			} else {
+				vcli.Out().FailF("Error: %v.", err)
+			}
+			return 1
+		}
 	}
 
 	encoding := viper.GetString(cst.Encoding)
@@ -146,71 +181,74 @@ func (c *baseCommand) preRun(args []string) int {
 	} else if upd != nil {
 		log.SetOutput(os.Stderr)
 		log.Println(upd)
-		setVerbosity()
+
+		if !doVerbose {
+			log.SetOutput(io.Discard)
+		}
 	}
 
 	if !c.noPreAuth {
-		tokenResponse, err := auth.NewAuthenticatorDefault().GetToken()
+		tokenResponse, err := vcli.Authenticator().GetToken()
 		if err != nil || tokenResponse == nil || tokenResponse.Token == "" {
-			format.NewDefaultOutClient().WriteResponse(nil, err)
-			os.Exit(1)
+			vcli.Out().WriteResponse(nil, err)
+			return 1
 		}
 		viper.Set("token", tokenResponse.Token)
 	}
-	return 0
-}
 
-func setVerbosity() {
-	if viper.GetBool(cst.Verbose) {
-		log.SetOutput(os.Stderr)
-	} else {
-		log.SetOutput(io.Discard)
+	if onlyGlobalFlags && c.wizardFunc != nil {
+		return c.wizardFunc(vcli)
 	}
+	return c.runFunc(vcli, args)
 }
 
-func (c *baseCommand) SetFlags() {
-	flag.Parse()
+func (c *baseCommand) parseFlags() (bool, error) {
+	// Return an error when parsing flags, so it can be handled outside of spf13/pflag.
+	flag.CommandLine.Init(os.Args[0], flag.ContinueOnError)
+	err := flag.CommandLine.Parse(os.Args[1:])
+	if err != nil {
+		return false, err
+	}
 
-	for _, e := range c.flagsPredictor {
-		v := e.Val
-		if v.Name == "" {
+	onlyGlobals := true
+
+	for _, flg := range c.flagsPredictor {
+		if flg.Name == "" {
 			continue
 		}
-		viperVal := viper.Get(v.Name)
-		if v.String() != "" || (viperVal == "" && v.DefaultValue != "") {
-			val := v.String()
-			if val == "" {
-				val = v.DefaultValue
+
+		v := flg.Val
+		viperVal := viper.Get(flg.Name)
+		flagVal := flg.Val.String()
+
+		if flagVal != "" && !flg.Global {
+			onlyGlobals = false
+		}
+
+		if flagVal != "" || (viperVal == "" && v.DefaultValue != "") {
+			if flagVal == "" {
+				flagVal = flg.Val.DefaultValue
 			}
 
 			if v.Type() == "bool" {
-				if b, err := strconv.ParseBool(val); err == nil {
-					viper.Set(v.Name, b)
+				if b, err := strconv.ParseBool(flagVal); err == nil {
+					viper.Set(flg.Name, b)
 				}
 			} else {
-				viper.Set(v.Name, val)
+				viper.Set(flg.Name, flagVal)
 			}
 
 			// HACK: There should be a better way to tell authenticator not to read from
 			// cache and not to save to cache. This hack uses viper as a global storage
 			// and passes configuration to authenticator through it.
 			// This hack helps to skip cache when global auth related flag used.
-			if e.Global && strings.HasPrefix(v.Name, cst.NounAuth) {
+			if flg.Global && strings.HasPrefix(flg.Name, cst.NounAuth) {
 				viper.Set(cst.AuthSkipCache, true)
 			}
 		}
 	}
-}
 
-// Run satisfies cli.Command interface
-func (c *baseCommand) Run(args []string) int {
-	sig := c.preRun(args)
-	if sig != 0 {
-		return sig
-	}
-
-	vcli := vaultcli.New()
-	return c.runFunc(vcli, args)
+	return onlyGlobals, nil
 }
 
 // Help satisfies cli.Command interface.
@@ -271,105 +309,39 @@ Global:{{ range $value := .FlagsGlobal }}
 	return b.String()
 }
 
-// Synopsis satisfies cli.Command interface
-func (c *baseCommand) Synopsis() string {
-	return c.synopsisText
-}
-
 // AutocompleteFlags satisfies cli.CommandAutocomplete interface
 func (c *baseCommand) AutocompleteFlags() complete.Flags {
 	if c.flagsPredictor == nil {
 		return nil
 	}
 
-	// TODO : THIS IS INEFFICENT. Need to change complete.command.go nil checks becuase they think that
-	// a derived type is not nil (complete.PredictNothing) when they are nil
+	// Ignore error since not all autocomplete funcs require config.
+	_ = vaultcli.ViperInit()
+
 	flags := complete.Flags{}
 	for k, v := range c.flagsPredictor {
-		if !cst.DontAutocompleteGlobals || !v.Global {
-			flags[k] = v.Predictor
-		}
+		flags["--"+k] = v.Predictor
 	}
 	return flags
 }
 
 // AutocompleteArgs satisfies cli.CommandAutocomplete interface
 func (c *baseCommand) AutocompleteArgs() complete.Predictor {
-	if c.argsPredictorFunc == nil {
+	if c.argsPredictor == nil {
 		return nil
 	}
-	return c.argsPredictorFunc()
+
+	// Ignore error since not all autocomplete funcs require config.
+	_ = vaultcli.ViperInit()
+
+	return c.argsPredictor
 }
 
 func ValidateParams(params map[string]string, requiredKeys []string) *errors.ApiError {
 	for _, k := range requiredKeys {
 		if val, ok := params[k]; !ok || val == "" {
-			return utils.NewMissingArgError(k)
+			return errors.NewF("--%s must be set", k)
 		}
 	}
 	return nil
-}
-
-// IsInit checks if passed in command line args contain an init command. IsInit supports both cli.Args and os.Args.
-func IsInit(args []string) bool {
-	if len(args) == 0 {
-		return false
-	}
-
-	var a []string
-	if args[0] == cst.CmdRoot {
-		a = args[1:]
-	} else {
-		a = args
-	}
-
-	if len(a) == 0 {
-		return false
-	}
-	if a[0] == cst.Init {
-		return true
-	}
-	if len(a) > 1 && strings.Contains(strings.Join(a, " "), cst.NounCliConfig+" "+cst.Init) {
-		return true
-	}
-	return false
-}
-
-// IsInstall checks if passed in command line args contain an install command.
-func IsInstall(args []string) bool {
-	for _, a := range args {
-		if a == "--install" || a == "-install" {
-			return true
-		}
-	}
-	return false
-}
-
-// OnlyGlobalArgs checks if passed in command line args to a subcommand are only global flags.
-// It assumes viper had already set values for relevant flags like profile and config.
-func OnlyGlobalArgs(args []string) bool {
-	globalFlags := BasePredictorWrappers()
-
-	var isGlobal bool
-	for _, arg := range args {
-		if !strings.HasPrefix(arg, "-") {
-			continue // skip, not a flag
-		}
-
-		f := strings.TrimPrefix(arg, "--")
-		f = strings.TrimPrefix(f, "-")
-		f = strings.Split(f, "=")[0]
-
-		isGlobal = false
-		for _, g := range globalFlags {
-			if f == vaultcli.ToFlagName(g.Name) || f == g.Shorthand {
-				isGlobal = g.Global
-				break
-			}
-		}
-		if !isGlobal {
-			return false
-		}
-	}
-	return true
 }

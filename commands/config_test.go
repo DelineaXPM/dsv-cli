@@ -14,6 +14,26 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestGetConfigCmd(t *testing.T) {
+	_, err := GetConfigCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetConfigReadCmd(t *testing.T) {
+	_, err := GetConfigReadCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetConfigUpdateCmd(t *testing.T) {
+	_, err := GetConfigUpdateCmd()
+	assert.Nil(t, err)
+}
+
+func TestGetConfigEditCmd(t *testing.T) {
+	_, err := GetConfigEditCmd()
+	assert.Nil(t, err)
+}
+
 func TestHandleConfigUpdateCmd(t *testing.T) {
 	testCase := []struct {
 		name        string
@@ -50,9 +70,6 @@ func TestHandleConfigUpdateCmd(t *testing.T) {
 			nil,
 		},
 	}
-
-	_, err := GetConfigUpdateCmd()
-	assert.Nil(t, err)
 
 	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {
@@ -119,9 +136,6 @@ func TestHandleConfigReadCmd(t *testing.T) {
 			errors.New(e.New("error")),
 		},
 	}
-
-	_, err := GetConfigReadCmd()
-	assert.Nil(t, err)
 
 	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {
@@ -190,9 +204,6 @@ func TestHandleConfigEditCmd(t *testing.T) {
 		},
 	}
 
-	_, err := GetConfigEditCmd()
-	assert.Nil(t, err)
-
 	for _, tt := range testCase {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
@@ -239,9 +250,4 @@ func TestHandleConfigEditCmd(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestGetConfigCmd(t *testing.T) {
-	_, err := GetConfigCmd()
-	assert.Nil(t, err)
 }

@@ -12,7 +12,6 @@ import (
 	cst "thy/constants"
 
 	"github.com/mitchellh/go-homedir"
-	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
 )
 
@@ -62,41 +61,6 @@ type configFileFormatV2 struct {
 	Version        string                            `yaml:"version"`
 	DefaultProfile string                            `yaml:"defaultProfile"`
 	Profiles       map[string]map[string]interface{} `yaml:"profiles"`
-}
-
-func ViperInit(cfgFile string, profile string, args []string) error {
-	viper.SetEnvPrefix(cst.EnvVarPrefix)
-	envReplacer := strings.NewReplacer(".", "_")
-	viper.SetEnvKeyReplacer(envReplacer)
-	viper.AutomaticEnv()
-
-	cf, err := ReadConfigFile(cfgFile)
-	if err != nil {
-		return err
-	}
-
-	if profile == "" {
-		profile = viper.GetString(cst.Profile)
-		if profile == "" {
-			profile = cf.DefaultProfile
-		}
-	}
-
-	// Set profile name to lower case globally.
-	profile = strings.ToLower(profile)
-	viper.Set(cst.Profile, profile)
-
-	config, ok := cf.GetProfile(profile)
-	if !ok {
-		return fmt.Errorf("profile %q not found in configuration file %q", profile, cf.GetPath())
-	}
-
-	err = viper.MergeConfigMap(config.data)
-	if err != nil {
-		return fmt.Errorf("cannot initialize Viper: %w", err)
-	}
-
-	return nil
 }
 
 func ReadConfigFile(path string) (*ConfigFile, error) {

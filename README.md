@@ -2,9 +2,13 @@
 
 An automation tool for the management of credentials for applications, databases, CI/CD tools, and services.
 
+## Installation
+
+Prebuilt binaries for Linux, macOS and Windows can be downloaded from https://dsv.secretsvaultcloud.com/downloads.
+
 ## Documentation
 
-The documentation is available at https://docs.delinea.com/dsv/current
+The documentation is available at https://docs.delinea.com/dsv/current.
 
 ## Development environment setup
 

@@ -35,3 +35,8 @@ func TestGetCliConfigEditCmd(t *testing.T) {
 	_, err := GetCliConfigEditCmd()
 	assert.Nil(t, err)
 }
+
+func TestGetCliConfigUseProfileCmd(t *testing.T) {
+	_, err := GetCliConfigUseProfileCmd()
+	assert.Nil(t, err)
+}

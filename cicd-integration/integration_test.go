@@ -380,7 +380,7 @@ func init() {
 		},
 
 		{"sign-with-root-cert", []string{"pki", "sign", "--rootcapath", existingRootSecret,
-			"--csrpath", "@" + csrPath, "--maxttl", "100H",
+			"--csrpath", "@" + csrPath, "--ttl", "100H",
 		},
 			outputPattern("certificate"),
 		},

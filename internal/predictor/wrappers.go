@@ -26,7 +26,6 @@ type Wrapper struct {
 type FlagValue struct {
 	Val          string
 	FlagType     string
-	Name         string
 	DefaultValue string
 }
 
@@ -66,42 +65,38 @@ func New(params *Params) *Wrapper {
 		w.Val = f.Value.(*FlagValue)
 
 	} else {
-		fv := FlagValue{
+		w.Val = &FlagValue{
 			FlagType:     params.ValueType,
-			Name:         params.Name,
 			DefaultValue: params.Default,
 		}
-		w.Val = &fv
-		f := flag.CommandLine.VarPF(&fv, cmdFriendlyName, params.Shorthand, params.Usage)
+		flag.VarP(w.Val, cmdFriendlyName, params.Shorthand, params.Usage)
 		if params.ValueType == "bool" {
-			f.NoOptDefVal = "true"
+			flag.Lookup(cmdFriendlyName).NoOptDefVal = "true"
 		}
+	}
+
+	if w.Hidden {
+		flag.CommandLine.MarkHidden(cmdFriendlyName)
 	}
 
 	return w
 }
 
-func (f *FlagValue) Set(v string) error {
+func (f *FlagValue) Set(value string) error {
 	if f.FlagType == "" || f.FlagType == "string" {
-		if v != "" && len(v) > 1 && strings.HasPrefix(v, "@") {
+		if len(value) > 1 && strings.HasPrefix(value, "@") {
 			f.FlagType = "file"
-			fname := v[1:]
-			if b, err := os.ReadFile(fname); err != nil {
+			fname := value[1:]
+			b, err := os.ReadFile(fname)
+			if err != nil {
 				return err
-			} else {
-				f.Val = string(b)
-				return nil
 			}
+			value = string(b)
 		}
 	}
-	f.Val = v
+	f.Val = value
 	return nil
 }
 
-func (f *FlagValue) Type() string {
-	return f.FlagType
-}
-
-func (f *FlagValue) String() string {
-	return f.Val
-}
+func (f *FlagValue) Type() string   { return f.FlagType }
+func (f *FlagValue) String() string { return f.Val }

@@ -28,9 +28,8 @@ func GetCryptoCmd() (cli.Command, error) {
 		Path:         []string{cst.NounEncryption},
 		SynopsisText: "Encryption-as-a-Service",
 		HelpText:     "Encryption-as-a-Service",
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return cli.RunResultHelp
-		},
+		NoConfigRead: true,
+		NoPreAuth:    true,
 	})
 }
 
@@ -46,9 +45,7 @@ Usage:
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounKey), Predictor: predictor.NewSecretPathPredictorDefault()},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleCreateAutoKey(vcli, args)
-		},
+		RunFunc:       handleCreateAutoKey,
 	})
 }
 
@@ -69,9 +66,7 @@ Usage:
 			{Name: cst.Output, Usage: "Output file for encrypted value and metadata"},
 		},
 		MinNumberArgs: 5,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleRotate(vcli, args)
-		},
+		RunFunc:       handleRotate,
 	})
 }
 
@@ -87,9 +82,7 @@ Usage:
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounKey), Predictor: predictor.NewSecretPathPredictorDefault()},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleReadAutoKey(vcli, args)
-		},
+		RunFunc:       handleReadAutoKey,
 	})
 }
 
@@ -106,9 +99,7 @@ Usage:
 			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s and all its versions", cst.NounKey), ValueType: "bool"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleDeleteAutoKey(vcli, args)
-		},
+		RunFunc:       handleDeleteAutoKey,
 	})
 }
 
@@ -124,9 +115,7 @@ Usage:
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounKey), Predictor: predictor.NewSecretPathPredictorDefault()},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleRestoreAutoKey(vcli, args)
-		},
+		RunFunc:       handleRestoreAutoKey,
 	})
 }
 
@@ -146,9 +135,7 @@ Usage:
 			{Name: cst.Output, Usage: "Output file for encrypted value and metadata"},
 		},
 		MinNumberArgs: 4,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleEncrypt(vcli, args)
-		},
+		RunFunc:       handleEncrypt,
 	})
 }
 
@@ -168,9 +155,7 @@ Usage:
 			{Name: cst.Output, Usage: "Output file for decrypted value and metadata"},
 		},
 		MinNumberArgs: 2,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleDecrypt(vcli, args)
-		},
+		RunFunc:       handleDecrypt,
 	})
 }
 

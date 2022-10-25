@@ -1,19 +1,15 @@
 package main
 
 import (
-	"errors"
-	"fmt"
 	"io"
 	"log"
 	"os"
 	"runtime/debug"
-	"strings"
 
 	cmd "thy/commands"
 	cst "thy/constants"
 	"thy/format"
 	"thy/utils"
-	"thy/vaultcli"
 	"thy/version"
 
 	"github.com/mitchellh/cli"
@@ -62,7 +58,7 @@ func runCLI(args []string) (exitStatus int, err error) {
 		"secret bustcache":              cmd.GetSecretBustCacheCmd,
 		"policy":                        cmd.GetPolicyCmd,
 		"policy read":                   cmd.GetPolicyReadCmd,
-		"policy search":                 cmd.GetPolicySearchCommand,
+		"policy search":                 cmd.GetPolicySearchCmd,
 		"policy delete":                 cmd.GetPolicyDeleteCmd,
 		"policy restore":                cmd.GetPolicyRestoreCmd,
 		"policy create":                 cmd.GetPolicyCreateCmd,
@@ -137,7 +133,7 @@ func runCLI(args []string) (exitStatus int, err error) {
 		"siem create":                   cmd.GetSiemCreateCmd,
 		"siem update":                   cmd.GetSiemUpdateCmd,
 		"siem read":                     cmd.GetSiemReadCmd,
-		"siem search":                   cmd.GetSiemSearchCommand,
+		"siem search":                   cmd.GetSiemSearchCmd,
 		"siem delete":                   cmd.GetSiemDeleteCmd,
 		"home":                          cmd.GetHomeCmd,
 		"home read":                     cmd.GetHomeReadCmd,
@@ -197,25 +193,6 @@ func runCLI(args []string) (exitStatus int, err error) {
 	c.AutocompleteInstall = "install"
 	c.AutocompleteUninstall = "uninstall"
 	log.SetOutput(io.Discard)
-
-	if !cmd.IsInit(c.Args) && !cmd.IsInstall(c.Args) {
-		// TODO : We do this twice to support autocomplete. Investigate how to only do once instead
-
-		cfgFile := vaultcli.GetFlagVal(cst.Config, c.Args)
-		profile := strings.ToLower(vaultcli.GetFlagVal(cst.Profile, c.Args))
-		tenant := vaultcli.GetFlagVal(cst.Tenant, args)
-
-		err := vaultcli.ViperInit(cfgFile, profile, c.Args)
-		if tenant == "" {
-			if errors.Is(err, vaultcli.ErrFileNotFound) {
-				// Do not return the error to allow users to view help text for commands.
-				out := format.NewDefaultOutClient()
-				out.FailF("Create CLI config file manually or execute command '%s init' to initiate CLI configuration - cannot find config.", cst.CmdRoot)
-			} else if err != nil {
-				return utils.GetExecStatus(err), fmt.Errorf("Error: %v.", err)
-			}
-		}
-	}
 
 	return c.Run()
 }

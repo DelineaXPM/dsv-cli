@@ -29,7 +29,7 @@ Usage:
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.StartDate, Shorthand: "s", Usage: "Start date from which to fetch audit data (required)"},
 			{Name: cst.EndDate, Usage: "End date to which to fetch audit data (optional)"},
-			{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
+			{Name: cst.Limit, Shorthand: "l", Usage: cst.LimitHelpMessage},
 			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 			{Name: cst.Path, Usage: "Path (optional)"},
 			{Name: cst.NounPrincipal, Usage: "Principal name (optional)"},
@@ -37,9 +37,7 @@ Usage:
 			{Name: cst.Sort, Usage: "Change result sorting order (asc|desc) [default: desc] when search field is specified (optional)"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleAuditSearch(vcli, args)
-		},
+		RunFunc:       handleAuditSearch,
 	})
 }
 

@@ -27,7 +27,8 @@ func GetPkiCmd() (cli.Command, error) {
 		Path:         []string{cst.NounPki},
 		SynopsisText: "Manage certificates",
 		HelpText:     "Work with certificates",
-		RunFunc:      func(vcli vaultcli.CLI, args []string) int { return cli.RunResultHelp },
+		NoConfigRead: true,
+		NoPreAuth:    true,
 	})
 }
 
@@ -47,9 +48,8 @@ Usage:
 			{Name: cst.MaxTTL, Usage: "Maximum number of hours for which a signed certificate on behalf of the root CA can be valid (required)"},
 			{Name: cst.CRL, Usage: "URL of the CRL from which the revocation of leaf certificates can be checked"},
 		},
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleRegisterRootCmd(vcli, args)
-		},
+		RunFunc:    handleRegisterRootCmd,
+		WizardFunc: handleRegisterRootWizard,
 	})
 }
 
@@ -68,9 +68,8 @@ Usage:
 			{Name: cst.TTL, Usage: "Number of hours for which a signed certificate on behalf of the root CA can be valid"},
 			{Name: cst.Chain, Usage: "Include root certificate in response", ValueType: "bool"},
 		},
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleSignCmd(vcli, args)
-		},
+		RunFunc:    handleSignCmd,
+		WizardFunc: handleSignWizard,
 	})
 }
 
@@ -97,9 +96,8 @@ Usage:
 			{Name: cst.TTL, Usage: "Number of hours for which a signed certificate on behalf of the root CA can be valid"},
 			{Name: cst.Chain, Usage: "Include root certificate in response", ValueType: "bool"},
 		},
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleLeafCmd(vcli, args)
-		},
+		RunFunc:    handleLeafCmd,
+		WizardFunc: handleLeafWizard,
 	})
 }
 
@@ -126,9 +124,8 @@ Usage:
 			{Name: cst.MaxTTL, Usage: "Number of hours for which a generated root certificate can be valid (required)"},
 			{Name: cst.CRL, Usage: "URL of the CRL from which the revocation of leaf certificates can be checked"},
 		},
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleGenerateRootCmd(vcli, args)
-		},
+		RunFunc:    handleGenerateRootCmd,
+		WizardFunc: handleGenerateRootWizard,
 	})
 }
 
@@ -147,16 +144,11 @@ Usage:
 			{Name: cst.TTL, Usage: "Number of hours for which a signed certificate can be valid (required)"},
 		},
 		MinNumberArgs: 8,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleGetSSHCertificateCmd(vcli, args)
-		},
+		RunFunc:       handleGetSSHCertificateCmd,
 	})
 }
 
 func handleRegisterRootCmd(vcli vaultcli.CLI, args []string) int {
-	if OnlyGlobalArgs(args) {
-		return handleRegisterRootWorkflow(vcli, args)
-	}
 	params := map[string]string{
 		cst.CertPath:    viper.GetString(cst.CertPath),
 		cst.PrivKeyPath: viper.GetString(cst.PrivKeyPath),
@@ -170,9 +162,6 @@ func handleRegisterRootCmd(vcli vaultcli.CLI, args []string) int {
 }
 
 func handleSignCmd(vcli vaultcli.CLI, args []string) int {
-	if OnlyGlobalArgs(args) {
-		return handleSignWorkflow(vcli, args)
-	}
 	params := map[string]string{
 		cst.CSRPath:         viper.GetString(cst.CSRPath),
 		cst.RootCAPath:      viper.GetString(cst.RootCAPath),
@@ -186,9 +175,6 @@ func handleSignCmd(vcli vaultcli.CLI, args []string) int {
 }
 
 func handleLeafCmd(vcli vaultcli.CLI, args []string) int {
-	if OnlyGlobalArgs(args) {
-		return handleLeafWorkflow(vcli, args)
-	}
 	params := map[string]string{
 		cst.RootCAPath:   viper.GetString(cst.RootCAPath),
 		cst.PkiStorePath: viper.GetString(cst.PkiStorePath),
@@ -208,9 +194,6 @@ func handleLeafCmd(vcli vaultcli.CLI, args []string) int {
 }
 
 func handleGenerateRootCmd(vcli vaultcli.CLI, args []string) int {
-	if OnlyGlobalArgs(args) {
-		return handleGenerateRootWorkflow(vcli, args)
-	}
 	params := map[string]string{
 		cst.RootCAPath:   viper.GetString(cst.RootCAPath),
 		cst.Domains:      viper.GetString(cst.Domains),
@@ -259,7 +242,7 @@ func handleGetSSHCertificateCmd(vcli vaultcli.CLI, args []string) int {
 	return utils.GetExecStatus(apiErr)
 }
 
-func handleRegisterRootWorkflow(vcli vaultcli.CLI, args []string) int {
+func handleRegisterRootWizard(vcli vaultcli.CLI) int {
 	qs := []*survey.Question{
 		{
 			Name:      "CertFile",
@@ -368,7 +351,7 @@ func submitRoot(vcli vaultcli.CLI, params map[string]string) ([]byte, error) {
 	return pkiRegister(vcli, &body)
 }
 
-func handleSignWorkflow(vcli vaultcli.CLI, args []string) int {
+func handleSignWizard(vcli vaultcli.CLI) int {
 	qs := []*survey.Question{
 		{
 			Name:      "CSRPath",
@@ -460,7 +443,7 @@ func submitSign(vcli vaultcli.CLI, params map[string]string) ([]byte, error) {
 	return pkiSign(vcli, &body)
 }
 
-func handleLeafWorkflow(vcli vaultcli.CLI, args []string) int {
+func handleLeafWizard(vcli vaultcli.CLI) int {
 	qs := []*survey.Question{
 		{
 			Name:      "RootCAPath",
@@ -582,7 +565,7 @@ func submitLeaf(vcli vaultcli.CLI, params map[string]string) ([]byte, error) {
 	return pkiLeaf(vcli, &body)
 }
 
-func handleGenerateRootWorkflow(vcli vaultcli.CLI, args []string) int {
+func handleGenerateRootWizard(vcli vaultcli.CLI) int {
 	qs := []*survey.Question{
 		{
 			Name:      "RootCAPath",

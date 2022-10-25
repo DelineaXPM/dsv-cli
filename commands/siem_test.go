@@ -30,3 +30,8 @@ func TestGetSiemDeleteCmd(t *testing.T) {
 	_, err := GetSiemDeleteCmd()
 	assert.Nil(t, err)
 }
+
+func TestGetSiemSearchCmd(t *testing.T) {
+	_, err := GetSiemSearchCmd()
+	assert.Nil(t, err)
+}

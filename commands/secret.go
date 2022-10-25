@@ -42,7 +42,7 @@ func GetSearchOpWrappers() []*predictor.Params {
 	return []*predictor.Params{
 		{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("%s of %ss to fetch (optional)", strings.Title(cst.Query), cst.NounSecret)},
 		{Name: cst.SearchLinks, Usage: "Find secrets that link to the secret path in the query", ValueType: "bool"},
-		{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
+		{Name: cst.Limit, Shorthand: "l", Usage: cst.LimitHelpMessage},
 		{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 		{Name: cst.SearchField, Usage: "Advanced search on a secret field (optional)"},
 		{Name: cst.SearchType, Usage: "Specify the value type for advanced field searching, can be 'number' or 'string' (optional)"},
@@ -88,9 +88,9 @@ Usage:
    • secret %[1]s --path %[4]s -f data.Data.Key
    • secret %[1]s --version
 `, cst.Read, cst.NounSecret, cst.ProductName, cst.ExamplePath),
-		FlagsPredictor:    GetNoDataOpWrappers(cst.NounSecret),
-		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
-		MinNumberArgs:     1,
+		FlagsPredictor: GetNoDataOpWrappers(cst.NounSecret),
+		ArgsPredictor:  predictor.NewSecretPathPredictorDefault(),
+		MinNumberArgs:  1,
 		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			return handleSecretReadCmd(vcli, cst.NounSecret, args)
 		},
@@ -107,9 +107,9 @@ Usage:
    • secret %[1]s %[4]s
    • secret %[1]s --path %[4]s -f id
 `, cst.Describe, cst.NounSecret, cst.ProductName, cst.ExamplePath),
-		FlagsPredictor:    DescribeOpWrappers(cst.NounSecret),
-		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
-		MinNumberArgs:     1,
+		FlagsPredictor: DescribeOpWrappers(cst.NounSecret),
+		ArgsPredictor:  predictor.NewSecretPathPredictorDefault(),
+		MinNumberArgs:  1,
 		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			return handleSecretDescribeCmd(vcli, cst.NounSecret, args)
 		},
@@ -131,8 +131,8 @@ Usage:
 			{Name: cst.ID, Shorthand: "i", Usage: fmt.Sprintf("Target %s for a %s", cst.ID, cst.NounSecret)},
 			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s", cst.NounSecret), ValueType: "bool"},
 		},
-		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
-		MinNumberArgs:     1,
+		ArgsPredictor: predictor.NewSecretPathPredictorDefault(),
+		MinNumberArgs: 1,
 		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			return handleSecretDeleteCmd(vcli, cst.NounSecret, args)
 		},
@@ -152,8 +152,8 @@ Usage:
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret), Predictor: predictor.NewSecretPathPredictorDefault()},
 			{Name: cst.ID, Shorthand: "i", Usage: fmt.Sprintf("Target %s for a %s", cst.ID, cst.NounSecret)},
 		},
-		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
-		MinNumberArgs:     1,
+		ArgsPredictor: predictor.NewSecretPathPredictorDefault(),
+		MinNumberArgs: 1,
 		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			return handleSecretRestoreCmd(vcli, cst.NounSecret, args)
 		},
@@ -179,10 +179,11 @@ Usage:
 			{Name: cst.Overwrite, Usage: fmt.Sprintf("Overwrite all the contents of %s data", cst.NounSecret), ValueType: "bool"},
 			{Name: cst.ID, Shorthand: "i", Usage: fmt.Sprintf("Target %s for a %s", cst.ID, cst.NounSecret)},
 		},
-		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
+		ArgsPredictor: predictor.NewSecretPathPredictorDefault(),
 		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			return handleSecretUpsertCmd(vcli, cst.NounSecret, cst.Update, args)
 		},
+		WizardFunc: handleSecretUpdateWizard,
 	})
 }
 
@@ -201,8 +202,8 @@ Usage:
 			{Name: cst.ID, Shorthand: "i", Usage: fmt.Sprintf("Target %s for a %s", cst.ID, cst.NounSecret)},
 			{Name: cst.Version, Usage: "The version to which to rollback"},
 		},
-		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
-		MinNumberArgs:     1,
+		ArgsPredictor: predictor.NewSecretPathPredictorDefault(),
+		MinNumberArgs: 1,
 		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			return handleSecretRollbackCmd(vcli, cst.NounSecret, args)
 		},
@@ -223,8 +224,8 @@ Usage:
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret), Predictor: predictor.NewSecretPathPredictorDefault()},
 			{Name: cst.ID, Shorthand: "i", Usage: fmt.Sprintf("Target %s for a %s", cst.ID, cst.NounSecret)},
 		},
-		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
-		MinNumberArgs:     1,
+		ArgsPredictor: predictor.NewSecretPathPredictorDefault(),
+		MinNumberArgs: 1,
 		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			return handleSecretEditCmd(vcli, cst.NounSecret, args)
 		},
@@ -251,6 +252,7 @@ Usage:
 		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			return handleSecretUpsertCmd(vcli, cst.NounSecret, cst.Create, args)
 		},
+		WizardFunc: handleSecretCreateWizard,
 	})
 }
 
@@ -476,21 +478,6 @@ func handleSecretRollbackCmd(vcli vaultcli.CLI, secretType string, args []string
 }
 
 func handleSecretUpsertCmd(vcli vaultcli.CLI, secretType string, action string, args []string) int {
-	if OnlyGlobalArgs(args) {
-		var (
-			resp []byte
-			err  *errors.ApiError
-		)
-		switch action {
-		case cst.Create:
-			resp, err = handleCreateWorkflow(vcli, secretType)
-		case cst.Update:
-			resp, err = handleUpdateWorkflow(vcli, secretType)
-		}
-		vcli.Out().WriteResponse(resp, err)
-		return utils.GetExecStatus(err)
-	}
-
 	id := viper.GetString(cst.ID)
 	path := viper.GetString(cst.Path)
 	overwrite := viper.GetBool(cst.Overwrite)
@@ -555,7 +542,13 @@ func handleSecretUpsertCmd(vcli vaultcli.CLI, secretType string, action string, 
 	return utils.GetExecStatus(err)
 }
 
-func handleCreateWorkflow(vcli vaultcli.CLI, secretType string) ([]byte, *errors.ApiError) {
+func handleSecretCreateWizard(vcli vaultcli.CLI) int {
+	resp, err := handleGenericSecretCreateWizard(vcli, cst.NounSecret)
+	vcli.Out().WriteResponse(resp, err)
+	return utils.GetExecStatus(err)
+}
+
+func handleGenericSecretCreateWizard(vcli vaultcli.CLI, secretType string) ([]byte, *errors.ApiError) {
 	dataMap := make(map[string]interface{})
 	attrMap := make(map[string]interface{})
 
@@ -640,7 +633,13 @@ func handleCreateWorkflow(vcli vaultcli.CLI, secretType string) ([]byte, *errors
 	return vcli.HTTPClient().DoRequest(http.MethodPost, uri, &postData)
 }
 
-func handleUpdateWorkflow(vcli vaultcli.CLI, secretType string) ([]byte, *errors.ApiError) {
+func handleSecretUpdateWizard(vcli vaultcli.CLI) int {
+	resp, err := handleGenericSecretUpdateWizard(vcli, cst.NounSecret)
+	vcli.Out().WriteResponse(resp, err)
+	return utils.GetExecStatus(err)
+}
+
+func handleGenericSecretUpdateWizard(vcli vaultcli.CLI, secretType string) ([]byte, *errors.ApiError) {
 	var path string
 	pathPrompt := &survey.Input{Message: "Path:"}
 	survErr := survey.AskOne(pathPrompt, &path, survey.WithValidator(vaultcli.SurveyRequired))

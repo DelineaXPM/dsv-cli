@@ -6,6 +6,7 @@ import (
 
 	cst "thy/constants"
 	"thy/internal/predictor"
+	"thy/utils"
 	"thy/vaultcli"
 
 	"github.com/mitchellh/cli"
@@ -52,11 +53,8 @@ Usage:
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret), Predictor: predictor.NewSecretPathPredictorDefault()},
 			{Name: cst.Version, Usage: "List the current and last (n) versions"},
 		},
-		ArgsPredictorFunc: predictor.NewSecretPathPredictorDefault().Predict,
-		MinNumberArgs:     1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleHomeRead(vcli, args)
-		},
+		MinNumberArgs: 1,
+		RunFunc:       handleHomeRead,
 	})
 }
 
@@ -77,9 +75,8 @@ Usage:
 			{Name: cst.DataAttributes, Usage: fmt.Sprintf("Attributes of a %s", cst.NounSecret)},
 		},
 		MinNumberArgs: 2,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleHomeCreate(vcli, args)
-		},
+		RunFunc:       handleHomeCreate,
+		WizardFunc:    handleHomeCreateWizard,
 	})
 }
 
@@ -97,9 +94,7 @@ Usage:
 			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s", cst.NounSecret), ValueType: "bool"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleHomeDelete(vcli, args)
-		},
+		RunFunc:       handleHomeDelete,
 	})
 }
 
@@ -115,9 +110,7 @@ Usage:
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounHome), Predictor: predictor.NewSecretPathPredictorDefault()},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleHomeRestore(vcli, args)
-		},
+		RunFunc:       handleHomeRestore,
 	})
 }
 
@@ -139,9 +132,8 @@ Usage:
 			{Name: cst.Overwrite, Usage: fmt.Sprintf("Overwrite all the contents of %s data", cst.NounSecret), ValueType: "bool"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleHomeUpdate(vcli, args)
-		},
+		RunFunc:       handleHomeUpdate,
+		WizardFunc:    handleHomeUpdateWizard,
 	})
 }
 
@@ -159,9 +151,7 @@ Usage:
 			{Name: cst.Version, Usage: "The version to which to rollback"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleHomeRollback(vcli, args)
-		},
+		RunFunc:       handleHomeRollback,
 	})
 }
 
@@ -180,9 +170,7 @@ Usage:
    • %[2]s %[1]s --query 900 --search-field attributes.ttl --search-type number
    • %[2]s %[1]s --query production --search-field attributes.stage --search-comparison equal
 `, cst.Search, cst.NounHome, cst.ProductName, cst.ExampleUserSearch),
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleHomeSearch(vcli, args)
-		},
+		RunFunc: handleHomeSearch,
 	})
 }
 
@@ -199,9 +187,7 @@ Usage:
    • %[1]s %[2]s --%[3]s %[4]s
 `, cst.NounHome, cst.Describe, cst.Path, cst.ExamplePath),
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleHomeDescribe(vcli, args)
-		},
+		RunFunc:       handleHomeDescribe,
 	})
 }
 
@@ -218,9 +204,7 @@ Usage:
    • %[1]s %[2]s --%[3]s %[4]s
 `, cst.NounHome, cst.Edit, cst.Path, cst.ExamplePath),
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleHomeEdit(vcli, args)
-		},
+		RunFunc:       handleHomeEdit,
 	})
 }
 
@@ -258,4 +242,18 @@ func handleHomeDescribe(vcli vaultcli.CLI, args []string) int {
 
 func handleHomeEdit(vcli vaultcli.CLI, args []string) int {
 	return handleSecretEditCmd(vcli, cst.NounHome, args)
+}
+
+// Wizards:
+
+func handleHomeCreateWizard(vcli vaultcli.CLI) int {
+	resp, err := handleGenericSecretCreateWizard(vcli, cst.NounHome)
+	vcli.Out().WriteResponse(resp, err)
+	return utils.GetExecStatus(err)
+}
+
+func handleHomeUpdateWizard(vcli vaultcli.CLI) int {
+	resp, err := handleGenericSecretUpdateWizard(vcli, cst.NounHome)
+	vcli.Out().WriteResponse(resp, err)
+	return utils.GetExecStatus(err)
 }

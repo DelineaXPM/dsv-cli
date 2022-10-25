@@ -54,7 +54,7 @@ func TestGetPolicyRollbackCmd(t *testing.T) {
 }
 
 func TestGetPolicySearchCommand(t *testing.T) {
-	_, err := GetPolicySearchCommand()
+	_, err := GetPolicySearchCmd()
 	assert.Nil(t, err)
 }
 

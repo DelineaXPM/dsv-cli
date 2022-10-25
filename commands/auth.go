@@ -32,9 +32,7 @@ Usage:
    • auth --auth-username %[3]s --auth-password %[4]s
    • auth --auth-type %[5]s --auth-client-id %[6]s --domain %[7]s --auth-client-secret %[8]s 
 `, cst.NounAuth, cst.ProductName, cst.ExampleUser, cst.ExamplePassword, cst.ExampleAuthType, cst.ExampleAuthClientID, cst.ExampleDomain, cst.ExampleAuthClientSecret, string(auth.FederatedAws)),
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleAuth(vcli, args)
-		},
+		RunFunc: handleAuth,
 	})
 }
 
@@ -48,9 +46,7 @@ Usage:
    • auth clear
 `, cst.NounAuth, cst.ProductName, cst.NounToken),
 		NoPreAuth: true,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleAuthClear(vcli, args)
-		},
+		RunFunc:   handleAuthClear,
 	})
 }
 
@@ -64,9 +60,7 @@ Usage:
    • auth list
 `, cst.NounAuth, cst.ProductName, cst.NounToken),
 		NoPreAuth: true,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleAuthList(vcli, args)
-		},
+		RunFunc:   handleAuthList,
 	})
 }
 
@@ -78,9 +72,7 @@ func GetAuthChangePasswordCmd() (cli.Command, error) {
 
 Usage:
    • auth change-password`,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleAuthChangePassword(vcli, args)
-		},
+		RunFunc: handleAuthChangePassword,
 	})
 }
 

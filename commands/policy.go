@@ -63,9 +63,7 @@ Usage:
 			{Name: cst.Version, Usage: "List the current and last (n) versions"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handlePolicyReadCmd(vcli, args)
-		},
+		RunFunc:       handlePolicyReadCmd,
 	})
 }
 
@@ -83,9 +81,7 @@ Usage:
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s", cst.Path, cst.NounPolicy)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handlePolicyEditCmd(vcli, args)
-		},
+		RunFunc:       handlePolicyEditCmd,
 	})
 }
 
@@ -104,9 +100,7 @@ Usage:
 			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s", cst.NounPolicy), ValueType: "bool"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handlePolicyDeleteCmd(vcli, args)
-		},
+		RunFunc:       handlePolicyDeleteCmd,
 	})
 }
 
@@ -123,9 +117,7 @@ Usage:
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s", cst.Path, cst.NounPolicy)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handlePolicyRestoreCmd(vcli, args)
-		},
+		RunFunc:       handlePolicyRestoreCmd,
 	})
 }
 
@@ -149,12 +141,8 @@ Usage:
 			{Name: cst.DataCidr, Usage: fmt.Sprintf("Policy CIDR condition remote IP to be stored in a %s ", cst.NounPolicy)},
 			{Name: cst.DataResource, Usage: fmt.Sprintf("Policy resources to be stored in a %s. Defaults to the path plus all paths below (<.*>) ", cst.NounPolicy)},
 		},
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			if OnlyGlobalArgs(args) {
-				return handlePolicyCreateWizard(vcli, args)
-			}
-			return handlePolicyCreateCmd(vcli, args)
-		},
+		RunFunc:    handlePolicyCreateCmd,
+		WizardFunc: handlePolicyCreateWizard,
 	})
 }
 
@@ -180,12 +168,8 @@ Usage:
 			{Name: cst.DataCidr, Usage: fmt.Sprintf("Policy CIDR condition remote IP to be stored in a %s ", cst.NounPolicy)},
 			{Name: cst.DataResource, Usage: fmt.Sprintf("Policy resources to be stored in a %s. Defaults to the path plus all paths below (<.*>) ", cst.NounPolicy)},
 		},
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			if OnlyGlobalArgs(args) {
-				return handlePolicyUpdateWizard(vcli, args)
-			}
-			return handlePolicyUpdateCmd(vcli, args)
-		},
+		RunFunc:    handlePolicyUpdateCmd,
+		WizardFunc: handlePolicyUpdateWizard,
 	})
 }
 
@@ -204,13 +188,11 @@ Usage:
 			{Name: cst.Version, Usage: "The version to which to rollback"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handlePolicyRollbackCmd(vcli, args)
-		},
+		RunFunc:       handlePolicyRollbackCmd,
 	})
 }
 
-func GetPolicySearchCommand() (cli.Command, error) {
+func GetPolicySearchCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounPolicy, cst.Search},
 		SynopsisText: "policy search (<query> | (--query | -q) <query>) [(--limit | -l) <n>] [--cursor <cursor>]",
@@ -222,12 +204,10 @@ Usage:
 `, cst.ExamplePolicySearch),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("Filter %s of items to fetch (required)", strings.Title(cst.Query))},
-			{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
+			{Name: cst.Limit, Shorthand: "l", Usage: cst.LimitHelpMessage},
 			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 		},
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handlePolicySearchCmd(vcli, args)
-		},
+		RunFunc: handlePolicySearchCmd,
 	})
 }
 
@@ -512,7 +492,7 @@ func setCidrCondition(policy *defaultPolicy, cidr string) *errors.ApiError {
 
 // Wizards:
 
-func handlePolicyCreateWizard(vcli vaultcli.CLI, args []string) int {
+func handlePolicyCreateWizard(vcli vaultcli.CLI) int {
 	pathPrompt := &survey.Input{Message: "Path to policy:"}
 	pathValidation := func(ans interface{}) error {
 		answer := strings.TrimSpace(ans.(string))
@@ -553,7 +533,7 @@ func handlePolicyCreateWizard(vcli vaultcli.CLI, args []string) int {
 	return utils.GetExecStatus(apiErr)
 }
 
-func handlePolicyUpdateWizard(vcli vaultcli.CLI, args []string) int {
+func handlePolicyUpdateWizard(vcli vaultcli.CLI) int {
 	var policyAtPath []byte
 	pathPrompt := &survey.Input{Message: "Path to policy:"}
 	pathValidation := func(ans interface{}) error {

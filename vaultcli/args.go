@@ -1,7 +1,6 @@
 package vaultcli
 
 import (
-	"os"
 	"strings"
 
 	cst "thy/constants"
@@ -32,11 +31,7 @@ func GetFlagVal(flag string, args []string) string {
 		}
 	}
 
-	envKey := cst.CmdRoot + "_" + flag
-	envKey = strings.ReplaceAll(envKey, ".", "_")
-	envKey = strings.ReplaceAll(envKey, "-", "_")
-	envKey = strings.ToUpper(envKey)
-	return os.Getenv(envKey)
+	return ""
 }
 
 // GetFilenameFromArgs tries to extract a filename from args. If args has a --data or -d flag and

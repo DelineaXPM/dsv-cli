@@ -89,12 +89,8 @@ Usage:
 			{Name: cst.DataGroupName, Usage: fmt.Sprintf("%s of %s (required)", strings.Title(cst.DataName), cst.NounGroup)},
 			{Name: cst.Members, Usage: "Group members (comma-separated, optional)"},
 		},
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			if OnlyGlobalArgs(args) {
-				return handleGroupCreateWizard(vcli, args)
-			}
-			return handleGroupCreateCmd(vcli, args)
-		},
+		RunFunc:    handleGroupCreateCmd,
+		WizardFunc: handleGroupCreateWizard,
 	})
 }
 
@@ -113,9 +109,7 @@ Usage:
 			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s", cst.NounGroup), ValueType: "bool"},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleGroupDeleteCmd(vcli, args)
-		},
+		RunFunc:       handleGroupDeleteCmd,
 	})
 }
 
@@ -133,9 +127,7 @@ Usage:
 			{Name: cst.DataGroupName, Usage: fmt.Sprintf("%s of %s (required)", strings.Title(cst.DataName), cst.NounGroup)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleGroupRestoreCmd(vcli, args)
-		},
+		RunFunc:       handleGroupRestoreCmd,
 	})
 }
 
@@ -156,9 +148,7 @@ Usage:
 			{Name: cst.Members, Usage: "Group members (comma-separated, optional)"},
 		},
 		MinNumberArgs: 2,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleAddMembersCmd(vcli, args)
-		},
+		RunFunc:       handleAddMembersCmd,
 	})
 }
 
@@ -179,9 +169,7 @@ Usage:
 			{Name: cst.Members, Usage: "Group members (comma-separated, optional)"},
 		},
 		MinNumberArgs: 2,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleDeleteMembersCmd(vcli, args)
-		},
+		RunFunc:       handleDeleteMembersCmd,
 	})
 }
 
@@ -198,9 +186,7 @@ Usage:
 			{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s (required)", strings.Title(cst.DataUsername), cst.NounUser)},
 		},
 		MinNumberArgs: 1,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleUsersGroupReadCmd(vcli, args)
-		},
+		RunFunc:       handleUsersGroupReadCmd,
 	})
 }
 
@@ -216,12 +202,10 @@ Usage:
 `, cst.Search, cst.NounGroup, cst.ProductName, cst.ExampleUserSearch),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("%s of %ss to fetch (optional)", strings.Title(cst.Query), cst.NounGroup)},
-			{Name: cst.Limit, Shorthand: "l", Usage: "Maximum number of results per cursor (optional)"},
+			{Name: cst.Limit, Shorthand: "l", Usage: cst.LimitHelpMessage},
 			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 		},
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleGroupSearchCmd(vcli, args)
-		},
+		RunFunc: handleGroupSearchCmd,
 	})
 }
 
@@ -451,7 +435,7 @@ func handleGroupSearchCmd(vcli vaultcli.CLI, args []string) int {
 
 // Wizards:
 
-func handleGroupCreateWizard(vcli vaultcli.CLI, args []string) int {
+func handleGroupCreateWizard(vcli vaultcli.CLI) int {
 	var groupName string
 	groupNamePrompt := &survey.Input{Message: "Group name:"}
 	groupNameValidation := func(ans interface{}) error {
