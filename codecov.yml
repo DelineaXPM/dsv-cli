@@ -1,0 +1,23 @@
+---
+codecov:
+  require_ci_to_pass: true
+comment:
+  require_changes: true # if true: only post the comment if coverage changes
+coverage:
+  status:
+    project:
+      default:
+        informational: true
+        target: auto # auto compares coverage to the previous base commit
+    patch:
+      default:
+        informational: true
+        target: auto # auto compares coverage to the previous base commit
+# sample regex patterns
+ignore:
+  - 'magefiles'
+  - 'examples'
+  - '.trunk'
+  - '.vscode'
+  - '.devcontainer'
+  - 'vendor'

@@ -1,0 +1,83 @@
+changesDir: .changes
+unreleasedDir: unreleased
+headerPath: header.tpl.md
+changelogPath: CHANGELOG.md
+versionExt: md
+versionFormat: '## {{.Version}} - {{.Time.Format "2006-01-02"}}'
+kindFormat: '### {{.Kind}}'
+changeFormat: '- {{ .Body -}}'
+footerFormat: |
+  {{- $azureBoardsFixed :=  customs .Changes "azure-boards-workitemid-fixed" | compact | uniq   }}
+  {{ $azureBoardsRelated :=  customs .Changes "azure-boards-workitemid-related" | compact | uniq   }}
+  {{ $GitHubLinks :=  customs .Changes "github-link" | compact | uniq   }}
+  {{ $GitHubContributors :=  customs .Changes "github-contributor" | compact | uniq -}}
+  ### Related
+  {{ range $azureBoardsFixed }}
+  - fixes AB#{{.}}
+  {{- end -}}
+
+  {{ range $azureBoardsRelated }}
+  - related AB#{{.}}
+  {{- end -}}
+
+  {{ range $GitHubLinks }}
+  - <{{.}}>
+  {{- end }}
+  {{ with $GitHubContributors }}
+  ### Contributors
+  {{ range $GitHubContributors }}
+  - [{{.}}](https://github.com/{{.}})
+  {{ end }}
+  {{ end }}
+kinds:
+  - label: 🎉 Feature
+  - label: 🔨 Refactor
+  - label: ⬇️ Deprecated
+  - label: 🐛 Bug Fix
+  - label: 🔥 Breaking Change
+  - label: 🔒 Security
+  - label: ⬆️ Dependencies
+  - label: 🤖 Development
+newlines:
+  afterChange: 0
+  afterChangelogHeader: 1
+  afterChangelogVersion: 1
+  afterComponent: 1
+  afterFooterFile: 1
+  afterFooter: 1
+  afterHeaderFile: 1
+  afterHeaderTemplate: 1
+  afterKind: 1
+  afterVersion: 1
+
+  beforeChange: 0
+  beforeChangelogVersion: 0
+  beforeComponent: 0
+  beforeFooterFile: 0
+  beforeFooterTemplate: 0
+  beforeHeaderFile: 0
+  beforeHeaderTemplate: 0
+  beforeKind: 0
+  beforeVersion: 0
+  endOfVersion: 0
+
+custom:
+  - key: github-contributor
+    type: string
+    minLength: 3
+    optional: true
+  - key: github-link
+    label: GitHub Link
+    type: string
+    minLength: 3
+    optional: true
+  - key: azure-boards-workitemid-fixed
+    label: FIXED Azure Boards WorkItem ID
+    type: int
+    minLength: 6
+    optional: true
+  - key: azure-boards-workitemid-related
+    label: Related Azure Boards WorkItem ID
+    type: int
+    minLength: 6
+    optional: true

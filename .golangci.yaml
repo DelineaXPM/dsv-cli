@@ -1,10 +1,5 @@
 ---
-# Any changes need to be carefully reviewed!
 output:
-  # colored-line-number|line-number|json|tab|checkstyle|code-climate|junit-xml|github-actions
-  # default is "colored-line-number"
-  # format: colored-line-number
-  # Compact format: tab
   format: tab
 linters-settings:
   misspell:
@@ -12,64 +7,40 @@ linters-settings:
   gomnd:
     settings:
       mnd:
-        # the list of enabled checks, see https://github.com/tommy-muehle/go-mnd/#checks for description.
         checks: [argument, case, condition, return]
         ignored-functions: strconv.ParseFloat,rsa.GenerateKey
   nolintlint:
-    # Enable to ensure that nolint directives are all used. Default is true.
     allow-unused: false
-    # Disable to ensure that nolint directives don't have a leading space. Default is true.
     allow-leading-space: true
-    # Exclude following linters from requiring an explanation.  Default is [].
     allow-no-explanation: []
-    # Enable to require an explanation of nonzero length after each nolint directive. Default is false.
     require-explanation: true
-    # Enable to require nolint directives to mention the specific linter being suppressed. Default is false.
     require-specific: true
   gofumpt:
-    # Select the Go version to target. The default is `1.15`.
     lang-version: '1.18'
-    # Choose whether or not to use the extra rules that are disabled
-    # by default
     extra-rules: true
   godox:
-    # report any comments starting with keywords, this is useful for TODO or FIXME comments that
-    # might be left in the code accidentally and should be resolved before merging
-    keywords: # default keywords are TODO, BUG, and FIXME, these can be overwritten by this setting
-      - OPTIMIZE # marks code that should be optimized before merging
-      - HACK # marks hack-arounds that should be removed before merging
+    keywords:
+      - OPTIMIZE
+      - HACK
       - TODO
       - BUG
       - FIXME
   godot:
-    # comments to be checked: `declarations`, `toplevel`, or `all`
     scope: all
-    # list of regexps for excluding particular comment lines from check
     exclude:
       - //nolint
       - (API)
       - ^[ ]*@
-      # example: exclude comments which contain numbers
-      # - '[0-9]+'
-    # check that each sentence starts with a capital letter
     capital: true
   depguard:
     list-type: blacklist
     include-go-root: true
-    includeGoStdLib: true #  include standard library so we can make sure log and other conflicting packages aren't pulled.
+    includeGoStdLib: true
     packages:
       - github.com/sirupsen/logrus
-      - gopkg.in/redis.v5
-      # - github.com/go-redis/redis # This is matching v8
-      - log
     packages-with-error-message:
-      # specify an error message to output when a blacklisted package is used
       - github.com/sirupsen/logrus: logging is allowed only by zerolog. Please use zerolog
-      - ^github.com/go-redis/redis$: Use v8 github.com/go-redis/redis/v8 to ensure no version conflicts
-      - log: Use standardized zerolog - see sheldon for details
-      - gopkg.in/redis.v5: Probably imported in error. Should ensure you are using github.com/go-redis/redis/v8
-      - io/ioutil: 'io/ioutil was deprecated in Go 1.16: https://tip.golang.org/doc/go1.16#ioutil'
-    # improved go mod checks
+      - io/ioutil: 'io/ioutil was deprecated in Go 1.16: https://tip.golang.org/doc/go1.16'
     gomodguard:
       blocked:
         modules:
@@ -77,122 +48,70 @@ linters-settings:
               recommendations:
                 - internal/logging
               reason: logging is allowed only by zerolog. Please use zerolog
-          - gopkg.in/redis.v5:
-              recommendations:
-                - github.com/go-redis/redis/v8
-              reason: Probably imported in error. Should ensure you are using github.com/go-redis/redis/v8
-        # List of blocked module version constraints
-        # Version constraint, see https://github.com/Masterminds/semver#basic-comparisons
-        versions:
-          - github.com/go-redis/redis:
-            version: '>= 8.0'
-            reason: v8 required for new functionality, prior versions will not work
-        local_replace_directives: false # Set to true to raise lint issues for packages that are loaded from a local path via replace directive
-  wrapcheck:
-    ignorePackageGlobs:
-      - github.com/sheldonhull/magetools/*
-      - magefiles/*
-  # Configuration can be customized: https://github.com/ldez/tagliatelle
-  # This establishes consistency in the json naming, so that all json tagging uses the same approach.
+        local_replace_directives: false
   tagliatelle:
-    # check the struck tag name case
     case:
-      # use the struct field name to check the name of the struct tag
       use-field-name: true
       rules:
-        # any struct tag type can be used.
-        # support string case: `camel`, `pascal`, `kebab`, `snake`, `goCamel`, `goPascal`, `goKebab`, `goSnake`, `upper`, `lower`
-        json: goCamel
-        yaml: camel
+        json: kebab
+        yaml: kebab
         xml: camel
         bson: camel
         avro: snake
         mapstructure: kebab
     errcheck:
-      # report about not checking of errors in type assertions: `a := b.(MyStruct)`;
-      # default is false: such cases aren't reported by default.
       check-type-assertions: true
-      # report about assignment of errors to blank identifier: `num, _ := strconv.Atoi(numStr)`;
-      # default is false: such cases aren't reported by default.
       check-blank: false
-      # [deprecated] comma-separated list of pairs of the form pkg:regex
-      # the regex is used to ignore names within pkg. (default "fmt:.*").
-      # see https://github.com/kisielk/errcheck#the-deprecated-method for details
       ignore: fmt:.*,io/ioutil:^Read.*
-      # list of functions to exclude from checking, where each entry is a single function to exclude.
-      # see https://github.com/kisielk/errcheck#excluding-functions for details
       exclude-functions:
         - io/ioutil.ReadFile
         - io.Copy(*bytes.Buffer)
         - io.Copy(os.Stdout)
-        - io.Closer.Close #https://github.com/kisielk/errcheck/issues/132
+        - io.Closer.Close
         - io.Closer.Body.Close
-        # - (*net/http.Client).Do
   govet:
     enable-all: true
-    # report about shadowed variables
     check-shadowing: true
     disable:
       - fieldalignment
-    # settings per analyzer
     settings:
-      printf: # analyzer name, run `go tool vet help` to see all analyzers
-        funcs: # run `go tool vet help printf` to see available settings for `printf` analyzer
+      printf:
+        funcs:
           - (github.com/golangci/golangci-lint/pkg/logutils.Log).Infof
           - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
           - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
           - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
   varnamelen:
-    # The longest distance, in source lines, that is being considered a "small scope." (defaults to 5)
-    # Variables used in at most this many lines will be ignored.
-    max-distance: 15 # updated to 10 since we wrap struct and param lines pretty heavily
-    # The minimum length of a variable's name that is considered "long." (defaults to 3)
-    # Variable names that are at least this long will be ignored.
+    max-distance: 15
     min-name-length: 3
-    # Check method receiver names. (defaults to false)
     check-receiver: false
-    # Check named return values. (defaults to false)
     check-return: false
-    # Ignore "ok" variables that hold the bool return value of a type assertion. (defaults to false)
     ignore-type-assert-ok: true
-    # Ignore "ok" variables that hold the bool return value of a map index. (defaults to false)
     ignore-map-index-ok: true
-    # Ignore "ok" variables that hold the bool return value of a channel receive. (defaults to false)
     ignore-chan-recv-ok: true
-    # Optional list of variable names that should be ignored completely. (defaults to empty list)
     ignore-names:
       - err
       - tt
       - i
       - x
       - id
-      - b # for functions using byte input this is acceptable nomenclature
-      - ok # for functions doing checks on type assertions this is acceptable nomenclature
-      - zl # logger should be sure to keep brief
-      - fs # flagset, standard naming is acceptable.
-    # enable or disable analyzers by name
+      - b
+      - ok
+      - zl
+      - fs
     disable:
-      - fieldalignment # fieldalignment is not a priority except in high performance scenarios, and is a form of premature optimization
+      - fieldalignment
   revive:
-    # see https://github.com/mgechev/revive#available-rules for details.
     ignore-generated-header: true
     enableAllRules: true
     exclude:
       - .*_test.go
-#    severity: warning
-#    rules:
-#      - name: indent-error-flow
-#        severity: warning
-#      - name: add-constant
-#        severity: warning
-#        arguments:
-#          - maxLitCount: '3'
-#            allowStrs: '""'
-#            allowInts: '0,1,2'
-#            allowFloats: '0.0,0.,1.0,1.,2.0,2.'
+    rules:
+      - name: var-naming
+        severity: error
 linters:
-  exclude-use-default: false # Some key checks that will be missing if the default of 'true' is kept. (comments on exported and other will be missing!)
-  enable-all: true # disabling to provide control on mage and project tooling. pass --enable-all on the cli calls to run all.
+  exclude-use-default: false
+  enable-all: true
   disable:
     - scopelint
     - paralleltest
@@ -200,41 +119,38 @@ linters:
     - wsl
     - lll
     - interfacer
-    - golint # The linter 'golint' is deprecated (since v1.41.0) due to: The repository of the linter has been archived by the owner.  Replaced by revive.
+    - golint
     - maligned
-    - goimports # causes whiplash with gofumpt
+    - goimports
     - gci
     - gofmt
-    - nlreturn # until it supports autofix, just ignore as too much manual work
+    - nlreturn
     - gofumpt
     - exhaustivestruct
-    - exhaustruct # replaced exhaustivestruct by https://github.com/golangci/golangci-lint/pull/2667, v1.46.0.
+    - exhaustruct
     - wrapcheck
-    # - godox
-    - execinquery # Causes error in mtservice by https://github.com/golangci/golangci-lint/issues/2835, v1.46.0. Should remove from here after the bug is fixed.
-    - nonamedreturns # Added by https://github.com/golangci/golangci-lint/pull/2701, v1.46.0. Named returns are useful for defer. May remove from here and use nolint in future task.
-    - forbidigo # Disabled 2022-07-22 until migrating to a structured logger package. FMT is allowed for now
-    - structcheck # abandoned
-    - varcheck # abandoned
-    - deadcode # abandoned
-    - ifshort # abandoned
-    - godot # causes conflicts with trunk and other tool
-# VSCode sets golangci-lint fast flag to avoid IDE issues in this project.
-# Disabled and instead scoping lint on save to current package.
-# To check everything run command Lint: Workspace
-# fast: false
+    - godox
+    - execinquery
+    - nonamedreturns
+    - forbidigo
+    - structcheck
+    - varcheck
+    - deadcode
+    - ifshort
+    - godox
+    - godot
+    - nosnakecase
+    - rowserrcheck # disabled due to generics, can enable in future if needed
+    - sqlclosecheck # disabled due to generics, can enable in future if needed
+    - wastedassign # disabled due to generics, can enable in future if needed
 run:
-  # Fix found issues (if it's supported by the linter)
-  # fix: true
-  # skip-dirs-use-default: true # Enables skipping of directories:
-  # - vendor$, third_party$, testdata$, examples$, Godeps$, builtin$
   skip-dirs-use-default: true
   skip-dirs:
     - build
-    - .artifacts
-    - .cache
+    - artifacts
+    - _tools
+    - vendor
     - vendor$
-    - generated.*
   build-tags:
     - mage
     - tools
@@ -246,35 +162,46 @@ issues:
       linters:
         - goerr113
         - wrapcheck
-        - funlen # complexity length in tests isn't a big concern
-        - cyclop # complexity length in tests isn't a big concern
-        - gocognit # complexity length in tests isn't a big concern
-        - unparam # unused params in tests isn't as important
-        - varnamelen # don't worry about variable name length in test code (nice to keep clean, but not important enough to speed time on)
-        - revive # additional checks like constants and more aren't important in the test code
+        - funlen
+        - cyclop
+        - gocognit
+        - unparam
+        - varnamelen
+        - revive
     - linters:
         - goerr113
       text: do not define dynamic errors
-    - path: magefiles/
+    - path: magefiles
       linters:
         - goerr113
         - wrapcheck
-        - funlen # a lot of these are a longer automation tasks and not worth breaking down
-        - gocyclo # a lot of these are a longer automation tasks and not worth breaking down
-        - cyclop # a lot of these are a longer automation tasks and not worth breaking down
-        - gocognit # a lot of these are a longer automation tasks and not worth breaking down
-        - maintidx # a lot of these are a longer automation tasks and not worth breaking down
-        - deadcode # stand alone function are common
+        - funlen
+        - gocyclo
+        - cyclop
+        - gocognit
+        - maintidx
+        - deadcode
+        - gochecknoglobals
+    - path: magefile.go
+      linters:
+        - goerr113
+        - wrapcheck
+        - funlen
+        - gocyclo
+        - cyclop
+        - gocognit
+        - maintidx
+        - deadcode
+        - gochecknoglobals
     - linters:
         - goerr113
       text: magefiles don't need to worry about wrapping in the same way
     - linters:
         - govet
         - revive
-      text: 'shadow: declaration of .err. shadows declaration' # err shadowing is a normal practice, don't worry about this
+      text: 'shadow: declaration of .err. shadows declaration'
     - path: mocks
       linters:
         - godot
       text: mocked files do not need to be checked
-  whole-files: false # Only evaluate the sections of changed code rather than the entire file during greenfield stage of work to avoid excessive noise
-  new-from-rev: HEAD~
+  whole-files: false

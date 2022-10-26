@@ -1,24 +1,57 @@
 version: 0.1
 actions:
   disabled:
+    - trunk-announce
+    - trunk-cache-prune
     - trunk-check-pre-push
     - trunk-fmt-pre-commit
+    - trunk-upgrade-available
+    - go-mod-vendor
+    - gotestsum
+  definitions:
+    - id: go-mod-vendor
+      description: When go mod or sum is updated, go vendoring should be run to ensure it's consistent.
+      runtime: go
+      run: mod vendor
+      triggers:
+        - files: [go.mod]
+    - id: gotestsum
+      runtime: go
+      description: run go tests on pre-push
+      run: gotestsum --format pkgname -- -shuffle=on  -tags integration ./...
+      triggers:
+        - git_hooks: [pre-push]
 cli:
-  version: 0.17.0-beta
+  version: 1.0.1
 plugins:
   sources:
     - id: trunk
-      ref: v0.0.3
+      ref: v0.0.5
       uri: https://github.com/trunk-io/plugins
 lint:
   enabled:
-    - actionlint@1.6.17
+    - actionlint@1.6.21
     - git-diff-check@SYSTEM
-    - gitleaks@8.12.0
+    - gitleaks@8.15.0
     - gofmt@1.16.7
-    - golangci-lint@1.46.2
+    - golangci-lint@1.50.1
     - hadolint@2.10.0
     - markdownlint@0.32.2
     - prettier@2.7.1
     - shellcheck@0.8.0
     - shfmt@3.5.0
+  threshold:
+    - linters: [markdownlint]
+      level: high
+  ignore:
+    - linters: [ALL]
+      paths:
+        - .devcontainer/init
+        - vendor/*
+    - linters: [yamllint]
+      paths:
+        - .changes/unreleased/*.yaml
+runtimes:
+  enabled:
+    - go@1.18.3
+    - node@16.14.2
