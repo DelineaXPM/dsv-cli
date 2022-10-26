@@ -19,7 +19,7 @@ Create a secret at the path `resources/us-east-1/server1`:
 dsv secret create \
   --path resources/us-east-1/server1 \
   --desc 'my important secret' \
-  --data '{"password": "0cuJvsU3sY6Lc"}'
+  --data '{"password": ""}'
 ```
 
 Read a secret field:
