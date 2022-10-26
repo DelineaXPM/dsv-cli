@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"text/template"
@@ -89,9 +90,11 @@ func TestCliArgs(t *testing.T) {
 	}
 }
 
-var certPath = strings.Join([]string{"cicd-integration", "data", "cert.pem"}, string(filepath.Separator))
-var privateKeyPath = strings.Join([]string{"cicd-integration", "data", "key.pem"}, string(filepath.Separator))
-var csrPath = strings.Join([]string{"cicd-integration", "data", "csr.pem"}, string(filepath.Separator))
+var (
+	certPath       = strings.Join([]string{"cicd-integration", "data", "cert.pem"}, string(filepath.Separator))
+	privateKeyPath = strings.Join([]string{"cicd-integration", "data", "key.pem"}, string(filepath.Separator))
+	csrPath        = strings.Join([]string{"cicd-integration", "data", "csr.pem"}, string(filepath.Separator))
+)
 
 const (
 	manualKeyPath    = "thekey:first"
@@ -102,6 +105,12 @@ const (
 )
 
 func TestMain(m *testing.M) {
+	_, err := strconv.ParseBool(os.Getenv("GO_INTEGRATION_TEST"))
+	if err != nil {
+		fmt.Println("[SKIPPED]: GO_INTEGRATION_TEST must be set to 1/true to run integration tests")
+		return
+	}
+
 	var rootDir string
 	if out, err := execabs.Command("git", "rev-parse", "--show-toplevel").CombinedOutput(); err == nil {
 		rootDir = strings.TrimRight(string(out), " \n")
@@ -123,9 +132,9 @@ func TestMain(m *testing.M) {
 
 	cert, key, err := generateRootWithPrivateKey()
 	csr, err := generateCSR()
-	os.WriteFile(certPath, cert, 0644)
-	os.WriteFile(privateKeyPath, key, 0644)
-	os.WriteFile(csrPath, csr, 0644)
+	os.WriteFile(certPath, cert, 0o644)
+	os.WriteFile(privateKeyPath, key, 0o644)
+	os.WriteFile(csrPath, csr, 0o644)
 
 	defer os.Remove(certPath)
 	defer os.Remove(privateKeyPath)
@@ -143,7 +152,7 @@ func TestMain(m *testing.M) {
 	m.Run()
 	_ = os.Unsetenv("IS_SYSTEM_TEST")
 
-	err = os.WriteFile(configPath, config, 0644)
+	err = os.WriteFile(configPath, config, 0o644)
 	if err != nil {
 		fmt.Printf("could not write config: %v", err)
 		os.Exit(1)
@@ -187,17 +196,20 @@ var (
 	secret1Attributes string
 	secret1DataFmt    string
 )
-var adminUser, adminPass string
-var user1, user1Pass string
-var roleName string
-var policyName, policy2Name string
-var groupName string
-var authProvider string
-var synchronousCases []struct {
-	name   string
-	args   []string
-	output outputValidation
-}
+
+var (
+	adminUser, adminPass    string
+	user1, user1Pass        string
+	roleName                string
+	policyName, policy2Name string
+	groupName               string
+	authProvider            string
+	synchronousCases        []struct {
+		name   string
+		args   []string
+		output outputValidation
+	}
+)
 
 func init() {
 	if err := generateThyYml(".thy.yml.template", ".thy.yml"); err != nil {
@@ -277,7 +289,7 @@ func init() {
 		{"policy-read-fail", []string{"policy", "read", policyName}, outputPattern("will be removed")},
 		{"policy-restore", []string{"policy", "restore", policyName}, outputEmpty()},
 
-		//auth provider operations
+		// auth provider operations
 		{"auth-provider-help", []string{"config", "auth-provider", ""}, outputPattern(`Execute an action on an auth-provider.*`)},
 		{"auth-provider-create", []string{"config", "auth-provider", "create", "--name", authProvider, "--type", "aws", "--aws-account-id", "1234"}, outputPattern(fmt.Sprintf(`"name":\s*"%s"`, authProvider))},
 		{"auth-provider-read", []string{"config", "auth-provider", "read", authProvider}, outputPattern(fmt.Sprintf(`"name":\s*"%s"`, authProvider))},
@@ -350,7 +362,7 @@ func init() {
 		// {"logs-pass", []string{"logs", "--startdate", monthAgoDate}, outputPattern("data")},
 		// {"audit-pass", []string{"audit", "--startdate", monthAgoDate}, outputPattern("data")},
 
-		//config operations
+		// config operations
 		{"config-help", []string{"config", "--help"}, outputPattern(`Execute an action on the.*`)},
 		{"config-get-implicit-pass", []string{"config"}, outputPattern(`"permissionDocument":`)},
 		{"config-get-pass", []string{"config", "read"}, outputPattern(`"permissionDocument":`)},
@@ -373,33 +385,48 @@ func init() {
 		{"crypto-manual-key-update", []string{"crypto", "manual", "key-update", "--path", manualKeyPath, "--private-key", manualPrivateKey}, outputPattern(`"version": "1"`)},
 
 		// PKI
-		{"register-root-cert", []string{"pki", "register", "--rootcapath", existingRootSecret,
-			"--certpath", "@" + certPath, "--privkeypath", "@" + privateKeyPath, "--domains", leafCommonName, "--maxttl", "250h",
-		},
+		{
+			"register-root-cert",
+			[]string{
+				"pki", "register", "--rootcapath", existingRootSecret,
+				"--certpath", "@" + certPath, "--privkeypath", "@" + privateKeyPath, "--domains", leafCommonName, "--maxttl", "250h",
+			},
 			outputPattern("certificate"),
 		},
 
-		{"sign-with-root-cert", []string{"pki", "sign", "--rootcapath", existingRootSecret,
-			"--csrpath", "@" + csrPath, "--ttl", "100H",
-		},
+		{
+			"sign-with-root-cert",
+			[]string{
+				"pki", "sign", "--rootcapath", existingRootSecret,
+				"--csrpath", "@" + csrPath, "--ttl", "100H",
+			},
 			outputPattern("certificate"),
 		},
 
-		{"generate-root-cert", []string{"pki", "generate-root", "--rootcapath", certStoreSecret,
-			"--domains", leafCommonName, "--common-name", "thycotic.com", "--maxttl", "60d",
-		},
+		{
+			"generate-root-cert",
+			[]string{
+				"pki", "generate-root", "--rootcapath", certStoreSecret,
+				"--domains", leafCommonName, "--common-name", "thycotic.com", "--maxttl", "60d",
+			},
 			outputPattern("certificate"),
 		},
 
-		{"generate-leaf-cert", []string{"pki", "leaf", "--rootcapath", certStoreSecret,
-			"--common-name", leafCommonName, "--ttl", "5D", "--store-path", leafSecretPath,
-		},
+		{
+			"generate-leaf-cert",
+			[]string{
+				"pki", "leaf", "--rootcapath", certStoreSecret,
+				"--common-name", leafCommonName, "--ttl", "5D", "--store-path", leafSecretPath,
+			},
 			outputPattern("certificate"),
 		},
 
-		{"generate-ssh-cert", []string{"pki", "ssh-cert", "--rootcapath", certStoreSecret, "--leafcapath",
-			leafSecretPath, "--principals", "root,ubuntu", "--ttl", "52w",
-		},
+		{
+			"generate-ssh-cert",
+			[]string{
+				"pki", "ssh-cert", "--rootcapath", certStoreSecret, "--leafcapath",
+				leafSecretPath, "--principals", "root,ubuntu", "--ttl", "52w",
+			},
 			outputPattern("sshCertificate"),
 		},
 
@@ -429,7 +456,7 @@ func fixturePath(t *testing.T, fixture string) string {
 }
 
 func writeFixture(t *testing.T, fixture string, content []byte) {
-	err := os.WriteFile(fixturePath(t, fixture), content, 0644)
+	err := os.WriteFile(fixturePath(t, fixture), content, 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}

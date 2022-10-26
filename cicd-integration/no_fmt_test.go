@@ -10,6 +10,7 @@ import (
 )
 
 func TestEnsureNoFmtUsage(t *testing.T) {
+	t.Skip("This should be enforced by linting now")
 	files, err := getGoFilePaths()
 	if err != nil {
 		t.Fatalf("Unable to get a list of Go files in the project: %v", err)
@@ -29,7 +30,7 @@ func TestEnsureNoFmtUsage(t *testing.T) {
 	}
 }
 
-func getGoFilePaths() ([]string, error) {
+func getGoFilePaths() ([]string, error) { //nolint:unused // leaving for now, until remove test case
 	walkRoot := ".." + string(os.PathSeparator)
 	privPath := string(os.PathSeparator) + "."
 
