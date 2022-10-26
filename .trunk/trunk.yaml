@@ -8,6 +8,7 @@ actions:
     - trunk-upgrade-available
     - go-mod-vendor
     - gotestsum
+
   definitions:
     - id: go-mod-vendor
       description: When go mod or sum is updated, go vendoring should be run to ensure it's consistent.
@@ -33,13 +34,25 @@ lint:
     - actionlint@1.6.21
     - git-diff-check@SYSTEM
     - gitleaks@8.15.0
-    - gofmt@1.16.7
     - golangci-lint@1.50.1
     - hadolint@2.10.0
     - markdownlint@0.32.2
     - prettier@2.7.1
     - shellcheck@0.8.0
     - shfmt@3.5.0
+    - gofumpt@0.4.0
+  disabled:
+    - gofmt
+  definitions:
+    - name: gofumpt
+      files: [go]
+      runtime: go
+      package: mvdan.cc/gofumpt
+      commands:
+        - output: rewrite
+          formatter: true
+          run: gofumpt ${target}
+          success_codes: [0]
   threshold:
     - linters: [markdownlint]
       level: high

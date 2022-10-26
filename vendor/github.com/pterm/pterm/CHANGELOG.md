@@ -1,6 +1,46 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+
+<a name="v0.12.48"></a>
+## [v0.12.48] - 2022-10-02
+### Features
+- custom select/confirm key for interactive printer
+- add flag to disable filter/search for interactive printer
+
+
+<a name="v0.12.47"></a>
+## [v0.12.47] - 2022-09-19
+### Features
+- adding interactive continue printer
+
+### Bug Fixes
+- typo
+- append the selected value to the prompt
+
+### Code Refactoring
+- ignore invalid custom handles
+- initiazile handles on getSuffix
+- comment format
+- address renaming PR comments
+- show full handles by default
+- use a map for the options
+
+### Reverts
+- refactor: use a map for the options
+
+
+<a name="v0.12.46"></a>
+## [v0.12.46] - 2022-09-05
+### Features
+- **putils:** add `CenterText` in putils
+
+### Bug Fixes
+- **textinput:** fixed overwriting the default values
+
+
+<a name="v0.12.45"></a>
+## [v0.12.45] - 2022-07-26
 ### Bug Fixes
 - make sure the interactive printers can cleanup after Ctrl+C
 - the interactive confirm answers should match the confirm/reject text
@@ -1029,7 +1069,11 @@ removed `Header` and put it's content directly into `HeaderPrinter`
 - initial commit
 
 
-[Unreleased]: https://github.com/pterm/pterm/compare/v0.12.44...HEAD
+[Unreleased]: https://github.com/pterm/pterm/compare/v0.12.48...HEAD
+[v0.12.48]: https://github.com/pterm/pterm/compare/v0.12.47...v0.12.48
+[v0.12.47]: https://github.com/pterm/pterm/compare/v0.12.46...v0.12.47
+[v0.12.46]: https://github.com/pterm/pterm/compare/v0.12.45...v0.12.46
+[v0.12.45]: https://github.com/pterm/pterm/compare/v0.12.44...v0.12.45
 [v0.12.44]: https://github.com/pterm/pterm/compare/v0.12.43...v0.12.44
 [v0.12.43]: https://github.com/pterm/pterm/compare/v0.12.42...v0.12.43
 [v0.12.42]: https://github.com/pterm/pterm/compare/v0.12.41...v0.12.42

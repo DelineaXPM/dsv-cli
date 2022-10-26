@@ -12,7 +12,6 @@ package gotools
 import (
 	"fmt"
 	"go/build"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -21,6 +20,7 @@ import (
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 	"github.com/pterm/pterm"
+	"github.com/sheldonhull/magetools/ci"
 	"github.com/sheldonhull/magetools/pkg/magetoolsutils"
 	"github.com/sheldonhull/magetools/pkg/req"
 	"github.com/sheldonhull/magetools/tooling"
@@ -33,7 +33,7 @@ type (
 )
 
 const (
-	// _maxLength is the maximum length allowed before golines will wrap functional options and similar style calls.
+	// MaxLength is the maximum length allowed before golines will wrap functional options and similar style calls.
 	//
 	// For example:
 	//
@@ -43,55 +43,32 @@ const (
 	//	Str(bar).
 	//	Str(taco).
 	//	Msg("foo")
-	_maxLength = 120
+	maxLength = 120
 )
 
 // toolList is the list of tools to initially install when running a setup process in a project.
 //
-// This includes goreleaser, golangci-lint, petname (for random build/titles).
+// This includes goreleaser, golangci-lint, etc (for random build/titles).
 //
 // In addition, core tooling from VSCode Install Tool commands are included so using in a Codespace project doesn't require anything other than mage go:init.
 var toolList = []string{ //nolint:gochecknoglobals // ok to be global for tooling setup
+}
 
-	// build tools
-	"github.com/goreleaser/goreleaser@v0.174.1", // NOTE: 2022-03-25: latest results in error with  undefined: strings.Cut note: module requires Go 1.18 WHEN BUILDING FROM SOURCE
-	"github.com/dustinkirkland/golang-petname/cmd/petname@latest",
-	"github.com/AlexBeauchemin/gobadge@latest", // create a badge for your markdown from the coverage files.
-	// linting tools
-	"github.com/golangci/golangci-lint/cmd/golangci-lint@latest",
-
-	// formatting tools
-	"github.com/segmentio/golines@latest", // handles nice clean line breaks of long lines
-	"mvdan.cc/gofumpt@latest",
-
-	// Testing tools
-	"github.com/mfridman/tparse@latest", // nice table output after running test
-	"gotest.tools/gotestsum@latest",     // ability to run tests with junit, json output, xml, and more.
-
-	"golang.org/x/tools/gopls@latest",
-	"github.com/uudashr/gopkgs/v2/cmd/gopkgs@latest",
-	"github.com/ramya-rao-a/go-outline@latest",
-	"github.com/cweill/gotests/gotests@latest",
-	"github.com/fatih/gomodifytags@latest",
-	"github.com/josharian/impl@latest",
-	"github.com/haya14busa/goplay/cmd/goplay@latest",
-	"github.com/go-delve/delve/cmd/dlv@latest",
-	"github.com/rogpeppe/godef@latest",
-
-	// Self setup mage
-	"github.com/magefile/mage@latest",
+// CIToolList is key go tools likely required for CI.
+// This separates out the tools that are dev specific (like a language server tool) and others that would still be needed in CI systems.
+var ciToolList = []string{ //nolint:gochecknoglobals // ok to be global for tooling setup
 }
 
 // getModuleName returns the name from the module file.
 // Original help on this was: https://stackoverflow.com/a/63393712/68698
 func (Go) GetModuleName() string {
 	magetoolsutils.CheckPtermDebug()
-	goModBytes, err := ioutil.ReadFile("go.mod")
+	goModBytes, err := os.ReadFile("go.mod")
 	if err != nil {
 		pterm.Warning.WithShowLineNumber(true).WithLineNumberOffset(1).Println("getModuleName() can't find ./go.mod")
 		// Running one more check above the parent directory in case this is running in a test or nested directory for some reason.
 		// Only 1 level lookback for now.
-		goModBytes, err = ioutil.ReadFile("../go.mod")
+		goModBytes, err = os.ReadFile("../go.mod")
 		if err != nil {
 			pterm.Warning.WithShowLineNumber(true).
 				WithLineNumberOffset(1).
@@ -112,6 +89,13 @@ func (Go) GetModuleName() string {
 func (Go) Init() error {
 	magetoolsutils.CheckPtermDebug()
 	pterm.DefaultHeader.Println("Go Init()")
+	if ci.IsCI() {
+		if err := tooling.SilentInstallTools(ciToolList); err != nil {
+			return err
+		}
+		pterm.Info.Println("CI detected, installing CI tools, and returning early")
+		return nil
+	}
 	if err := tooling.SilentInstallTools(toolList); err != nil {
 		return err
 	}
@@ -125,9 +109,9 @@ func (Go) Init() error {
 // 🧪 Run go test. Optional: GOTEST_FLAGS '-tags integration', Or write your own GOTEST env logic.
 // Example of checking based on GOTEST style environment variable:
 //
-// 	if !strings.Contains(strings.ToLower(os.Getenv("GOTESTS")), "slow") {
-//		t.Skip("GOTESTS should include 'slow' to run this test")
-// }.
+//		if !strings.Contains(strings.ToLower(os.Getenv("GOTESTS")), "slow") {
+//			t.Skip("GOTESTS should include 'slow' to run this test")
+//	}.
 func (Go) Test() error {
 	magetoolsutils.CheckPtermDebug()
 	var vflag string
@@ -162,11 +146,17 @@ func (Go) TestSum(path string) error {
 	magetoolsutils.CheckPtermDebug()
 	pterm.DefaultHeader.Println("GOTESTSUM")
 	appgotestsum := "gotestsum"
-	gotestsum, err := req.ResolveBinaryByInstall(appgotestsum, "gotest.tools/gotestsum@latest")
+	var gotestsum string
+	var err error
+	gotestsum, err = req.ResolveBinaryByInstall("gotestsum", "gotest.tools/gotestsum@latest")
 	if err != nil {
-		pterm.Error.WithShowLineNumber(true).WithLineNumberOffset(1).Printfln("unable to find %s: %v", gotestsum, err)
+		pterm.Error.WithShowLineNumber(true).
+			WithLineNumberOffset(1).
+			Printfln("unable to find %s: %v", appgotestsum, err)
 		return err
 	}
+
+	pterm.Info.Printfln("gotestsum found: %s", gotestsum)
 
 	var vflag string
 	if mg.Verbose() {
@@ -197,9 +187,17 @@ func (Go) TestSum(path string) error {
 	}
 	additionalGoArgs := []string{}
 	additionalGoArgs = append(additionalGoArgs, "--format")
-	additionalGoArgs = append(additionalGoArgs, "pkgname")
-	additionalGoArgs = append(additionalGoArgs, "--junitfile "+junitFile)
-	additionalGoArgs = append(additionalGoArgs, "--jsonfile "+jsonFile)
+
+	if os.Getenv("TESTSUM_FORMAT") != "" {
+		additionalGoArgs = append(additionalGoArgs, os.Getenv("TESTSUM_FORMAT"))
+	} else {
+		additionalGoArgs = append(additionalGoArgs, "pkgname")
+	}
+
+	additionalGoArgs = append(additionalGoArgs, "--junitfile")
+	additionalGoArgs = append(additionalGoArgs, junitFile)
+	additionalGoArgs = append(additionalGoArgs, "--jsonfile")
+	additionalGoArgs = append(additionalGoArgs, jsonFile)
 	additionalGoArgs = append(additionalGoArgs, fmt.Sprintf("--packages=%s", path))
 
 	additionalGoArgs = append(additionalGoArgs, "--")
@@ -258,7 +256,22 @@ func (Go) Lint() error {
 	magetoolsutils.CheckPtermDebug()
 
 	pterm.Info.Println("Running golangci-lint")
-	if err := sh.RunV("golangci-lint", "run"); err != nil {
+
+	appgolangcilint := "golangci-lint"
+	var golangcilint string
+	var err error
+	golangcilint, err = req.ResolveBinaryByInstall(
+		appgolangcilint,
+		"github.com/golangci/golangci-lint/cmd/golangci-lint@latest",
+	)
+	if err != nil {
+		pterm.Error.WithShowLineNumber(true).
+			WithLineNumberOffset(1).
+			Printfln("unable to find %s: %v", appgolangcilint, err)
+		return err
+	}
+	pterm.Info.Printfln("gotestsum found: %s", golangcilint)
+	if err := sh.RunV(golangcilint, "run"); err != nil {
 		pterm.Error.WithShowLineNumber(true).WithLineNumberOffset(1).Println("golangci-lint failure")
 
 		return err
@@ -272,7 +285,18 @@ func (Go) Fix() error {
 	magetoolsutils.CheckPtermDebug()
 
 	pterm.Info.Println("Running golangci-lint with --fix flag enabled.")
-	if err := sh.RunV("golangci-lint", "run", "--fix"); err != nil {
+	golangcilint, err := req.ResolveBinaryByInstall(
+		"golangci-lint",
+		"github.com/golangci/golangci-lint/cmd/golangci-lint@latest",
+	)
+	if err != nil {
+		pterm.Error.WithShowLineNumber(true).
+			WithLineNumberOffset(1).
+			Printfln("unable to find %s: %v", "golangci-lint", err)
+		return err
+	}
+
+	if err := sh.RunV(golangcilint, "run", "--fix"); err != nil {
 		pterm.Error.WithShowLineNumber(true).WithLineNumberOffset(1).Println("golangci-lint failure")
 		return err
 	}
@@ -331,7 +355,7 @@ func (Go) Wrap() error {
 		"--base-formatter",
 		gofumpt,
 		"-w",
-		fmt.Sprintf("--max-len=%d", _maxLength),
+		fmt.Sprintf("--max-len=%d", maxLength),
 		"--reformat-tags"); err != nil {
 		tracerr.PrintSourceColor(err)
 		return err
@@ -384,7 +408,19 @@ func (Go) LintConfig() error {
 	pterm.DefaultSection.Println("🔍 golangci-lint linters with --fast")
 	var out string // using output instead of formatted colors straight to console so that test output with pterm can suppress.
 	var err error
-	out, err = sh.Output("golangci-lint", "linters", "--fast")
+
+	golangcilint, err := req.ResolveBinaryByInstall(
+		"golangci-lint",
+		"github.com/golangci/golangci-lint/cmd/golangci-lint@latest",
+	)
+	if err != nil {
+		pterm.Error.WithShowLineNumber(true).
+			WithLineNumberOffset(1).
+			Printfln("unable to find %s: %v", "golangci-lint", err)
+		return err
+	}
+
+	out, err = sh.Output(golangcilint, "linters", "--fast")
 	if err != nil {
 		pterm.Error.WithShowLineNumber(true).WithLineNumberOffset(1).Println("unable to run golangci-lint")
 		tracerr.PrintSourceColor(err)
@@ -392,7 +428,7 @@ func (Go) LintConfig() error {
 	}
 	pterm.DefaultBox.Println(out)
 	pterm.DefaultSection.Println("🔍  golangci-lint linters with plain run")
-	out, err = sh.Output("golangci-lint", "linters")
+	out, err = sh.Output(golangcilint, "linters")
 	if err != nil {
 		pterm.Error.WithShowLineNumber(true).WithLineNumberOffset(1).Println("unable to run golangci-lint")
 		tracerr.PrintSourceColor(err)

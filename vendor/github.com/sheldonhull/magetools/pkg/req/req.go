@@ -14,8 +14,7 @@ package req
 
 import (
 	"go/build"
-	"os"
-	"path/filepath"
+	"os/exec"
 	"strings"
 
 	"github.com/bitfield/script"
@@ -37,23 +36,21 @@ func GetGoPath() (gopath string) {
 	return gopath
 }
 
-// ResolveBinaryByInstall tries to qualify the Go tool path, but if can't find it, it will attempt to install and try again once.
+// ResolveBinaryByInstall tries to qualify the tool, looking in all `PATH` locations.
+// If it can't resolve the binary, it will attempt to use a source based install via `go install`, which might be slower, but eliminate failure if not using a pre-installation method such as Aqua, asdf, brew, or other tooling methods.
 //
 // This can help with running in CI and not having to have a lot of setup code.
-func ResolveBinaryByInstall(app, goInstallCmd string) (string, error) {
-	var binary string
-	var err error
-
-	binary, err = QualifyGoBinary(app)
+func ResolveBinaryByInstall(app, goInstallCmd string) (qualifiedBinary string, err error) {
+	qualifiedBinary, err = QualifyGoBinary(app)
 
 	if err != nil {
-		pterm.Info.Printfln("Couldn't find %s, so will attempt to install it", app)
+		pterm.Info.Printfln("Couldn't find %s, so will attempt to install it from source", app)
 		err := tooling.SilentInstallTools([]string{goInstallCmd})
 		if err != nil {
 			return "", tracerr.Wrap(err)
 		}
 
-		binary, err = QualifyGoBinary(app)
+		qualifiedBinary, err = QualifyGoBinary(app)
 		if err != nil {
 			pterm.Error.WithShowLineNumber(true).
 				WithLineNumberOffset(1).
@@ -61,7 +58,7 @@ func ResolveBinaryByInstall(app, goInstallCmd string) (string, error) {
 			return "", tracerr.Wrap(err)
 		}
 	}
-	return binary, nil
+	return qualifiedBinary, nil
 }
 
 // addGoPkgBinToPath ensures the go/bin directory is available in path for cli tooling.
@@ -83,15 +80,15 @@ func ResolveBinaryByInstall(app, goInstallCmd string) (string, error) {
 // }
 
 // QualifyGoBinary provides a fully qualified path for an installed Go binary to avoid path issues.
+// This uses exec.LookPath to allow resolution of the binary from any provided `PATH` variables, allowing better alternative tooling installation before installing from source.
 func QualifyGoBinary(binary string) (string, error) {
-	gopath := GetGoPath()
 
-	qualifiedPath := filepath.Join(gopath, "bin", binary)
-	pterm.Debug.Printfln("qualifiedPath to search for: %q", qualifiedPath)
-	if _, err := os.Stat(qualifiedPath); err != nil {
+	pterm.Debug.Printfln("searching for binary in all provided PATH locations: %q", binary)
+	qualifiedPath, err := exec.LookPath(binary)
+	if err != nil {
 		pterm.Warning.WithShowLineNumber(true).
 			WithLineNumberOffset(1).
-			Printfln("%q not found in bin. qualifiedPath searched: %q", binary, qualifiedPath)
+			Printfln("%q not found in any provided locations", binary)
 		return "", tracerr.Wrap(err)
 	}
 	pterm.Debug.Printfln("%q full path: %q", binary, qualifiedPath)

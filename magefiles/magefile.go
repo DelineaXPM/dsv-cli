@@ -10,7 +10,6 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/pterm/pterm"
 	"github.com/sheldonhull/magetools/ci"
-	_ "github.com/sheldonhull/magetools/gittools"
 	"github.com/sheldonhull/magetools/pkg/magetoolsutils"
 	"github.com/sheldonhull/magetools/tooling"
 
@@ -18,14 +17,13 @@ import (
 	_ "github.com/sheldonhull/magetools/gotools"
 	//mage:import
 	_ "github.com/sheldonhull/magetools/docgen"
-	//mage:import
-	_ "github.com/sheldonhull/magetools/precommit"
 )
 
 // relTime returns just a simple relative time humanized, without the "ago" suffix.
 func relTime(t time.Time) string {
 	return strings.ReplaceAll(humanize.Time(t), " ago", "")
 }
+
 func Init() error {
 	start := time.Now()
 	magetoolsutils.CheckPtermDebug()
