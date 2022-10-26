@@ -1,0 +1,14 @@
+---
+name: test
+on:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  test:
+    uses: delineaxpm/github-workflows/.github/workflows/test.yml@main
+    secrets: inherit
+    with:
+      gotestflags: ''
