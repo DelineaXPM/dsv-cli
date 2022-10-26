@@ -14,3 +14,14 @@ Prebuilt binaries for Linux, macOS and Windows can be downloaded from https://ds
 ## License
 
 See [LICENSE](https://github.com/thycotic/dsv-cli/blob/master/LICENSE) for the full license text.
+
+## Contributors
+
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+
+<!-- readme: collaborators,contributors -start -->
+<!-- readme: collaborators,contributors -end -->
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->)
