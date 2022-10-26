@@ -1,4 +1,6 @@
 #eval "$(direnv hook zsh)"
+export PATH="${AQUA_ROOT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/aquaproj-aqua}/bin:$PATH"
+export PATH="$(go env GOPATH)/bin:${PATH}"
 export ZSH="$HOME/.oh-my-zsh"
 ZSH_THEME=avit
 plugins=(z direnv zsh-interactive-cd docker golang gh zsh-navigation-tools)
@@ -7,8 +9,8 @@ source "$ZSH/oh-my-zsh.sh"
 
 
 # Display optional first run image specific notice if configured and terminal is interactive
-# if [ -t 1 ] && [[ "${TERM_PROGRAM}" = "vscode" || "${TERM_PROGRAM}" = "codespaces" ]] && [ ! -f "$HOME/.config/vscode-dev-containers/first-run-notice-already-displayed" ]; then
-if [ -t 1 ] && [[ "${TERM_PROGRAM}" = "vscode" || "${TERM_PROGRAM}" = "codespaces" ]]; then
+# if [ -t 1 ] && [[ "${TERM_PROGRAM}" = "vscode" || "${TERM_PROGRAM}" = "vscodes" ]] && [ ! -f "$HOME/.config/vscode-dev-containers/first-run-notice-already-displayed" ]; then
+if [ -t 1 ] && [[ "${TERM_PROGRAM}" = "vscode" || "${TERM_PROGRAM}" = "vscodes" ]]; then
     if [ -f "$HOME/first-run-notice.txt" ]; then
         if  command -v glow &>/dev/null;   then
             glow "$HOME/first-run-notice.txt"

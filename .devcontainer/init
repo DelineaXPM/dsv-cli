@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# This runs on the the host context
 touch "$HOME/.envrc" && echo "✅ $HOME/.envrc initialized"
 mkdir "$HOME/.ssh" || echo "✅ .ssh dir already exists"
 mkdir "$HOME/.kube" || echo "✅ .kube dir already exists"

@@ -1,6 +1,6 @@
-# Welcome to devcontainer
+# Welcome to this devcontainer
 
-> This bakes in Go, Kind, Docker, and more into a self-contained devenvironment.
+> This bakes in Go, Kind, Docker, and more into a self-contained dev environment.
 
 > TIP: run `glow README.md` to get a nice formatted setup guide in your terminal.
 
