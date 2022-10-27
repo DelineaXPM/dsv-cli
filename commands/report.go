@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	cst "thy/constants"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
 	"github.com/DelineaXPM/dsv-cli/errors"
 	"github.com/DelineaXPM/dsv-cli/internal/predictor"
 	"github.com/DelineaXPM/dsv-cli/paths"

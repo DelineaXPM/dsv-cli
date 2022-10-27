@@ -14,7 +14,7 @@ import (
 	"github.com/mitchellh/cli"
 	"github.com/spf13/viper"
 
-	cst "thy/constants"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
 )
 
 func GetUsageCmd() (cli.Command, error) {

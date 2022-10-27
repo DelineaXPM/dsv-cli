@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strings"
 
-	cst "thy/constants"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
 	"github.com/DelineaXPM/dsv-cli/errors"
 
 	"github.com/spf13/viper"

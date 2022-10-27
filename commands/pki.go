@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	cst "thy/constants"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
 	apperrors "thy/errors"
 	"github.com/DelineaXPM/dsv-cli/internal/predictor"
 	"github.com/DelineaXPM/dsv-cli/paths"
