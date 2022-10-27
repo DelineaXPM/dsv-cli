@@ -1,0 +1,19 @@
+---
+name: lint
+on:
+  push:
+    branches:
+      - main
+      - stable-*
+  pull_request:
+  workflow_dispatch:
+  workflow_call: # so composite actions can use this
+
+permissions:
+  pull-requests: write
+  checks: write
+  contents: read
+jobs:
+  lint:
+    uses: delineaxpm/github-workflows/.github/workflows/lint.yml@main
+    secrets: inherit

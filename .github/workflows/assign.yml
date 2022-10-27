@@ -1,0 +1,26 @@
+---
+name: assign
+on:
+  # on why it's reasonable to use pull_request_target for this purpose: https://securitylab.github.com/research/github-actions-preventing-pwn-requests/#:~:text=The%20main%20differences%20between%20the,but%20not%20from%20external%20forks.
+  pull_request_target:
+    types: [opened, ready_for_review]
+  workflow_call:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.action }}
+  cancel-in-progress: true
+jobs:
+  assign:
+    name: assign
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    permissions:
+      pull-requests: write
+      contents: read # Because it needs to read the configuration file
+    steps:
+      - uses: kentaro-m/auto-assign-action@60730395fd3afb76c7407e16cd4b144fbbcf28a6 # renovate: tag=v1
+        with:
+          configuration-path: .github/auto-assign.yml # Only needed if you use something other than .github/auto_assign.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

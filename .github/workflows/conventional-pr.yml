@@ -1,0 +1,48 @@
+---
+name: conventional-commit-pr-title
+on:
+  workflow_call:
+  pull_request_target:
+    # pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.action }}
+  cancel-in-progress: true
+jobs:
+  main:
+    name: conventional-commit-pr-title
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    steps:
+      - uses: amannn/action-semantic-pull-request@505e44b4f33b4c801f063838b3f053990ee46ea7 # renovate: tag=v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            chore
+            refactor
+            test
+            docs
+            style
+            perf
+            ci
+            build
+            revert
+          requireScope: false
+          subjectPattern: ^(?![A-Z]).+$
+          subjectPatternError: |
+            The subject "{subject}" found in the pull request title "{title}"
+            didn't match the configured pattern. Please ensure that the subject
+            doesn't start with an uppercase character.
+          ignoreLabels: |
+            ignore-semantic-pull-request
+          headerPattern: '^(\w*)(?:\(([\w$.\-*/ ]*)\))?: (.*)$'
+          headerPatternCorrespondence: type, scope, subject
+          wip: false # This requires elevated permissions, not using
