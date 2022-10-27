@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/DelineaXPM/dsv-cli/errors"
-	ch "thy/store/credential-helpers"
+	ch "github.com/DelineaXPM/dsv-cli/store/credential-helpers"
 )
 
 type secureStore struct {
