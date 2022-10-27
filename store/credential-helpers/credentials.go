@@ -32,7 +32,7 @@ func (c *Credentials) isValid() (bool, error) {
 	return true, nil
 }
 
-// CredsLabel holds the way Docker credentials should be labeled as such in credentials stores that allow labelling.
+// CredsLabel holds the way Docker credentials should be labeled as such in credentials stores that allow labeling.
 // That label allows to filter out non-Docker credentials too at lookup/search in macOS keychain,
 // Windows credentials manager and Linux libsecret. Default value is "Vault Token"
 var CredsLabel = "Vault Token"

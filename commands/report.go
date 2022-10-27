@@ -157,7 +157,6 @@ func reportRoleSecret(vcli vaultcli.CLI, role, path string, limit, offset int) i
 			}
 
 			data, err = vcli.GraphQLClient().DoRequest(uri, &query, variables)
-
 		} else {
 			var query struct {
 				Role struct {
@@ -209,7 +208,6 @@ func reportGroupSecret(vcli vaultcli.CLI, group, path string, limit, offset int)
 			}
 
 			data, err = vcli.GraphQLClient().DoRequest(uri, &query, variables)
-
 		} else {
 			var query struct {
 				Group struct {
@@ -277,7 +275,6 @@ func reportUserSecret(vcli vaultcli.CLI, user, path string, limit, offset int, c
 			}
 
 			data, err = vcli.GraphQLClient().DoRequest(uri, &query, variables)
-
 		} else {
 			var query struct {
 				User struct {
@@ -342,7 +339,6 @@ func reportSignInUserSecret(vcli vaultcli.CLI, path string, limit, offset int, c
 			}
 
 			data, err = vcli.GraphQLClient().DoRequest(uri, &query, variables)
-
 		} else {
 			var query struct {
 				Me struct {

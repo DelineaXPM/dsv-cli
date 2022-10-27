@@ -242,7 +242,7 @@ func toYaml(data []byte) ([]byte, *errors.ApiError) {
 	var obj interface{}
 	err := json.Unmarshal(data, &obj)
 	if err != nil {
-		return nil, errors.New(err).Grow("Failed marshalling data as json prior to conversion to yaml")
+		return nil, errors.New(err).Grow("Failed marshaling data as json prior to conversion to yaml")
 	}
 	return errors.Convert(yaml.Marshal(obj))
 }

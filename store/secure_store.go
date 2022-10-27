@@ -77,13 +77,13 @@ func (s *secureStore) List(prefix string) ([]string, *errors.ApiError) {
 }
 
 func dataToCreds(key string, data interface{}) (*ch.Credentials, *errors.ApiError) {
-	marshalled, err := json.Marshal(data)
+	marshaled, err := json.Marshal(data)
 	if err != nil {
 		return nil, errors.New(err)
 	}
 	return &ch.Credentials{
 		ServerURL: key,
-		Secret:    string(marshalled),
+		Secret:    string(marshaled),
 	}, nil
 }
 

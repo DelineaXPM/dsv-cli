@@ -143,7 +143,7 @@ Usage:
 		NoPreAuth: true,
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Key, Usage: "Key of setting to be updated (required)"},
-			{Name: cst.Value, Usage: "Value of setting to be udpated (required)"},
+			{Name: cst.Value, Usage: "Value of setting to be updated (required)"},
 		},
 		MinNumberArgs: 2,
 		RunFunc:       handleCliConfigUpdateCmd,
@@ -891,7 +891,6 @@ Example:
 
 Example:
 	dsv secret search --auth-client-id "a71d...f0d4" --auth-client-secret "R8WzW...jWg"`)
-
 		}
 	}
 

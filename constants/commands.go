@@ -180,7 +180,7 @@ const (
 	DataProjectID = "gcp.project.id"
 	DataCallback  = "callback"
 
-	//group
+	// group
 	DataGroupName = "group.name"
 	Members       = "members"
 )

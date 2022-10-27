@@ -41,8 +41,8 @@ func NewFileStore(basePath string) Store {
 }
 
 func (s *fileStore) Store(key string, secret interface{}) *errors.ApiError {
-	if marshalled, err := json.Marshal(secret); err == nil {
-		return errors.New(s.internalStore.Write(key, marshalled))
+	if marshaled, err := json.Marshal(secret); err == nil {
+		return errors.New(s.internalStore.Write(key, marshaled))
 	} else {
 		return errors.New(err)
 	}

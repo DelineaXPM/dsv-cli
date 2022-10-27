@@ -53,8 +53,8 @@ linters-settings:
     case:
       use-field-name: true
       rules:
-        json: kebab
-        yaml: kebab
+        json: camel # CUSTOMIZED: preexisting format, leave. 2022-10-27 - sheldon
+        yaml: camel # CUSTOMIZED: preexisting format, leave. 2022-10-27 - sheldon
         xml: camel
         bson: camel
         avro: snake
@@ -109,6 +109,10 @@ linters-settings:
     rules:
       - name: var-naming
         severity: error
+  ireturn:
+    allow:
+      - github.com\/mitchellh\/cli # CUSTOMIZED: cli command is common interfacer in this project
+
 linters:
   exclude-use-default: false
   enable-all: true
@@ -143,6 +147,11 @@ linters:
     - rowserrcheck # disabled due to generics, can enable in future if needed
     - sqlclosecheck # disabled due to generics, can enable in future if needed
     - wastedassign # disabled due to generics, can enable in future if needed
+
+    - funlen # CUSTOMIZED: preexisting many larger functions, remove to avoid excessive noise, leave. 2022-10-27 - sheldon
+    - cyclop # CUSTOMIZED: preexisting many larger functions, remove to avoid excessive noise, leave. 2022-10-27 - sheldon
+    - gocognit # CUSTOMIZED: preexisting many larger functions, remove to avoid excessive noise, leave. 2022-10-27 - sheldon
+    - testpackage # CUSTOMIZED: existing tests don't use this approach, too many false positives, remove to avoid excessive noise, leave. 2022-10-27 - sheldon
 run:
   skip-dirs-use-default: true
   skip-dirs:
@@ -204,4 +213,8 @@ issues:
       linters:
         - godot
       text: mocked files do not need to be checked
+    - path: commands/ # CUSTOMIZED: current cli framework uses this return of functions so not checking those
+      text: current cli framework uses this return of functions so not checking those
+      linters:
+        - ireturn
   whole-files: false

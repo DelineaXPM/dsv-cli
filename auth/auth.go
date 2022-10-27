@@ -24,7 +24,8 @@ const (
 	refreshTokenLifeSeconds = 60 * 60 * 720
 )
 
-// Note that this global error variable is of type *ApiError, not regular error.
+// KeyfileNotFoundError is a global error variable is of type *ApiError, not regular error.
+// trunk-ignore(golangci-lint/gochecknoglobals)
 var KeyfileNotFoundError = errors.NewS("failed to find the encryption key")
 
 // AuthType is the type of authentication.

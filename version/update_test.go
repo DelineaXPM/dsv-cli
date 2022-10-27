@@ -71,7 +71,7 @@ func TestReadCache(t *testing.T) {
 		{
 			name:     "Old cached content",
 			filename: "old_cached_content_*.json",
-			//content:  time.Now().Add(checkFrequencyDays*-2*time.Hour*24).Format(dateLayout) + "\nWrong JSON string",
+			// content:  time.Now().Add(checkFrequencyDays*-2*time.Hour*24).Format(dateLayout) + "\nWrong JSON string",
 			content: time.Now().Add(checkFrequencyDays*-2*time.Hour*24).Format(dateLayout) + `
 {"latest":"1.29.0","links": {"darwin/amd64":"https://dsv.thycotic.com/downloads/cli/1.29.0/dsv-darwin-x64", "linux/amd64":"https://dsv.thycotic.com/downloads/cli/1.29.0/dsv-linux-x64"}}`,
 			result: nil,
@@ -114,7 +114,6 @@ func TestReadCache(t *testing.T) {
 			result := readCache(fName)
 			assert.Equal(t, testCase.result, result)
 		})
-
 	}
 }
 

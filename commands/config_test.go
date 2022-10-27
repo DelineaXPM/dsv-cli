@@ -171,7 +171,6 @@ func TestHandleConfigReadCmd(t *testing.T) {
 				assert.Equal(t, err, tt.expectedErr)
 			}
 		})
-
 	}
 }
 

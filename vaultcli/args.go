@@ -20,7 +20,6 @@ func GetFlagVal(flag string, args []string) string {
 
 	for i, arg := range args {
 		for _, flagName := range flagNames {
-
 			if arg == flagName && len(args)-1 >= i+1 {
 				return args[i+1]
 			}

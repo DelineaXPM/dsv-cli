@@ -404,12 +404,12 @@ func createPolicy(params []map[string]string) (string, error) {
 	doc := map[string][]*defaultPolicy{
 		"permissionDocument": permissions,
 	}
-	marshalled, err := json.Marshal(doc)
+	marshaled, err := json.Marshal(doc)
 	if err != nil {
 		return "", err
 	}
 
-	return string(marshalled), nil
+	return string(marshaled), nil
 }
 
 func policyBuildFromFlags() (string, *errors.ApiError) {
