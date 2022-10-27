@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	cst "thy/constants"
-	"thy/errors"
-	"thy/tests/fake"
-	"thy/vaultcli"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/tests/fake"
+	"github.com/DelineaXPM/dsv-cli/vaultcli"
 )
 
 func TestGetGroupCmd(t *testing.T) {

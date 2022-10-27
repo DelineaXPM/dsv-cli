@@ -4,8 +4,8 @@ import (
 	"context"
 
 	cst "thy/constants"
-	"thy/errors"
-	"thy/format"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/format"
 
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2"

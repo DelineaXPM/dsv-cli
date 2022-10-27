@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"thy/store"
+	"github.com/DelineaXPM/dsv-cli/store"
 )
 
 const (

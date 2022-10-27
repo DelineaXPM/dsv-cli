@@ -7,8 +7,8 @@ import (
 	"sync"
 
 	cst "thy/constants"
-	"thy/errors"
-	"thy/utils"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/utils"
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"

@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	cst "thy/constants"
-	"thy/errors"
-	"thy/format"
-	"thy/utils"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/format"
+	"github.com/DelineaXPM/dsv-cli/utils"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"

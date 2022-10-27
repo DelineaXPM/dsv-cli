@@ -6,7 +6,7 @@ import (
 	"log"
 	"strings"
 
-	"thy/errors"
+	"github.com/DelineaXPM/dsv-cli/errors"
 	ch "thy/store/credential-helpers"
 )
 

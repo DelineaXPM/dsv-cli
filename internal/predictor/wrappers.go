@@ -4,7 +4,7 @@ import (
 	"os"
 	"strings"
 
-	"thy/vaultcli"
+	"github.com/DelineaXPM/dsv-cli/vaultcli"
 
 	"github.com/posener/complete"
 	flag "github.com/spf13/pflag"

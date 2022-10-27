@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"strings"
 
-	"thy/auth"
+	"github.com/DelineaXPM/dsv-cli/auth"
 	cst "thy/constants"
-	"thy/paths"
-	"thy/requests"
+	"github.com/DelineaXPM/dsv-cli/paths"
+	"github.com/DelineaXPM/dsv-cli/requests"
 
 	"github.com/posener/complete"
 	"github.com/spf13/viper"

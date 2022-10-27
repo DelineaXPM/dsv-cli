@@ -7,7 +7,7 @@ import (
 	"path"
 	"strings"
 
-	"thy/errors"
+	"github.com/DelineaXPM/dsv-cli/errors"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/peterbourgon/diskv/v3"

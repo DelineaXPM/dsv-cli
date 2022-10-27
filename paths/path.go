@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	cst "thy/constants"
-	"thy/errors"
+	"github.com/DelineaXPM/dsv-cli/errors"
 
 	"github.com/spf13/viper"
 )

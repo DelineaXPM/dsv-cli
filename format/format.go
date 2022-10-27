@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	cst "thy/constants"
-	"thy/errors"
-	"thy/utils"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/utils"
 
 	"github.com/fatih/color"
 	"github.com/hokaccha/go-prettyjson"

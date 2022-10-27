@@ -10,9 +10,9 @@ import (
 
 	"github.com/spf13/viper"
 
-	cst "thy/constants"
-	"thy/errors"
-	"thy/store"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/store"
 )
 
 // StorePassword takes a fileName in which it tries to find an encryption key. It also receives data to encrypt (password).

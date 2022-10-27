@@ -1,12 +1,12 @@
 package vaultcli
 
 import (
-	"thy/errors"
+	"github.com/DelineaXPM/dsv-cli/errors"
 
-	"thy/auth"
-	"thy/format"
-	"thy/requests"
-	"thy/store"
+	"github.com/DelineaXPM/dsv-cli/auth"
+	"github.com/DelineaXPM/dsv-cli/format"
+	"github.com/DelineaXPM/dsv-cli/requests"
+	"github.com/DelineaXPM/dsv-cli/store"
 )
 
 type VaultCLIOption func(vcli CLI) error

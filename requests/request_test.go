@@ -7,7 +7,7 @@ import (
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
 
-	"thy/requests"
+	"github.com/DelineaXPM/dsv-cli/requests"
 )
 
 func TestHttpClient_DoRequest(t *testing.T) {

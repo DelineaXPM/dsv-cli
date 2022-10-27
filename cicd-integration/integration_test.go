@@ -16,8 +16,8 @@ import (
 	"text/template"
 	"time"
 
-	"thy/constants"
-	"thy/utils/test_helpers"
+	"github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/utils/test_helpers"
 
 	"github.com/gobuffalo/uuid"
 	"golang.org/x/sys/execabs"

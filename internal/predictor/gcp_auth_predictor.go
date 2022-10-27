@@ -3,7 +3,7 @@ package predictor
 import (
 	"github.com/posener/complete"
 
-	"thy/auth"
+	"github.com/DelineaXPM/dsv-cli/auth"
 )
 
 type GcpAuthTypePredictor struct{}

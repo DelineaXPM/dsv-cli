@@ -3,7 +3,7 @@ package predictor
 import (
 	"github.com/posener/complete"
 
-	"thy/format"
+	"github.com/DelineaXPM/dsv-cli/format"
 )
 
 type OutputTypePredictor struct{}

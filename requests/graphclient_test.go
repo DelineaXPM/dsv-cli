@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"testing"
 
-	"thy/requests"
+	"github.com/DelineaXPM/dsv-cli/requests"
 
 	"github.com/shurcooL/graphql"
 

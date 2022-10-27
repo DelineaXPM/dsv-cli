@@ -5,9 +5,9 @@ import (
 	"strings"
 
 	cst "thy/constants"
-	"thy/internal/predictor"
-	"thy/utils"
-	"thy/vaultcli"
+	"github.com/DelineaXPM/dsv-cli/internal/predictor"
+	"github.com/DelineaXPM/dsv-cli/utils"
+	"github.com/DelineaXPM/dsv-cli/vaultcli"
 
 	"github.com/mitchellh/cli"
 	"github.com/spf13/viper"
@@ -45,9 +45,9 @@ func GetHomeReadCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounHome, cst.Read},
 		SynopsisText: fmt.Sprintf("%s %s (<path> | --path|-r)", cst.NounHome, cst.Read),
-		HelpText: fmt.Sprintf(`Read a a secret in %[2]s 
+		HelpText: fmt.Sprintf(`Read a a secret in %[2]s
 Usage:
-   • home %[1]s %[4]s 
+   • home %[1]s %[4]s
    • home %[1]s --path %[4]s`, cst.Read, cst.NounHome, cst.ProductName, cst.ExamplePath),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret), Predictor: predictor.NewSecretPathPredictorDefault()},

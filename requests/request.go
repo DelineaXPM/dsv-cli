@@ -11,8 +11,8 @@ import (
 	"time"
 
 	cst "thy/constants"
-	"thy/errors"
-	"thy/version"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/version"
 
 	"github.com/spf13/viper"
 )

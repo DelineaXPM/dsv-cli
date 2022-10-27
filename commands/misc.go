@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"thy/auth"
-	"thy/vaultcli"
+	"github.com/DelineaXPM/dsv-cli/auth"
+	"github.com/DelineaXPM/dsv-cli/vaultcli"
 
 	cst "thy/constants"
 

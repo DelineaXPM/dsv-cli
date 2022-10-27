@@ -3,9 +3,9 @@ package cmd
 import (
 	"testing"
 
-	"thy/errors"
-	"thy/tests/fake"
-	"thy/vaultcli"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/tests/fake"
+	"github.com/DelineaXPM/dsv-cli/vaultcli"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"

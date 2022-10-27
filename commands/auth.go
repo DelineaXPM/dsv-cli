@@ -6,14 +6,14 @@ import (
 	"net/http"
 	"strings"
 
-	"thy/auth"
-	cst "thy/constants"
-	"thy/errors"
-	"thy/format"
-	"thy/paths"
-	"thy/store"
-	"thy/utils"
-	"thy/vaultcli"
+	"github.com/DelineaXPM/dsv-cli/auth"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/format"
+	"github.com/DelineaXPM/dsv-cli/paths"
+	"github.com/DelineaXPM/dsv-cli/store"
+	"github.com/DelineaXPM/dsv-cli/utils"
+	"github.com/DelineaXPM/dsv-cli/vaultcli"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/mitchellh/cli"
@@ -30,7 +30,7 @@ func GetAuthCmd() (cli.Command, error) {
 Usage:
    • auth --profile staging
    • auth --auth-username %[3]s --auth-password %[4]s
-   • auth --auth-type %[5]s --auth-client-id %[6]s --domain %[7]s --auth-client-secret %[8]s 
+   • auth --auth-type %[5]s --auth-client-id %[6]s --domain %[7]s --auth-client-secret %[8]s
 `, cst.NounAuth, cst.ProductName, cst.ExampleUser, cst.ExamplePassword, cst.ExampleAuthType, cst.ExampleAuthClientID, cst.ExampleDomain, cst.ExampleAuthClientSecret, string(auth.FederatedAws)),
 		RunFunc: handleAuth,
 	})

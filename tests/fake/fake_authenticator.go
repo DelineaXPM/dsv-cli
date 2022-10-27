@@ -3,8 +3,8 @@ package fake
 
 import (
 	"sync"
-	"thy/auth"
-	"thy/errors"
+	"github.com/DelineaXPM/dsv-cli/auth"
+	"github.com/DelineaXPM/dsv-cli/errors"
 )
 
 type FakeAuthenticator struct {

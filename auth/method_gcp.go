@@ -9,8 +9,8 @@ import (
 	"log"
 	"net/http"
 
-	cst "thy/constants"
-	"thy/paths"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/paths"
 
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2"

@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	cst "thy/constants"
-	"thy/errors"
-	"thy/paths"
-	"thy/requests"
-	"thy/store"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/paths"
+	"github.com/DelineaXPM/dsv-cli/requests"
+	"github.com/DelineaXPM/dsv-cli/store"
 
 	"github.com/spf13/viper"
 )
