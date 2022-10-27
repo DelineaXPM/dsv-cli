@@ -343,7 +343,7 @@ func handleManualKeyEncrypt(vcli vaultcli.CLI, args []string) int {
 			newFileName = info.Name() + ".enc"
 		}
 
-		err := os.WriteFile(newFileName, resp, 0664)
+		err := os.WriteFile(newFileName, resp, 0o664)
 		if err != nil {
 			vcli.Out().Fail(err)
 			return 1
@@ -419,7 +419,7 @@ func handleManualKeyDecrypt(vcli vaultcli.CLI, args []string) int {
 			newFileName = info.Name() + ".txt"
 		}
 
-		err = os.WriteFile(newFileName, resp, 0664)
+		err = os.WriteFile(newFileName, resp, 0o664)
 		if err != nil {
 			vcli.Out().Fail(err)
 			return 1

@@ -37,8 +37,10 @@ func (h Pass) GetName() string {
 
 // initializationMutex is held while initializing so that only one 'pass'
 // round-tripping is done to check pass is functioning.
-var initializationMutex sync.Mutex
-var passInitialized bool
+var (
+	initializationMutex sync.Mutex
+	passInitialized     bool
+)
 
 // CheckInitialized checks whether the password helper can be used. It
 // internally caches and so may be safely called multiple times with no impact
@@ -81,6 +83,7 @@ func getPathFromUrl(url string) string {
 	assembled := strings.Join(path, "/")
 	return assembled
 }
+
 func getUrlFromPath(p string) (string, error) {
 	paths := strings.Split(p, "/")
 
@@ -238,7 +241,7 @@ func (h Pass) List(prefix string) (map[string]string, error) {
 
 	for _, p := range paths {
 		if !strings.HasSuffix(p, ".gpg") {
-			//directory
+			// directory
 			continue
 		}
 		p := strings.TrimSuffix(p, ".gpg")

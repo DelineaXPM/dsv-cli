@@ -84,7 +84,6 @@ func (p *secretPathPredictor) Predict(a complete.Args) (prediction []string) {
 			token = tr.Token
 			viper.Set("token", token)
 		}
-
 	}
 	uri := paths.CreateResourceURI(cst.NounSecrets, a.Last, cst.SuffixListPaths, true, nil)
 	res := pathAutocompleteResult{}

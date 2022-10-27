@@ -52,7 +52,7 @@ func doEditData(data []byte, startErr *errors.ApiError) (edited []byte, runErr *
 		}
 	}()
 
-	if err := os.WriteFile(tmpFile.Name(), data, 0600); err != nil {
+	if err := os.WriteFile(tmpFile.Name(), data, 0o600); err != nil {
 		return nil, errors.New(err).Grow("Error while copying data to temp file")
 	}
 

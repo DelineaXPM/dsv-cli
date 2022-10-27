@@ -35,7 +35,6 @@ func TestHandleGetUsageCmd(t *testing.T) {
 			nil,
 		},
 		{
-
 			"No start date",
 			"",
 			nil,

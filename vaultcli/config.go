@@ -34,9 +34,7 @@ const (
 	v2 = "v2"
 )
 
-var (
-	ErrFileNotFound = errors.New("configuration file not found")
-)
+var ErrFileNotFound = errors.New("configuration file not found")
 
 type ConfigFile struct {
 	DefaultProfile string
@@ -254,7 +252,7 @@ func (cf *ConfigFile) save() error {
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(cf.path, dataYml, 0600); err != nil {
+	if err := os.WriteFile(cf.path, dataYml, 0o600); err != nil {
 		return err
 	}
 	return nil

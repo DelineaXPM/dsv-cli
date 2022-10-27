@@ -388,7 +388,7 @@ func handleSecretSearchCmd(vcli vaultcli.CLI, secretType string, args []string) 
 		cst.Sort:             sort,
 	}
 	if searchLinks {
-		//flag just needs to be present
+		// flag just needs to be present
 		queryParams[cst.SearchLinks] = strconv.FormatBool(searchLinks)
 	}
 	rc, rerr := getResourceConfig("", secretType)

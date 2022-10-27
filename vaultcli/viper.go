@@ -3,6 +3,7 @@ package vaultcli
 import (
 	"fmt"
 	"strings"
+
 	cst "github.com/DelineaXPM/dsv-cli/constants"
 
 	"github.com/spf13/viper"

@@ -103,7 +103,6 @@ func TestHandleClientReadCmd(t *testing.T) {
 				assert.Equal(t, err, tt.expectedErr)
 			}
 		})
-
 	}
 }
 
@@ -169,7 +168,6 @@ func TestHandleClientDeleteCmd(t *testing.T) {
 				assert.Equal(t, err, tt.expectedErr)
 			}
 		})
-
 	}
 }
 

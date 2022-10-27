@@ -34,8 +34,8 @@ func NewFileStore(basePath string) Store {
 		internalStore: diskv.New(diskv.Options{
 			BasePath:     basePath,
 			CacheSizeMax: 1024 * 1024,
-			FilePerm:     0600,
-			PathPerm:     0700,
+			FilePerm:     0o600,
+			PathPerm:     0o700,
 		}),
 	}
 }

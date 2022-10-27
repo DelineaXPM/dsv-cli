@@ -3,6 +3,7 @@ package fake
 
 import (
 	"sync"
+
 	"github.com/DelineaXPM/dsv-cli/auth"
 	"github.com/DelineaXPM/dsv-cli/errors"
 )
@@ -10,9 +11,8 @@ import (
 type FakeAuthenticator struct {
 	GetTokenStub        func() (*auth.TokenResponse, *errors.ApiError)
 	getTokenMutex       sync.RWMutex
-	getTokenArgsForCall []struct {
-	}
-	getTokenReturns struct {
+	getTokenArgsForCall []struct{}
+	getTokenReturns     struct {
 		result1 *auth.TokenResponse
 		result2 *errors.ApiError
 	}
@@ -22,9 +22,8 @@ type FakeAuthenticator struct {
 	}
 	WipeCachedTokensStub        func() *errors.ApiError
 	wipeCachedTokensMutex       sync.RWMutex
-	wipeCachedTokensArgsForCall []struct {
-	}
-	wipeCachedTokensReturns struct {
+	wipeCachedTokensArgsForCall []struct{}
+	wipeCachedTokensReturns     struct {
 		result1 *errors.ApiError
 	}
 	wipeCachedTokensReturnsOnCall map[int]struct {
@@ -37,8 +36,7 @@ type FakeAuthenticator struct {
 func (fake *FakeAuthenticator) GetToken() (*auth.TokenResponse, *errors.ApiError) {
 	fake.getTokenMutex.Lock()
 	ret, specificReturn := fake.getTokenReturnsOnCall[len(fake.getTokenArgsForCall)]
-	fake.getTokenArgsForCall = append(fake.getTokenArgsForCall, struct {
-	}{})
+	fake.getTokenArgsForCall = append(fake.getTokenArgsForCall, struct{}{})
 	stub := fake.GetTokenStub
 	fakeReturns := fake.getTokenReturns
 	fake.recordInvocation("GetToken", []interface{}{})
@@ -93,8 +91,7 @@ func (fake *FakeAuthenticator) GetTokenReturnsOnCall(i int, result1 *auth.TokenR
 func (fake *FakeAuthenticator) WipeCachedTokens() *errors.ApiError {
 	fake.wipeCachedTokensMutex.Lock()
 	ret, specificReturn := fake.wipeCachedTokensReturnsOnCall[len(fake.wipeCachedTokensArgsForCall)]
-	fake.wipeCachedTokensArgsForCall = append(fake.wipeCachedTokensArgsForCall, struct {
-	}{})
+	fake.wipeCachedTokensArgsForCall = append(fake.wipeCachedTokensArgsForCall, struct{}{})
 	stub := fake.WipeCachedTokensStub
 	fakeReturns := fake.wipeCachedTokensReturns
 	fake.recordInvocation("WipeCachedTokens", []interface{}{})

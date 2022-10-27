@@ -1,10 +1,11 @@
 kind: "\U0001F916 Development"
-body: Testing is now able to be run on unit tests immediately with integration tests
+body:
+  Testing is now able to be run on unit tests immediately with integration tests
   now checking for required environment variable `GO_INTEGRATION_TEST` to opt-in to
   tests, rather than requiring filtering out.
 time: 2022-10-27T17:11:01.847008-05:00
 custom:
-  azure-boards-workitemid-fixed: ""
-  azure-boards-workitemid-related: "452090"
+  azure-boards-workitemid-fixed: ''
+  azure-boards-workitemid-related: '452090'
   github-contributor: sheldonhull
-  github-link: ""
+  github-link: ''

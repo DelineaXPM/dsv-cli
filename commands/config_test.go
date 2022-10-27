@@ -47,7 +47,8 @@ func TestHandleConfigUpdateCmd(t *testing.T) {
 			[]string{"conf"},
 			[]byte(`test`),
 			[]byte(`test`),
-			nil},
+			nil,
+		},
 		{
 			"UTF16",
 			[]string{"conf"},
@@ -73,7 +74,6 @@ func TestHandleConfigUpdateCmd(t *testing.T) {
 
 	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {
-
 		t.Run(tt.name, func(t *testing.T) {
 			writer := &fake.FakeOutClient{}
 			var data []byte
@@ -127,7 +127,8 @@ func TestHandleConfigReadCmd(t *testing.T) {
 			"conf",
 			[]byte(`test`),
 			[]byte(`test`),
-			nil},
+			nil,
+		},
 		{
 			"api Error",
 			"conf",

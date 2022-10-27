@@ -19,8 +19,7 @@ type GraphClient interface {
 	DoRequest(uri string, query interface{}, variables map[string]interface{}) ([]byte, *errors.ApiError)
 }
 
-type graphClient struct {
-}
+type graphClient struct{}
 
 func NewGraphClient() GraphClient {
 	return &graphClient{}

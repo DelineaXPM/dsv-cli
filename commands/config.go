@@ -121,7 +121,7 @@ func handleConfigUpdateCmd(vcli vaultcli.CLI, args []string) int {
 		// The version would still be one behind that incremented as a result of this update.
 		color := false
 		text, _ := format.BeautifyBytes(resp, &color)
-		if writeErr := os.WriteFile(fileName, []byte(text), 0644); writeErr != nil {
+		if writeErr := os.WriteFile(fileName, []byte(text), 0o644); writeErr != nil {
 			vcli.Out().Fail(writeErr)
 		}
 	}

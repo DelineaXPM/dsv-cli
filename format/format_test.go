@@ -27,7 +27,7 @@ func TestIsJson(t *testing.T) {
 }
 
 func TestJsonMarshal(t *testing.T) {
-	var obj = struct {
+	obj := struct {
 		Name string `json:"name"`
 		Val  string `json:"val"`
 	}{
@@ -89,7 +89,6 @@ func TestWriterWriteResponse(t *testing.T) {
 			assert.Equal(t, c.Expected, written)
 		})
 	}
-
 }
 
 func TestFilterResponse_Prop(t *testing.T) {

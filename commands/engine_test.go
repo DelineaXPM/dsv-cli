@@ -16,18 +16,22 @@ func TestGetEngineCmd(t *testing.T) {
 	_, err := GetEngineCmd()
 	assert.Nil(t, err)
 }
+
 func TestGetEngineReadCmd(t *testing.T) {
 	_, err := GetEngineReadCmd()
 	assert.Nil(t, err)
 }
+
 func TestGetEngineListCmd(t *testing.T) {
 	_, err := GetEngineListCmd()
 	assert.Nil(t, err)
 }
+
 func TestGetEngineDeleteCmd(t *testing.T) {
 	_, err := GetEngineDeleteCmd()
 	assert.Nil(t, err)
 }
+
 func TestGetEngineCreateCmd(t *testing.T) {
 	_, err := GetEngineCreateCmd()
 	assert.Nil(t, err)
@@ -189,7 +193,8 @@ func TestHandleEngineDeleteCmd(t *testing.T) {
 			"engine1",
 			[]byte(`test`),
 			[]byte(`test`),
-			nil},
+			nil,
+		},
 		{
 			"No engine name passed",
 			"",

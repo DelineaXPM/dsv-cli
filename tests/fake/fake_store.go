@@ -3,6 +3,7 @@ package fake
 
 import (
 	"sync"
+
 	"github.com/DelineaXPM/dsv-cli/errors"
 	"github.com/DelineaXPM/dsv-cli/store"
 )

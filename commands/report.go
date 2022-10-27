@@ -87,7 +87,7 @@ func handleSecretReport(vcli vaultcli.CLI, args []string) int {
 		return reportGroupSecret(vcli, group, path, limit, offset)
 	case role != "":
 		return reportRoleSecret(vcli, role, path, limit, offset)
-		//read sign in user record
+		// read sign in user record
 	default:
 		return reportSignInUserSecret(vcli, path, limit, offset, cursor)
 	}
@@ -108,7 +108,6 @@ func handleGroupReport(vcli vaultcli.CLI, args []string) int {
 }
 
 func reportRoleSecret(vcli vaultcli.CLI, role, path string, limit, offset int) int {
-
 	var data []byte
 	var err *errors.ApiError
 
@@ -176,7 +175,6 @@ func reportRoleSecret(vcli vaultcli.CLI, role, path string, limit, offset int) i
 }
 
 func reportGroupSecret(vcli vaultcli.CLI, group, path string, limit, offset int) int {
-
 	var data []byte
 	var err *errors.ApiError
 
