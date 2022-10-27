@@ -13,7 +13,7 @@ Prebuilt binaries for Linux, macOS and Windows can be downloaded from https://ds
 
 ## License
 
-See [LICENSE](https://github.com/DelineaXPM/dsv-cli/blob/master/LICENSE) for the full license text.
+See [LICENSE](https://github.com/DelineaXPM/dsv-cli/blob/main/LICENSE) for the full license text.
 
 ## Contributors
 
