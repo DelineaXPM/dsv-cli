@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	cst "github.com/DelineaXPM/dsv-cli/constants"
-	apperrors "thy/errors"
+	apperrors "github.com/DelineaXPM/dsv-cli/errors"
 	"github.com/DelineaXPM/dsv-cli/internal/predictor"
 	"github.com/DelineaXPM/dsv-cli/paths"
 	"github.com/DelineaXPM/dsv-cli/utils"

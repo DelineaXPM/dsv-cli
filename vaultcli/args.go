@@ -3,7 +3,7 @@ package vaultcli
 import (
 	"strings"
 
-	cst "thy/constants"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
 )
 
 func ToFlagName(flag string) string {

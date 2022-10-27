@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/DelineaXPM/dsv-cli/auth"
-	cst "thy/constants"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
 	"github.com/DelineaXPM/dsv-cli/paths"
 	"github.com/DelineaXPM/dsv-cli/requests"
 

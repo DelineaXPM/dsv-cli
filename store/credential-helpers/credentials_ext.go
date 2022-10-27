@@ -1,7 +1,7 @@
 package credhelpers
 
 import (
-	cst "thy/constants"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
 )
 
 func externalUrlToInternalUrl(url string) string {

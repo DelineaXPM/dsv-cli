@@ -1,6 +1,6 @@
 package store
 
-import "thy/errors"
+import "github.com/DelineaXPM/dsv-cli/errors"
 
 type NoneStore struct{}
 

@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	cst "thy/constants"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
 
 	"github.com/mitchellh/go-homedir"
 	"gopkg.in/yaml.v3"

@@ -18,7 +18,7 @@ import (
 
 	"golang.org/x/sys/execabs"
 
-	cst "thy/constants"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
 )
 
 const PASS_FOLDER = cst.CmdRoot

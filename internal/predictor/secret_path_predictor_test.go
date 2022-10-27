@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/DelineaXPM/dsv-cli/auth"
-	cst "thy/constants"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
 	"github.com/DelineaXPM/dsv-cli/errors"
 	"github.com/DelineaXPM/dsv-cli/requests"
 	"github.com/DelineaXPM/dsv-cli/tests/fake"

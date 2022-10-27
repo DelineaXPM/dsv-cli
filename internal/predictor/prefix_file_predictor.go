@@ -7,7 +7,7 @@ import (
 
 	"github.com/posener/complete"
 
-	cst "thy/constants"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
 )
 
 type PrefixFilePredictor struct {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	cst "thy/constants"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
 	"github.com/DelineaXPM/dsv-cli/errors"
 	"github.com/DelineaXPM/dsv-cli/format"
 	"github.com/DelineaXPM/dsv-cli/utils"
