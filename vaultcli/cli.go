@@ -1,11 +1,11 @@
 package vaultcli
 
 import (
-	"thy/auth"
-	"thy/errors"
-	"thy/format"
-	"thy/requests"
-	"thy/store"
+	"github.com/DelineaXPM/dsv-cli/auth"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/format"
+	"github.com/DelineaXPM/dsv-cli/requests"
+	"github.com/DelineaXPM/dsv-cli/store"
 )
 
 type CLI interface {

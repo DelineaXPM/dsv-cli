@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"thy/store"
+	"github.com/DelineaXPM/dsv-cli/store"
 )
 
 const (
@@ -112,7 +112,7 @@ func readCache(updateFilePath string) *latestInfo {
 // updateCache updates content in the cache file
 func updateCache(cacheFilePath string, content []byte) {
 	fileContent := fmt.Sprintf("%s\n%s", time.Now().Format(dateLayout), string(content))
-	err := os.WriteFile(cacheFilePath, []byte(fileContent), os.FileMode(0644))
+	err := os.WriteFile(cacheFilePath, []byte(fileContent), os.FileMode(0o644))
 	if err != nil {
 		// Only log error and continue
 		log.Printf("Unsuccessfully update of the cache file %s (%s) ", cacheFilePath, err)

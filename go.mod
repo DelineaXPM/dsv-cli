@@ -1,4 +1,4 @@
-module thy
+module github.com/DelineaXPM/dsv-cli
 
 go 1.17
 

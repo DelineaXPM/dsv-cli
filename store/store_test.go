@@ -6,8 +6,8 @@ import (
 	"runtime"
 	"testing"
 
-	cst "thy/constants"
-	"thy/errors"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/errors"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -78,7 +78,7 @@ func testStore(t *testing.T, storeType string) {
 	// act
 	_ = s.Wipe("")
 
-	//assert
+	// assert
 	obj2 = tokenData{}
 	err = s.Get("token", &obj2)
 	assert.Empty(t, obj2)
@@ -108,6 +108,5 @@ func TestGetSecureSetting(t *testing.T) {
 				assert.Equal(t, tt.expectedVal, val)
 			}
 		})
-
 	}
 }

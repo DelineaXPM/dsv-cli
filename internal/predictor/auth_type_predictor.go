@@ -1,7 +1,7 @@
 package predictor
 
 import (
-	"thy/auth"
+	"github.com/DelineaXPM/dsv-cli/auth"
 
 	"github.com/posener/complete"
 )

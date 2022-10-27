@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"testing"
 
-	cst "thy/constants"
-	"thy/errors"
-	"thy/tests/fake"
-	"thy/vaultcli"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/tests/fake"
+	"github.com/DelineaXPM/dsv-cli/vaultcli"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -47,7 +47,8 @@ func TestHandleConfigUpdateCmd(t *testing.T) {
 			[]string{"conf"},
 			[]byte(`test`),
 			[]byte(`test`),
-			nil},
+			nil,
+		},
 		{
 			"UTF16",
 			[]string{"conf"},
@@ -73,7 +74,6 @@ func TestHandleConfigUpdateCmd(t *testing.T) {
 
 	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {
-
 		t.Run(tt.name, func(t *testing.T) {
 			writer := &fake.FakeOutClient{}
 			var data []byte
@@ -127,7 +127,8 @@ func TestHandleConfigReadCmd(t *testing.T) {
 			"conf",
 			[]byte(`test`),
 			[]byte(`test`),
-			nil},
+			nil,
+		},
 		{
 			"api Error",
 			"conf",
@@ -170,7 +171,6 @@ func TestHandleConfigReadCmd(t *testing.T) {
 				assert.Equal(t, err, tt.expectedErr)
 			}
 		})
-
 	}
 }
 

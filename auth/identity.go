@@ -3,7 +3,7 @@ package auth
 import (
 	"github.com/golang-jwt/jwt/v4"
 
-	"thy/errors"
+	"github.com/DelineaXPM/dsv-cli/errors"
 )
 
 func GetCurrentIdentity() (string, error) {

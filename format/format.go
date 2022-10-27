@@ -8,9 +8,9 @@ import (
 	"os"
 	"strings"
 
-	cst "thy/constants"
-	"thy/errors"
-	"thy/utils"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/utils"
 
 	"github.com/fatih/color"
 	"github.com/hokaccha/go-prettyjson"
@@ -242,7 +242,7 @@ func toYaml(data []byte) ([]byte, *errors.ApiError) {
 	var obj interface{}
 	err := json.Unmarshal(data, &obj)
 	if err != nil {
-		return nil, errors.New(err).Grow("Failed marshalling data as json prior to conversion to yaml")
+		return nil, errors.New(err).Grow("Failed marshaling data as json prior to conversion to yaml")
 	}
 	return errors.Convert(yaml.Marshal(obj))
 }

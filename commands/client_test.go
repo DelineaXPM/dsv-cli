@@ -3,10 +3,10 @@ package cmd
 import (
 	"testing"
 
-	cst "thy/constants"
-	"thy/errors"
-	"thy/tests/fake"
-	"thy/vaultcli"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/tests/fake"
+	"github.com/DelineaXPM/dsv-cli/vaultcli"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -103,7 +103,6 @@ func TestHandleClientReadCmd(t *testing.T) {
 				assert.Equal(t, err, tt.expectedErr)
 			}
 		})
-
 	}
 }
 
@@ -169,7 +168,6 @@ func TestHandleClientDeleteCmd(t *testing.T) {
 				assert.Equal(t, err, tt.expectedErr)
 			}
 		})
-
 	}
 }
 

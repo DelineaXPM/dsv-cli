@@ -7,7 +7,7 @@ import (
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
 
-	"thy/requests"
+	"github.com/DelineaXPM/dsv-cli/requests"
 )
 
 func TestHttpClient_DoRequest(t *testing.T) {
@@ -32,7 +32,6 @@ func TestHttpClient_DoRequest(t *testing.T) {
 	)
 	_, err := c.DoRequest(http.MethodPost, "https://localhost:8088", body)
 	assert.Nil(t, err)
-
 }
 
 func TestHttpClient_DoRequestOut(t *testing.T) {
@@ -65,7 +64,7 @@ func TestHttpClient_DoRequestInvalidBody(t *testing.T) {
 	jsonResponse := map[string]interface{}{
 		"data": "ok",
 	}
-	//need somethign that won't unmarshal
+	// need something that won't unmarshal
 	body := make(chan int)
 
 	httpmock.RegisterResponder(http.MethodPost, "https://localhost:8088",

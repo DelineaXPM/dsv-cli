@@ -3,8 +3,9 @@ package fake
 
 import (
 	"sync"
-	"thy/errors"
-	"thy/store"
+
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/store"
 )
 
 type FakeStore struct {

@@ -9,13 +9,13 @@ import (
 	"unicode/utf16"
 	"unicode/utf8"
 
-	cst "thy/constants"
-	"thy/errors"
-	"thy/format"
-	"thy/internal/predictor"
-	"thy/paths"
-	"thy/utils"
-	"thy/vaultcli"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/format"
+	"github.com/DelineaXPM/dsv-cli/internal/predictor"
+	"github.com/DelineaXPM/dsv-cli/paths"
+	"github.com/DelineaXPM/dsv-cli/utils"
+	"github.com/DelineaXPM/dsv-cli/vaultcli"
 
 	"github.com/mitchellh/cli"
 	"github.com/spf13/viper"
@@ -121,7 +121,7 @@ func handleConfigUpdateCmd(vcli vaultcli.CLI, args []string) int {
 		// The version would still be one behind that incremented as a result of this update.
 		color := false
 		text, _ := format.BeautifyBytes(resp, &color)
-		if writeErr := os.WriteFile(fileName, []byte(text), 0644); writeErr != nil {
+		if writeErr := os.WriteFile(fileName, []byte(text), 0o644); writeErr != nil {
 			vcli.Out().Fail(writeErr)
 		}
 	}

@@ -7,10 +7,10 @@ import (
 	"os"
 	"strings"
 
-	cst "thy/constants"
-	"thy/errors"
-	"thy/format"
-	"thy/utils"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/format"
+	"github.com/DelineaXPM/dsv-cli/utils"
 
 	"github.com/spf13/viper"
 	"golang.org/x/sys/execabs"
@@ -52,7 +52,7 @@ func doEditData(data []byte, startErr *errors.ApiError) (edited []byte, runErr *
 		}
 	}()
 
-	if err := os.WriteFile(tmpFile.Name(), data, 0600); err != nil {
+	if err := os.WriteFile(tmpFile.Name(), data, 0o600); err != nil {
 		return nil, errors.New(err).Grow("Error while copying data to temp file")
 	}
 

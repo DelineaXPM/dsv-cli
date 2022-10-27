@@ -4,10 +4,10 @@ import (
 	e "errors"
 	"testing"
 
-	cst "thy/constants"
-	"thy/errors"
-	"thy/tests/fake"
-	"thy/vaultcli"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/tests/fake"
+	"github.com/DelineaXPM/dsv-cli/vaultcli"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -45,7 +45,8 @@ func TestHandleSecretReport(t *testing.T) {
 			"",
 			[]byte(`user data`),
 			[]byte(`user data`),
-			nil},
+			nil,
+		},
 		{
 			"group",
 			"",
@@ -53,7 +54,8 @@ func TestHandleSecretReport(t *testing.T) {
 			"",
 			[]byte(`group data`),
 			[]byte(`group data`),
-			nil},
+			nil,
+		},
 		{
 			"role",
 			"",
@@ -61,7 +63,8 @@ func TestHandleSecretReport(t *testing.T) {
 			"role1",
 			[]byte(`role data`),
 			[]byte(`role data`),
-			nil},
+			nil,
+		},
 		{
 			"Sign in User",
 			"",
@@ -69,7 +72,8 @@ func TestHandleSecretReport(t *testing.T) {
 			"",
 			[]byte(`user data`),
 			[]byte(`user data`),
-			nil},
+			nil,
+		},
 		{
 			"api Error",
 			"user1",
@@ -134,28 +138,32 @@ func TestHandleGroupReport(t *testing.T) {
 			"",
 			[]byte(`user data`),
 			[]byte(`user data`),
-			nil},
+			nil,
+		},
 		{
 			"group",
 			"",
 			"",
 			[]byte(`group data`),
 			[]byte(`group data`),
-			nil},
+			nil,
+		},
 		{
 			"role",
 			"",
 			"role1",
 			[]byte(`role data`),
 			[]byte(`role data`),
-			nil},
+			nil,
+		},
 		{
 			"Sign in User",
 			"",
 			"",
 			[]byte(`user data`),
 			[]byte(`user data`),
-			nil},
+			nil,
+		},
 		{
 			"api Error",
 			"user1",

@@ -11,15 +11,15 @@ import (
 	"strconv"
 	"strings"
 
-	"thy/auth"
-	cst "thy/constants"
-	"thy/errors"
-	"thy/internal/pki"
-	"thy/internal/predictor"
-	"thy/paths"
-	"thy/store"
-	"thy/utils"
-	"thy/vaultcli"
+	"github.com/DelineaXPM/dsv-cli/auth"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/internal/pki"
+	"github.com/DelineaXPM/dsv-cli/internal/predictor"
+	"github.com/DelineaXPM/dsv-cli/paths"
+	"github.com/DelineaXPM/dsv-cli/store"
+	"github.com/DelineaXPM/dsv-cli/utils"
+	"github.com/DelineaXPM/dsv-cli/vaultcli"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/mitchellh/cli"
@@ -143,7 +143,7 @@ Usage:
 		NoPreAuth: true,
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Key, Usage: "Key of setting to be updated (required)"},
-			{Name: cst.Value, Usage: "Value of setting to be udpated (required)"},
+			{Name: cst.Value, Usage: "Value of setting to be updated (required)"},
 		},
 		MinNumberArgs: 2,
 		RunFunc:       handleCliConfigUpdateCmd,
@@ -891,7 +891,6 @@ Example:
 
 Example:
 	dsv secret search --auth-client-id "a71d...f0d4" --auth-client-secret "R8WzW...jWg"`)
-
 		}
 	}
 

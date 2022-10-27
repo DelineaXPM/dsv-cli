@@ -4,12 +4,12 @@ import (
 	"net/http"
 	"time"
 
-	cst "thy/constants"
-	"thy/errors"
-	"thy/internal/predictor"
-	"thy/paths"
-	"thy/utils"
-	"thy/vaultcli"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/internal/predictor"
+	"github.com/DelineaXPM/dsv-cli/paths"
+	"github.com/DelineaXPM/dsv-cli/utils"
+	"github.com/DelineaXPM/dsv-cli/vaultcli"
 
 	"github.com/mitchellh/cli"
 	"github.com/spf13/viper"
@@ -42,9 +42,9 @@ Usage:
 }
 
 func handleAuditSearch(vcli vaultcli.CLI, args []string) int {
-	s := viper.GetString(cst.StartDate)
-	e := viper.GetString(cst.EndDate)
-	if s == "" {
+	vipConstStartDate := viper.GetString(cst.StartDate)
+	vipConstEndDate := viper.GetString(cst.EndDate)
+	if vipConstStartDate == "" {
 		err := errors.NewS("error: must specify " + cst.StartDate)
 		vcli.Out().WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
@@ -52,7 +52,7 @@ func handleAuditSearch(vcli vaultcli.CLI, args []string) int {
 
 	const layout = "2006-01-02"
 
-	startDate, parsingErr := time.Parse(layout, s)
+	startDate, parsingErr := time.Parse(layout, vipConstStartDate)
 	if parsingErr != nil {
 		err := errors.NewS("error: must correctly specify " + cst.StartDate)
 		vcli.Out().WriteResponse(nil, err)
@@ -60,12 +60,12 @@ func handleAuditSearch(vcli vaultcli.CLI, args []string) int {
 	}
 
 	var endDate time.Time
-	if e == "" {
+	if vipConstEndDate == "" {
 		endDate = time.Now() // end date is today
-	} else if s == e {
+	} else if vipConstStartDate == vipConstEndDate {
 		endDate = startDate
 	} else {
-		endDate, parsingErr = time.Parse(layout, e)
+		endDate, parsingErr = time.Parse(layout, vipConstEndDate)
 		if parsingErr != nil {
 			err := errors.NewS("error: must correctly specify " + cst.EndDate)
 			vcli.Out().WriteResponse(nil, err)

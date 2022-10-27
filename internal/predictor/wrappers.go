@@ -4,7 +4,7 @@ import (
 	"os"
 	"strings"
 
-	"thy/vaultcli"
+	"github.com/DelineaXPM/dsv-cli/vaultcli"
 
 	"github.com/posener/complete"
 	flag "github.com/spf13/pflag"
@@ -63,7 +63,6 @@ func New(params *Params) *Wrapper {
 
 	if f := flag.Lookup(cmdFriendlyName); f != nil {
 		w.Val = f.Value.(*FlagValue)
-
 	} else {
 		w.Val = &FlagValue{
 			FlagType:     params.ValueType,

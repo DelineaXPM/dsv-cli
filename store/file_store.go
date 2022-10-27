@@ -7,7 +7,7 @@ import (
 	"path"
 	"strings"
 
-	"thy/errors"
+	"github.com/DelineaXPM/dsv-cli/errors"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/peterbourgon/diskv/v3"
@@ -34,15 +34,15 @@ func NewFileStore(basePath string) Store {
 		internalStore: diskv.New(diskv.Options{
 			BasePath:     basePath,
 			CacheSizeMax: 1024 * 1024,
-			FilePerm:     0600,
-			PathPerm:     0700,
+			FilePerm:     0o600,
+			PathPerm:     0o700,
 		}),
 	}
 }
 
 func (s *fileStore) Store(key string, secret interface{}) *errors.ApiError {
-	if marshalled, err := json.Marshal(secret); err == nil {
-		return errors.New(s.internalStore.Write(key, marshalled))
+	if marshaled, err := json.Marshal(secret); err == nil {
+		return errors.New(s.internalStore.Write(key, marshaled))
 	} else {
 		return errors.New(err)
 	}

@@ -1,6 +1,9 @@
+---
 version: 0.1
+cli:
+  version: 1.0.1
 actions:
-  disabled:
+  enabled:
     - trunk-announce
     - trunk-cache-prune
     - trunk-check-pre-push
@@ -8,7 +11,6 @@ actions:
     - trunk-upgrade-available
     - go-mod-vendor
     - gotestsum
-
   definitions:
     - id: go-mod-vendor
       description: When go mod or sum is updated, go vendoring should be run to ensure it's consistent.
@@ -22,8 +24,6 @@ actions:
       run: gotestsum --format pkgname -- -shuffle=on  -tags integration ./...
       triggers:
         - git_hooks: [pre-push]
-cli:
-  version: 1.0.1
 plugins:
   sources:
     - id: trunk
@@ -31,6 +31,8 @@ plugins:
       uri: https://github.com/trunk-io/plugins
 lint:
   enabled:
+    - taplo@release-taplo-cli-0.7.0
+    - yamllint@1.28.0
     - actionlint@1.6.21
     - git-diff-check@SYSTEM
     - gitleaks@8.15.0
@@ -66,5 +68,6 @@ lint:
         - .changes/unreleased/*.yaml
 runtimes:
   enabled:
+    - python@3.10.3
     - go@1.18.3
     - node@16.14.2

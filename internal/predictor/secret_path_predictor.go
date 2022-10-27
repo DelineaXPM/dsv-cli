@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"strings"
 
-	"thy/auth"
-	cst "thy/constants"
-	"thy/paths"
-	"thy/requests"
+	"github.com/DelineaXPM/dsv-cli/auth"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/paths"
+	"github.com/DelineaXPM/dsv-cli/requests"
 
 	"github.com/posener/complete"
 	"github.com/spf13/viper"
@@ -84,7 +84,6 @@ func (p *secretPathPredictor) Predict(a complete.Args) (prediction []string) {
 			token = tr.Token
 			viper.Set("token", token)
 		}
-
 	}
 	uri := paths.CreateResourceURI(cst.NounSecrets, a.Last, cst.SuffixListPaths, true, nil)
 	res := pathAutocompleteResult{}

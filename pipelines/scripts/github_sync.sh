@@ -6,7 +6,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-PUBLIC_REPO="github.com/thycotic/dsv-cli.git"
+PUBLIC_REPO="github.com/DelineaXPM/dsv-cli.git"
 SYNC_GIT_USER_NAME="thycotic-rd"
 SYNC_GIT_USER_EMAIL="lightvaulttrack@thycotic.com"
 SYNC_GIT_TAG=$(git describe --always --dirty --tags)
@@ -17,12 +17,12 @@ WORKING_DIR=$(pwd)
 echo "[---] Current working directory: ${WORKING_DIR}"
 echo "[---] Current tag is ${SYNC_GIT_TAG}. Validating tag."
 
-if [[ "${SYNC_GIT_TAG}" == *"-rc"* ]]; then
+if [[ ${SYNC_GIT_TAG} == *"-rc"* ]]; then
     echo "[---] Tag ${SYNC_GIT_TAG} is RC tag. Skipping sync."
     exit 0
 fi
 
-if [[ "${SYNC_GIT_TAG}" == *"-"* ]]; then
+if [[ ${SYNC_GIT_TAG} == *"-"* ]]; then
     echo "[---] Tag ${SYNC_GIT_TAG} contains dash(es). Skipping sync."
     exit 0
 fi

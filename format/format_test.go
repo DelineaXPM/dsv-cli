@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"testing"
 
-	cst "thy/constants"
-	"thy/errors"
-	"thy/format"
-	"thy/utils"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/format"
+	"github.com/DelineaXPM/dsv-cli/utils"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -27,7 +27,7 @@ func TestIsJson(t *testing.T) {
 }
 
 func TestJsonMarshal(t *testing.T) {
-	var obj = struct {
+	obj := struct {
 		Name string `json:"name"`
 		Val  string `json:"val"`
 	}{
@@ -89,7 +89,6 @@ func TestWriterWriteResponse(t *testing.T) {
 			assert.Equal(t, c.Expected, written)
 		})
 	}
-
 }
 
 func TestFilterResponse_Prop(t *testing.T) {

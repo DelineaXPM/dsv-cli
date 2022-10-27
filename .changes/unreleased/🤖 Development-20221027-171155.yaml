@@ -1,0 +1,10 @@
+kind: "\U0001F916 Development"
+body:
+  Remove `fmt` blocking test. This is now covered by `golangci-lint` tooling run
+  by trunk if required. Current tests flag vendor directory incorrectly.
+time: 2022-10-27T17:11:55.40093-05:00
+custom:
+  azure-boards-workitemid-fixed: ''
+  azure-boards-workitemid-related: '452090'
+  github-contributor: ''
+  github-link: ''

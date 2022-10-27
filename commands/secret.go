@@ -10,13 +10,13 @@ import (
 	"strings"
 	"time"
 
-	"thy/auth"
-	cst "thy/constants"
-	"thy/errors"
-	"thy/internal/predictor"
-	"thy/paths"
-	"thy/utils"
-	"thy/vaultcli"
+	"github.com/DelineaXPM/dsv-cli/auth"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/internal/predictor"
+	"github.com/DelineaXPM/dsv-cli/paths"
+	"github.com/DelineaXPM/dsv-cli/utils"
+	"github.com/DelineaXPM/dsv-cli/vaultcli"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/mitchellh/cli"
@@ -388,7 +388,7 @@ func handleSecretSearchCmd(vcli vaultcli.CLI, secretType string, args []string) 
 		cst.Sort:             sort,
 	}
 	if searchLinks {
-		//flag just needs to be present
+		// flag just needs to be present
 		queryParams[cst.SearchLinks] = strconv.FormatBool(searchLinks)
 	}
 	rc, rerr := getResourceConfig("", secretType)

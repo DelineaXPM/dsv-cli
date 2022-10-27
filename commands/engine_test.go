@@ -3,10 +3,10 @@ package cmd
 import (
 	"testing"
 
-	cst "thy/constants"
-	"thy/errors"
-	"thy/tests/fake"
-	"thy/vaultcli"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/tests/fake"
+	"github.com/DelineaXPM/dsv-cli/vaultcli"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -16,18 +16,22 @@ func TestGetEngineCmd(t *testing.T) {
 	_, err := GetEngineCmd()
 	assert.Nil(t, err)
 }
+
 func TestGetEngineReadCmd(t *testing.T) {
 	_, err := GetEngineReadCmd()
 	assert.Nil(t, err)
 }
+
 func TestGetEngineListCmd(t *testing.T) {
 	_, err := GetEngineListCmd()
 	assert.Nil(t, err)
 }
+
 func TestGetEngineDeleteCmd(t *testing.T) {
 	_, err := GetEngineDeleteCmd()
 	assert.Nil(t, err)
 }
+
 func TestGetEngineCreateCmd(t *testing.T) {
 	_, err := GetEngineCreateCmd()
 	assert.Nil(t, err)
@@ -189,7 +193,8 @@ func TestHandleEngineDeleteCmd(t *testing.T) {
 			"engine1",
 			[]byte(`test`),
 			[]byte(`test`),
-			nil},
+			nil,
+		},
 		{
 			"No engine name passed",
 			"",

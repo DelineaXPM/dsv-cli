@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"thy/auth"
-	"thy/vaultcli"
+	"github.com/DelineaXPM/dsv-cli/auth"
+	"github.com/DelineaXPM/dsv-cli/vaultcli"
 
-	cst "thy/constants"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
 
 	"github.com/mitchellh/cli"
 	"github.com/spf13/viper"

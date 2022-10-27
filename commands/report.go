@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"strings"
 
-	cst "thy/constants"
-	"thy/errors"
-	"thy/internal/predictor"
-	"thy/paths"
-	"thy/utils"
-	"thy/vaultcli"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/internal/predictor"
+	"github.com/DelineaXPM/dsv-cli/paths"
+	"github.com/DelineaXPM/dsv-cli/utils"
+	"github.com/DelineaXPM/dsv-cli/vaultcli"
 
 	"github.com/mitchellh/cli"
 	"github.com/shurcooL/graphql"
@@ -87,7 +87,7 @@ func handleSecretReport(vcli vaultcli.CLI, args []string) int {
 		return reportGroupSecret(vcli, group, path, limit, offset)
 	case role != "":
 		return reportRoleSecret(vcli, role, path, limit, offset)
-		//read sign in user record
+		// read sign in user record
 	default:
 		return reportSignInUserSecret(vcli, path, limit, offset, cursor)
 	}
@@ -108,7 +108,6 @@ func handleGroupReport(vcli vaultcli.CLI, args []string) int {
 }
 
 func reportRoleSecret(vcli vaultcli.CLI, role, path string, limit, offset int) int {
-
 	var data []byte
 	var err *errors.ApiError
 
@@ -158,7 +157,6 @@ func reportRoleSecret(vcli vaultcli.CLI, role, path string, limit, offset int) i
 			}
 
 			data, err = vcli.GraphQLClient().DoRequest(uri, &query, variables)
-
 		} else {
 			var query struct {
 				Role struct {
@@ -176,7 +174,6 @@ func reportRoleSecret(vcli vaultcli.CLI, role, path string, limit, offset int) i
 }
 
 func reportGroupSecret(vcli vaultcli.CLI, group, path string, limit, offset int) int {
-
 	var data []byte
 	var err *errors.ApiError
 
@@ -211,7 +208,6 @@ func reportGroupSecret(vcli vaultcli.CLI, group, path string, limit, offset int)
 			}
 
 			data, err = vcli.GraphQLClient().DoRequest(uri, &query, variables)
-
 		} else {
 			var query struct {
 				Group struct {
@@ -279,7 +275,6 @@ func reportUserSecret(vcli vaultcli.CLI, user, path string, limit, offset int, c
 			}
 
 			data, err = vcli.GraphQLClient().DoRequest(uri, &query, variables)
-
 		} else {
 			var query struct {
 				User struct {
@@ -344,7 +339,6 @@ func reportSignInUserSecret(vcli vaultcli.CLI, path string, limit, offset int, c
 			}
 
 			data, err = vcli.GraphQLClient().DoRequest(uri, &query, variables)
-
 		} else {
 			var query struct {
 				Me struct {

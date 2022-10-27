@@ -3,7 +3,7 @@ package paths
 import (
 	"testing"
 
-	cst "thy/constants"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"

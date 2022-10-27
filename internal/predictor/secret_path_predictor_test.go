@@ -10,11 +10,11 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 
-	"thy/auth"
-	cst "thy/constants"
-	"thy/errors"
-	"thy/requests"
-	"thy/tests/fake"
+	"github.com/DelineaXPM/dsv-cli/auth"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/requests"
+	"github.com/DelineaXPM/dsv-cli/tests/fake"
 )
 
 var secretPathPredictorCases = []struct {

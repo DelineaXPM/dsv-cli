@@ -10,8 +10,8 @@ import (
 	"text/template"
 	"time"
 
-	cst "thy/constants"
-	"thy/paths"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/paths"
 
 	"github.com/mitchellh/cli"
 	"github.com/pkg/browser"

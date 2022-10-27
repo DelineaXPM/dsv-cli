@@ -2,18 +2,15 @@
 
 An automation tool for the management of credentials for applications, databases, CI/CD tools, and services.
 
-## Installation
-
-Prebuilt binaries for Linux, macOS and Windows can be downloaded from https://dsv.secretsvaultcloud.com/downloads.
-
 ## Getting Started
 
+- [Pre-built Binaries](https://dsv.secretsvaultcloud.com/downloads)
 - [Developer](docs/developer): instructions on running tests, local tooling, and other resources.
 - [DSV Documentation](https://docs.delinea.com/dsv/current?ref=githubrepo)
 
 ## License
 
-See [LICENSE](https://github.com/thycotic/dsv-cli/blob/master/LICENSE) for the full license text.
+See [LICENSE](https://github.com/DelineaXPM/dsv-cli/blob/main/LICENSE) for the full license text.
 
 ## Contributors
 

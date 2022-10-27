@@ -11,13 +11,13 @@ import (
 	"testing"
 	"time"
 
-	"thy/auth"
-	cst "thy/constants"
-	"thy/errors"
-	"thy/requests"
-	"thy/store"
-	"thy/tests/fake"
-	"thy/utils/test_helpers"
+	"github.com/DelineaXPM/dsv-cli/auth"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/requests"
+	"github.com/DelineaXPM/dsv-cli/store"
+	"github.com/DelineaXPM/dsv-cli/tests/fake"
+	"github.com/DelineaXPM/dsv-cli/utils/test_helpers"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/jarcoal/httpmock"
@@ -218,7 +218,7 @@ func TestGetToken(t *testing.T) {
 		expectedError error
 	}{
 		{"password", "none", nil, fmt.Errorf("error")},
-		//{"azure", "none", nil, errors.New("error")},
+		// {"azure", "none", nil, errors.New("error")},
 		//{"gcp", "none", nil, errors.New("error")},
 		{"aws", "none", nil, fmt.Errorf("error")},
 		{"refresh", "none", nil, fmt.Errorf("error")},
@@ -343,7 +343,7 @@ func TestGetToken_SecurePassword(t *testing.T) {
 		t.Fatalf("auth.StorePassword: %v", err)
 	}
 
-	os.WriteFile(filepath.Join(path, filename), []byte(key), 0644)
+	os.WriteFile(filepath.Join(path, filename), []byte(key), 0o644)
 	t.Log("Encryption file:", filepath.Join(path, filename))
 
 	viper.Set("auth.securePassword", securePass)
@@ -529,7 +529,7 @@ func TestToken_GcpSignJwt(t *testing.T) {
 	if credsRaw, err = json.Marshal(creds); err != nil {
 		log.Fatal("unable to marshal test gcp creds")
 	}
-	if err := os.WriteFile("app_creds.json", credsRaw, 0644); err != nil {
+	if err := os.WriteFile("app_creds.json", credsRaw, 0o644); err != nil {
 		log.Fatal("unable to write test gcp credential file")
 	}
 	defer func() {

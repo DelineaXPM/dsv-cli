@@ -7,12 +7,12 @@ import (
 	"strconv"
 	"strings"
 
-	cst "thy/constants"
-	"thy/errors"
-	"thy/internal/predictor"
-	"thy/paths"
-	"thy/utils"
-	"thy/vaultcli"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/internal/predictor"
+	"github.com/DelineaXPM/dsv-cli/paths"
+	"github.com/DelineaXPM/dsv-cli/utils"
+	"github.com/DelineaXPM/dsv-cli/vaultcli"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/mitchellh/cli"

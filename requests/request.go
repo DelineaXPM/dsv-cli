@@ -10,9 +10,9 @@ import (
 	"runtime"
 	"time"
 
-	cst "thy/constants"
-	"thy/errors"
-	"thy/version"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/version"
 
 	"github.com/spf13/viper"
 )

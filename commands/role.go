@@ -10,12 +10,12 @@ import (
 	"github.com/mitchellh/cli"
 	"github.com/spf13/viper"
 
-	cst "thy/constants"
-	"thy/errors"
-	"thy/internal/predictor"
-	"thy/paths"
-	"thy/utils"
-	"thy/vaultcli"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/internal/predictor"
+	"github.com/DelineaXPM/dsv-cli/paths"
+	"github.com/DelineaXPM/dsv-cli/utils"
+	"github.com/DelineaXPM/dsv-cli/vaultcli"
 )
 
 func GetRoleCmd() (cli.Command, error) {

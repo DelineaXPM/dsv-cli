@@ -10,8 +10,8 @@ import (
 	"log"
 	"net/http"
 
-	"thy/internal/pki"
-	"thy/paths"
+	"github.com/DelineaXPM/dsv-cli/internal/pki"
+	"github.com/DelineaXPM/dsv-cli/paths"
 )
 
 func (a *authenticator) buildCertParams(cert string, privateKey string) (*requestBody, error) {

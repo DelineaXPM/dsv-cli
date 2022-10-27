@@ -3,11 +3,11 @@ package cmd
 import (
 	"testing"
 
-	"thy/auth"
-	cst "thy/constants"
-	"thy/errors"
-	"thy/tests/fake"
-	"thy/vaultcli"
+	"github.com/DelineaXPM/dsv-cli/auth"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/tests/fake"
+	"github.com/DelineaXPM/dsv-cli/vaultcli"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"

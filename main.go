@@ -6,11 +6,11 @@ import (
 	"os"
 	"runtime/debug"
 
-	cmd "thy/commands"
-	cst "thy/constants"
-	"thy/format"
-	"thy/utils"
-	"thy/version"
+	cmd "github.com/DelineaXPM/dsv-cli/commands"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/format"
+	"github.com/DelineaXPM/dsv-cli/utils"
+	"github.com/DelineaXPM/dsv-cli/version"
 
 	"github.com/mitchellh/cli"
 	"github.com/spf13/viper"

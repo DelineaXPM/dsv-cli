@@ -6,9 +6,9 @@ import (
 	"strings"
 	"sync"
 
-	cst "thy/constants"
-	"thy/errors"
-	"thy/utils"
+	cst "github.com/DelineaXPM/dsv-cli/constants"
+	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/utils"
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"

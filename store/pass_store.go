@@ -2,7 +2,7 @@
 package store
 
 import (
-	ch "thy/store/credential-helpers"
+	ch "github.com/DelineaXPM/dsv-cli/store/credential-helpers"
 )
 
 func NewPassStore() Store {
