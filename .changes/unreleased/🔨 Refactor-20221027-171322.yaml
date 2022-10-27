@@ -1,0 +1,11 @@
+kind: "\U0001F528 Refactor"
+body: The project go module has been renamed from `thy` to GitHub canonical name format
+  `github.com/DelineaXPM/dsv-cli`. This will also allow better support for installing
+  the latest version of cli via `go install github.com/DelineaXPM/dsv-cli@latest`
+  as an option.
+time: 2022-10-27T17:13:22.50653-05:00
+custom:
+  azure-boards-workitemid-fixed: ""
+  azure-boards-workitemid-related: "452090"
+  github-contributor: sheldonhull
+  github-link: ""
