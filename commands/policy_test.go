@@ -542,16 +542,13 @@ func TestHandlePolicyDeleteCmd(t *testing.T) {
 	}{
 		{
 			name:        "success",
-			args:        []string{"--path", "secrets/servers/db"},
+			args:        []string{"secrets/servers/db"},
 			apiResponse: []byte(`test`),
 			out:         []byte(`test`),
-			expectedErr: nil,
 		},
 		{
 			name:        "validation error",
-			args:        []string{"--path", "secrets/servers/db/missing-polciy"},
-			apiResponse: []byte(`test`),
-			out:         []byte(`test`),
+			args:        []string{"secrets/servers/db/missing-polciy"},
 			expectedErr: errors.NewS("item doesn't exist"),
 		},
 	}
@@ -579,6 +576,8 @@ func TestHandlePolicyDeleteCmd(t *testing.T) {
 			if rerr != nil {
 				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
 			}
+
+			viper.Reset()
 
 			_ = handlePolicyDeleteCmd(vcli, tt.args)
 			if tt.expectedErr == nil {
