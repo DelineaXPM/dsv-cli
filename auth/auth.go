@@ -25,8 +25,7 @@ const (
 )
 
 // KeyfileNotFoundError is a global error variable is of type *ApiError, not regular error.
-// trunk-ignore(golangci-lint/gochecknoglobals)
-var KeyfileNotFoundError = errors.NewS("failed to find the encryption key")
+var KeyfileNotFoundError = errors.NewS("failed to find the encryption key") // trunk-ignore(golangci-lint/gochecknoglobals)
 
 // AuthType is the type of authentication.
 type AuthType string

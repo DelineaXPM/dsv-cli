@@ -109,9 +109,9 @@ linters-settings:
     rules:
       - name: var-naming
         severity: error
-  ireturn:
-    allow:
-      - github.com\/mitchellh\/cli # CUSTOMIZED: cli command is common interfacer in this project
+  # ireturn:
+  #   allow:
+  #     - github.com\/mitchellh\/cli # CUSTOMIZED: cli command is common interfacer in this project
 
 linters:
   exclude-use-default: false
@@ -152,6 +152,7 @@ linters:
     - cyclop # CUSTOMIZED: preexisting many larger functions, remove to avoid excessive noise, leave. 2022-10-27 - sheldon
     - gocognit # CUSTOMIZED: preexisting many larger functions, remove to avoid excessive noise, leave. 2022-10-27 - sheldon
     - testpackage # CUSTOMIZED: existing tests don't use this approach, too many false positives, remove to avoid excessive noise, leave. 2022-10-27 - sheldon
+    - ireturn # CUSTOMIZED:  used in this project with cli calls a lot, leave. 2022-10-27 - sheldon
 run:
   skip-dirs-use-default: true
   skip-dirs:
