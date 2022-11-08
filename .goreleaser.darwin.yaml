@@ -54,3 +54,33 @@ checksum:
   disable: false
   # ids:
   #   - dsv-linux
+release:
+  prerelease: auto
+  draft: true
+  mode: append
+  skip_upload: false
+sboms:
+  - artifacts: binary
+    documents:
+      - '${artifact}.spdx.sbom'
+changelog:
+  skip: false
+  sort: asc
+  use: github
+  groups:
+    - title: Features
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: 'Fixes'
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 1
+    - title: 'CI & Chore'
+      regexp: "^.*(fix|chore|build)[(\\w)]*:+.*$"
+      order: 2
+    - title: Others
+      order: 999
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^style:'
