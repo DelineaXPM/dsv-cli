@@ -24,7 +24,7 @@ See [LICENSE](https://github.com/DelineaXPM/dsv-cli/blob/main/LICENSE) for the f
         <a href="https://github.com/thycotic-rd">
             <img src="https://avatars.githubusercontent.com/u/45605025?v=4" width="100;" alt="thycotic-rd"/>
             <br />
-            <sub><b>Null</b></sub>
+            <sub><b>Thycotic-Bot</b></sub>
         </a>
     </td>
     <td align="center">
@@ -45,4 +45,4 @@ See [LICENSE](https://github.com/DelineaXPM/dsv-cli/blob/main/LICENSE) for the f
 <!-- readme: collaborators,contributors -end -->
 
 <!-- markdownlint-restore -->
-<!-- prettier-ignore-end -->)
+<!-- prettier-ignore-end -->
