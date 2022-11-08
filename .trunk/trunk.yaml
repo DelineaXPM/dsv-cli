@@ -27,13 +27,13 @@ actions:
 plugins:
   sources:
     - id: trunk
-      ref: v0.0.5
+      ref: v0.0.6
       uri: https://github.com/trunk-io/plugins
 lint:
   enabled:
-    - taplo@release-taplo-cli-0.7.0
+    - taplo@0.7.0
     - yamllint@1.28.0
-    - actionlint@1.6.21
+    - actionlint@1.6.22
     - git-diff-check@SYSTEM
     - gitleaks@8.15.0
     - golangci-lint@1.50.1
