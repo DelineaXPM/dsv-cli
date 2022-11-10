@@ -11,7 +11,7 @@ trigger:
       - '*.md'
       - '**/*.md'
 parameters:
-  - name: timeoutMinutes
+  - name: TIMEOUT_MIN
     type: number
     default: 15
   - name: debug
