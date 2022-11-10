@@ -1,0 +1,38 @@
+---
+parameters:
+  - name: DEBUG
+    type: boolean
+    default: false
+variables:
+  - name: IS_MAIN_BRANCH
+    value: $[eq(variables['Build.SourceBranch'], 'refs/heads/main')]
+  # to simplify debugging
+  - name: CUSTOM_ARTIFACT_DIRECTORY
+    value: .artifacts/
+  - name: YARN_CACHE_FOLDER
+    value: $(Pipeline.Workspace)/.yarn
+  # Output
+  - name: System.Debug
+    value: ${{ parameters.DEBUG }}
+  # - group: SLACK
+  - name: MAGEFILE_ENABLE_COLOR
+    value: 1
+  - name: MAGEFILE_HASHFAST # Speeds up recompiling for changes after it's built the first time
+    value: 1
+  - ${{ if eq(variables['SYSTEM_DEBUG'], 1) }}:
+      - name: MAGEFILE_VERBOSE
+        value: 1
+    # https://docs.microsoft.com/en-us/azure/devops/pipelines/ecosystems/containers/build-image?view=azure-devops#how-do-i-set-the-buildkit-variable-for-my-docker-builds
+  - name: DOCKER_BUILDKIT
+    value: 1
+  - name: why
+    ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+      value: pr
+    ${{ elseif eq(variables['Build.Reason'], 'Manual' ) }}:
+      value: manual
+    ${{ elseif eq(variables['Build.Reason'], 'IndividualCI' ) }}:
+      value: individci
+    ${{ elseif eq(variables['Build.Reason'], 'BatchedCI' ) }}:
+      value: ci
+    ${{ else }}:
+      value: other

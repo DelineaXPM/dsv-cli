@@ -39,6 +39,7 @@ func Init() error {
 			"github.com/jstemmer/go-junit-report/v2@latest",
 			"github.com/axw/gocov/gocov@latest",
 			"github.com/AlekSi/gocov-xml@latest",
+			"github.com/mitchellh/gon/cmd/gon@latest", // macOS binary signing
 		}); err != nil {
 			return err
 		}

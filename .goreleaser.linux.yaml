@@ -1,0 +1,69 @@
+---
+project_name: dsv
+dist: .artifacts/goreleaser
+
+env:
+  - GITHUB_TOKEN='null'
+  - GITLAB_TOKEN=''
+  - GITEA_TOKEN=''
+  - LOCAL_DEBUGGING=false
+  - CGO_ENABLED=0
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: dsv-linux
+    binary: dsv-{{ replace .Os "windows" "win" }}-{{ if eq .Arch "386" }}x86{{ else if eq .Arch "amd64" }}x64{{ else }}{{ .Arch }}{{end}}
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    ldflags:
+      - -s -w
+      - -X thy/version.Version={{ .Summary }}
+      - -X thy/version.GitCommit={{ .FullCommit }}
+      - -X thy/version.BuildDate={{ .Timestamp }}
+    goos: [linux]
+    goarch:
+      - amd64
+      - '386'
+
+archives:
+  - format: binary
+    name_template: dsv-{{ replace .Os "windows" "win" }}-{{ if eq .Arch "386" }}x86{{ else if eq .Arch "amd64" }}x64{{ else }}{{ .Arch }}{{end}}
+
+checksum:
+  name_template: '{{ .ProjectName }}-linux-sha256.txt'
+  algorithm: sha256
+  disable: false
+  # ids:
+  #   - dsv-linux
+release:
+  prerelease: auto
+  draft: true
+  mode: append
+  skip_upload: false
+sboms:
+  - artifacts: binary
+    documents:
+      - '${artifact}.spdx.sbom'
+changelog:
+  skip: false
+  sort: asc
+  use: github
+  groups:
+    - title: Features
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: 'Fixes'
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 1
+    - title: 'CI & Chore'
+      regexp: "^.*(fix|chore|build)[(\\w)]*:+.*$"
+      order: 2
+    - title: Others
+      order: 999
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^style:'

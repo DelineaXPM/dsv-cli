@@ -1,0 +1,86 @@
+---
+# Requirements: go install github.com/sigstore/cosign/cmd/cosign@latest
+#
+project_name: dsv
+dist: .artifacts/goreleaser
+
+env:
+  - GITHUB_TOKEN='null' # required to bypass check as this tool integrates heavily with those systems
+  - GITLAB_TOKEN=''
+  - GITEA_TOKEN=''
+  - LOCAL_DEBUGGING=false # set to make this quick and bypass extra effort builds like archiving zip
+  - CGO_ENABLED=0
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: dsv-darwin
+    binary: dsv
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    ldflags:
+      - -s -w
+      - -X thy/version.Version={{ .Summary }}
+      - -X thy/version.GitCommit={{ .FullCommit }}
+      - -X thy/version.BuildDate={{ .Timestamp }}
+    goos: [darwin]
+    goarch:
+      - amd64
+      - arm64
+
+# signs:
+#   - artifacts: checksum
+#   - id: codesign
+#     ids:
+#       - dsv-darwin
+#     cmd: codesign
+#     args: [-s, 'Thycotic Software', '${artifact}']
+#     artifacts: binary
+
+archives:
+  - format: binary
+    # Name template is: 'dsv-{{ .Os }}-{{ .Arch }}',
+    # but we replace:
+    #     - "windows" with "win"
+    #     - "386" with "x86"
+    #     - "amd64" with "x64"
+    # Example: "dsv-windows-amd64.exe" -> "dsv-win-x64.exe"
+    name_template: dsv-{{ replace .Os "windows" "win" }}-{{ if eq .Arch "386" }}x86{{ else if eq .Arch "amd64" }}x64{{ else }}{{ .Arch }}{{end}}
+
+checksum:
+  name_template: '{{ .ProjectName }}-darwin-sha256.txt'
+  algorithm: sha256
+  disable: false
+  # ids:
+  #   - dsv-linux
+release:
+  prerelease: auto
+  draft: true
+  mode: append
+  skip_upload: false
+sboms:
+  - artifacts: binary
+    documents:
+      - '${artifact}.spdx.sbom'
+changelog:
+  skip: false
+  sort: asc
+  use: github
+  groups:
+    - title: Features
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: 'Fixes'
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 1
+    - title: 'CI & Chore'
+      regexp: "^.*(fix|chore|build)[(\\w)]*:+.*$"
+      order: 2
+    - title: Others
+      order: 999
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^style:'
