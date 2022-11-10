@@ -1,6 +1,6 @@
 ---
 parameters:
-  - name: WORKING_DIRECTORY
+  - name: workingDirectory
     type: string
     default: $(Build.SourcesDirectory)
 steps:
@@ -12,7 +12,7 @@ steps:
       SYSTEM_DEBUG: false
     inputs:
       # key: 'go | "$(Agent.OS)" | go.sum | go.mod'
-      key: go | "$(Agent.OS)" | ${{ parameters.WORKING_DIRECTORY }}/go.sum
+      key: go | "$(Agent.OS)" | ${{ parameters.workingDirectory }}/go.sum
       restoreKeys: |
         go | "$(Agent.OS)"
       path: $(GOPATH)/pkg/mod
