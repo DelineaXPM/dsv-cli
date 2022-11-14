@@ -8,6 +8,7 @@ steps:
       goBin: $(GOBIN)
   # Prepend path: https://github.com/microsoft/azure-pipelines-tasks/blob/master/docs/authoring/commands.md
   - pwsh: |
+      $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua;${ENV:PATH}" # ensure aqua managed binaries can be found
       New-Item -Path "$(GOBIN)" -ItemType Directory -Force -ErrorAction SilentlyContinue
       &go env
       $ENV:PATH += ";$(GOBIN)"
@@ -19,6 +20,7 @@ steps:
     condition: eq(variables['Agent.OS'], 'Windows_NT')
 
   - bash: |
+      export PATH="${AQUA_ROOT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/aquaproj-aqua}/bin:$PATH"
       echo "=========================== GO CONFIG ==========================="
       go env
       echo "=========================== END GO CONFIG ==========================="

@@ -5,10 +5,19 @@ parameters:
     default: $(System.DefaultWorkingDirectory)
 steps:
   - pwsh: |
-      Write-Host "##vso[task.prependpath]$(GOBIN)"
-      go install github.com/magefile/mage@latest
+      $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua;${ENV:PATH}" # ensure aqua managed binaries can be found
+      Write-Host "##vso[task.prependpath]${ENV:HOME}/AppData/Local/aquaproj-aqua"
+      try {
+        &mage -version
+        write-host "mage was found already, so not installing: $(which -a mage)"
+      }
+      catch {
+        write-Host "Trying to install mage as couldn't find"
+        go install github.com/magefile/mage@latest
+      }
+
       echo "Compile mage for speedy invocation in pipelines with local binary"
-      &(Join-Path $ENV:GOBIN 'mage') -f -debug -compile ./magec
+      mage -f -debug -compile ./magec
       # Write-Host "##vso[task.setvariable variable=MAGEPRECOMPILEDPATH]$(Resolve-Path ./magec -ErrorAction SilentlyContinue)"
     displayName: install-mage-windows
     name: InstallMageWindows
@@ -16,9 +25,16 @@ steps:
     condition: eq(variables['Agent.OS'], 'Windows_NT')
 
   - bash: |
-      go install github.com/magefile/mage@latest
+      export PATH="${AQUA_ROOT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/aquaproj-aqua}/bin:$PATH"
+
+      if command -v mage &>/dev/null; then
+        echo "✔️️ mage detected"
+      else
+        echo "❌ mage command not recognized, will attempt to go install as backup method"
+        go install github.com/magefile/mage@latest
+      fi
       echo "Compile mage for speedy invocation in pipelines with local binary"
-      $(GOBIN)/mage -f -debug -compile ${{ parameters.workingDirectory }}/magec
+      mage -f -debug -compile ${{ parameters.workingDirectory }}/magec
       echo "./magec realpath: $(realpath ./magec)"
       echo "##vso[task.setvariable variable=MAGEPRECOMPILEDPATH]$(realpath ./magec)"
     displayName: install-mage-linux-and-darwin

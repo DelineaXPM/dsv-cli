@@ -5,11 +5,13 @@ parameters:
     default: $(Build.SourcesDirectory)
 steps:
   - pwsh: |
+      $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua;${ENV:PATH}" # ensure aqua managed binaries can be found
       go mod download -x
     displayName: go-mod-download
     # condition: and(succeeded(), eq(variables.VENDORED, '0' )) # Only proceed with caching if vendoring is false
     workingDirectory: ${{ parameters.WorkingDirectory }}
   - pwsh: |
+      $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua;${ENV:PATH}" # ensure aqua managed binaries can be found
       go get -t -x -tags mage,build,integration -v ./...
     displayName: go-get
     # condition: and(succeeded(), eq(variables.VENDORED, '0' )) # Only proceed with caching if vendoring is false
