@@ -14,5 +14,6 @@ steps:
       echo "Added ${AQUA_PACKAGE_BIN} to PATH"
     displayName: install-aqua
   - bash: |
-      $(Agent.ToolsDirectory)/aqua install --working_directory ${{ parameters.workingDirectory }} ${{ parameters.aquaInstallMethod }}
+      $(Agent.ToolsDirectory)/aqua install ${{ parameters.aquaInstallMethod }}
     displayName: aqua-install
+    workingDirectory: ${{ parameters.workingDirectory }}
