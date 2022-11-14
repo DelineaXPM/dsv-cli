@@ -11,5 +11,5 @@ steps:
       curl -sSfL https://raw.githubusercontent.com/aquaproj/aqua-installer/v1.1.2/aqua-installer | bash -s -- -i /usr/local/bin
     displayName: install-aqua
   - bash: |
-      aqua install --working_directory ${{ parameters.working_directory }} ${{ parameters.aquaInstallMethod }}
+      aqua install --working_directory ${{ parameters.workingDirectory }} ${{ parameters.aquaInstallMethod }}
     displayName: aqua-install
