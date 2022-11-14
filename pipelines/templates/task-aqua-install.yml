@@ -8,7 +8,7 @@ parameters:
     default: '--only-link'
 steps:
   - bash: |
-      curl -sSfL https://raw.githubusercontent.com/aquaproj/aqua-installer/v1.1.2/aqua-installer | bash -s -- -i $(Agent.ToolsDirectory)
+      curl -sSfL https://raw.githubusercontent.com/aquaproj/aqua-installer/v1.1.2/aqua-installer | bash -s -- -i "$(Agent.ToolsDirectory)/bin"
       export AQUA_PACKAGE_BIN="${AQUA_ROOT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/aquaproj-aqua}/bin"
       echo "##vso[task.prependpath]${AQUA_PACKAGE_BIN}"
       echo "Added ${AQUA_PACKAGE_BIN} to PATH"
