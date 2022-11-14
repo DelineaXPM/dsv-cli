@@ -102,6 +102,8 @@ jobs:
         displayName: mage init
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
       - bash: |
+          changie latest
+          echo "changie latest: $(changie latest)"
           $(GOBIN)/mage release
         displayName: mage release
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)

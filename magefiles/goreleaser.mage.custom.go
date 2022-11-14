@@ -88,7 +88,8 @@ func Release() error {
 
 	releaseVersion, err := sh.Output("changie", "latest")
 	if err != nil {
-		pterm.Warning.Printfln("changie pulling latest release note version failure: %v", err)
+		pterm.Error.Printfln("changie pulling latest release note version failure: %v", err)
+		return err
 	}
 	cleanVersion := strings.TrimSpace(releaseVersion)
 	cleanpath := filepath.Join(".changes", cleanVersion+".md")
