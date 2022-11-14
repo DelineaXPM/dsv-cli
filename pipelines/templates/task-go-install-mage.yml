@@ -5,7 +5,7 @@ parameters:
     default: $(System.DefaultWorkingDirectory)
 steps:
   - pwsh: |
-      $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua;${ENV:PATH}" # ensure aqua managed binaries can be found
+      $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua/bin;${ENV:PATH}" # ensure aqua managed binaries can be found
       Write-Host "##vso[task.prependpath]${ENV:HOME}/AppData/Local/aquaproj-aqua"
       try {
         &mage -version

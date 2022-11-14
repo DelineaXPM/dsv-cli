@@ -8,7 +8,7 @@ steps:
       goBin: $(GOBIN)
   # Prepend path: https://github.com/microsoft/azure-pipelines-tasks/blob/master/docs/authoring/commands.md
   - pwsh: |
-      $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua;${ENV:PATH}" # ensure aqua managed binaries can be found
+      $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua/bin;${ENV:PATH}" # ensure aqua managed binaries can be found
       New-Item -Path "$(GOBIN)" -ItemType Directory -Force -ErrorAction SilentlyContinue
       &go env
       $ENV:PATH += ";$(GOBIN)"
