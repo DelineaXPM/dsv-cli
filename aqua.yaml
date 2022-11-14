@@ -20,5 +20,5 @@ packages:
   - name: golang/tools/guru@v0.2.0
   - name: anchore/syft@v0.59.0
   - name: direnv/direnv@v2.32.1
-  - name: thycotic/dsv-cli@1.38.1
   - name: sigstore/cosign@v1.13.1
+  - name: thycotic/dsv-cli@1.39.0
