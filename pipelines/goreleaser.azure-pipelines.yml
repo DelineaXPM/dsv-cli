@@ -68,6 +68,7 @@ jobs:
       - checkout: self
         fetchDepth: 0
         path: $(Build.Repository.Name)
+      - template: templates/task-aqua-install.yml
       - template: templates/task-go-install.yml
       - task: thycotic-software.thycotic-dsv-task.thycotic-dsv-build-release-task.ThycoticDSV@0
         displayName: Retrieve ado/cli from Thycotic DevOps Secrets Vault

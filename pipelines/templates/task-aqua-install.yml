@@ -1,0 +1,15 @@
+---
+parameters:
+  - name: workingDirectory
+    type: string
+    default: $(System.DefaultWorkingDirectory)
+  - name: aquaInstallMethod
+    type: string
+    default: '--only-link'
+steps:
+  - bash: |
+      curl -sSfL https://raw.githubusercontent.com/aquaproj/aqua-installer/v1.1.2/aqua-installer | bash -s -- -i /usr/local/bin
+    displayName: install-aqua
+  - bash: |
+      aqua install --working_directory ${{ parameters.working_directory }} ${{ parameters.aquaInstallMethod }}
+    displayName: aqua-install
