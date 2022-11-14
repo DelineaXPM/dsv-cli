@@ -13,7 +13,7 @@ import (
 	"github.com/sheldonhull/magetools/pkg/magetoolsutils"
 )
 
-func checkEnvVar(envVar string, required bool) (string, error) {
+func checkEnvVar(envVar string, required bool) (string, error) { //nolint:unused // leaving this as will use in future releases
 	envVarValue := os.Getenv(envVar)
 	if envVarValue == "" && required {
 		pterm.Error.Printfln(
@@ -81,9 +81,10 @@ func BuildAll() error {
 func Release() error {
 	magetoolsutils.CheckPtermDebug()
 
-	if _, err := checkEnvVar("DOCKER_ORG", true); err != nil {
-		return err
-	}
+	// TODO: this will be checked once we publish cli to github
+	// if _, err := checkEnvVar("DOCKER_ORG", true); err != nil {
+	// 	return err
+	// }
 
 	releaseVersion, err := sh.Output("changie", "latest")
 	if err != nil {
