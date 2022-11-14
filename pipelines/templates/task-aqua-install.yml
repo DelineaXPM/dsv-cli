@@ -6,6 +6,9 @@ parameters:
   - name: aquaInstallMethod
     type: string
     default: '--only-link'
+  - name: aquaInstallTags
+    type: string
+    default: '--tags ci'
 steps:
   - bash: |
       curl -sSfL https://raw.githubusercontent.com/aquaproj/aqua-installer/v1.1.2/aqua-installer | bash -s -- -i "$(Agent.ToolsDirectory)/aqua"
@@ -14,6 +17,6 @@ steps:
       echo "Added ${AQUA_PACKAGE_BIN} to PATH"
     displayName: install-aqua
   - bash: |
-      $(Agent.ToolsDirectory)/aqua install ${{ parameters.aquaInstallMethod }}
+      $(Agent.ToolsDirectory)/aqua install ${{ parameters.aquaInstallMethod }} ${{ parameters.aquaInstallTags }}
     displayName: aqua-install
     workingDirectory: ${{ parameters.workingDirectory }}
