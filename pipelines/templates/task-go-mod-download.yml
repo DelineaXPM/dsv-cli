@@ -38,7 +38,7 @@ steps:
     condition: ne(variables['Agent.OS'], 'Windows_NT')
 
   - pwsh: |
-      $ENV:PATH="${ENV:HOME}/.local/share/aquaproj-aqua}/bin:${PATH}"
+      $ENV:PATH="${ENV:HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
       Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
       go get -t -x -tags mage,build,integration -v ./...
     displayName: go-get
