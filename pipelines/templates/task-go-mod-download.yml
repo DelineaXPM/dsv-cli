@@ -29,13 +29,14 @@ steps:
   # NonWindows #
   ##############
   - pwsh: |
-      $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua/bin;${ENV:PATH}" # ensure aqua managed binaries can be found on windows
+      $ENV:PATH="${ENV:HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
       Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
       go mod download -x
     displayName: go-mod-download
     # condition: and(succeeded(), eq(variables.VENDORED, '0' )) # Only proceed with caching if vendoring is false
     workingDirectory: ${{ parameters.WorkingDirectory }}
     condition: ne(variables['Agent.OS'], 'Windows_NT')
+    failOnStderr: false # go gives false errors on this
 
   - pwsh: |
       $ENV:PATH="${ENV:HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
@@ -45,3 +46,4 @@ steps:
     # condition: and(succeeded(), eq(variables.VENDORED, '0' )) # Only proceed with caching if vendoring is false
     workingDirectory: ${{ parameters.WorkingDirectory }}
     condition: ne(variables['Agent.OS'], 'Windows_NT')
+    failOnStderr: false # go gives false errors on this
