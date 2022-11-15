@@ -9,7 +9,7 @@ steps:
       Write-Host "##vso[task.prependpath]${ENV:HOME}/AppData/Local/aquaproj-aqua"
       try {
         &mage -version
-        write-host "mage was found already, so not installing: $(which -a mage)"
+        Write-Host "mage was found already, so not installing: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
       }
       catch {
         write-Host "Trying to install mage as couldn't find"
