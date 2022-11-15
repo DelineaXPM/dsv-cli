@@ -16,6 +16,7 @@ steps:
       echo "##vso[task.prependpath]${AQUA_PACKAGE_BIN}"
       echo "Added ${AQUA_PACKAGE_BIN} to PATH"
     displayName: install-aqua
+    condition: ne(variables['Agent.OS'], 'Windows_NT')
   - bash: |
       $(Agent.ToolsDirectory)/aqua install ${{ parameters.aquaInstallMethod }} ${{ parameters.aquaInstallTags }}
     displayName: aqua-install
