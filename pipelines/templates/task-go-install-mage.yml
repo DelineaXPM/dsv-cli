@@ -15,9 +15,8 @@ steps:
         write-Host "Trying to install mage as couldn't find"
         go install github.com/magefile/mage@latest
       }
-
       echo "Compile mage for speedy invocation in pipelines with local binary"
-      Write-Host "Mage binary used: $(which mage)" -ErrorAction Continue  ## In case the which command isn't recognized
+      Write-Host "Mage binary used: $((Get-Command mage -ErrorAction SilentlyContinue).Path)"
       mage -f -debug -compile ./magec
       # Write-Host "##vso[task.setvariable variable=MAGEPRECOMPILEDPATH]$(Resolve-Path ./magec -ErrorAction SilentlyContinue)"
     displayName: install-mage-windows

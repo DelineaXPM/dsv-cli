@@ -4,17 +4,44 @@ parameters:
     type: string
     default: $(Build.SourcesDirectory)
 steps:
+  ####################
+  # Windows Specific #
+  ####################
+  # The paths are different and the joining, so just seperating.
   - pwsh: |
-      $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua/bin;${ENV:PATH}" # ensure aqua managed binaries can be found
+      $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua/bin;${ENV:PATH}" # ensure aqua managed binaries can be found on windows
+      Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
+      go mod download -x
+    displayName: go-mod-download-windows
+    # condition: and(succeeded(), eq(variables.VENDORED, '0' )) # Only proceed with caching if vendoring is false
+    workingDirectory: ${{ parameters.WorkingDirectory }}
+    condition: eq(variables['Agent.OS'], 'Windows_NT')
+  - pwsh: |
+      $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua/bin;${ENV:PATH}" # ensure aqua managed binaries can be found on windows
+      Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
+      go get -t -x -tags mage,build,integration -v ./...
+    displayName: go-get-windows
+    # condition: and(succeeded(), eq(variables.VENDORED, '0' )) # Only proceed with caching if vendoring is false
+    workingDirectory: ${{ parameters.WorkingDirectory }}
+    condition: eq(variables['Agent.OS'], 'Windows_NT')
+
+  ##############
+  # NonWindows #
+  ##############
+  - pwsh: |
+      $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua/bin;${ENV:PATH}" # ensure aqua managed binaries can be found on windows
       Write-Host "Go binary used: $(which go)"
       go mod download -x
     displayName: go-mod-download
     # condition: and(succeeded(), eq(variables.VENDORED, '0' )) # Only proceed with caching if vendoring is false
     workingDirectory: ${{ parameters.WorkingDirectory }}
+    condition: ne(variables['Agent.OS'], 'Windows_NT')
+
   - pwsh: |
-      $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua/bin;${ENV:PATH}" # ensure aqua managed binaries can be found
+      $ENV:PATH="${ENV:HOME}/.local/share/aquaproj-aqua}/bin:${PATH}"
       Write-Host "Go binary used: $(which go)"
       go get -t -x -tags mage,build,integration -v ./...
     displayName: go-get
     # condition: and(succeeded(), eq(variables.VENDORED, '0' )) # Only proceed with caching if vendoring is false
     workingDirectory: ${{ parameters.WorkingDirectory }}
+    condition: ne(variables['Agent.OS'], 'Windows_NT')
