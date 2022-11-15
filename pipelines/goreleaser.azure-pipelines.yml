@@ -102,7 +102,8 @@ jobs:
       - bash: |
           export PATH="${AQUA_ROOT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/aquaproj-aqua}/bin:$PATH"
           echo "mage binary used: $(which mage)"
-          mage init
+          echo "mage version: $($(which mage) -version)"
+          $(which mage) init
         displayName: mage init
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
         failOnStderr: false
@@ -112,7 +113,8 @@ jobs:
           changie latest
           echo "changie latest: $(changie latest)"
           echo "mage binary used: $(which mage)"
-          mage release
+          echo "mage version: $($(which mage) -version)"
+          $(which mage) release
         displayName: mage release
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
         failOnStderr: false
