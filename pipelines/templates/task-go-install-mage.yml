@@ -17,6 +17,7 @@ steps:
       }
 
       echo "Compile mage for speedy invocation in pipelines with local binary"
+      Write-Host "Mage binary used: $(which mage)" -ErrorAction Continue  ## In case the which command isn't recognized
       mage -f -debug -compile ./magec
       # Write-Host "##vso[task.setvariable variable=MAGEPRECOMPILEDPATH]$(Resolve-Path ./magec -ErrorAction SilentlyContinue)"
     displayName: install-mage-windows
@@ -26,7 +27,6 @@ steps:
 
   - bash: |
       export PATH="${AQUA_ROOT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/aquaproj-aqua}/bin:$PATH"
-
       if command -v mage &>/dev/null; then
         echo "✔️️ mage detected"
       else
@@ -34,6 +34,7 @@ steps:
         go install github.com/magefile/mage@latest
       fi
       echo "Compile mage for speedy invocation in pipelines with local binary"
+      echo "Mage binary used: $(which mage)"
       mage -f -debug -compile ${{ parameters.workingDirectory }}/magec
       echo "./magec realpath: $(realpath ./magec)"
       echo "##vso[task.setvariable variable=MAGEPRECOMPILEDPATH]$(realpath ./magec)"

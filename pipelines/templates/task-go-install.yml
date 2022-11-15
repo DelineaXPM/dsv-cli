@@ -1,11 +1,11 @@
 ---
 steps:
-  - task: GoTool@0
-    displayName: install go $(GO_VERSION)
-    inputs:
-      version: $(GO_VERSION)
-      goPath: $(GOPATH)
-      goBin: $(GOBIN)
+  # - task: GoTool@0
+  #   displayName: install go $(GO_VERSION)
+  #   inputs:
+  #     version: $(GO_VERSION)
+  #     goPath: $(GOPATH)
+  #     goBin: $(GOBIN)
   # Prepend path: https://github.com/microsoft/azure-pipelines-tasks/blob/master/docs/authoring/commands.md
   - pwsh: |
       $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua/bin;${ENV:PATH}" # ensure aqua managed binaries can be found
