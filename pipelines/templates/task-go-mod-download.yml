@@ -29,9 +29,16 @@ steps:
   # NonWindows #
   ##############
   - pwsh: |
-      $ENV:PATH="${ENV:HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
-      Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
-      go mod download -x
+      try {
+        $ENV:PATH="${ENV:HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
+        Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
+        go mod download -x
+        exit 0
+      }
+      catch {
+        throw
+        exit 1
+      }
     displayName: go-mod-download
     # condition: and(succeeded(), eq(variables.VENDORED, '0' )) # Only proceed with caching if vendoring is false
     workingDirectory: ${{ parameters.WorkingDirectory }}
@@ -39,9 +46,16 @@ steps:
     failOnStderr: false # go gives false errors on this
 
   - pwsh: |
-      $ENV:PATH="${ENV:HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
-      Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
-      go get -t -x -tags mage,build,integration -v ./...
+      try {
+        $ENV:PATH="${ENV:HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
+        Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
+        go get -t -x -tags mage,build,integration -v ./...
+        exit 0
+      }
+      catch {
+        throw
+        exit 1
+      }
     displayName: go-get
     # condition: and(succeeded(), eq(variables.VENDORED, '0' )) # Only proceed with caching if vendoring is false
     workingDirectory: ${{ parameters.WorkingDirectory }}
