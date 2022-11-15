@@ -105,6 +105,7 @@ jobs:
           mage init
         displayName: mage init
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
+        failOnStderr: false
       - bash: |
           export PATH="${AQUA_ROOT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/aquaproj-aqua}/bin:$PATH"
           echo "changie binary used: $(which changie)"
@@ -114,6 +115,7 @@ jobs:
           mage release
         displayName: mage release
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
+        failOnStderr: false
         env:
           CERT_PASSWORD: $(cert.password)
           CERT_SECURE_FILE: $(certSecureFile)
