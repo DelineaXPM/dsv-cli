@@ -103,7 +103,7 @@ jobs:
           export PATH="${AQUA_ROOT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/aquaproj-aqua}/bin:$PATH"
           magebinary=$(which mage)
           echo "mage binary used: $magebinary"
-
+          aqua install
           echo "mage version: $($magebinary -version)"
           $magebinary init
         displayName: mage init
@@ -111,6 +111,7 @@ jobs:
         failOnStderr: false
       - bash: |
           export PATH="${AQUA_ROOT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/aquaproj-aqua}/bin:$PATH"
+          aqua install
           magebinary=$(which mage)
           changiebinary=$(which changie)
           echo "mage binary used: ${magebinary}"
