@@ -68,17 +68,17 @@ jobs:
       - checkout: self
         fetchDepth: 0
         path: $(Build.Repository.Name)
-      - template: templates/task-aqua-install.yml
-        parameters:
-          aquaInstallMethod: ''
-      - template: templates/task-go-install.yml
       - task: thycotic-software.thycotic-dsv-task.thycotic-dsv-build-release-task.ThycoticDSV@0
-        displayName: Retrieve ado/cli from Thycotic DevOps Secrets Vault
+        displayName: retrieve-cert
         inputs:
           ServerUrl: $(ServerUrl)
           ClientId: $(ClientId)
           ClientSecret: $(ClientSecret)
           SecretPath: ado/cli
+      - template: templates/task-aqua-install.yml
+        parameters:
+          aquaInstallMethod: ''
+      - template: templates/task-go-install.yml
       # This step only runs on macOS
       - task: InstallAppleCertificate@2
         displayName: macos-install-cert-to-keychain
