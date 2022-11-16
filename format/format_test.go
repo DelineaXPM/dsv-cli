@@ -80,6 +80,7 @@ var writerTestCases = []struct {
 func TestWriterWriteResponse(t *testing.T) {
 	for i, c := range writerTestCases {
 		t.Run(fmt.Sprintf("case %d-B:%v-Err:%v-Data:%s", i, c.Beautify, c.Err, c.Data), func(t *testing.T) {
+			viper.Reset()
 			viper.Set(cst.Beautify, c.Beautify)
 			viper.Set(cst.Encoding, c.Encoding)
 			testWriter := new(bytes.Buffer)
