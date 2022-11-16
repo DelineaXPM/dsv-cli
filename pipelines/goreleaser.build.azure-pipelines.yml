@@ -101,20 +101,24 @@ jobs:
           workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
       - bash: |
           export PATH="${AQUA_ROOT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/aquaproj-aqua}/bin:$PATH"
-          echo "mage binary used: $(which mage)"
-          echo "mage version: $($(which mage) -version)"
-          $(which mage) init
+          magebinary=$(which mage)
+          echo "mage binary used: $magebinary"
+
+          echo "mage version: $($magebinary -version)"
+          $magebinary init
         displayName: mage init
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
         failOnStderr: false
       - bash: |
           export PATH="${AQUA_ROOT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/aquaproj-aqua}/bin:$PATH"
-          echo "changie binary used: $(which changie)"
+          magebinary=$(which mage)
+          changiebinary=$(which changie)
+          echo "mage binary used: ${magebinary}"
+          echo "changie binary used: ${changiebinary}"
           changie latest
-          echo "changie latest: $(changie latest)"
-          echo "mage binary used: $(which mage)"
-          echo "mage version: $($(which mage) -version)"
-          $(which mage) release
+          echo "changie latest: $($changiebinary latest)"
+          echo "mage version: $($magebinary -version)"
+          $magebinary release
         displayName: mage release
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
         failOnStderr: false
