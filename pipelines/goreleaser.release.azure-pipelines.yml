@@ -1,0 +1,131 @@
+---
+name: goreleaser-dsv-cli-$(why).$(Date:yyyyMMdd)-$(Rev:r)
+trigger:
+  branches:
+    include:
+      - feat/448642/*
+  paths:
+    exclude:
+      - .devcontainer/*
+      - .github/*
+      - '*.md'
+      - '**/*.md'
+parameters:
+  - name: TIMEOUT_MIN
+    type: number
+    default: 15
+  - name: debug
+    type: boolean
+    default: false
+  - name: workingDirectory
+    type: string
+    default: $(Pipeline.Workspace)
+variables:
+  - group: CLI_integration_test # TODO: replace with dsv cli calls
+  - group: CLi-pipeline-variables # TODO: replace with dsv cli calls
+  - group: CLI End-to-End tests # TODO: replace with dsv cli calls
+  - ${{ if eq(variables['SYSTEM_DEBUG'], 1) }}:
+      - name: MAGEFILE_VERBOSE
+        value: 1
+    # https://docs.microsoft.com/en-us/azure/devops/pipelines/ecosystems/containers/build-image?view=azure-devops#how-do-i-set-the-buildkit-variable-for-my-docker-builds
+  - name: DOCKER_BUILDKIT
+    value: 1
+  - name: why
+    ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+      value: pr
+    ${{ elseif eq(variables['Build.Reason'], 'Manual' ) }}:
+      value: manual
+    ${{ elseif eq(variables['Build.Reason'], 'IndividualCI' ) }}:
+      value: individci
+    ${{ elseif eq(variables['Build.Reason'], 'BatchedCI' ) }}:
+      value: ci
+    ${{ else }}:
+      value: other
+
+jobs:
+  - job: BuildCLI
+    strategy:
+      matrix:
+        linux:
+          imageName: ubuntu-latest
+        mac:
+          imageName: macOS-latest
+          demands: xcode
+    timeoutInMinutes: ${{ parameters.TIMEOUT_MIN }}
+    pool:
+      vmImage: $(imageName)
+    variables:
+      - template: templates/vars.go.yml
+        parameters:
+          DEBUG: ${{ parameters.DEBUG }}
+      - template: templates/vars.goreleaser.yml
+        parameters:
+          DEBUG: ${{ parameters.DEBUG }}
+      - name: ARTIFACT_DIRECTORY
+        value: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)/.artifacts/goreleaser
+    steps:
+      #https://docs.microsoft.com/en-us/azure/devops/pipelines/scripts/git-commands?view=azure-devops&tabs=yaml#enable-scripts-to-run-git-commands
+      - checkout: self
+        fetchDepth: 0
+        path: $(Build.Repository.Name)
+      - task: thycotic-software.thycotic-dsv-task.thycotic-dsv-build-release-task.ThycoticDSV@0
+        displayName: retrieve-cert
+        inputs:
+          ServerUrl: $(ServerUrl)
+          ClientId: $(ClientId)
+          ClientSecret: $(ClientSecret)
+          SecretPath: ado/cli
+      - template: templates/task-aqua-install.yml
+        parameters:
+          aquaInstallMethod: ''
+      - template: templates/task-go-install.yml
+      # This step only runs on macOS
+      - task: InstallAppleCertificate@2
+        displayName: macos-install-cert-to-keychain
+        condition: eq(variables['Agent.OS'], 'Darwin')
+        inputs:
+          certSecureFile: $(certSecureFile)
+          certPwd: $(cert.password)
+          setUpPartitionIdACLForPrivateKey: false
+      - template: templates/task-go-detect-vendoring.yml
+        parameters:
+          workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
+      - template: templates/task-go-restore-go-cache.yml
+        parameters:
+          workingDirectory: ${{ parameters.workingDirectory }}/${{ parameters.workingDirectory }}
+      - template: templates/task-go-mod-download.yml
+        parameters:
+          workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
+      - template: templates/task-go-install-mage.yml
+        parameters:
+          workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
+      - bash: |
+          export PATH="${HOME}/.local/share/aquaproj-aqua}/bin:${PATH}"
+          $(Agent.ToolsDirectory)/aqua install --tags ci
+          magebinary=$(which mage)
+          echo "mage binary used: $magebinary"
+          $magebinary init
+        displayName: mage init
+        workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
+        failOnStderr: false
+      - bash: |
+          export PATH="${HOME}/.local/share/aquaproj-aqua}/bin:${PATH}"
+          $(Agent.ToolsDirectory)/aqua install --tags ci
+          magebinary=$(which mage)
+          changiebinary=$(which changie)
+          echo "mage binary used: ${magebinary}"
+          echo "changie binary used: ${changiebinary}"
+          changie latest
+          echo "changie latest: $($changiebinary latest)"
+          $magebinary release
+        displayName: mage release
+        workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
+        failOnStderr: false
+        env:
+          CERT_PASSWORD: $(cert.password)
+          CERT_SECURE_FILE: $(certSecureFile)
+      - task: PublishBuildArtifacts@1
+        displayName: 'Build Artifact: PRTestBuilds'
+        inputs:
+          PathtoPublish: $(ARTIFACT_DIRECTORY)
+          ArtifactName: ThrowAwayBuilds
