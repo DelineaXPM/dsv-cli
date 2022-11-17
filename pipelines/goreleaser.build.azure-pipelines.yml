@@ -104,7 +104,6 @@ jobs:
           $(Agent.ToolsDirectory)/aqua install --tags ci
           magebinary=$(which mage)
           echo "mage binary used: $magebinary"
-          echo "mage version: $($magebinary -version)"
           $magebinary init
         displayName: mage init
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
@@ -118,7 +117,6 @@ jobs:
           echo "changie binary used: ${changiebinary}"
           changie latest
           echo "changie latest: $($changiebinary latest)"
-          echo "mage version: $($magebinary -version)"
           $magebinary release
         displayName: mage release
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
