@@ -100,18 +100,18 @@ jobs:
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
       - bash: |
-          export PATH="${AQUA_ROOT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/aquaproj-aqua}/bin:$PATH"
+          export PATH="${HOME}/.local/share/aquaproj-aqua}/bin:${PATH}"
+          $(Agent.ToolsDirectory)/aqua install --tags ci
           magebinary=$(which mage)
           echo "mage binary used: $magebinary"
-          aqua install
           echo "mage version: $($magebinary -version)"
           $magebinary init
         displayName: mage init
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
         failOnStderr: false
       - bash: |
-          export PATH="${AQUA_ROOT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/aquaproj-aqua}/bin:$PATH"
-          aqua install
+          export PATH="${HOME}/.local/share/aquaproj-aqua}/bin:${PATH}"
+          $(Agent.ToolsDirectory)/aqua install --tags ci
           magebinary=$(which mage)
           changiebinary=$(which changie)
           echo "mage binary used: ${magebinary}"

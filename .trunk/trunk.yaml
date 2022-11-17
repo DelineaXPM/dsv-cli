@@ -1,13 +1,13 @@
 ---
 version: 0.1
 cli:
-  version: 1.0.1
+  version: 1.1.0
 actions:
   enabled:
-    - trunk-announce
-    - trunk-cache-prune
     - trunk-check-pre-push
     - trunk-fmt-pre-commit
+    - trunk-announce
+    - trunk-cache-prune
     - trunk-upgrade-available
     - go-mod-vendor
     - gotestsum
@@ -37,7 +37,7 @@ lint:
     - git-diff-check@SYSTEM
     - gitleaks@8.15.0
     - golangci-lint@1.50.1
-    - hadolint@2.10.0
+    - hadolint@2.12.0
     - markdownlint@0.32.2
     - prettier@2.7.1
     - shellcheck@0.8.0
