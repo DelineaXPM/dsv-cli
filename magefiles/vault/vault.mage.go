@@ -2,8 +2,13 @@
 package vault
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/DelineaXPM/dsv-sdk-go/v2/vault"
 	env "github.com/caarlos0/env/v6"
+	"github.com/magefile/mage/mg"
+	"github.com/pterm/pterm"
 )
 
 // Vault is the mage namespace for tasks related to DelineaXPM vault.
@@ -20,7 +25,6 @@ type Config struct {
 
 func ParseDSVConfig() (Config, error) {
 	cfg := Config{}
-	cfg.configureLogging()
 	if err := env.Parse(&cfg, env.Options{
 		// Prefix: "DSV_",.
 	}); err != nil {
@@ -31,7 +35,7 @@ func ParseDSVConfig() (Config, error) {
 	return cfg, nil
 }
 
-func newClient(cfg *Config) (*Vault, error) {
+func newClient(cfg *Config) (*vault.Vault, error) {
 	clientVault, err := vault.New(vault.Configuration{
 		Credentials: vault.ClientCredential{
 			ClientID:     cfg.ClientIDEnv,
@@ -41,7 +45,7 @@ func newClient(cfg *Config) (*Vault, error) {
 		TLD:    os.Getenv("DSV_TLD"),
 	})
 	if err != nil {
-		return &Vault{}, fmt.Errorf("unable to create vault client: %w", err)
+		return &vault.Vault{}, fmt.Errorf("unable to create vault client: %w", err)
 	}
 	return clientVault, nil
 }
