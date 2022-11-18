@@ -2,8 +2,14 @@
 package vault
 
 import (
+	"fmt"
+
 	"github.com/DelineaXPM/dsv-sdk-go/v2/vault"
 	env "github.com/caarlos0/env/v6"
+	"github.com/magefile/mage/mg"
+
+	"github.com/pterm/pterm"
+	"github.com/sheldonhull/magetools/pkg/magetoolsutils"
 )
 
 // Vault is the mage namespace for tasks related to DelineaXPM vault.
@@ -18,30 +24,61 @@ type Config struct {
 	ClientSecretEnv string `json:"-" env:"DSV_CLIENT_SECRET,notEmpty"` // ClientSecretEnv is the client secret token for authentication.
 }
 
-func ParseDSVConfig() (Config, error) {
+// GetSecrets retrieves the desired secrets from the DelineaXPM vault.
+func (Vault) GetSecrets() error {
+	magetoolsutils.CheckPtermDebug()
+	pterm.Info.Println("(Vault) GetSecrets()")
+	cfg, err := ParseDSVConfig()
+	if err != nil {
+		return err
+	}
+	pterm.Debug.Printfln("Config: %+v", cfg)
+
+	clientVault, err := newClient(cfg)
+	if err != nil {
+		pterm.Error.Printfln("newClient unable to create vault client: %+v", err)
+		return err
+	}
+
+	secret1, err := clientVault.Secret("test-secret")
+	if err != nil {
+		pterm.Error.Printfln("unable to retrieve secret: %+v", err)
+		return err
+	}
+	pterm.Debug.Printfln("secretkey: %v", secret1.Path)
+	return nil
+}
+
+// parseDSVConfig parses the DelineaXPM vault configuration from the environment variables, and returns the configuration for usage in setting up client credentials.
+func ParseDSVConfig() (*Config, error) {
+	magetoolsutils.CheckPtermDebug()
+	pterm.Info.Println("ParseDSVConfig()")
+
 	cfg := Config{}
-	cfg.configureLogging()
 	if err := env.Parse(&cfg, env.Options{
 		// Prefix: "DSV_",.
 	}); err != nil {
 		pterm.Error.Printfln("env.Parse() %+v", err)
-		return Config{}, fmt.Errorf("unable to parse env vars: %w", err)
+		return &Config{}, fmt.Errorf("unable to parse env vars: %w", err)
 	}
 	pterm.Success.Println("parsed environment variables")
-	return cfg, nil
+	return &cfg, nil
 }
 
-func newClient(cfg *Config) (*Vault, error) {
+// newClient creates a new DelineaXPM vault client and returns for usage in retrieving and setting secrets.
+func newClient(cfg *Config) (*vault.Vault, error) {
+	magetoolsutils.CheckPtermDebug()
+	pterm.Info.Println("newClient")
 	clientVault, err := vault.New(vault.Configuration{
 		Credentials: vault.ClientCredential{
 			ClientID:     cfg.ClientIDEnv,
 			ClientSecret: cfg.ClientSecretEnv,
 		},
 		Tenant: cfg.TenantIDEnv,
-		TLD:    os.Getenv("DSV_TLD"),
+		TLD:    cfg.TLDEnv,
 	})
 	if err != nil {
-		return &Vault{}, fmt.Errorf("unable to create vault client: %w", err)
+		return &vault.Vault{}, fmt.Errorf("unable to create vault client: %w", err)
 	}
 	return clientVault, nil
 }

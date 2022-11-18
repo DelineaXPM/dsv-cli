@@ -16,6 +16,8 @@ import (
 	"text/template"
 	"time"
 
+	// ff "github.com/peterbourgon/ff/v3"
+
 	"github.com/DelineaXPM/dsv-cli/constants"
 	"github.com/DelineaXPM/dsv-cli/utils/test_helpers"
 
@@ -23,13 +25,23 @@ import (
 	"golang.org/x/sys/execabs"
 )
 
-var update = flag.Bool("update", false, "update golden case files")
-
+//nolint
+var (
+	testTenant   = flag.String("testtenant", "", "the test tenant to run against")
+	userName     = flag.String("username", "", "the test user to run against")
+	userPassword = flag.String("userpassword", "", "the test user's password to run against")
+	update       = flag.Bool("update", false, "update golden case files")
+)
 var binaryName = constants.CmdRoot
 
-const configPath = "cicd-integration/.thy.yml"
+const (
+	configPath = "cicd-integration/.thy.yml"
+	// failureExitCode is the exit code to return when an error occurs.
+	failureExitCode = 1
+)
 
 func TestCliArgs(t *testing.T) {
+	t.Skip("TODO: Remove this after reworking is done ❗❗❗❗❗❗")
 	workDir, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("[TestCliArgs] Unable to determine working directory: %v.", err)
@@ -105,6 +117,7 @@ const (
 )
 
 func TestMain(m *testing.M) {
+	flag.Parse()
 	_, err := strconv.ParseBool(os.Getenv("GO_INTEGRATION_TEST"))
 	if err != nil {
 		fmt.Println("[SKIPPED]: GO_INTEGRATION_TEST must be set to 1/true to run integration tests")
@@ -121,8 +134,40 @@ func TestMain(m *testing.M) {
 	if err := os.Chdir(rootDir); err != nil {
 		log.Fatal(err)
 	}
+	// fs := flag.NewFlagSet("cicd-integration", flag.ContinueOnError)
+	// var (
+	// 	testTenant = flag.String("tenant", "", "the test tenant to run against")
+	// 	userName = flag.String("user", "", "the test user to run against")
+	// 	userPassword = flag.String("password", "", "the test user's password to run against")
 
-	if err := test_helpers.AddEncryptionKey(os.Getenv("TEST_TENANT"), os.Getenv("USER_NAME"), os.Getenv("DSV_USER_PASSWORD")); err != nil {
+	// )
+	// if err := ff.Parse(fs, os.Args[1:], ff.WithEnvVarPrefix("DSV_INTEGRATION_TEST")); err != nil {
+	// 	fmt.Fprintf(os.Stderr, "error parsing test flags: %v\n", err)
+	// 	os.Exit(1)
+	// }
+	var errCount int
+
+	if userName == nil || *userName == "" {
+		fmt.Println("REQUIRED FLAG: `userName` must be set in order to run this test")
+		errCount++
+	}
+	if userPassword == nil || *userPassword == "" {
+		fmt.Println("REQUIRED FLAG: `userPassword` must be set in order to run this test")
+		errCount++
+	}
+	if testTenant == nil || *testTenant == "" {
+		fmt.Println("REQUIRED FLAG: `testTenant` must be set in order to run this test")
+		errCount++
+	}
+	if errCount > 0 {
+		fmt.Printf("ERROR: [%d] required flags were not set. Please set the required flags and try again.\n", errCount)
+		os.Exit(failureExitCode)
+	}
+	fmt.Printf("userName: %s\n", *userName)
+	fmt.Printf("userPassword: %s\n", *userPassword)
+	fmt.Printf("testTenant: %s\n", *testTenant)
+
+	if err := test_helpers.AddEncryptionKey(*testTenant, *userName, *userPassword); err != nil {
 		log.Fatalf("could not create encryption key: %v", err)
 	}
 	makeCmd := execabs.Command("make", "build-test")
@@ -212,6 +257,8 @@ var (
 )
 
 func init() {
+	fmt.Printf("--------> PARSING FLAGS\n")
+	fmt.Printf("testTenant: %s\n", *testTenant)
 	if err := generateThyYml(".thy.yml.template", ".thy.yml"); err != nil {
 		panic(err)
 	}
