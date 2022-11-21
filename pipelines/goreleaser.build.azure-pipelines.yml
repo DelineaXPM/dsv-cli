@@ -109,9 +109,11 @@ jobs:
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
         failOnStderr: false
       - bash: |
-          export PATH="${HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
-          $(Agent.ToolsDirectory)/aqua install --tags ci
+          # export PATH="${HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
+          # $(Agent.ToolsDirectory)/aqua install --tags ci
           magebinary=$(which mage)
+          go install github.com/miniscruff/changie@latest
+          echo "changie versions: $(which -a changie)"
           changiebinary=$(which changie)
           echo "mage binary used: ${magebinary}"
           echo "changie binary used: ${changiebinary}"
