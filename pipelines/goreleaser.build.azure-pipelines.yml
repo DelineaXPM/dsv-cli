@@ -111,13 +111,13 @@ jobs:
       - bash: |
           export PATH="${HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
           $(Agent.ToolsDirectory)/aqua install --tags ci
-          magebinary=$(which mage)
-          changiebinary=$(which changie)
-          echo "mage binary used: ${magebinary}"
-          echo "changie binary used: ${changiebinary}"
-          changie latest
-          echo "changie latest: $($changiebinary latest)"
-          $magebinary release
+          # magebinary=$(which mage)
+          # changiebinary=$(which changie)
+          # echo "mage binary used: ${magebinary}"
+          # echo "changie binary used: ${changiebinary}"
+          # changie latest
+          # echo "changie latest: $($changiebinary latest)"
+          # $magebinary release
         displayName: mage release
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
         failOnStderr: false
