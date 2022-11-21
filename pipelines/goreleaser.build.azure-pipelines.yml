@@ -48,9 +48,10 @@ jobs:
       matrix:
         linux:
           imageName: ubuntu-latest
-        mac:
-          imageName: macOS-latest
-          demands: xcode
+        # TODO: RENABLE THIS
+        # mac:
+        #   imageName: macOS-latest
+        #   demands: xcode
     timeoutInMinutes: ${{ parameters.TIMEOUT_MIN }}
     pool:
       vmImage: $(imageName)
@@ -111,6 +112,9 @@ jobs:
       - bash: |
           # export PATH="${HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
           # $(Agent.ToolsDirectory)/aqua install --tags ci
+          echo "go version: $(go version)"
+          export PATH="${HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
+          echo "go version: $(go version)"
           magebinary=$(which mage)
           go install github.com/miniscruff/changie@latest
           echo "changie versions: $(which -a changie)"
