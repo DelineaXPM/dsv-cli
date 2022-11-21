@@ -117,7 +117,7 @@ jobs:
           echo "changie binary used: ${changiebinary}"
           # changie latest
           echo "changie latest: $($changiebinary latest)"
-          echo "Listing Files: ls -lla"
+          echo "Listing Files: ls -lla: $(ls -lla)"
           # $magebinary release
         displayName: mage release
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
