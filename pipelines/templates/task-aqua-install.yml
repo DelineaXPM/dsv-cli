@@ -9,7 +9,7 @@ parameters:
   - name: aquaInstallTags
     type: string
     default: '--tags ci'
-  - name: GITHUB_TOKEN
+  - name: AQUA_GITHUB_TOKEN
     type: string
     default: ''
 steps:
@@ -24,7 +24,7 @@ steps:
     displayName: install-aqua
     condition: ne(variables['Agent.OS'], 'Windows_NT')
     env:
-      GITHUB_TOKEN: ${{ parameters.GITHUB_TOKEN }}
+      AQUA_GITHUB_TOKEN: ${{ parameters.AQUA_GITHUB_TOKEN }}
   - bash: |
       $(Agent.ToolsDirectory)/aqua install ${{ parameters.aquaInstallMethod }} ${{ parameters.aquaInstallTags }}
     displayName: aqua-install
