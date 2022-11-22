@@ -9,6 +9,7 @@ steps:
   # Prepend path: https://github.com/microsoft/azure-pipelines-tasks/blob/master/docs/authoring/commands.md
   - pwsh: |
       # $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua/bin;${ENV:PATH}" # ensure aqua managed binaries can be found
+      $ENV:PATH = '$(Agent.ToolsDirectory)/bin', $ENV:PATH -join [IO.Path]::PathSeparator
       Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
       Write-Host "Go Version Used: $(go version)"
       New-Item -Path "$(GOBIN)" -ItemType Directory -Force -ErrorAction SilentlyContinue
@@ -22,6 +23,7 @@ steps:
     condition: eq(variables['Agent.OS'], 'Windows_NT')
 
   - bash: |
+      $ENV:PATH = '$(Agent.ToolsDirectory)/bin', $ENV:PATH -join [IO.Path]::PathSeparator
       Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
       Write-Host "Go Version Used: $(go version)"
       echo "=========================== GO CONFIG ==========================="

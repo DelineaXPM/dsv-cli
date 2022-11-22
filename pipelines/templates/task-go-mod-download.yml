@@ -9,7 +9,8 @@ steps:
   ####################
   # The paths are different and the joining, so just seperating.
   - pwsh: |
-      $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua/bin;${ENV:PATH}" # ensure aqua managed binaries can be found on windows
+      # $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua/bin;${ENV:PATH}" # ensure aqua managed binaries can be found on windows
+      $ENV:PATH = '$(Agent.ToolsDirectory)/bin', $ENV:PATH -join [IO.Path]::PathSeparator
       Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
       go mod download -x
     displayName: go-mod-download-windows
@@ -17,7 +18,8 @@ steps:
     workingDirectory: ${{ parameters.WorkingDirectory }}
     condition: eq(variables['Agent.OS'], 'Windows_NT')
   - pwsh: |
-      $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua/bin;${ENV:PATH}" # ensure aqua managed binaries can be found on windows
+      # $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua/bin;${ENV:PATH}" # ensure aqua managed binaries can be found on windows
+      $ENV:PATH = '$(Agent.ToolsDirectory)/bin', $ENV:PATH -join [IO.Path]::PathSeparator
       Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
       go get -t -x -tags mage,build,integration -v ./...
     displayName: go-get-windows
@@ -48,8 +50,9 @@ steps:
 
   - pwsh: |
       try {
-        # $ENV:PATH="${ENV:HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
-        $ENV:PATH="$(Agent.ToolsDirectory)/bin:${PATH}"
+        $ENV:PATH = '$(Agent.ToolsDirectory)/bin', $ENV:PATH -join [IO.Path]::PathSeparator
+        # # $ENV:PATH="${ENV:HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
+        # $ENV:PATH="$(Agent.ToolsDirectory)/bin:${PATH}"
         Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
         go get -t -x -tags mage,build,integration -v ./...
         exit 0
