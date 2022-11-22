@@ -5,7 +5,7 @@ parameters:
     default: $(System.DefaultWorkingDirectory)
 steps:
   - pwsh: |
-      $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua/bin;${ENV:PATH}" # ensure aqua managed binaries can be found
+      # $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua/bin;${ENV:PATH}" # ensure aqua managed binaries can be found
       Write-Host "##vso[task.prependpath]${ENV:HOME}/AppData/Local/aquaproj-aqua"
       try {
         &mage -version
@@ -25,7 +25,7 @@ steps:
     condition: eq(variables['Agent.OS'], 'Windows_NT')
 
   - bash: |
-      export PATH="${AQUA_ROOT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/aquaproj-aqua}/bin:$PATH"
+      # export PATH="${AQUA_ROOT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/aquaproj-aqua}/bin:$PATH"
       if command -v mage &>/dev/null; then
         echo "✔️️ mage detected"
       else
