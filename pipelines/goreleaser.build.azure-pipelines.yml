@@ -1,6 +1,7 @@
 ---
 name: goreleaser-dsv-cli-$(why).$(Date:yyyyMMdd)-$(Rev:r)
-pr: autoCacnel
+pr:
+  autoCancel: true
 trigger:
   batch: true
   branches:
