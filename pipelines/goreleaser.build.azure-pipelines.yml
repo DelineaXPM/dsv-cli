@@ -78,6 +78,7 @@ jobs:
       - template: templates/task-aqua-install.yml
         parameters:
           AQUA_GITHUB_TOKEN: $(AQUA_GITHUB_TOKEN)
+          GOROOT: $(AQUA_ROOT_DIR)/bin
       - template: templates/task-go-install.yml
         parameters:
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
