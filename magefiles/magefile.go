@@ -45,7 +45,7 @@ func Init() error {
 		}
 		return nil
 	}
-	pterm.Success.Printf("Init() completed [%s]\n", relTime(start))
+	pterm.Success.Printfln("Init() completed [%s]\n", relTime(start))
 
 	return nil
 }

@@ -127,6 +127,7 @@ jobs:
           CERT_SECURE_FILE: $(certSecureFile)
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
           GOROOT: $(AQUA_ROOT_DIR)/bin
+          GITHUB_TOKEN: $(GITHUB_TOKEN)
       - task: PublishBuildArtifacts@1
         displayName: 'Build Artifact: PRTestBuilds'
         inputs:
