@@ -3,6 +3,9 @@ parameters:
   - name: workingDirectory
     type: string
     default: $(Build.SourcesDirectory)
+  - name: AQUA_ROOT_DIR
+    type: string
+    default: ''
   # To allow using the aqua installed/other installed version over default agent version
   - name: GOROOT
     type: string
@@ -14,6 +17,7 @@ steps:
     env:
       SYSTEM_DEBUG: false
       GOROOT: ${{ parameters.GOROOT }}
+      AQUA_ROOT_DIR: ${{ parameters.AQUA_ROOT_DIR }}
     inputs:
       # key: 'go | "$(Agent.OS)" | go.sum | go.mod'
       key: go | "$(Agent.OS)" | ${{ parameters.workingDirectory }}/go.sum

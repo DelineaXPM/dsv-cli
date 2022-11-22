@@ -78,6 +78,8 @@ jobs:
       - template: templates/task-aqua-install.yml
         parameters:
           AQUA_GITHUB_TOKEN: $(AQUA_GITHUB_TOKEN)
+          AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
+          AQUA_BINARY_FULL_INSTALL_PATH: $(AQUA_BINARY_FULL_INSTALL_PATH)
           GOROOT: $(AQUA_ROOT_DIR)/bin
       - template: templates/task-go-install.yml
         parameters:
@@ -90,13 +92,17 @@ jobs:
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/${{ parameters.workingDirectory }}
           GOROOT: $(AQUA_ROOT_DIR)/bin
+          AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
       - template: templates/task-go-mod-download.yml
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
           GOROOT: $(AQUA_ROOT_DIR)/bin
+          AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
       - template: templates/task-go-install-mage.yml
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
+          GOROOT: $(AQUA_ROOT_DIR)/bin
+          AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
       - pwsh: |
           $ENV:PATH = '$(Build.SourcesDirectory)/.cache/aqua/bin', $ENV:PATH -join [IO.Path]::PathSeparator
           Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
@@ -105,6 +111,9 @@ jobs:
         displayName: mage init
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
         failOnStderr: false
+        env:
+          AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
+          GOROOT: $(AQUA_ROOT_DIR)/bin
       - pwsh: |
           $ENV:PATH = '$(Build.SourcesDirectory)/.cache/aqua/bin', $ENV:PATH -join [IO.Path]::PathSeparator
           Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
