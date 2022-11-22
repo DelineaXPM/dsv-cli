@@ -9,6 +9,9 @@ parameters:
   - name: aquaInstallTags
     type: string
     default: '--tags ci'
+  - name: GITHUB_TOKEN
+    type: string
+    default: ''
 steps:
   - bash: |
       curl -sSfL https://raw.githubusercontent.com/aquaproj/aqua-installer/v1.1.2/aqua-installer | bash -s -- -i "$(Agent.ToolsDirectory)/aqua"
@@ -20,7 +23,11 @@ steps:
       # echo "Added ${AQUA_PACKAGE_BIN} to PATH"
     displayName: install-aqua
     condition: ne(variables['Agent.OS'], 'Windows_NT')
+    env:
+      GITHUB_TOKEN: ${{ parameters.GITHUB_TOKEN }}
   - bash: |
       $(Agent.ToolsDirectory)/aqua install ${{ parameters.aquaInstallMethod }} ${{ parameters.aquaInstallTags }}
     displayName: aqua-install
     workingDirectory: ${{ parameters.workingDirectory }}
+    env:
+      AQUA_LOG_LEVEL: debug

@@ -24,6 +24,7 @@ variables:
   - group: CLI_integration_test # TODO: replace with dsv cli calls
   - group: CLi-pipeline-variables # TODO: replace with dsv cli calls
   - group: CLI End-to-End tests # TODO: replace with dsv cli calls
+  - group: GITHUB # to avoid api rate issues
   - ${{ if eq(variables['SYSTEM_DEBUG'], 1) }}:
       - name: MAGEFILE_VERBOSE
         value: 1
@@ -79,6 +80,7 @@ jobs:
       - template: templates/task-aqua-install.yml
         parameters:
           aquaInstallMethod: ''
+          GITHUB_TOKEN: $(GITHUB_TOKEN)
       - template: templates/task-go-install.yml
       # This step only runs on macOS
       - task: InstallAppleCertificate@2
@@ -101,8 +103,7 @@ jobs:
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
       - bash: |
-          export PATH="${HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
-          $(Agent.ToolsDirectory)/aqua install --tags ci
+          # export PATH="${HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
           magebinary=$(which mage)
           echo "mage binary used: $magebinary"
           # $magebinary init
