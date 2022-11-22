@@ -21,8 +21,8 @@ parameters:
     type: string
 steps:
   - pwsh: |
-      $binarydirectory = '${{ parameters.AQUA_BINARY_FULL_INSTALL_PATH }}' | Split-Path -Parent -Resolve
-      New-Item -ItemType Directory -Path $binarydirectory | Split-Path -Parent -Resolve -Force -ErrorAction SilentlyContinue && Write-Host "✅ Created the directory to house the aqua binary: $binarydirectory"
+      $binarydirectory = '${{ parameters.AQUA_BINARY_FULL_INSTALL_PATH }}' | Split-Path -Parent
+      New-Item -ItemType Directory -Path $binarydirectory | Split-Path -Parent -Force -ErrorAction SilentlyContinue && Write-Host "✅ Created the directory to house the aqua binary: $binarydirectory"
       New-Item -ItemType Directory -Path '${{ parameters.AQUA_ROOT_DIR }}' -Force -ErrorAction SilentlyContinue && Write-Host "✅ Created the directory to house the aqua binary: ${{ parameters.AQUA_ROOT_DIR }}"
       go run github.com/aquaproj/aqua-installer@latest -o "${{ parameters.AQUA_BINARY_FULL_INSTALL_PATH }}"
 
