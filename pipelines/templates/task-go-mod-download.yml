@@ -30,7 +30,8 @@ steps:
   ##############
   - pwsh: |
       try {
-        $ENV:PATH="${ENV:HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
+        # $ENV:PATH="${ENV:HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
+        $ENV:PATH="$(Agent.ToolsDirectory)/bin:${PATH}"
         Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
         go mod download -x
         exit 0
@@ -47,7 +48,8 @@ steps:
 
   - pwsh: |
       try {
-        $ENV:PATH="${ENV:HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
+        # $ENV:PATH="${ENV:HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
+        $ENV:PATH="$(Agent.ToolsDirectory)/bin:${PATH}"
         Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
         go get -t -x -tags mage,build,integration -v ./...
         exit 0
