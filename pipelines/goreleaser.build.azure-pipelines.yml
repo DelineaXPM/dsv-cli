@@ -117,8 +117,6 @@ jobs:
           Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
           Write-Host ('[mage] binary: {0} version: {1}' -f $(Get-Command mage -ErrorAction SilentlyContinue).Path, [string]$(mage -version)) -ForegroundColor Gray
           Write-Host ('[changie] binary: {0} version: {1}' -f $(Get-Command changie -ErrorAction SilentlyContinue).Path, [string]$(changie --version)) -ForegroundColor Gray
-          magebinary=$(Get-Command mage -ErrorAction SilentlyContinue).Path
-          changiebinary=$(Get-Command changie -ErrorAction SilentlyContinue).Path
           Write-Host "Changie Detected Version: [$(changie latest)]"
           &mage release
         displayName: mage release
@@ -127,6 +125,8 @@ jobs:
         env:
           CERT_PASSWORD: $(cert.password)
           CERT_SECURE_FILE: $(certSecureFile)
+          AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
+          GOROOT: $(AQUA_ROOT_DIR)/bin
       - task: PublishBuildArtifacts@1
         displayName: 'Build Artifact: PRTestBuilds'
         inputs:
