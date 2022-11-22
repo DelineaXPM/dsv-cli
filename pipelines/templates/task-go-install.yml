@@ -3,6 +3,9 @@ parameters:
   - name: AQUA_ROOT_DIR
     type: string
     default: ''
+  # To allow using the aqua installed/other installed version over default agent version
+  - name: GOROOT
+    type: string
 steps:
   # - task: GoTool@0
   #   displayName: install go $(GO_VERSION)
@@ -27,8 +30,9 @@ steps:
     displayName: configure-go-env-var
     env:
       AQUA_ROOT_DIR: ${{ parameters.AQUA_ROOT_DIR }}
-    # condition: eq(variables['Agent.OS'], 'Windows_NT')
+      GOROOT: ${{ parameters.GOROOT }}
 
+  # condition: eq(variables['Agent.OS'], 'Windows_NT')
   # - bash: |
   #     $ENV:PATH = '$(Build.SourcesDirectory)/.cache/aqua/bin', $ENV:PATH -join [IO.Path]::PathSeparator
   #     Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"

@@ -19,7 +19,6 @@ steps:
       Write-Host "Check the Go Versions: $(which -a go)" -ErrorAction SilentlyContinue
       try { Write-Host ('[go] manually invoked from aqua bin: {0} -- version info: {1}' -f '$(Build.SourcesDirectory)/.cache/aqua/bin', (&$(Build.SourcesDirectory)/.cache/aqua/bin/go version)) -ErrorAction Continue } catch { write-warning "not able to invoke go with full path from aqua. not sure why"}
       Write-Host "Items In Aqua Bin: $(Get-ChildItem '$(Build.SourcesDirectory)/.cache/' -Depth 3 -Recurse -ErrorAction Continue | Format-Table | Out-String)"
-
       &go mod download -x
     displayName: go-mod-download
     workingDirectory: ${{ parameters.WorkingDirectory }}

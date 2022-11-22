@@ -19,7 +19,9 @@ parameters:
   - name: AQUA_BINARY_FULL_INSTALL_PATH
     type: string
     default: ''
-
+  # To allow using the aqua installed/other installed version over default agent version
+  - name: GOROOT
+    type: string
 steps:
   - pwsh: |
       $binarydirectory = '${{ parameters.AQUA_BINARY_FULL_INSTALL_PATH }}' | Split-Path -Parent -Resolve)
@@ -34,6 +36,7 @@ steps:
     failOnStderr: false
     env:
       AQUA_GITHUB_TOKEN: ${{ parameters.AQUA_GITHUB_TOKEN }}
+      GOROOT: ${{ parameters.GOROOT }}
   - pwsh: |
       &aqua install ${{ parameters.aquaInstallMethod }} ${{ parameters.aquaInstallTags }}
     displayName: aqua-install
@@ -41,3 +44,4 @@ steps:
     env:
       AQUA_LOG_LEVEL: debug
       AQUA_ROOT_DIR: ${{ parameters.AQUA_ROOT_DIR }}
+      GOROOT: ${{ parameters.GOROOT }}
