@@ -1,6 +1,8 @@
 ---
 name: goreleaser-dsv-cli-$(why).$(Date:yyyyMMdd)-$(Rev:r)
+pr: autoCacnel
 trigger:
+  batch: true
   branches:
     include:
       - feat/448642/*
