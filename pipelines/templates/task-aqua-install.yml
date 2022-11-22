@@ -12,22 +12,32 @@ parameters:
   - name: AQUA_GITHUB_TOKEN
     type: string
     default: ''
+  # Required (loaded from templates/vars.common.yml)
+  - name: AQUA_ROOT_DIR
+    type: string
+    default: ''
+  - name: AQUA_BINARY_FULL_INSTALL_PATH
+    type: string
+    default: ''
+
 steps:
   - pwsh: |
-      New-Item -ItemType Directory -Path '$(Build.SourcesDirectory)/.cache/aqua/' -Force -ErrorAction SilentlyContinue
-      &curl -sSfL https://raw.githubusercontent.com/aquaproj/aqua-installer/v1.1.2/aqua-installer | bash -s -- -i "$(Build.SourcesDirectory)/.cache/aqua/aqua"
-      # echo "##vso[task.prependpath]$(Build.SourcesDirectory)/.cache/aqua/bin"
-      # echo "##vso[task.setvariable variable=AQUA_ROOT_DIR]$(Build.SourcesDirectory)/.cache/aqua"
-      # echo "Configured AQUA_ROOT_DIR to the Agent.ToolsDirectory: $(Build.SourcesDirectory)/.cache/aqua"
-      # # echo "Added ${AQUA_PACKAGE_BIN} to PATH"
+      $binarydirectory = '${{ parameters.AQUA_BINARY_FULL_INSTALL_PATH }}' | Split-Path -Parent -Resolve)
+      New-Item -ItemType Directory -Path $binarydirectory | Split-Path -Parent -Resolve) -Force -ErrorAction SilentlyContinue && Write-Host "✅ Created the directory to house the aqua binary: $binarydirectory"
+      New-Item -ItemType Directory -Path '${{ parameters.AQUA_ROOT_DIR }}' -Force -ErrorAction SilentlyContinue && Write-Host "✅ Created the directory to house the aqua binary: ${{ parameters.AQUA_ROOT_DIR }}"
+      go run github.com/aquaproj/aqua-installer@latest -o "${{ parameters.AQUA_BINARY_FULL_INSTALL_PATH }}"
+
+      # &curl -sSfL https://raw.githubusercontent.com/aquaproj/aqua-installer/v1.1.2/aqua-installer | bash -s -- -i "$(Build.SourcesDirectory)/.cache/aqua/aqua"
+      Write-Host "##vso[task.prependpath]${{ parameters.AQUA_ROOT_DIR }}/bin"
+      Write-Host "##vso[task.prependpath]$binarydirectory"
     displayName: install-aqua
     failOnStderr: false
-    # condition: ne(variables['Agent.OS'], 'Windows_NT')
     env:
       AQUA_GITHUB_TOKEN: ${{ parameters.AQUA_GITHUB_TOKEN }}
   - pwsh: |
-      &"$(Build.SourcesDirectory)/.cache/aqua/aqua" install ${{ parameters.aquaInstallMethod }} ${{ parameters.aquaInstallTags }}
+      &aqua install ${{ parameters.aquaInstallMethod }} ${{ parameters.aquaInstallTags }}
     displayName: aqua-install
     workingDirectory: ${{ parameters.workingDirectory }}
     env:
       AQUA_LOG_LEVEL: debug
+      AQUA_ROOT_DIR: ${{ parameters.AQUA_ROOT_DIR }}

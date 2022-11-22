@@ -17,3 +17,7 @@ variables:
       value: ci
     ${{ else }}:
       value: other
+  - name: AQUA_ROOT_DIR
+    value: $(Build.SourcesDirectory)/.cache/aqua-proj/
+  - name: AQUA_BINARY_FULL_INSTALL_PATH
+    value: $(Build.SourcesDirectory)/.cache/bin/aqua

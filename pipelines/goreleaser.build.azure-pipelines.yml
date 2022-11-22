@@ -53,13 +53,23 @@ jobs:
           DEBUG: ${{ parameters.DEBUG }}
       - name: ARTIFACT_DIRECTORY
         value: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)/.artifacts/goreleaser
+      - name: GOROOT # Overriding with aqua
+        value: $(AQUA_ROOT_DIR)/bin
     steps:
       #https://docs.microsoft.com/en-us/azure/devops/pipelines/scripts/git-commands?view=azure-devops&tabs=yaml#enable-scripts-to-run-git-commands
       - checkout: self
         fetchDepth: 0
         path: $(Build.Repository.Name)
+
+      - task: InstallAppleCertificate@2
+        displayName: macos-install-cert-to-keychain
+        condition: eq(variables['Agent.OS'], 'Darwin') # 👉 DARWIN ONLY
+        inputs:
+          certSecureFile: $(certSecureFile)
+          certPwd: $(cert.password)
+          setUpPartitionIdACLForPrivateKey: false
       - task: thycotic-software.thycotic-dsv-task.thycotic-dsv-build-release-task.ThycoticDSV@0
-        displayName: retrieve-cert
+        displayName: retrieve-cert-for-signing-code
         inputs:
           ServerUrl: $(ServerUrl)
           ClientId: $(ClientId)
@@ -67,26 +77,21 @@ jobs:
           SecretPath: ado/cli
       - template: templates/task-aqua-install.yml
         parameters:
-          aquaInstallMethod: ''
           AQUA_GITHUB_TOKEN: $(AQUA_GITHUB_TOKEN)
       - template: templates/task-go-install.yml
-      # This step only runs on macOS
-      - task: InstallAppleCertificate@2
-        displayName: macos-install-cert-to-keychain
-        condition: eq(variables['Agent.OS'], 'Darwin')
-        inputs:
-          certSecureFile: $(certSecureFile)
-          certPwd: $(cert.password)
-          setUpPartitionIdACLForPrivateKey: false
+        parameters:
+          AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
       - template: templates/task-go-detect-vendoring.yml
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
       - template: templates/task-go-restore-go-cache.yml
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/${{ parameters.workingDirectory }}
+          GOROOT: $(AQUA_ROOT_DIR)/bin
       - template: templates/task-go-mod-download.yml
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
+          GOROOT: $(AQUA_ROOT_DIR)/bin
       - template: templates/task-go-install-mage.yml
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)

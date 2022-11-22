@@ -3,6 +3,11 @@ parameters:
   - name: workingDirectory
     type: string
     default: $(System.DefaultWorkingDirectory)
+  - name: AQUA_ROOT_DIR
+    type: string
+    default: ''
+  - name: GOROOT
+    type: string
 steps:
   - pwsh: |
       $ENV:PATH = '$(Build.SourcesDirectory)/.cache/aqua/bin', $ENV:PATH -join [IO.Path]::PathSeparator
@@ -21,7 +26,9 @@ steps:
     displayName: install-mage
     name: InstallMage
     workingDirectory: ${{ parameters.workingDirectory }}
-
+    env:
+      AQUA_ROOT_DIR: ${{ parameters.AQUA_ROOT_DIR }}
+      GOROOT: ${{ parameters.GOROOT }}
   # - pwsh: |
   #     # $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua/bin;${ENV:PATH}" # ensure aqua managed binaries can be found
   #     Write-Host "##vso[task.prependpath]${ENV:HOME}/AppData/Local/aquaproj-aqua"

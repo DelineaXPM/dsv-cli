@@ -1,4 +1,8 @@
 ---
+parameters:
+  - name: AQUA_ROOT_DIR
+    type: string
+    default: ''
 steps:
   # - task: GoTool@0
   #   displayName: install go $(GO_VERSION)
@@ -21,6 +25,8 @@ steps:
       Write-Host $ENV:PATH
       Write-Host "=========================== END PATH CONFIG ==========================="
     displayName: configure-go-env-var
+    env:
+      AQUA_ROOT_DIR: ${{ parameters.AQUA_ROOT_DIR }}
     # condition: eq(variables['Agent.OS'], 'Windows_NT')
 
   # - bash: |

@@ -3,6 +3,9 @@ parameters:
   - name: workingDirectory
     type: string
     default: $(Build.SourcesDirectory)
+  # To allow using the aqua installed/other installed version over default agent version
+  - name: GOROOT
+    type: string
 steps:
   - task: Cache@2
     displayName: Save/restore go mod cache
@@ -10,6 +13,7 @@ steps:
     continueOnError: true
     env:
       SYSTEM_DEBUG: false
+      GOROOT: ${{ parameters.GOROOT }}
     inputs:
       # key: 'go | "$(Agent.OS)" | go.sum | go.mod'
       key: go | "$(Agent.OS)" | ${{ parameters.workingDirectory }}/go.sum
