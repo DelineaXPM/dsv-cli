@@ -81,6 +81,7 @@ jobs:
       - template: templates/task-go-install.yml
         parameters:
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
+          GOROOT: $(AQUA_ROOT_DIR)/bin
       - template: templates/task-go-detect-vendoring.yml
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
