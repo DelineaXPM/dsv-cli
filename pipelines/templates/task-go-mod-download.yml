@@ -11,6 +11,8 @@ steps:
   - pwsh: |
       $ENV:PATH = '$(Build.SourcesDirectory)/.cache/aqua/bin', $ENV:PATH -join [IO.Path]::PathSeparator
       Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
+      Write-Host ('[go] manually invoked from aqua bin: {0} -- version info: {1}' -f '$(Build.SourcesDirectory)/.cache/aqua/bin', (&$(Build.SourcesDirectory)/.cache/aqua/bin/go version))
+
       go mod download -x
     displayName: go-mod-download
     workingDirectory: ${{ parameters.WorkingDirectory }}
