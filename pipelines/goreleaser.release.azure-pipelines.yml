@@ -101,7 +101,7 @@ jobs:
           workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
       - bash: |
           export PATH="${HOME}/.local/share/aquaproj-aqua}/bin:${PATH}"
-          $(Agent.ToolsDirectory)/aqua install --tags ci
+          $(Build.SourcesDirectory)/.cache/aqua/aqua install --tags ci
           magebinary=$(which mage)
           echo "mage binary used: $magebinary"
           $magebinary init
@@ -110,7 +110,7 @@ jobs:
         failOnStderr: false
       - bash: |
           export PATH="${HOME}/.local/share/aquaproj-aqua}/bin:${PATH}"
-          $(Agent.ToolsDirectory)/aqua install --tags ci
+          $(Build.SourcesDirectory)/.cache/aqua/aqua install --tags ci
           magebinary=$(which mage)
           changiebinary=$(which changie)
           echo "mage binary used: ${magebinary}"

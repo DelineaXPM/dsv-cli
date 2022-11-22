@@ -5,7 +5,7 @@ parameters:
     default: $(System.DefaultWorkingDirectory)
 steps:
   - pwsh: |
-      $ENV:PATH = '$(Agent.ToolsDirectory)/bin', $ENV:PATH -join [IO.Path]::PathSeparator
+      $ENV:PATH = '$(Build.SourcesDirectory)/.cache/aqua/bin', $ENV:PATH -join [IO.Path]::PathSeparator
       try {
         &mage -version
         Write-Host "mage was found already, so not installing: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
