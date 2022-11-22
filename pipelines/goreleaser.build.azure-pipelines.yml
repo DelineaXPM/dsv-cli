@@ -25,11 +25,11 @@ parameters:
     type: string
     default: $(Pipeline.Workspace)
 variables:
-  - group: CLI_integration_test # TODO: replace with dsv cli calls
-  - group: CLi-pipeline-variables # TODO: replace with dsv cli calls
-  - group: CLI End-to-End tests # TODO: replace with dsv cli calls
+  - group: 'CLI_integration_test' # TODO: replace with dsv cli calls
+  - group: 'CLi-pipeline-variables' # TODO: replace with dsv cli calls
+  - group: 'CLI End-to-End tests' # TODO: replace with dsv cli calls
   - group: GITHUB # to avoid api rate issues
-  - group: templates/vars.common.yml
+  - template: templates/vars.common.yml
 
 jobs:
   - job: BuildCLI
