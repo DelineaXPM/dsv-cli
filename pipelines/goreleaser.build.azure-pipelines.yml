@@ -53,8 +53,6 @@ jobs:
           DEBUG: ${{ parameters.DEBUG }}
       - name: ARTIFACT_DIRECTORY
         value: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)/.artifacts/goreleaser
-      - name: GOROOT # Overriding with aqua
-        value: $(AQUA_ROOT_DIR)/bin
     steps:
       #https://docs.microsoft.com/en-us/azure/devops/pipelines/scripts/git-commands?view=azure-devops&tabs=yaml#enable-scripts-to-run-git-commands
       - checkout: self
@@ -104,7 +102,7 @@ jobs:
           GOROOT: $(AQUA_ROOT_DIR)/bin
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
       - pwsh: |
-          $ENV:PATH = '$(Build.SourcesDirectory)/.cache/aqua/bin', $ENV:PATH -join [IO.Path]::PathSeparator
+          # $ENV:PATH = '$(Build.SourcesDirectory)/.cache/aqua/bin', $ENV:PATH -join [IO.Path]::PathSeparator
           Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
           Write-Host ('[mage] binary: {0} version: {1}' -f $(Get-Command mage -ErrorAction SilentlyContinue).Path, [string]$(mage -version)) -ForegroundColor Gray
           &mage init
@@ -115,7 +113,7 @@ jobs:
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
           GOROOT: $(AQUA_ROOT_DIR)/bin
       - pwsh: |
-          $ENV:PATH = '$(Build.SourcesDirectory)/.cache/aqua/bin', $ENV:PATH -join [IO.Path]::PathSeparator
+          # $ENV:PATH = '$(Build.SourcesDirectory)/.cache/aqua/bin', $ENV:PATH -join [IO.Path]::PathSeparator
           Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
           Write-Host ('[mage] binary: {0} version: {1}' -f $(Get-Command mage -ErrorAction SilentlyContinue).Path, [string]$(mage -version)) -ForegroundColor Gray
           Write-Host ('[changie] binary: {0} version: {1}' -f $(Get-Command changie -ErrorAction SilentlyContinue).Path, [string]$(changie --version)) -ForegroundColor Gray
