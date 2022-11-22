@@ -58,7 +58,7 @@ jobs:
       - checkout: self
         fetchDepth: 0
         path: $(Build.Repository.Name)
-
+        persistCredentials: true
       - task: InstallAppleCertificate@2
         displayName: macos-install-cert-to-keychain
         condition: eq(variables['Agent.OS'], 'Darwin') # 👉 DARWIN ONLY
