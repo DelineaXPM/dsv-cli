@@ -90,31 +90,20 @@ jobs:
       - template: templates/task-go-install-mage.yml
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
-      - bash: |
-          # export PATH="${HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
+      - pwsh: |
           magebinary=$(which mage)
-          echo "mage binary used: $magebinary"
-          # $magebinary init
+          &$magebinary init
         displayName: mage init
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
         failOnStderr: false
-      - bash: |
-          # docker pull goreleaser/goreleaser:latest
-          # export PATH="${HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
-          # $(Agent.ToolsDirectory)/aqua install --tags ci
-          echo "go version: $(go version)"
-          export PATH="${HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
-          echo "go version: $(go version)"
-          magebinary=$(which mage)
-          # go install github.com/miniscruff/changie@latest
-          echo "changie versions: $(which -a changie)"
-          changiebinary=$(which changie)
-          echo "mage binary used: ${magebinary}"
-          echo "changie binary used: ${changiebinary}"
-          # changie latest
-          echo "changie latest: $($changiebinary latest)"
-          echo "Listing Files: ls -lla: $(ls -lla)"
-          # $magebinary release
+      - pwsh: |
+          Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
+          Write-Host ('[mage] binary: {0} version: {1}' -f $(Get-Command mage -ErrorAction SilentlyContinue).Path, [string]$(mage -version)) -ForegroundColor Gray
+          Write-Host ('[changie] binary: {0} version: {1}' -f $(Get-Command changie -ErrorAction SilentlyContinue).Path, [string]$(changie --version)) -ForegroundColor Gray
+          magebinary=$(Get-Command mage -ErrorAction SilentlyContinue).Path
+          changiebinary=$(Get-Command changie -ErrorAction SilentlyContinue).Path
+          Write-Host "Changie Detected Version: [$(changie latest)]"
+          &mage release
         displayName: mage release
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
         failOnStderr: false
