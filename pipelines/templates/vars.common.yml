@@ -1,0 +1,19 @@
+---
+variables:
+  - ${{ if eq(variables['SYSTEM_DEBUG'], 1) }}:
+      - name: MAGEFILE_VERBOSE
+        value: 1
+    # https://docs.microsoft.com/en-us/azure/devops/pipelines/ecosystems/containers/build-image?view=azure-devops#how-do-i-set-the-buildkit-variable-for-my-docker-builds
+  - name: DOCKER_BUILDKIT
+    value: 1
+  - name: why
+    ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+      value: pr
+    ${{ elseif eq(variables['Build.Reason'], 'Manual' ) }}:
+      value: manual
+    ${{ elseif eq(variables['Build.Reason'], 'IndividualCI' ) }}:
+      value: individci
+    ${{ elseif eq(variables['Build.Reason'], 'BatchedCI' ) }}:
+      value: ci
+    ${{ else }}:
+      value: other
