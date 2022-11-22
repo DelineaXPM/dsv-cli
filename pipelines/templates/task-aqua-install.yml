@@ -13,19 +13,20 @@ parameters:
     type: string
     default: ''
 steps:
-  - bash: |
-      mkdir -p '$(Build.SourcesDirectory)/.cache/aqua/aqua' &>/dev/null || true
-      curl -sSfL https://raw.githubusercontent.com/aquaproj/aqua-installer/v1.1.2/aqua-installer | bash -s -- -i "$(Build.SourcesDirectory)/.cache/aqua/aqua"
-      echo "##vso[task.prependpath]$(Build.SourcesDirectory)/.cache/aqua/bin"
-      echo "##vso[task.setvariable variable=AQUA_ROOT_DIR]$(Build.SourcesDirectory)/.cache/aqua"
-      echo "Configured AQUA_ROOT_DIR to the Agent.ToolsDirectory: $(Build.SourcesDirectory)/.cache/aqua"
-      # echo "Added ${AQUA_PACKAGE_BIN} to PATH"
+  - pwsh: |
+      New-Item -ItemType Directory -Path '$(Build.SourcesDirectory)/.cache/aqua/' -Force -ErrorAction -ErrorAction SilentlyContinue
+      &curl -sSfL https://raw.githubusercontent.com/aquaproj/aqua-installer/v1.1.2/aqua-installer | bash -s -- -i "$(Build.SourcesDirectory)/.cache/aqua/aqua"
+      # echo "##vso[task.prependpath]$(Build.SourcesDirectory)/.cache/aqua/bin"
+      # echo "##vso[task.setvariable variable=AQUA_ROOT_DIR]$(Build.SourcesDirectory)/.cache/aqua"
+      # echo "Configured AQUA_ROOT_DIR to the Agent.ToolsDirectory: $(Build.SourcesDirectory)/.cache/aqua"
+      # # echo "Added ${AQUA_PACKAGE_BIN} to PATH"
     displayName: install-aqua
-    condition: ne(variables['Agent.OS'], 'Windows_NT')
+    failOnStderr: false
+    # condition: ne(variables['Agent.OS'], 'Windows_NT')
     env:
       AQUA_GITHUB_TOKEN: ${{ parameters.AQUA_GITHUB_TOKEN }}
-  - bash: |
-      $(Build.SourcesDirectory)/.cache/aqua/aqua install ${{ parameters.aquaInstallMethod }} ${{ parameters.aquaInstallTags }}
+  - pwsh: |
+      &"$(Build.SourcesDirectory)/.cache/aqua/aqua" install ${{ parameters.aquaInstallMethod }} ${{ parameters.aquaInstallTags }}
     displayName: aqua-install
     workingDirectory: ${{ parameters.workingDirectory }}
     env:
