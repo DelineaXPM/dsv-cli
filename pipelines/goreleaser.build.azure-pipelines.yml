@@ -38,9 +38,13 @@ jobs:
         linux:
           imageName: ubuntu-latest
         # TODO: RENABLE THIS
-        # mac:
-        #   imageName: macOS-latest
-        #   demands: xcode
+        mac:
+          imageName: macOS-latest
+          demands: xcode
+        windows:
+          imageName: windows-latest
+          demands: xcode
+
     timeoutInMinutes: ${{ parameters.TIMEOUT_MIN }}
     pool:
       vmImage: $(imageName)
