@@ -22,7 +22,6 @@ steps:
        go get -t -x -tags mage,build,integration -v ./...
     displayName: go-get
     workingDirectory: ${{ parameters.WorkingDirectory }}
-    condition: eq(variables['Agent.OS'], 'Windows_NT')
     failOnStderr: false
   # ##############
   # # NonWindows #
