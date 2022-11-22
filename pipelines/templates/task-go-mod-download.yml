@@ -10,16 +10,16 @@ steps:
   # The paths are different and the joining, so just seperating.
   - pwsh: |
       $ENV:PATH = '$(Build.SourcesDirectory)/.cache/aqua/bin', $ENV:PATH -join [IO.Path]::PathSeparator
-       Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
-       go mod download -x
+      Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
+      go mod download -x
     displayName: go-mod-download
     workingDirectory: ${{ parameters.WorkingDirectory }}
     failOnStderr: false
 
   - pwsh: |
       $ENV:PATH = '$(Build.SourcesDirectory)/.cache/aqua/bin', $ENV:PATH -join [IO.Path]::PathSeparator
-       Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
-       go get -t -x -tags mage,build,integration -v ./...
+      Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
+      go get -t -x -tags mage,build,integration -v ./...
     displayName: go-get
     workingDirectory: ${{ parameters.WorkingDirectory }}
     failOnStderr: false
