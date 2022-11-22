@@ -91,8 +91,9 @@ jobs:
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
       - pwsh: |
-          magebinary=$(which mage)
-          &$magebinary init
+          Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
+          Write-Host ('[mage] binary: {0} version: {1}' -f $(Get-Command mage -ErrorAction SilentlyContinue).Path, [string]$(mage -version)) -ForegroundColor Gray
+          &mage init
         displayName: mage init
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
         failOnStderr: false
