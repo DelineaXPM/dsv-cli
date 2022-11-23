@@ -19,13 +19,23 @@ parameters:
   # To allow using the aqua installed/other installed version over default agent version
   - name: GOROOT
     type: string
+  - name: GOPATH
+    type: string
 steps:
   - pwsh: |
       $binarydirectory = '${{ parameters.AQUA_BINARY_FULL_INSTALL_PATH }}' | Split-Path -Parent
       New-Item -ItemType Directory -Path $binarydirectory -ErrorAction SilentlyContinue && Write-Host "✅ Created the directory to house the aqua binary: [$binarydirectory]"
       New-Item -ItemType Directory -Path '${{ parameters.AQUA_ROOT_DIR }}' -Force -ErrorAction SilentlyContinue && Write-Host "✅ Created the directory to house the aqua binary: [${{ parameters.AQUA_ROOT_DIR }}]"
       go run github.com/aquaproj/aqua-installer@latest -o "${{ parameters.AQUA_BINARY_FULL_INSTALL_PATH }}"
+      go install github.com/aquaproj/aqua/cmd/aqua@latest # Alternative installation to see if resolves other issues.
       # &curl -sSfL https://raw.githubusercontent.com/aquaproj/aqua-installer/v1.1.2/aqua-installer | bash -s -- -i "${{ parameters.AQUA_BINARY_FULL_INSTALL_PATH }}"
+
+      $GoBinariesInstallPath = Join-Path $ENV:GOPATH 'bin'
+      # Evaluate if current $ENV:GOPATH contains $ENV:GOPATH/bin
+      if (-not ($ENV:PATH -match "$GoBinariesInstallPath")) {
+        $ENV:PATH = $GoBinariesInstallPath, $ENV:PATH -join [IO.Path]::PathSeparator
+        Write-Host "##vso[task.prependpath]$GoBinariesInstallPath"
+      }
       Write-Host "##vso[task.prependpath]${{ parameters.AQUA_ROOT_DIR }}/bin"
       Write-Host "##vso[task.prependpath]${{ parameters.AQUA_ROOT_DIR }}/bat"  # NOTE: Added this per aquaproject documentation, to support Windows environment. Haven't yet seen this needed, but added for now as a precaution. https://aquaproj.github.io/docs/reference/windows-support#windows-settings
       Write-Host "##vso[task.prependpath]$binarydirectory"
@@ -33,6 +43,7 @@ steps:
     failOnStderr: false
     env:
       AQUA_GITHUB_TOKEN: ${{ parameters.AQUA_GITHUB_TOKEN }}
+      GOPATH: ${{ parameters.GOPATH }}
       # GOROOT: ${{ parameters.GOROOT }}
   - pwsh: |
       Write-Host "AQUA INSTALL: &aqua install ${{ parameters.aquaInstallMethod }} ${{ parameters.aquaInstallTags }}"
@@ -44,4 +55,5 @@ steps:
     env:
       AQUA_LOG_LEVEL: debug
       AQUA_ROOT_DIR: ${{ parameters.AQUA_ROOT_DIR }}
+      GOPATH: ${{ parameters.GOPATH }}
       # GOROOT: ${{ parameters.GOROOT }} # We haven't installed the new go version so for now just use the default agent version.
