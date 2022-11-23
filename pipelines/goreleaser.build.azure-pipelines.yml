@@ -33,7 +33,7 @@ variables:
 
 jobs:
   - job: build
-    displayName: build-dsv-cli-
+    displayName: build-dsv-cli
     strategy:
       matrix:
         linux:
