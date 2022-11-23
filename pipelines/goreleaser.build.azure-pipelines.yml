@@ -159,7 +159,7 @@ jobs:
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
           GOPATH: $(GOPATH)
       - template: templates/task-go-mod-download.yml
-        condition: and(succeeded(), eq(variables.VENDORED, '0' )) # Only proceed with caching if vendoring is false
+        condition: and(succeeded(), eq($(detectvendoring.VENDORED), '0' )) # Only proceed with caching if vendoring is false
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
           GOROOT: $(goenv.GOROOT)
