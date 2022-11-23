@@ -30,7 +30,7 @@ builds:
       - '386'
 
 signs:
-  - artifacts: checksum
+  # - artifacts: checksum  # NOTE: doesn't work as is on windows.
   - id: signtool
     ids:
       - dsv-windows
