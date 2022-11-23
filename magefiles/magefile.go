@@ -40,6 +40,9 @@ func Init() error {
 			"github.com/axw/gocov/gocov@latest",
 			"github.com/AlekSi/gocov-xml@latest",
 			"github.com/mitchellh/gon/cmd/gon@latest", // macOS binary signing
+			"github.com/miniscruff/changie@latest",    // AS WINDOWS IS NOT WORKING WITH AQUA
+			"github.com/goreleaser/goreleaser@latest", // AS WINDOWS IS NOT WORKING WITH AQUA
+			"github.com/anchore/syft/cmd/syft@latest", // AS WINDOWS IS NOT WORKING WITH AQUA
 		}); err != nil {
 			return err
 		}
