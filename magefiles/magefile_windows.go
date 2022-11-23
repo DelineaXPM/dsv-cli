@@ -11,26 +11,6 @@ import (
 	"github.com/pterm/pterm"
 )
 
-func checkEnvVar(varName string, tbl pterm.TableData, isSecret bool, notes string) (string, bool, pterm.TableData) {
-	var value, valueOfVar string
-	var isSet bool
-
-	value, isSet = os.LookupEnv(varName)
-
-	if isSet {
-		if isSecret {
-			valueOfVar = "***** secret set, but not logged *****"
-		} else {
-			valueOfVar = value
-		}
-
-		tbl = append(tbl, []string{"✅", varName, valueOfVar, notes})
-		return value, true, tbl
-	}
-	tbl = append(tbl, []string{"❌", varName, valueOfVar, notes})
-	return "", false, tbl
-}
-
 // ✏️ Sign will use signtool in Windows to sign the binary.
 // Required environment variables will be checked.
 func Sign() error {

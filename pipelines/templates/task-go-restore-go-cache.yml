@@ -20,9 +20,10 @@ steps:
       SYSTEM_DEBUG: false
       GOROOT: ${{ parameters.GOROOT }}
       AQUA_ROOT_DIR: ${{ parameters.AQUA_ROOT_DIR }}
+      GOPATH: ${{ parameters.GOPATH }}
     inputs:
       # key: 'go | "$(Agent.OS)" | go.sum | go.mod'
       key: go | "$(Agent.OS)" | ${{ parameters.workingDirectory }}/go.sum
       restoreKeys: |
         go | "$(Agent.OS)"
-      path: ${{ parameters.GOPATH }} /pkg/mod
+      path: ${{ parameters.GOPATH }}/pkg/mod
