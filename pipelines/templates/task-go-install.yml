@@ -21,7 +21,7 @@ steps:
       Write-Host "Go Version Used: $(go version)"
       New-Item -Path "$(GOBIN)" -ItemType Directory -Force -ErrorAction SilentlyContinue
 
-      $ENV:GOROOT = Invoke-Expression ('{0} env GOROOT' -f "$(&aqua which go)")
+      $ENV:GOROOT = Invoke-Expression ('{0} env GOROOT' -f "$(&aqua which go | Resolve-Path -Relative )")
       Write-Host "##vso[task.setvariable variable=GOROOT]$ENV:GOROOT"
       Write-Host "✅ set GOROOT to aqua go version: $ENV:GOROOT"
 
