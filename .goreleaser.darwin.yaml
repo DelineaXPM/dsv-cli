@@ -57,8 +57,11 @@ checksum:
 release:
   prerelease: auto
   draft: true
-  mode: append
+  mode: replace
   skip_upload: false
+  replace_existing_draft: true
+  name_template: '{{.ProjectName}}-v{{.Version}} {{.Runtime.Goos}}' #TODO: remove and have merged upload occur
+
 sboms:
   - artifacts: binary
     documents:
