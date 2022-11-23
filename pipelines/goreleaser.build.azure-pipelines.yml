@@ -128,23 +128,23 @@ jobs:
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
           GOPATH: $(GOPATH)
-          GOROOT: ${{ goenv.GOROOT }}
+          GOROOT: $(goenv.GOROOT)
       - template: templates/task-go-restore-go-cache.yml
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/${{ parameters.workingDirectory }}
-          GOROOT: ${{ goenv.GOROOT }}
+          GOROOT: $(goenv.GOROOT)
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
           GOPATH: $(GOPATH)
       - template: templates/task-go-mod-download.yml
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
-          GOROOT: ${{ goenv.GOROOT }}
+          GOROOT: $(goenv.GOROOT)
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
           GOPATH: $(GOPATH)
       - template: templates/task-go-install-mage.yml
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
-          GOROOT: ${{ goenv.GOROOT }}
+          GOROOT: $(goenv.GOROOT)
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
           GOPATH: $(GOPATH)
       - pwsh: |
@@ -156,7 +156,7 @@ jobs:
         failOnStderr: false
         env:
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
-          GOROOT: ${{ goenv.GOROOT }}
+          GOROOT: $(goenv.GOROOT)
           GOPATH: $(GOPATH)
       - pwsh: |
           Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
@@ -171,7 +171,7 @@ jobs:
           CERT_PASSWORD: $(cert.password)
           CERT_SECURE_FILE: $(certSecureFile)
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
-          GOROOT: ${{ goenv.GOROOT }}
+          GOROOT: $(goenv.GOROOT)
           GITHUB_TOKEN: $(GITHUB_TOKEN)
           GOPATH: $(GOPATH)
       - task: PublishBuildArtifacts@1
