@@ -10,7 +10,6 @@
     }
   },
   "runArgs": ["--init", "--privileged"],
-
   // "runArgs": [
   //   "--cap-add=SYS_PTRACE",
   //   "--security-opt",
@@ -82,6 +81,7 @@
       "version": "latest",
       "dockerDashComposeVersion": "v2",
       "username": "vscode"
-    }
+    },
+    "ghcr.io/devcontainers/features/powershell:1": {}
   }
 }
