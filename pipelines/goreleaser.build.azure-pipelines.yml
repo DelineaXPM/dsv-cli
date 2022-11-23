@@ -86,6 +86,7 @@ jobs:
           AQUA_GITHUB_TOKEN: $(AQUA_GITHUB_TOKEN)
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
           AQUA_BINARY_FULL_INSTALL_PATH: $(AQUA_BINARY_FULL_INSTALL_PATH)
+          aquaInstallMethod: ''
           GOROOT: $(AQUA_ROOT_DIR)/bin
       - template: templates/task-go-install.yml
         parameters:
