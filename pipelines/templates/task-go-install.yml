@@ -20,7 +20,7 @@ steps:
       Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
       Write-Host "Go Version Used: $(go version)"
       New-Item -Path "$(GOBIN)" -ItemType Directory -Force -ErrorAction SilentlyContinue
-      $ENV:GOROOT= "$(&aqua which go)" env GOROOT
+      $ENV:GOROOT= &"$(&aqua which go)" env GOROOT
       Write-Host "##vso[task.setvariable variable=GOROOT]$ENV:GOROOT"
       Write-Host "✅ set GOROOT to aqua go version: $ENV:GOROOT"
 
