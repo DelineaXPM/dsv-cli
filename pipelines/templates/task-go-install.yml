@@ -18,7 +18,11 @@ steps:
       # $ENV:PATH = $ENV:AQUA_ROOT_DIR, 'bin', $ENV:PATH -join [IO.Path]::PathSeparator
       [string]$aquago = &aqua which go
       Write-Host "aquago              : $aquago"
-      [string]$aquagoroot = &"$aquago" env GOROOT
+      [string]$currentgo = &Get-Command go
+      Write-Host "current go          : $currentgo"
+      Write-Host "All Go Version: $(Get-Command go -All -ErrorAction SilentlyContinue)"
+
+      [string]$aquagoroot = &go env GOROOT
       Write-Host "aquagoroot          : $aquagoroot"
 
       $ENV:GOROOT = $aquagoroot
