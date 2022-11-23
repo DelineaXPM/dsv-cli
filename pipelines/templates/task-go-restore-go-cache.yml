@@ -9,6 +9,8 @@ parameters:
   # To allow using the aqua installed/other installed version over default agent version
   - name: GOROOT
     type: string
+  - name: GOPATH
+    type: string
 steps:
   - task: Cache@2
     displayName: Save/restore go mod cache
