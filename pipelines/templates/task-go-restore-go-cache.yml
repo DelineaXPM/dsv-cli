@@ -14,7 +14,7 @@ parameters:
 steps:
   - task: Cache@2
     displayName: Save/restore go mod cache
-    condition: and(succeeded(), eq(variables.VENDORED, '0' )) # Only proceed with caching if vendoring is false.
+    # condition: and(succeeded(), eq(variables.VENDORED, '0' )) # Only proceed with caching if vendoring is false. Shouldn't work in templates, build tool caching is still viable.
     continueOnError: true
     env:
       SYSTEM_DEBUG: false
@@ -25,4 +25,4 @@ steps:
       key: go | "$(Agent.OS)" | ${{ parameters.workingDirectory }}/go.sum
       restoreKeys: |
         go | "$(Agent.OS)"
-      path: $(GOPATH)/pkg/mod
+      path: ${{ parameters.GOPATH }} /pkg/mod
