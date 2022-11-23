@@ -109,17 +109,16 @@ jobs:
 
           Write-Host "aquago              : $aquago"
           if (-not $aquago) {
-            Write-Host "##vso[task.logissue type=error]aqua tool not successfully invoked"
-            exit 1
+            Write-Host "##vso[task.logissue type=warning]aqua tool not successfully invoked"
+            [string]$currentgo = &Get-Command go
+            Write-Host "current go          : $currentgo"
+            $ENV:GOROOT = $aquagoroot
+          } else {
+          [string]$aquagoroot = &$(aqua which go) env GOROOT
+            Write-Host "aquagoroot          : $aquagoroot"
+            $ENV:GOROOT = $aquagoroot
           }
-          [string]$currentgo = &Get-Command go
-          Write-Host "current go          : $currentgo"
-          Write-Host "All Go Version: $(Get-Command go -All -ErrorAction SilentlyContinue)"
 
-          [string]$aquagoroot = &go env GOROOT
-          Write-Host "aquagoroot          : $aquagoroot"
-
-          $ENV:GOROOT = $aquagoroot
           Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
           Write-Host "Go Version Used: $(go version)"
           New-Item -Path "$(GOBIN)" -ItemType Directory -Force -ErrorAction SilentlyContinue
