@@ -87,31 +87,67 @@ jobs:
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
           AQUA_BINARY_FULL_INSTALL_PATH: $(AQUA_BINARY_FULL_INSTALL_PATH)
           aquaInstallMethod: ''
-          GOROOT: $(AQUA_ROOT_DIR)/bin
-      - template: templates/task-go-install.yml
-        parameters:
+          workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
+          GOPATH: $(GOPATH)
+      # Extracted this out from template so it could produce an output variable for GOROOT at this time
+      - pwsh: |
+          # $ENV:PATH = $ENV:AQUA_ROOT_DIR, 'bin', $ENV:PATH -join [IO.Path]::PathSeparator
+          [string]$aquago = &aqua which go
+          Write-Host "aquago              : $aquago"
+          [string]$currentgo = &Get-Command go
+          Write-Host "current go          : $currentgo"
+          Write-Host "All Go Version: $(Get-Command go -All -ErrorAction SilentlyContinue)"
+
+          [string]$aquagoroot = &go env GOROOT
+          Write-Host "aquagoroot          : $aquagoroot"
+
+          $ENV:GOROOT = $aquagoroot
+          Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
+          Write-Host "Go Version Used: $(go version)"
+          New-Item -Path "$(GOBIN)" -ItemType Directory -Force -ErrorAction SilentlyContinue
+          Write-Host "##vso[task.setvariable variable=GOROOT; isOutput=true]$ENV:GOROOT"
+          Write-Host "✅ set GOROOT to aqua go version: $ENV:GOROOT"
+
+          $ENV:PATH += ";$(GOBIN)"
+          $ENV:PATH = '$(GOBIN)', $ENV:PATH -join [IO.Path]::PathSeparator
+
+          Write-Host "##vso[task.prependpath]$(GOBIN)"
+          Write-Host "=========================== PATH CONFIG ==========================="
+          Write-Host $ENV:PATH
+          Write-Host "=========================== END PATH CONFIG ==========================="
+        displayName: configure-go-env-var
+        name: goenv
+        env:
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
-          GOROOT: $(AQUA_ROOT_DIR)/bin
+
+      # - template: templates/task-go-install.yml
+      #   parameters:
+      #     AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
+      #     GOPATH: $(GOPATH)
       - template: templates/task-go-detect-vendoring.yml
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
+          GOPATH: $(GOPATH)
+          GOROOT: ${{ goenv.GOROOT }}
       - template: templates/task-go-restore-go-cache.yml
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/${{ parameters.workingDirectory }}
-          GOROOT: $(AQUA_ROOT_DIR)/bin
+          GOROOT: ${{ goenv.GOROOT }}
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
+          GOPATH: $(GOPATH)
       - template: templates/task-go-mod-download.yml
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
-          GOROOT: $(AQUA_ROOT_DIR)/bin
+          GOROOT: ${{ goenv.GOROOT }}
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
+          GOPATH: $(GOPATH)
       - template: templates/task-go-install-mage.yml
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
-          GOROOT: $(AQUA_ROOT_DIR)/bin
+          GOROOT: ${{ goenv.GOROOT }}
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
+          GOPATH: $(GOPATH)
       - pwsh: |
-          # $ENV:PATH = '$(Build.SourcesDirectory)/.cache/aqua/bin', $ENV:PATH -join [IO.Path]::PathSeparator
           Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
           Write-Host ('[mage] binary: {0} version: {1}' -f $(Get-Command mage -ErrorAction SilentlyContinue).Path, [string]$(mage -version)) -ForegroundColor Gray
           &mage init
@@ -120,9 +156,9 @@ jobs:
         failOnStderr: false
         env:
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
-          GOROOT: $(AQUA_ROOT_DIR)/bin
+          GOROOT: ${{ goenv.GOROOT }}
+          GOPATH: $(GOPATH)
       - pwsh: |
-          # $ENV:PATH = '$(Build.SourcesDirectory)/.cache/aqua/bin', $ENV:PATH -join [IO.Path]::PathSeparator
           Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
           Write-Host ('[mage] binary: {0} version: {1}' -f $(Get-Command mage -ErrorAction SilentlyContinue).Path, [string]$(mage -version)) -ForegroundColor Gray
           Write-Host ('[changie] binary: {0} version: {1}' -f $(Get-Command changie -ErrorAction SilentlyContinue).Path, [string]$(changie --version)) -ForegroundColor Gray
@@ -135,8 +171,9 @@ jobs:
           CERT_PASSWORD: $(cert.password)
           CERT_SECURE_FILE: $(certSecureFile)
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
-          GOROOT: $(AQUA_ROOT_DIR)/bin
+          GOROOT: ${{ goenv.GOROOT }}
           GITHUB_TOKEN: $(GITHUB_TOKEN)
+          GOPATH: $(GOPATH)
       - task: PublishBuildArtifacts@1
         displayName: 'Build Artifact: PRTestBuilds'
         inputs:
