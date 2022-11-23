@@ -178,7 +178,6 @@ jobs:
           workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
           GOROOT: $(goenv.GOROOT)
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
-          GOPATH: $(GOPATH)
       - template: templates/task-go-install-mage.yml
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
