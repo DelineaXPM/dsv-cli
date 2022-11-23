@@ -27,6 +27,7 @@ steps:
       go run github.com/aquaproj/aqua-installer@latest -o "${{ parameters.AQUA_BINARY_FULL_INSTALL_PATH }}"
       # &curl -sSfL https://raw.githubusercontent.com/aquaproj/aqua-installer/v1.1.2/aqua-installer | bash -s -- -i "${{ parameters.AQUA_BINARY_FULL_INSTALL_PATH }}"
       Write-Host "##vso[task.prependpath]${{ parameters.AQUA_ROOT_DIR }}/bin"
+      Write-Host "##vso[task.prependpath]${{ parameters.AQUA_ROOT_DIR }}/bat"  # NOTE: Added this per aquaproject documentation, to support Windows environment. Haven't yet seen this needed, but added for now as a precaution. https://aquaproj.github.io/docs/reference/windows-support#windows-settings
       Write-Host "##vso[task.prependpath]$binarydirectory"
     displayName: install-aqua
     failOnStderr: false
@@ -35,10 +36,12 @@ steps:
       # GOROOT: ${{ parameters.GOROOT }}
   - pwsh: |
       Write-Host "AQUA INSTALL: &aqua install ${{ parameters.aquaInstallMethod }} ${{ parameters.aquaInstallTags }}"
+      # Test The Binary Path and using a ternary operator provide logging output
+      (Test-Path ${{ parameters.AQUA_BINARY_FULL_INSTALL_PATH }}) ? (Write-Host "✅ Found the aqua binary: [${{ parameters.AQUA_BINARY_FULL_INSTALL_PATH }}]") : (Write-Host "❌ Could not find the aqua binary: [${{ parameters.AQUA_BINARY_FULL_INSTALL_PATH }}]")
       &${{ parameters.AQUA_BINARY_FULL_INSTALL_PATH }} install ${{ parameters.aquaInstallMethod }} ${{ parameters.aquaInstallTags }}
     displayName: aqua-install
     workingDirectory: ${{ parameters.workingDirectory }}
     env:
       AQUA_LOG_LEVEL: debug
       AQUA_ROOT_DIR: ${{ parameters.AQUA_ROOT_DIR }}
-      GOROOT: ${{ parameters.GOROOT }}
+      # GOROOT: ${{ parameters.GOROOT }} # We haven't installed the new go version so for now just use the default agent version.
