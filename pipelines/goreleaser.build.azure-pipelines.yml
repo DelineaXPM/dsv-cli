@@ -128,10 +128,30 @@ jobs:
       #   parameters:
       #     AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
       #     GOPATH: $(GOPATH)
-      - template: templates/task-go-detect-vendoring.yml
-        parameters:
-          workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
-          GOROOT: $(goenv.GOROOT)
+      - task: PowerShell@2
+        displayName: detect-vendoring
+        name: detectvendoring
+        inputs:
+          targetType: inline
+          script: |
+            if (Test-Path -Path 'vendor' -PathType Container) {
+                  Write-Host "Setting VENDORED to 1, as vendor found"
+                  Write-Host "##vso[task.setvariable variable=VENDORED;isOutput=true]1"
+                  # Write-Host "##vso[task.setvariable variable=GOFLAGS;isOutput=true]-mod=vendor"
+                  # Write-Host "##vso[task.setvariable variable=GOFLAGS]-mod=vendor"
+                  # $ENV:GOFLAGS = "-mod=vendor"
+                  # Write-Host "Updated `$ENV:GOFLAGS with vendor: -mod=vendor: resulting in: '${ENV:GOFLAGS}'"
+            } else {
+                Write-Host "Setting VENDORED to 0, as no vendor directory found"
+                Write-Host "##vso[task.setvariable variable=VENDORED;isOutput=true]0"
+            }
+          workingDirectory: ${{ parameters.workingDirectory }}
+          pwsh: true
+
+      # - template: templates/task-go-detect-vendoring.yml
+      #   parameters:
+      #     workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
+      #     GOROOT: $(goenv.GOROOT)
       - template: templates/task-go-restore-go-cache.yml
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/${{ parameters.workingDirectory }}
@@ -139,6 +159,7 @@ jobs:
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
           GOPATH: $(GOPATH)
       - template: templates/task-go-mod-download.yml
+        condition: and(succeeded(), eq(variables.VENDORED, '0' )) # Only proceed with caching if vendoring is false
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
           GOROOT: $(goenv.GOROOT)
