@@ -32,7 +32,7 @@ steps:
     failOnStderr: false
     env:
       AQUA_GITHUB_TOKEN: ${{ parameters.AQUA_GITHUB_TOKEN }}
-      GOROOT: ${{ parameters.GOROOT }}
+      # GOROOT: ${{ parameters.GOROOT }}
   - pwsh: |
       &aqua install ${{ parameters.aquaInstallMethod }} ${{ parameters.aquaInstallTags }}
     displayName: aqua-install
