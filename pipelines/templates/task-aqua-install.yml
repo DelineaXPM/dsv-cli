@@ -30,7 +30,7 @@ steps:
 
       $GoBinariesInstallPath = Join-Path $ENV:GOPATH 'bin'
       # Evaluate if current $ENV:GOPATH contains $ENV:GOPATH/bin
-      if (-not ($ENV:PATH -match "$GoBinariesInstallPath")) {
+      if (-not ($ENV:PATH -match [regex]::Escape($GoBinariesInstallPath))) {
         $ENV:PATH = $GoBinariesInstallPath, $ENV:PATH -join [IO.Path]::PathSeparator
         Write-Host "##vso[task.prependpath]$GoBinariesInstallPath"
       }
