@@ -92,7 +92,7 @@ jobs:
       # Extracted this out from template so it could produce an output variable for GOROOT at this time
       - pwsh: |
           # $ENV:PATH = $ENV:AQUA_ROOT_DIR, 'bin', $ENV:PATH -join [IO.Path]::PathSeparator
-          [string]$aquago = &"${{ parameters.AQUA_BINARY_FULL_INSTALL_PATH }}" which go
+          [string]$aquago = &"$(AQUA_BINARY_FULL_INSTALL_PATH)" which go
           Write-Host "aquago              : $aquago"
           if (-not $aquago) {
             Write-Host "##vso[task.logissue type=error]aqua tool not successfully invoked"
