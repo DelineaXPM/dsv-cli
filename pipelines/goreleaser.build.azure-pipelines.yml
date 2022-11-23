@@ -131,7 +131,6 @@ jobs:
       - template: templates/task-go-detect-vendoring.yml
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
-          GOPATH: $(GOPATH)
           GOROOT: $(goenv.GOROOT)
       - template: templates/task-go-restore-go-cache.yml
         parameters:
