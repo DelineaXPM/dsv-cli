@@ -41,7 +41,7 @@ release:
   prerelease: auto
   draft: true
   mode: replace
-  skip_upload: false
+  skip_upload: true
   replace_existing_draft: true
   name_template: '{{.ProjectName}}-v{{.Version}} {{.Runtime.Goos}}' #TODO: remove and have merged upload occur
 sboms:

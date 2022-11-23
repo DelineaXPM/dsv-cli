@@ -15,12 +15,13 @@ steps:
   #     goBin: $(GOBIN)
   # Prepend path: https://github.com/microsoft/azure-pipelines-tasks/blob/master/docs/authoring/commands.md
   - pwsh: |
-      # $ENV:PATH = $ENV:AQUA_ROOT_DIR, 'bin', $ENV:PATH -join [IO.Path]::PathSeparator
+      $ENV:PATH = $ENV:AQUA_ROOT_DIR, 'bin', $ENV:PATH -join [IO.Path]::PathSeparator
 
       Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
       Write-Host "Go Version Used: $(go version)"
       New-Item -Path "$(GOBIN)" -ItemType Directory -Force -ErrorAction SilentlyContinue
-      $ENV:GOROOT= &"$(&aqua which go)" env GOROOT
+
+      $ENV:GOROOT = Invoke-Expression ('{0} env GOROOT' -f "$(&aqua which go)")
       Write-Host "##vso[task.setvariable variable=GOROOT]$ENV:GOROOT"
       Write-Host "✅ set GOROOT to aqua go version: $ENV:GOROOT"
 
@@ -37,7 +38,7 @@ steps:
 
   # condition: eq(variables['Agent.OS'], 'Windows_NT')
   # - bash: |
-  #     $ENV:PATH = '$(Build.SourcesDirectory)/.cache/aqua/bin', $ENV:PATH -join [IO.Path]::PathSeparator
+  #     $ENV:PATH = '$(Build.SourcesDirectory)/.cache/aqua/bin', $ENV:PATH -join [IO.Path]::PathSeparandlytor
   #     Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
   #     Write-Host "Go Version Used: $(go version)"
   #     echo "=========================== GO CONFIG ==========================="
