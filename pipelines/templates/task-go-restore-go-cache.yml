@@ -23,7 +23,7 @@ steps:
       GOPATH: ${{ parameters.GOPATH }}
     inputs:
       # key: 'go | "$(Agent.OS)" | go.sum | go.mod'
-      key: go | "$(Agent.OS)" | ${{ parameters.workingDirectory }}/go.sum
+      key: go | "$(Agent.OS)" | '${{ parameters.workingDirectory }}/go.sum'
       restoreKeys: |
         go | "$(Agent.OS)"
       path: ${{ parameters.GOPATH }}/pkg/mod
