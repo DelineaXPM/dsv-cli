@@ -4,6 +4,7 @@
 package main
 
 import (
+	"runtime"
 	"strings"
 	"time"
 
@@ -39,16 +40,26 @@ func Init() error {
 			"github.com/jstemmer/go-junit-report/v2@latest",
 			"github.com/axw/gocov/gocov@latest",
 			"github.com/AlekSi/gocov-xml@latest",
-			"github.com/mitchellh/gon/cmd/gon@latest", // macOS binary signing
+			// "github.com/mitchellh/gon/cmd/gon@latest", // macOS binary signing
 			"github.com/miniscruff/changie@latest",    // AS WINDOWS IS NOT WORKING WITH AQUA
 			"github.com/goreleaser/goreleaser@latest", // AS WINDOWS IS NOT WORKING WITH AQUA
 			"github.com/anchore/syft/cmd/syft@latest", // AS WINDOWS IS NOT WORKING WITH AQUA
 		}); err != nil {
 			return err
 		}
-		return nil
-	}
-	pterm.Success.Printfln("Init() completed [%s]\n", relTime(start))
 
+		// If goos is windows, then run SilentInstallTools since aqua isn't installing the tools correctly for windows.
+		if runtime.GOOS == "windows" {
+			if err = tooling.SilentInstallTools([]string{
+				"github.com/miniscruff/changie@latest",    // AS WINDOWS IS NOT WORKING WITH AQUA
+				"github.com/goreleaser/goreleaser@latest", // AS WINDOWS IS NOT WORKING WITH AQUA
+				"github.com/anchore/syft/cmd/syft@latest", // AS WINDOWS IS NOT WORKING WITH AQUA
+			}); err != nil {
+				return err
+			}
+		}
+	}
+
+	pterm.Success.Printfln("Init() completed [%s]\n", relTime(start))
 	return nil
 }
