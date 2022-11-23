@@ -36,14 +36,14 @@ jobs:
     displayName: build-dsv-cli
     strategy:
       matrix:
-        # linux:
-        #   friendlyName: dsv-cli-linux
-        #   imageName: ubuntu-latest
-        # # TODO: RENABLE THIS
-        # mac:
-        #   friendlyName: dsv-cli-darwin
-        #   imageName: macOS-latest
-        #   demands: xcode
+        linux:
+          friendlyName: dsv-cli-linux
+          imageName: ubuntu-latest
+        # TODO: RENABLE THIS
+        mac:
+          friendlyName: dsv-cli-darwin
+          imageName: macOS-latest
+          demands: xcode
         windows:
           friendlyName: dsv-cli-windows
           imageName: windows-latest
