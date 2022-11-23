@@ -158,14 +158,14 @@ jobs:
           GOROOT: $(goenv.GOROOT)
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
           GOPATH: $(GOPATH)
-      - ${{ if eq($(detectvendoring.VENDORED), 1) }}:
-          - template: templates/task-go-mod-download.yml
-            # TEMPLATES DO NOT SUPPORT CONDITIONS: condition: and(succeeded(), eq($(detectvendoring.VENDORED), '0' )) # Only proceed with caching if vendoring is false
-            parameters:
-              workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
-              GOROOT: $(goenv.GOROOT)
-              AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
-              GOPATH: $(GOPATH)
+      # - ${{ if eq($(detectvendoring.VENDORED), 1) }}:
+      #     - template: templates/task-go-mod-download.yml
+      #       # TEMPLATES DO NOT SUPPORT CONDITIONS: condition: and(succeeded(), eq($(detectvendoring.VENDORED), '0' )) # Only proceed with caching if vendoring is false
+      #       parameters:
+      #         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
+      #         GOROOT: $(goenv.GOROOT)
+      #         AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
+      #         GOPATH: $(GOPATH)
       - template: templates/task-go-install-mage.yml
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
