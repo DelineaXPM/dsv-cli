@@ -7,7 +7,7 @@ variables:
   - name: GOBIN
     value: $(GOPATH)/bin
   - name: GO_VERSION
-    value: 1.19
+    value: 1.19.2
   - name: GOLANGCI_LINT_VERSION
     value: v1.49.0
   - name: GORELEASER_VERSION
