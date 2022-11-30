@@ -197,5 +197,18 @@ jobs:
           GOROOT: $(goenv.GOROOT)
           GOPATH: $(GOPATH)
           GO_INTEGRATION_TEST: 1 # REQUIRED TO ALLOW INTEGRATION TEST TO TRIGGER
+          GOTEST_DISABLE_RACE: 1
 
+          # secrets that have to be exposed to script to be visible
+          ADMIN_USER: $(ADMIN_USER)
+          DSV_ADMIN_PASS: $(DSV_ADMIN_PASS)
+          DSV_USER_PASSWORD: $(DSV_USER_PASSWORD)
+          CLIENT_ID: $(CLIENT_ID)
+          DSV_CLIENT_SECRET: $(DSV_CLIENT_SECRET)
+
+          ## Other config values just for clarity
+          TEST_TENANT: $(TEST_TENANT)
+          USER_NAME: $(USER_NAME)
+          LOCAL_DOMAIN: $(LOCAL_DOMAIN)
+          DEV_DOMAIN: $(DEV_DOMAIN)
 # TEMPLATE: TO DO - CODECOV REPORT
