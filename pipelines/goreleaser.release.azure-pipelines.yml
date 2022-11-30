@@ -93,6 +93,7 @@ jobs:
       - template: templates/task-go-restore-go-cache.yml
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/${{ parameters.workingDirectory }}
+          GOCACHE: $(GOCACHE)
       - template: templates/task-go-mod-download.yml
         parameters:
           workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)

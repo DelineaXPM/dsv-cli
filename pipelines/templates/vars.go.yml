@@ -17,5 +17,7 @@ variables:
   # CGO_ENABLED required for race condition in testing
   - name: CGO_ENABLED
     value: 1
+  - name: GOCACHE
+    value: $(Pipeline.Workspace)/.cache/go-build/
   # - name: GO_CACHE_DIR
   #   value: $(Pipeline.Workspace)/.cache/go-build/ #doesn't exist, using system variable GOCACHE
