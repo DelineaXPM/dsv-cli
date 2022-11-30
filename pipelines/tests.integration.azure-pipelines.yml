@@ -56,6 +56,15 @@ jobs:
         fetchDepth: 0
         path: $(Build.Repository.Name)
         persistCredentials: true
+
+      - task: thycotic-software.thycotic-dsv-task.thycotic-dsv-build-release-task.ThycoticDSV@0
+        displayName: 'Retrieve ado/cli from Thycotic DevOps Secrets Vault'
+        inputs:
+          ServerUrl: '$(ServerUrl)'
+          ClientId: '$(ClientId)'
+          ClientSecret: '$(ClientSecret)'
+          SecretPath: ado/cli
+
       - task: GoTool@0
         displayName: install-go-$(GO_VERSION)
         # aqua will replace later, but this prevents prior conflicts with Windows using the Go install commands.
