@@ -1,5 +1,5 @@
 ---
-name: dsv-cli.tests.end-to-end.$(why).$(Date:yyyyMMdd)-$(Rev:r)
+name: dsv-cli.tests.integration.$(why).$(Date:yyyyMMdd)-$(Rev:r)
 pr:
   autoCancel: true
   drafts: true # TODO: make this false for future runs
@@ -25,14 +25,14 @@ parameters:
     type: string
     default: $(Pipeline.Workspace)
 variables:
-  - group: 'CLI End-to-End tests' # TODO: replace with dsv cli calls
+  - group: 'CLI_integration_test' # TODO: replace with dsv cli calls
   - group: 'CLi-pipeline-variables' # TODO: replace with dsv cli calls
   - group: GITHUB # to avoid api rate issues
   - template: templates/vars.common.yml
 
 jobs:
-  - job: endtoendtest
-    displayName: dsv-cli-endtoend-test
+  - job: integrationtest
+    displayName: dsv-cli-integration-test
     strategy:
       matrix:
         linux:
@@ -197,7 +197,7 @@ jobs:
           Write-Host ('[mage] binary: {0} version: {1}' -f $(Get-Command mage -ErrorAction SilentlyContinue).Path, [string]$(mage -version)) -ForegroundColor Gray
           Write-Host ('[changie] binary: {0} version: {1}' -f $(Get-Command changie -ErrorAction SilentlyContinue).Path, [string]$(changie --version)) -ForegroundColor Gray
           Write-Host "Changie Detected Version: [$(changie latest)]"
-          &mage go:testsum ./tests/e2e/...
+          &mage go:testsum ./cicd-integration/...
         displayName: mage test
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
         failOnStderr: false
@@ -207,7 +207,6 @@ jobs:
           GOPATH: $(GOPATH)
           GO_INTEGRATION_TEST: 1 # REQUIRED TO ALLOW INTEGRATION TEST TO TRIGGER
           GOTEST_DISABLE_RACE: 1
-          GOTEST_FLAGS: '-tags=endtoend'
 
           # secrets that have to be exposed to script to be visible
           ADMIN_USER: $(ADMIN_USER)
