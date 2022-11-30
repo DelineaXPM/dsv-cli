@@ -1,0 +1,198 @@
+---
+name: dsv-cli.tests.integration.$(why).$(Date:yyyyMMdd)-$(Rev:r)
+pr:
+  autoCancel: true
+  drafts: true # TODO: make this false for future runs
+trigger:
+  batch: true
+  branches:
+    include:
+      - feat/448642/*
+  paths:
+    exclude:
+      - .devcontainer/*
+      - .github/*
+      - '*.md'
+      - '**/*.md'
+parameters:
+  - name: TIMEOUT_MIN
+    type: number
+    default: 15
+  - name: debug
+    type: boolean
+    default: false
+  - name: workingDirectory
+    type: string
+    default: $(Pipeline.Workspace)
+variables:
+  - group: 'CLI_integration_test' # TODO: replace with dsv cli calls
+  - group: 'CLi-pipeline-variables' # TODO: replace with dsv cli calls
+  - group: GITHUB # to avoid api rate issues
+  - template: templates/vars.common.yml
+
+jobs:
+  - job: integrationtest
+    displayName: dsv-cli-integration-test
+    strategy:
+      matrix:
+        linux:
+          friendlyName: dsv-cli-linux
+          imageName: ubuntu-latest
+    timeoutInMinutes: ${{ parameters.TIMEOUT_MIN }}
+    pool:
+      vmImage: $(imageName)
+    variables:
+      - template: templates/vars.go.yml
+        parameters:
+          DEBUG: ${{ parameters.DEBUG }}
+      - template: templates/vars.goreleaser.yml
+        parameters:
+          DEBUG: ${{ parameters.DEBUG }}
+      - name: ARTIFACT_DIRECTORY
+        value: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)/.artifacts/goreleaser
+    steps:
+      #https://docs.microsoft.com/en-us/azure/devops/pipelines/scripts/git-commands?view=azure-devops&tabs=yaml#enable-scripts-to-run-git-commands
+      - checkout: self
+        fetchDepth: 0
+        path: $(Build.Repository.Name)
+        persistCredentials: true
+      - task: GoTool@0
+        displayName: install-go-$(GO_VERSION)
+        # aqua will replace later, but this prevents prior conflicts with Windows using the Go install commands.
+        inputs:
+          version: $(GO_VERSION)
+          goPath: $(GOPATH)
+      - template: templates/task-aqua-install.yml
+        parameters:
+          AQUA_GITHUB_TOKEN: $(AQUA_GITHUB_TOKEN)
+          AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
+          AQUA_BINARY_FULL_INSTALL_PATH: $(AQUA_BINARY_FULL_INSTALL_PATH)
+          aquaInstallMethod: ''
+          workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
+          GOPATH: $(GOPATH)
+      # Extracted this out from template so it could produce an output variable for GOROOT at this time
+      - pwsh: |
+          # $ENV:PATH = $ENV:AQUA_ROOT_DIR, 'bin', $ENV:PATH -join [IO.Path]::PathSeparator
+          [string]$aquago = &"$(AQUA_BINARY_FULL_INSTALL_PATH)" which go
+
+          &$(AQUA_BINARY_FULL_INSTALL_PATH) which go
+          &$(AQUA_BINARY_FULL_INSTALL_PATH) install --tags ci
+          go version
+          go env
+
+
+          Write-Host "aquago              : $aquago"
+          if (-not $aquago) {
+            Write-Host "##vso[task.logissue type=warning]aqua tool not successfully invoked"
+            [string]$currentgo = &Get-Command go
+            Write-Host "current go          : $currentgo"
+            $ENV:GOROOT = $aquagoroot
+          } else {
+          [string]$aquagoroot = &$(aqua which go) env GOROOT
+            Write-Host "aquagoroot          : $aquagoroot"
+            $ENV:GOROOT = $aquagoroot
+          }
+
+          Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
+          Write-Host "Go Version Used: $(go version)"
+          New-Item -Path "$(GOBIN)" -ItemType Directory -Force -ErrorAction SilentlyContinue
+          Write-Host "##vso[task.setvariable variable=GOROOT; isOutput=true]$ENV:GOROOT"
+          Write-Host "✅ set GOROOT to aqua go version: $ENV:GOROOT"
+
+          $ENV:PATH += ";$(GOBIN)"
+          $ENV:PATH = '$(GOBIN)', $ENV:PATH -join [IO.Path]::PathSeparator
+
+          Write-Host "##vso[task.prependpath]$(GOBIN)"
+          Write-Host "=========================== PATH CONFIG ==========================="
+          Write-Host $ENV:PATH
+          Write-Host "=========================== END PATH CONFIG ==========================="
+        displayName: configure-go-env-var
+        name: goenv
+        env:
+          AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
+
+      # - template: templates/task-go-install.yml
+      #   parameters:
+      #     AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
+      #     GOPATH: $(GOPATH)
+      - task: PowerShell@2
+        displayName: detect-vendoring
+        name: detectvendoring
+        inputs:
+          targetType: inline
+          script: |
+            if (Test-Path -Path 'vendor' -PathType Container) {
+                  Write-Host "Setting VENDORED to 1, as vendor found"
+                  Write-Host "##vso[task.setvariable variable=VENDORED;isOutput=true]1"
+                  # Write-Host "##vso[task.setvariable variable=GOFLAGS;isOutput=true]-mod=vendor"
+                  # Write-Host "##vso[task.setvariable variable=GOFLAGS]-mod=vendor"
+                  # $ENV:GOFLAGS = "-mod=vendor"
+                  # Write-Host "Updated `$ENV:GOFLAGS with vendor: -mod=vendor: resulting in: '${ENV:GOFLAGS}'"
+            } else {
+                Write-Host "Setting VENDORED to 0, as no vendor directory found"
+                Write-Host "##vso[task.setvariable variable=VENDORED;isOutput=true]0"
+            }
+          workingDirectory: ${{ parameters.workingDirectory }}
+          pwsh: true
+
+      # - template: templates/task-go-detect-vendoring.yml
+      #   parameters:
+      #     workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
+      #     GOROOT: $(goenv.GOROOT)
+      - template: templates/task-go-restore-go-cache.yml
+        parameters:
+          workingDirectory: ${{ parameters.workingDirectory }}/${{ parameters.workingDirectory }}
+          GOROOT: $(goenv.GOROOT)
+          AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
+          GOPATH: $(GOPATH)
+      # - ${{ if eq($(detectvendoring.VENDORED), 1) }}:
+      - template: templates/task-go-mod-download.yml
+        # TEMPLATES DO NOT SUPPORT CONDITIONS: condition: and(succeeded(), eq($(detectvendoring.VENDORED), '0' )) # Only proceed with caching if vendoring is false
+        parameters:
+          workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
+          GOROOT: $(goenv.GOROOT)
+          AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
+      - template: templates/task-go-install-mage.yml
+        parameters:
+          workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
+          GOROOT: $(goenv.GOROOT)
+          AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
+          GOPATH: $(GOPATH)
+      - pwsh: |
+          Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
+          Write-Host ('[mage] binary: {0} version: {1}' -f $(Get-Command mage -ErrorAction SilentlyContinue).Path, [string]$(mage -version)) -ForegroundColor Gray
+          &mage init
+        displayName: mage init
+        workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
+        failOnStderr: false
+        env:
+          AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
+          GOROOT: $(goenv.GOROOT)
+          GOPATH: $(GOPATH)
+      - pwsh: |
+          Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
+          Write-Host ('[mage] binary: {0} version: {1}' -f $(Get-Command mage -ErrorAction SilentlyContinue).Path, [string]$(mage -version)) -ForegroundColor Gray
+          Write-Host ('[changie] binary: {0} version: {1}' -f $(Get-Command changie -ErrorAction SilentlyContinue).Path, [string]$(changie --version)) -ForegroundColor Gray
+          Write-Host "Changie Detected Version: [$(changie latest)]"
+          &mage build
+        displayName: mage build
+        workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
+        failOnStderr: false
+        env:
+          AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
+          GOROOT: $(goenv.GOROOT)
+          GOPATH: $(GOPATH)
+      - pwsh: |
+          Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
+          Write-Host ('[mage] binary: {0} version: {1}' -f $(Get-Command mage -ErrorAction SilentlyContinue).Path, [string]$(mage -version)) -ForegroundColor Gray
+          Write-Host ('[changie] binary: {0} version: {1}' -f $(Get-Command changie -ErrorAction SilentlyContinue).Path, [string]$(changie --version)) -ForegroundColor Gray
+          Write-Host "Changie Detected Version: [$(changie latest)]"
+          &mage test ./cicd-integration/...
+        displayName: mage build
+        workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
+        failOnStderr: false
+        env:
+          AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
+          GOROOT: $(goenv.GOROOT)
+          GOPATH: $(GOPATH)
+          GO_INTEGRATION_TEST: 1 # REQUIRED TO ALLOW INTEGRATION TEST TO TRIGGER

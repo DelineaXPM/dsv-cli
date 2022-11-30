@@ -1,6 +1,6 @@
 # CLI End-to-End testing
 
-```[first draft of the E2E related docs]```
+`[first draft of the E2E related docs]`
 
 To run E2E tests you need to have a tenant and an admin access to it.
 
@@ -17,6 +17,7 @@ dsv user create --username <username> --password <password>
 Create policies which will allow actions required for testing to the created user.
 
 - Create, Read, Update and Delete Roles with "e2e-cli-test" prefix
+
 ```
 dsv policy create \
     --path "roles:e2e-cli-test" \
@@ -27,6 +28,7 @@ dsv policy create \
 ```
 
 - List all Roles
+
 ```
 dsv policy create \
     --path "roles" \
@@ -37,6 +39,7 @@ dsv policy create \
 ```
 
 - Create, Read and Delete Pools with "e2e-cli-test" prefix
+
 ```
 dsv policy create \
     --path "pools:e2e-cli-test" \
@@ -47,6 +50,7 @@ dsv policy create \
 ```
 
 - List all Pools
+
 ```
 dsv policy create \
     --path "pools" \
@@ -57,6 +61,7 @@ dsv policy create \
 ```
 
 - Create, Read and Delete Engines with "e2e-cli-test" prefix
+
 ```
 dsv policy create \
     --path "engines:e2e-cli-test" \
@@ -67,6 +72,7 @@ dsv policy create \
 ```
 
 - List all Engines
+
 ```
 dsv policy create \
     --path "engines" \
@@ -76,7 +82,8 @@ dsv policy create \
     --subjects users:<username>
 ```
 
-- Create, Read, Update and Delete SIEMs with "e2e-cli-test" prefix 
+- Create, Read, Update and Delete SIEMs with "e2e-cli-test" prefix
+
 ```
 dsv policy create \
     --path "config:siem:e2e-cli-test" \
@@ -89,11 +96,13 @@ dsv policy create \
 ### Create certificate data
 
 - Create a role for authentication by certificate
+
 ```
 dsv role create --name e2e-cli-test-certauth
 ```
 
 - Create root certificate
+
 ```
 dsv pki generate-root \
     --rootcapath e2e-cli-test-root-for-auth \
@@ -103,6 +112,7 @@ dsv pki generate-root \
 ```
 
 - Create leaf certificate with role name in description. Use `"certificate"` and `"privateKey"` as env variables.
+
 ```
 dsv pki leaf \
     --common-name root.system.a \
@@ -116,16 +126,21 @@ dsv pki leaf \
 Coverage file is created for each execution and stored in the `<project root>/tests/e2e/coverage` directory.
 
 ### Merge Into One File
+
 If you don't need that granularity, you can merge coverage results into one file. To do that install "gocovmerge":
+
 ```
 go install -v github.com/hansboder/gocovmerge@latest
 ```
+
 And after it, run from the project root directory:
+
 ```
 gocovmerge -dir ./tests/e2e/coverage -pattern "\.out" > ./coverage-e2e.out
 ```
 
 ### Inspect Results
+
 ```
 go tool cover -html=./coverage-e2e.out
 ```
