@@ -60,9 +60,9 @@ jobs:
       - task: thycotic-software.thycotic-dsv-task.thycotic-dsv-build-release-task.ThycoticDSV@0
         displayName: 'Retrieve ado/cli from Thycotic DevOps Secrets Vault'
         inputs:
-          ServerUrl: '$(ServerUrl)'
-          ClientId: '$(ClientId)'
-          ClientSecret: '$(ClientSecret)'
+          ServerUrl: $(ServerUrl)
+          ClientId: $(ClientId)
+          ClientSecret: $(ClientSecret)
           SecretPath: ado/cli
 
       - task: GoTool@0
@@ -141,7 +141,7 @@ jobs:
                 Write-Host "Setting VENDORED to 0, as no vendor directory found"
                 Write-Host "##vso[task.setvariable variable=VENDORED;isOutput=true]0"
             }
-          workingDirectory: ${{ parameters.workingDirectory }}
+          workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
           pwsh: true
 
       # - template: templates/task-go-detect-vendoring.yml
@@ -150,7 +150,7 @@ jobs:
       #     GOROOT: $(goenv.GOROOT)
       - template: templates/task-go-restore-go-cache.yml
         parameters:
-          workingDirectory: ${{ parameters.workingDirectory }}/${{ parameters.workingDirectory }}
+          workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
           GOROOT: $(goenv.GOROOT)
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
           GOPATH: $(GOPATH)
