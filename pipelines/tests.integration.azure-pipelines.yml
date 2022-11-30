@@ -158,17 +158,18 @@ jobs:
           GOROOT: $(goenv.GOROOT)
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
           GOPATH: $(GOPATH)
-      - pwsh: |
-          Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
-          Write-Host ('[mage] binary: {0} version: {1}' -f $(Get-Command mage -ErrorAction SilentlyContinue).Path, [string]$(mage -version)) -ForegroundColor Gray
-          &mage init
-        displayName: mage init
-        workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
-        failOnStderr: false
-        env:
-          AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
-          GOROOT: $(goenv.GOROOT)
-          GOPATH: $(GOPATH)
+      # let's see if we need this since the test setup commands should be self setup basically
+      # - pwsh: |
+      #     Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
+      #     Write-Host ('[mage] binary: {0} version: {1}' -f $(Get-Command mage -ErrorAction SilentlyContinue).Path, [string]$(mage -version)) -ForegroundColor Gray
+      #     &mage init
+      #   displayName: mage init
+      #   workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
+      #   failOnStderr: false
+      #   env:
+      #     AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
+      #     GOROOT: $(goenv.GOROOT)
+      #    GOPATH: $(GOPATH)
       - pwsh: |
           Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
           Write-Host ('[mage] binary: {0} version: {1}' -f $(Get-Command mage -ErrorAction SilentlyContinue).Path, [string]$(mage -version)) -ForegroundColor Gray
