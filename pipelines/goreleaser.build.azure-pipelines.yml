@@ -170,7 +170,6 @@ jobs:
           workingDirectory: ${{ parameters.workingDirectory }}/${{ parameters.workingDirectory }}
           GOROOT: $(goenv.GOROOT)
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
-          GOPATH: $(GOPATH)
           GOCACHE: $(GOCACHE)
       # - ${{ if eq($(detectvendoring.VENDORED), 1) }}:
       - template: templates/task-go-mod-download.yml
