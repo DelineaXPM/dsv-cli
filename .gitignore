@@ -116,3 +116,6 @@ id_dsa
 
 # Temporarily block any pub certs from being included till I confirm.
 *.pub
+
+# install for powershell resulted in .deb file getting into repo. let's remove that!
+*.deb
