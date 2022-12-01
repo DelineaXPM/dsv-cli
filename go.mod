@@ -3,7 +3,7 @@ module github.com/DelineaXPM/dsv-cli
 go 1.17
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.3.5
+	github.com/AlecAivazis/survey/v2 v2.3.6
 	github.com/Azure/go-autorest/autorest v0.11.21
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.8
 	github.com/DelineaXPM/dsv-sdk-go/v2 v2.0.0
