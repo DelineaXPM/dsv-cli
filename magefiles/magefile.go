@@ -36,10 +36,13 @@ func Init() error {
 		pterm.DefaultHeader.Println("CI detected, minimal init being applied")
 		pterm.Info.Println("Installing Core CI Dependencies")
 		if err = tooling.SilentInstallTools([]string{
-			"github.com/hansboder/gocovmerge@latest",
-			"github.com/jstemmer/go-junit-report/v2@latest",
-			"github.com/axw/gocov/gocov@latest",
-			"github.com/AlekSi/gocov-xml@latest",
+
+			// PRIOR TOOLING - REPLACED BY GOTESTSUM + codecov tooling
+			// "github.com/hansboder/gocovmerge@latest",
+			// "github.com/jstemmer/go-junit-report/v2@latest",
+			// "github.com/axw/gocov/gocov@latest",
+			// "github.com/AlekSi/gocov-xml@latest",
+
 			// "github.com/mitchellh/gon/cmd/gon@latest", // macOS binary signing
 			"github.com/miniscruff/changie@latest",    // AS WINDOWS IS NOT WORKING WITH AQUA
 			"github.com/goreleaser/goreleaser@latest", // AS WINDOWS IS NOT WORKING WITH AQUA
