@@ -18,6 +18,8 @@ import (
 	_ "github.com/sheldonhull/magetools/gotools"
 	//mage:import
 	_ "github.com/sheldonhull/magetools/docgen"
+	//mage:import
+	_ "github.com/DelineaXPM/dsv-cli/magefiles/certs"
 )
 
 // relTime returns just a simple relative time humanized, without the "ago" suffix.
