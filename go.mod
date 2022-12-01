@@ -30,7 +30,7 @@ require (
 	github.com/pterm/pterm v0.12.49
 	github.com/savaki/jq v0.0.0-20161209013833-0e6baecebbf8
 	github.com/sheldonhull/magetools v1.0.0
-	github.com/shurcooL/graphql v0.0.0-20200928012149-18c5c3165e3a
+	github.com/shurcooL/graphql v0.0.0-20220606043923-3cf50f8a0a29
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.13.0
 	github.com/stretchr/testify v1.8.0
