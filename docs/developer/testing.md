@@ -48,4 +48,5 @@ In the same way as `cicd-integration`, the `tests/e2e` testing suite also compil
 There is an active branch for using DSV SDK with Mage to retrieve test configuration values.
 This will mean eventually all that is needed to run the full suite of tests locally would be a one time initialized dsv profile.
 
-This work is located in: `refactor/469577/start-of-using-flags-instead-of-envvars` which focused on using flags instead of env vars to allow `mage test` to provide the correct values directly instead of requiring more complex environment setup.
+This work is located in: `refactor/469577/start-of-using-flags-instead-of-envvars` which focused on using flags instead of env vars.
+This would allow `mage test` to provide the correct values directly instead of requiring more complex environment setup.
