@@ -11,6 +11,10 @@ parameters:
     type: string
   - name: GOCACHE
     type: string
+
+  # Without this patches in stdlib might not be detected as they aren't part of go.mod
+  - name: GO_VERSION
+    type: string
 steps:
   - pwsh: |
       New-Item -Path "$(GOCACHE)" -ItemType Directory -Force -ErrorAction SilentlyContinue
@@ -26,7 +30,7 @@ steps:
       GOSUMFILE: ${{ parameters.workingDirectory }}/go.sum
     inputs:
       # key: 'go | "$(Agent.OS)" | go.sum | go.mod'
-      key: 'go | "$(Agent.OS)" | go.mod'
+      key: 'go | "$(GO_VERSION)" | "$(Agent.OS)" | go.mod'
       restoreKeys: |
         go | "$(Agent.OS)"
       path: $(Pipeline.Workspace)/.cache/go-build/ # also set to GOCACHE in the vars.go.yml

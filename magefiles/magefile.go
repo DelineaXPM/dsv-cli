@@ -36,7 +36,6 @@ func Init() error {
 		pterm.DefaultHeader.Println("CI detected, minimal init being applied")
 		pterm.Info.Println("Installing Core CI Dependencies")
 		if err = tooling.SilentInstallTools([]string{
-
 			// PRIOR TOOLING - REPLACED BY GOTESTSUM + codecov tooling
 			// "github.com/hansboder/gocovmerge@latest",
 			// "github.com/jstemmer/go-junit-report/v2@latest",
