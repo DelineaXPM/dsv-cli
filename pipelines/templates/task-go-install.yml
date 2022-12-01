@@ -1,4 +1,8 @@
 ---
+parameters:
+  - name: AQUA_ROOT_DIR
+    type: string
+    default: ''
 steps:
   # - task: GoTool@0
   #   displayName: install go $(GO_VERSION)
@@ -8,30 +12,50 @@ steps:
   #     goBin: $(GOBIN)
   # Prepend path: https://github.com/microsoft/azure-pipelines-tasks/blob/master/docs/authoring/commands.md
   - pwsh: |
-      $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua/bin;${ENV:PATH}" # ensure aqua managed binaries can be found
+      # $ENV:PATH = $ENV:AQUA_ROOT_DIR, 'bin', $ENV:PATH -join [IO.Path]::PathSeparator
+      [string]$aquago = &aqua which go
+      Write-Host "aquago              : $aquago"
+      [string]$currentgo = &Get-Command go
+      Write-Host "current go          : $currentgo"
+      Write-Host "All Go Version: $(Get-Command go -All -ErrorAction SilentlyContinue)"
+
+      [string]$aquagoroot = &go env GOROOT
+      Write-Host "aquagoroot          : $aquagoroot"
+
+      $ENV:GOROOT = $aquagoroot
+      Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
+      Write-Host "Go Version Used: $(go version)"
       New-Item -Path "$(GOBIN)" -ItemType Directory -Force -ErrorAction SilentlyContinue
-      &go env
+      Write-Host "##vso[task.setvariable variable=GOROOT; isOutput=true]$ENV:GOROOT"
+      Write-Host "✅ set GOROOT to aqua go version: $ENV:GOROOT"
+
       $ENV:PATH += ";$(GOBIN)"
+      $ENV:PATH = '$(GOBIN)', $ENV:PATH -join [IO.Path]::PathSeparator
+
       Write-Host "##vso[task.prependpath]$(GOBIN)"
       Write-Host "=========================== PATH CONFIG ==========================="
       Write-Host $ENV:PATH
       Write-Host "=========================== END PATH CONFIG ==========================="
-    displayName: configure-go-env-var-windows
-    condition: eq(variables['Agent.OS'], 'Windows_NT')
+    displayName: configure-go-env-var
+    env:
+      AQUA_ROOT_DIR: ${{ parameters.AQUA_ROOT_DIR }}
 
-  - bash: |
-      export PATH="${AQUA_ROOT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/aquaproj-aqua}/bin:$PATH"
-      echo "=========================== GO CONFIG ==========================="
-      go env
-      echo "=========================== END GO CONFIG ==========================="
-      GOBINARIES="$(go env GOPATH)/bin"
-      echo "✅ using vscode task.prepend path to ensure go binaries are available to subquent tasks"
-      echo "##vso[task.prependpath]$GOBINARIES"
-      echo "=========================== PATH CONFIG ==========================="
-      echo $PATH
-      echo "=========================== END PATH CONFIG ==========================="
-    displayName: configure-go-env-var-linux-and-darwin
-    condition: ne(variables['Agent.OS'], 'Windows_NT')
+  # condition: eq(variables['Agent.OS'], 'Windows_NT')
+  # - bash: |
+  #     $ENV:PATH = '$(Build.SourcesDirectory)/.cache/aqua/bin', $ENV:PATH -join [IO.Path]::PathSeparandlytor
+  #     Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
+  #     Write-Host "Go Version Used: $(go version)"
+  #     echo "=========================== GO CONFIG ==========================="
+  #     go env
+  #     echo "=========================== END GO CONFIG ==========================="
+  #     GOBINARIES="$(go env GOPATH)/bin"
+  #     echo "✅ using vscode task.prepend path to ensure go binaries are available to subquent tasks"
+  #     echo "##vso[task.prependpath]$GOBINARIES"
+  #     echo "=========================== PATH CONFIG ==========================="
+  #     echo $PATH
+  #     echo "=========================== END PATH CONFIG ==========================="
+  #   displayName: configure-go-env-var-linux-and-darwin
+  #   condition: ne(variables['Agent.OS'], 'Windows_NT')
 # NOTE: I stripped out the package restore from cache from this task since already have a template for that called install-go.yml
 # ORIGINAL SOURCE: https://github.com/signalfx/signalfx-agent/blob/main/.azure-pipelines/install-go.yml
 # Used with Apache 2 License, allowing reuse as long as noticed provided

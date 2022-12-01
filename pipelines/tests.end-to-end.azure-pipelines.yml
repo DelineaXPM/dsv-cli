@@ -1,5 +1,5 @@
 ---
-name: goreleaser-dsv-cli-$(why).$(Date:yyyyMMdd)-$(Rev:r)
+name: dsv-cli.tests.end-to-end.$(why).$(Date:yyyyMMdd)-$(Rev:r)
 pr:
   autoCancel: true
   drafts: true # TODO: make this false for future runs
@@ -25,30 +25,19 @@ parameters:
     type: string
     default: $(Pipeline.Workspace)
 variables:
-  - group: 'CLI_integration_test' # TODO: replace with dsv cli calls
-  - group: 'CLi-pipeline-variables' # TODO: replace with dsv cli calls
   - group: 'CLI End-to-End tests' # TODO: replace with dsv cli calls
+  - group: 'CLi-pipeline-variables' # TODO: replace with dsv cli calls
   - group: GITHUB # to avoid api rate issues
   - template: templates/vars.common.yml
 
 jobs:
-  - job: build
-    displayName: build-dsv-cli
+  - job: endtoendtest
+    displayName: dsv-cli-endtoend-test
     strategy:
       matrix:
         linux:
           friendlyName: dsv-cli-linux
           imageName: ubuntu-latest
-        # TODO: RENABLE THIS
-        mac:
-          friendlyName: dsv-cli-darwin
-          imageName: macOS-latest
-          demands: xcode
-        windows:
-          friendlyName: dsv-cli-windows
-          imageName: windows-latest
-          demands: xcode
-
     timeoutInMinutes: ${{ parameters.TIMEOUT_MIN }}
     pool:
       vmImage: $(imageName)
@@ -67,27 +56,21 @@ jobs:
         fetchDepth: 0
         path: $(Build.Repository.Name)
         persistCredentials: true
-      - task: InstallAppleCertificate@2
-        displayName: macos-install-cert-to-keychain
-        condition: eq(variables['Agent.OS'], 'Darwin') # 👉 DARWIN ONLY
-        inputs:
-          certSecureFile: $(certSecureFile)
-          certPwd: $(cert.password)
-          setUpPartitionIdACLForPrivateKey: false
+
       - task: thycotic-software.thycotic-dsv-task.thycotic-dsv-build-release-task.ThycoticDSV@0
-        displayName: retrieve-cert-for-signing-code
+        displayName: 'Retrieve ado/cli from Thycotic DevOps Secrets Vault'
         inputs:
           ServerUrl: $(ServerUrl)
           ClientId: $(ClientId)
           ClientSecret: $(ClientSecret)
           SecretPath: ado/cli
+
       - task: GoTool@0
         displayName: install-go-$(GO_VERSION)
         # aqua will replace later, but this prevents prior conflicts with Windows using the Go install commands.
         inputs:
           version: $(GO_VERSION)
           goPath: $(GOPATH)
-          # goBin: # Optional
       - template: templates/task-aqua-install.yml
         parameters:
           AQUA_GITHUB_TOKEN: $(AQUA_GITHUB_TOKEN)
@@ -185,11 +168,25 @@ jobs:
           GOROOT: $(goenv.GOROOT)
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
           GOPATH: $(GOPATH)
+      # let's see if we need this since the test setup commands should be self setup basically
+      # - pwsh: |
+      #     Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
+      #     Write-Host ('[mage] binary: {0} version: {1}' -f $(Get-Command mage -ErrorAction SilentlyContinue).Path, [string]$(mage -version)) -ForegroundColor Gray
+      #     &mage init
+      #   displayName: mage init
+      #   workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
+      #   failOnStderr: false
+      #   env:
+      #     AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
+      #     GOROOT: $(goenv.GOROOT)
+      #    GOPATH: $(GOPATH)
       - pwsh: |
           Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
           Write-Host ('[mage] binary: {0} version: {1}' -f $(Get-Command mage -ErrorAction SilentlyContinue).Path, [string]$(mage -version)) -ForegroundColor Gray
-          &mage init
-        displayName: mage init
+          Write-Host ('[changie] binary: {0} version: {1}' -f $(Get-Command changie -ErrorAction SilentlyContinue).Path, [string]$(changie --version)) -ForegroundColor Gray
+          Write-Host "Changie Detected Version: [$(changie latest)]"
+          &mage build
+        displayName: mage build
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
         failOnStderr: false
         env:
@@ -201,19 +198,28 @@ jobs:
           Write-Host ('[mage] binary: {0} version: {1}' -f $(Get-Command mage -ErrorAction SilentlyContinue).Path, [string]$(mage -version)) -ForegroundColor Gray
           Write-Host ('[changie] binary: {0} version: {1}' -f $(Get-Command changie -ErrorAction SilentlyContinue).Path, [string]$(changie --version)) -ForegroundColor Gray
           Write-Host "Changie Detected Version: [$(changie latest)]"
-          &mage release
-        displayName: mage release
+          &mage go:testsum ./tests/e2e/...
+        displayName: mage test
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
         failOnStderr: false
         env:
-          CERT_PASSWORD: $(cert.password)
-          CERT_SECURE_FILE: $(certSecureFile)
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
           GOROOT: $(goenv.GOROOT)
-          GITHUB_TOKEN: $(GITHUB_TOKEN)
           GOPATH: $(GOPATH)
-      - task: PublishBuildArtifacts@1
-        displayName: 'Build Artifact: PRTestBuilds'
-        inputs:
-          PathtoPublish: $(ARTIFACT_DIRECTORY)
-          ArtifactName: ThrowAwayBuilds
+          GO_INTEGRATION_TEST: 1 # REQUIRED TO ALLOW INTEGRATION TEST TO TRIGGER
+          GOTEST_DISABLE_RACE: 1
+          GOTEST_FLAGS: '-tags=endtoend'
+
+          # secrets that have to be exposed to script to be visible
+          ADMIN_USER: $(ADMIN_USER)
+          DSV_ADMIN_PASS: $(DSV_ADMIN_PASS)
+          DSV_USER_PASSWORD: $(DSV_USER_PASSWORD)
+          CLIENT_ID: $(CLIENT_ID)
+          DSV_CLIENT_SECRET: $(DSV_CLIENT_SECRET)
+
+          ## Other config values just for clarity
+          TEST_TENANT: $(TEST_TENANT)
+          USER_NAME: $(USER_NAME)
+          LOCAL_DOMAIN: $(LOCAL_DOMAIN)
+          DEV_DOMAIN: $(DEV_DOMAIN)
+# TEMPLATE: TO DO - CODECOV REPORT

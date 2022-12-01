@@ -3,61 +3,75 @@ parameters:
   - name: workingDirectory
     type: string
     default: $(Build.SourcesDirectory)
+  - name: AQUA_ROOT_DIR
+    type: string
+    default: ''
+  - name: GOROOT
+    type: string
 steps:
   ####################
   # Windows Specific #
   ####################
   # The paths are different and the joining, so just seperating.
   - pwsh: |
-      $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua/bin;${ENV:PATH}" # ensure aqua managed binaries can be found on windows
-      Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
-      go mod download -x
-    displayName: go-mod-download-windows
-    # condition: and(succeeded(), eq(variables.VENDORED, '0' )) # Only proceed with caching if vendoring is false
-    workingDirectory: ${{ parameters.WorkingDirectory }}
-    condition: eq(variables['Agent.OS'], 'Windows_NT')
-  - pwsh: |
-      $ENV:PATH="${ENV:HOME}/AppData/Local/aquaproj-aqua/bin;${ENV:PATH}" # ensure aqua managed binaries can be found on windows
-      Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
-      go get -t -x -tags mage,build,integration -v ./...
-    displayName: go-get-windows
-    # condition: and(succeeded(), eq(variables.VENDORED, '0' )) # Only proceed with caching if vendoring is false
-    workingDirectory: ${{ parameters.WorkingDirectory }}
-    condition: eq(variables['Agent.OS'], 'Windows_NT')
-
-  ##############
-  # NonWindows #
-  ##############
-  - pwsh: |
-      try {
-        $ENV:PATH="${ENV:HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
-        Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
-        go mod download -x
-        exit 0
-      }
-      catch {
-        throw
-        exit 1
-      }
+      # $ENV:PATH = '$(Build.SourcesDirectory)/.cache/aqua/bin', $ENV:PATH -join [IO.Path]::PathSeparator
+      Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
+      Write-Host "Check the Go Versions: $(which -a go)" -ErrorAction SilentlyContinue
+      try { Write-Host ('[go] manually invoked from aqua bin: {0} -- version info: {1}' -f '$(Build.SourcesDirectory)/.cache/aqua/bin', (&$(Build.SourcesDirectory)/.cache/aqua/bin/go version)) -ErrorAction Continue } catch { write-warning "not able to invoke go with full path from aqua. not sure why"}
+      Write-Host "Items In Aqua Bin: $(Get-ChildItem '$(Build.SourcesDirectory)/.cache/' -Depth 3 -Recurse -ErrorAction Continue | Format-Table | Out-String)"
+      &go mod download -x
     displayName: go-mod-download
-    # condition: and(succeeded(), eq(variables.VENDORED, '0' )) # Only proceed with caching if vendoring is false
     workingDirectory: ${{ parameters.WorkingDirectory }}
-    condition: ne(variables['Agent.OS'], 'Windows_NT')
-    failOnStderr: false # go gives false errors on this
-
+    failOnStderr: false
+    env:
+      AQUA_ROOT_DIR: ${{ parameters.AQUA_ROOT_DIR }}
+      GOROOT: ${{ parameters.GOROOT }}
   - pwsh: |
-      try {
-        $ENV:PATH="${ENV:HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
-        Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
-        go get -t -x -tags mage,build,integration -v ./...
-        exit 0
-      }
-      catch {
-        throw
-        exit 1
-      }
+      # $ENV:PATH = '$(Build.SourcesDirectory)/.cache/aqua/bin', $ENV:PATH -join [IO.Path]::PathSeparator
+      Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
+      &go get -t -x -tags mage,build,integration -v ./...
     displayName: go-get
-    # condition: and(succeeded(), eq(variables.VENDORED, '0' )) # Only proceed with caching if vendoring is false
     workingDirectory: ${{ parameters.WorkingDirectory }}
-    condition: ne(variables['Agent.OS'], 'Windows_NT')
-    failOnStderr: false # go gives false errors on this
+    failOnStderr: false
+    env:
+      AQUA_ROOT_DIR: ${{ parameters.AQUA_ROOT_DIR }}
+      GOROOT: ${{ parameters.GOROOT }}
+  # ##############
+  # # NonWindows #
+  # ##############
+  # - pwsh: |
+  #     try {
+  #       # $ENV:PATH="${ENV:HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
+  #       $ENV:PATH="$(Build.SourcesDirectory)/.cache/aqua/bin:${PATH}"
+  #       Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
+  #       go mod download -x
+  #       exit 0
+  #     }
+  #     catch {
+  #       throw
+  #       exit 1
+  #     }
+  #   displayName: go-mod-download
+  #   # condition: and(succeeded(), eq(variables.VENDORED, '0' )) # Only proceed with caching if vendoring is false
+  #   workingDirectory: ${{ parameters.WorkingDirectory }}
+  #   condition: ne(variables['Agent.OS'], 'Windows_NT')
+  #   failOnStderr: false # go gives false errors on this
+
+  # - pwsh: |
+  #     try {
+  #       $ENV:PATH = '$(Build.SourcesDirectory)/.cache/aqua/bin', $ENV:PATH -join [IO.Path]::PathSeparator
+  #       # # $ENV:PATH="${ENV:HOME}/.local/share/aquaproj-aqua/bin:${PATH}"
+  #       # $ENV:PATH="$(Build.SourcesDirectory)/.cache/aqua/bin:${PATH}"
+  #       Write-Host "Go binary used: $((Get-Command go -ErrorAction SilentlyContinue).Path)"
+  #       go get -t -x -tags mage,build,integration -v ./...
+  #       exit 0
+  #     }
+  #     catch {
+  #       throw
+  #       exit 1
+  #     }
+  #   displayName: go-get
+  #   # condition: and(succeeded(), eq(variables.VENDORED, '0' )) # Only proceed with caching if vendoring is false
+  #   workingDirectory: ${{ parameters.WorkingDirectory }}
+  #   condition: ne(variables['Agent.OS'], 'Windows_NT')
+  #   failOnStderr: false # go gives false errors on this

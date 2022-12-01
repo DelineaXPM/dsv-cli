@@ -9,15 +9,48 @@ parameters:
   - name: aquaInstallTags
     type: string
     default: '--tags ci'
+  - name: AQUA_GITHUB_TOKEN
+    type: string
+  # Required (loaded from templates/vars.common.yml)
+  - name: AQUA_ROOT_DIR
+    type: string
+  - name: AQUA_BINARY_FULL_INSTALL_PATH
+    type: string
+  # To allow using the aqua installed/other installed version over default agent version
+  - name: GOPATH
+    type: string
 steps:
-  - bash: |
-      curl -sSfL https://raw.githubusercontent.com/aquaproj/aqua-installer/v1.1.2/aqua-installer | bash -s -- -i "$(Agent.ToolsDirectory)/aqua"
-      export AQUA_PACKAGE_BIN="${AQUA_ROOT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/aquaproj-aqua}/bin"
-      echo "##vso[task.prependpath]${AQUA_PACKAGE_BIN}"
-      echo "Added ${AQUA_PACKAGE_BIN} to PATH"
+  - pwsh: |
+      $binarydirectory = '${{ parameters.AQUA_BINARY_FULL_INSTALL_PATH }}' | Split-Path -Parent
+      New-Item -ItemType Directory -Path $binarydirectory -ErrorAction SilentlyContinue && Write-Host "✅ Created the directory to house the aqua binary: [$binarydirectory]"
+      New-Item -ItemType Directory -Path '${{ parameters.AQUA_ROOT_DIR }}' -Force -ErrorAction SilentlyContinue && Write-Host "✅ Created the directory for aqua-proj packages & assets: [${{ parameters.AQUA_ROOT_DIR }}]"
+      go run github.com/aquaproj/aqua-installer@latest -o "${{ parameters.AQUA_BINARY_FULL_INSTALL_PATH }}"
+      go install github.com/aquaproj/aqua/cmd/aqua@latest # Alternative installation to see if resolves other issues.
+      # &curl -sSfL https://raw.githubusercontent.com/aquaproj/aqua-installer/v1.1.2/aqua-installer | bash -s -- -i "${{ parameters.AQUA_BINARY_FULL_INSTALL_PATH }}"
+
+      $GoBinariesInstallPath = Join-Path $ENV:GOPATH 'bin'
+      # Evaluate if current $ENV:GOPATH contains $ENV:GOPATH/bin
+      if (-not ($ENV:PATH -match [regex]::Escape($GoBinariesInstallPath))) {
+        $ENV:PATH = $GoBinariesInstallPath, $ENV:PATH -join [IO.Path]::PathSeparator
+        Write-Host "##vso[task.prependpath]$GoBinariesInstallPath"
+      }
+      Write-Host "##vso[task.prependpath]${{ parameters.AQUA_ROOT_DIR }}/bin"
+      Write-Host "##vso[task.prependpath]${{ parameters.AQUA_ROOT_DIR }}/bat"  # NOTE: Added this per aquaproject documentation, to support Windows environment. Haven't yet seen this needed, but added for now as a precaution. https://aquaproj.github.io/docs/reference/windows-support#windows-settings
+      Write-Host "##vso[task.prependpath]$binarydirectory"
     displayName: install-aqua
-    condition: ne(variables['Agent.OS'], 'Windows_NT')
-  - bash: |
-      $(Agent.ToolsDirectory)/aqua install ${{ parameters.aquaInstallMethod }} ${{ parameters.aquaInstallTags }}
+    failOnStderr: false
+    workingDirectory: ${{ parameters.workingDirectory }}
+    env:
+      AQUA_GITHUB_TOKEN: ${{ parameters.AQUA_GITHUB_TOKEN }}
+      GOPATH: ${{ parameters.GOPATH }}
+  - pwsh: |
+      Write-Host "AQUA INSTALL: &aqua install ${{ parameters.aquaInstallMethod }} ${{ parameters.aquaInstallTags }}"
+      # Test The Binary Path and using a ternary operator provide logging output
+      (Test-Path ${{ parameters.AQUA_BINARY_FULL_INSTALL_PATH }}) ? (Write-Host "✅ Found the aqua binary: [${{ parameters.AQUA_BINARY_FULL_INSTALL_PATH }}]") : (Write-Host "❌ Could not find the aqua binary: [${{ parameters.AQUA_BINARY_FULL_INSTALL_PATH }}]")
+      &${{ parameters.AQUA_BINARY_FULL_INSTALL_PATH }} install ${{ parameters.aquaInstallMethod }} ${{ parameters.aquaInstallTags }}
     displayName: aqua-install
     workingDirectory: ${{ parameters.workingDirectory }}
+    env:
+      AQUA_LOG_LEVEL: debug
+      AQUA_ROOT_DIR: ${{ parameters.AQUA_ROOT_DIR }}
+      GOPATH: ${{ parameters.GOPATH }}

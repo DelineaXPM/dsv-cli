@@ -113,3 +113,6 @@ id_dsa.pub
 id_dsa
 *.key
 *.csr
+
+# Temporarily block any pub certs from being included till I confirm.
+*.pub

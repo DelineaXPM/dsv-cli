@@ -10,6 +10,8 @@ on:
   workflow_call: # so composite actions can use this
 permissions:
   contents: read
+  actions: read
+  security-events: write
 jobs:
   scan:
     uses: delineaxpm/github-workflows/.github/workflows/scan.yml@main

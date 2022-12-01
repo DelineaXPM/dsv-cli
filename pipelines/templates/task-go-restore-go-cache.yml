@@ -3,16 +3,34 @@ parameters:
   - name: workingDirectory
     type: string
     default: $(Build.SourcesDirectory)
+  - name: AQUA_ROOT_DIR
+    type: string
+    default: ''
+  # To allow using the aqua installed/other installed version over default agent version
+  - name: GOROOT
+    type: string
+  - name: GOCACHE
+    type: string
+
+  # Without this patches in stdlib might not be detected as they aren't part of go.mod
+  - name: GO_VERSION
+    type: string
 steps:
+  - pwsh: |
+      New-Item -Path "$(GOCACHE)" -ItemType Directory -Force -ErrorAction SilentlyContinue
+    displayName: create-go-cache-dir
   - task: Cache@2
     displayName: Save/restore go mod cache
-    condition: and(succeeded(), eq(variables.VENDORED, '0' )) # Only proceed with caching if vendoring is false.
+    # condition: and(succeeded(), eq(variables.VENDORED, '0' )) # Only proceed with caching if vendoring is false. Shouldn't work in templates, build tool caching is still viable.
     continueOnError: true
     env:
       SYSTEM_DEBUG: false
+      GOROOT: ${{ parameters.GOROOT }}
+      AQUA_ROOT_DIR: ${{ parameters.AQUA_ROOT_DIR }}
+      GOSUMFILE: ${{ parameters.workingDirectory }}/go.sum
     inputs:
       # key: 'go | "$(Agent.OS)" | go.sum | go.mod'
-      key: go | "$(Agent.OS)" | ${{ parameters.workingDirectory }}/go.sum
+      key: 'go | "$(GO_VERSION)" | "$(Agent.OS)" | go.mod'
       restoreKeys: |
         go | "$(Agent.OS)"
-      path: $(GOPATH)/pkg/mod
+      path: $(Pipeline.Workspace)/.cache/go-build/ # also set to GOCACHE in the vars.go.yml

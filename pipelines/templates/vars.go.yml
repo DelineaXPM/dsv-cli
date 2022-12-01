@@ -7,15 +7,17 @@ variables:
   - name: GOBIN
     value: $(GOPATH)/bin
   - name: GO_VERSION
-    value: 1.19
+    value: 1.19.3
   - name: GOLANGCI_LINT_VERSION
     value: v1.49.0
   - name: GORELEASER_VERSION
     value: latest
   - name: GOWORK
-    value: off
+    value: off # yamllint disable-line rule:truthy
   # CGO_ENABLED required for race condition in testing
   - name: CGO_ENABLED
     value: 1
+  - name: GOCACHE
+    value: $(Pipeline.Workspace)/.cache/go-build/
   # - name: GO_CACHE_DIR
   #   value: $(Pipeline.Workspace)/.cache/go-build/ #doesn't exist, using system variable GOCACHE

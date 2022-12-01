@@ -13,24 +13,44 @@ import (
 	"github.com/sheldonhull/magetools/pkg/magetoolsutils"
 )
 
-func checkEnvVar(envVar string, required bool) (string, error) { //nolint:unused // leaving this as will use in future releases
-	envVarValue := os.Getenv(envVar)
-	if envVarValue == "" && required {
-		pterm.Error.Printfln(
-			"%s is required and unable to proceed without this being provided. terminating task.",
-			envVar,
-		)
-		return "", fmt.Errorf("%s is required", envVar)
+func checkEnvVar(varName string, tbl pterm.TableData, isSecret bool, notes string) (string, bool, pterm.TableData) {
+	var value, valueOfVar string
+	var isSet bool
+
+	value, isSet = os.LookupEnv(varName)
+
+	if isSet {
+		if isSecret {
+			valueOfVar = "***** secret set, but not logged *****"
+		} else {
+			valueOfVar = value
+		}
+
+		tbl = append(tbl, []string{"✅", varName, valueOfVar, notes})
+		return value, true, tbl
 	}
-	if envVarValue == "" {
-		pterm.Debug.Printfln(
-			"checkEnvVar() found no value for: %q, however this is marked as optional, so not exiting task",
-			envVar,
-		)
-	}
-	pterm.Debug.Printfln("checkEnvVar() found value: %q=%q", envVar, envVarValue)
-	return envVarValue, nil
+	tbl = append(tbl, []string{"❌", varName, valueOfVar, notes})
+	return "", false, tbl
 }
+
+// func checkEnvVar(envVar string, required bool) (string, error) { //nolint:unused // leaving this as will use in future releases
+// 	envVarValue := os.Getenv(envVar)
+// 	if envVarValue == "" && required {
+// 		pterm.Error.Printfln(
+// 			"%s is required and unable to proceed without this being provided. terminating task.",
+// 			envVar,
+// 		)
+// 		return "", fmt.Errorf("%s is required", envVar)
+// 	}
+// 	if envVarValue == "" {
+// 		pterm.Debug.Printfln(
+// 			"checkEnvVar() found no value for: %q, however this is marked as optional, so not exiting task",
+// 			envVar,
+// 		)
+// 	}
+// 	pterm.Debug.Printfln("checkEnvVar() found value: %q=%q", envVar, envVarValue)
+// 	return envVarValue, nil
+// }
 
 // 🔨 Build builds the project for the current platform.
 func Build() error {
