@@ -2,7 +2,7 @@
 name: dsv-cli.tests.end-to-end.$(why).$(Date:yyyyMMdd)-$(Rev:r)
 pr:
   autoCancel: true
-  drafts: true # TODO: make this false for future runs
+  drafts: false
 trigger:
   batch: true
   branches:
