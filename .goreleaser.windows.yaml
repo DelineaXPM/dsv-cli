@@ -75,11 +75,11 @@ release:
   mode: replace
   skip_upload: false
   replace_existing_draft: true
-  name_template: '{{.ProjectName}}-v{{.Version}} {{.Runtime.Goos}}' #TODO: remove and have merged upload occur
+  name_template: '{{.ProjectName}}-v{{.Version}}'
 sboms:
   - artifacts: binary
     documents:
-      - '${artifact}.spdx.sbom'
+      - '${artifact}.{{.Runtime.Goos}}.spdx.sbom'
 changelog:
   skip: false
   sort: asc

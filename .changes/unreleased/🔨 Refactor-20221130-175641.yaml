@@ -1,0 +1,10 @@
+kind: "\U0001F528 Refactor"
+body:
+  Tests for end-to-end and integration are now contained in their own isolated
+  pipelines, and are expected to be required status checks for pull requests.
+time: 2022-11-30T17:56:41.75024-06:00
+custom:
+  azure-boards-workitemid-fixed: ''
+  azure-boards-workitemid-related: '469577'
+  github-contributor: sheldonhull
+  github-link: ''
