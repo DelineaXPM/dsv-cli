@@ -2,7 +2,7 @@
 name: goreleaser-dsv-cli-$(why).$(Date:yyyyMMdd)-$(Rev:r)
 pr:
   autoCancel: true
-  drafts: true # TODO: make this false for future runs
+  drafts: false
 trigger:
   batch: true
   branches:
