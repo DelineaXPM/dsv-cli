@@ -1,0 +1,11 @@
+kind: "\U0001F528 Refactor"
+body:
+  Mac binary signing is now performed with quill. As long as the p12 cert is available
+  (which is the pfx cert relabeled), goreleaser release process will now sign mac
+  binaries from a mac, windows, or Linux machind.
+time: 2022-12-02T13:55:40.58944-06:00
+custom:
+  azure-boards-workitemid-fixed: '475825'
+  azure-boards-workitemid-related: '448642'
+  github-contributor: sheldonhull
+  github-link: ''

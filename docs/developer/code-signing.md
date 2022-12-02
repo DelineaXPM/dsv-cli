@@ -4,27 +4,36 @@ This is automated as part of the build process via calls to Azure Pipelines.
 
 This doc captures any specific debugging or other helpful notes to work through any issues.
 
+## How Do I Sign?
+
+If you have all the required certs setup, then you just run `mage release` and all of the required signing steps will be performed by goreleaser for all platforms.
+
 ## General Tooling
 
 A single linux based agent is all that is required to build and sign for cross-platform, due to the power of Go and some amazing community projects.
+You should be able to do this on any OS, but this is primarily tested in Darwin & run in CI on a Linux based agent.
 
 - For mac signing: [Quill](https://github.com/anchore/quill) to allow signing and notarization of the binary without using a darwin based build system.
 - For windows & linux binary signing: [cosign](https://github.com/sigstore/cosign)
 
 ## Mac Specific
 
-The following certs from Apple are required to sign correctly.
-To do this automatically on a Darwin based system just run `mage certs:init`.
-If the dates are incorrect, update this to the latest from this page [Apple Public Certificates](https://www.apple.com/certificateauthority/)
-
-- [AppleIncRootCertificate](https://www.apple.com/appleca/AppleIncRootCertificate.cer)
-- [Worldwide Developer Relations - G1 (Expiring 02/07/2023 21:48:47 UTC)](https://developer.apple.com/certificationauthority/AppleWWDRCA.cer)
+### Validation
 
 - On a darwin system, to get more helpful diagnostics on why a signature is invalid try: `codesign -vvv --deep --strict ./.artifacts/dsv`.
 - Use the spctl utility to determine if the software to be notarized will run with the system policies currently in effect: `spctl -vvv --assess --type exec ./.artifacts/dsv`
 
 For visually verifying signing you can install: `brew install whatsyoursign` and then run `open '/usr/local/Caskroom/whatsyoursign/2.0.1/WhatsYourSign Installer.app'` or whatever version you find.
 This will add a Finder button when right-clicking that is called "Signing Info" and provide a visual way to look at the signing information on a Mac system.
+
+### [DEPRECATED] Codesign
+
+The following notes are more specific to working with Apple certificate signing.
+
+The following certs from Apple are required to sign correctly.
+To do this automatically on a Darwin based system just run `mage certs:init`.
+
+If the dates are incorrect, update this to the latest from this page [Apple Public Certificates](https://www.apple.com/certificateauthority/) in `magefile/certs` to add it to the download and install list.
 
 ### Mac Resource Links
 

@@ -1,0 +1,142 @@
+---
+# INFO: Why is there a _v1 suffix on amd64 builds?  https://goreleaser.com/customization/build/#why-is-there-a-_v1-suffix-on-amd64-builds
+project_name: dsv
+dist: .artifacts/goreleaser
+env:
+  - GITHUB_TOKEN='null' # required to bypass check as this tool integrates heavily with those systems
+  - GITLAB_TOKEN=''
+  - GITEA_TOKEN=''
+  - LOCAL_DEBUGGING=
+  - QUILL_SIGN_P12=
+  - QUILL_SIGN_PASSWORD=
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: dsv-darwin
+    binary: dsv
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    ldflags:
+      - -s -w
+      - -X thy/version.Version={{ .Summary }}
+      - -X thy/version.GitCommit={{ .FullCommit }}
+      - -X thy/version.BuildDate={{ .CommitDate }}
+    goos: [darwin]
+    goarch:
+      - amd64
+      - arm64
+    hooks:
+      post:
+        - cmd: quill sign "{{ .Path }}" --ad-hoc={{ .IsSnapshot }} -vv
+          env:
+            - QUILL_LOG_FILE=.cache/quill-{{ .Target }}.log
+            - QUILL_SIGN_P12={{ .Env.QUILL_SIGN_P12 }}
+            - QUILL_SIGN_P12_PASSWORD={{ .Env.QUILL_SIGN_PASSWORD }}
+  - id: dsv-linux
+    binary: dsv-{{ replace .Os "windows" "win" }}-{{ if eq .Arch "386" }}x86{{ else if eq .Arch "amd64" }}x64{{ else }}{{ .Arch }}{{end}}
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    ldflags:
+      - -s -w
+      - -X thy/version.Version={{ .Summary }}
+      - -X thy/version.GitCommit={{ .FullCommit }}
+      - -X thy/version.BuildDate={{ .CommitDate }}
+    goos: [linux]
+    goarch:
+      - amd64
+      - '386'
+  - id: dsv-windows
+    binary: dsv
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    ldflags:
+      - -s -w
+      - -X thy/version.Version={{ .Summary }}
+      - -X thy/version.GitCommit={{ .FullCommit }}
+      - -X thy/version.BuildDate={{ .CommitDate }}
+    goos: [windows]
+    goarch:
+      - amd64
+      - '386'
+archives:
+  # Name template is: 'dsv-{{ .Os }}-{{ .Arch }}',
+  # but we replace:
+  #     - "windows" with "win"
+  #     - "386" with "x86"
+  #     - "amd64" with "x64"
+  # Example: "dsv-windows-amd64.exe" -> "dsv-win-x64.exe"
+  - format: binary
+    name_template: dsv-{{ replace .Os "windows" "win" }}-{{ if eq .Arch "386" }}x86{{ else if eq .Arch "amd64" }}x64{{ else }}{{ .Arch }}{{end}}
+checksum:
+  name_template: '{{ .ProjectName }}-{{.Runtime.Goos}}-sha256.txt'
+  algorithm: sha256
+  disable: false
+  # ids:
+  #   - dsv-linux
+
+# signs:
+# - artifacts: checksum  # NOTE: Uses GPG to sign checksums by default
+# - id: signtool
+#   ids:
+#     - dsv-windows
+#   cmd: signtool
+#   args:
+#     [
+#       sign,
+#       /tr,
+#       http,
+#       //timestamp.digicert.com,
+#       /td,
+#       sha256,
+#       /fd,
+#       sha256,
+#       /sha1,
+#       668feb4178afea4d3c4ae833459b09c2bcf6b64e,
+#       '${artifact}',
+#     ]
+#   artifacts: binary
+# - id: codesign
+#   ids:
+#     - dsv-darwin
+#   cmd: codesign
+#   args: [-s, 'Thycotic Software', '${artifact}']
+#   artifacts: binary
+# - id: sign-darwin
+#   ids:
+#     - dsv-darwin
+#   cmd: quill
+#   args: [sign, '${artifact}']
+#   artifacts: binary
+
+release:
+  prerelease: auto
+  draft: true
+  mode: replace
+  skip_upload: false
+  replace_existing_draft: true
+  name_template: '{{.ProjectName}}-v{{.Version}}'
+
+sboms:
+  - artifacts: binary
+    documents:
+      - '${artifact}.{{.Runtime.Goos}}.spdx.sbom'
+changelog:
+  skip: false
+  sort: asc
+  use: github
+  groups:
+    - title: Features
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: 'Fixes'
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 1
+    - title: 'CI & Chore'
+      regexp: "^.*(fix|chore|build)[(\\w)]*:+.*$"
+      order: 2
+    - title: Others
+      order: 999
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^style:'
