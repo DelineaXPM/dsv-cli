@@ -28,6 +28,7 @@ builds:
       - arm64
     hooks:
       post:
+        # Quill tool is installed in environment by aqua.
         - cmd: quill sign "{{ .Path }}" --ad-hoc={{ .IsSnapshot }} -vv
           env:
             - QUILL_LOG_FILE=.cache/quill-{{ .Target }}.log
