@@ -1,19 +1,15 @@
 ---
 name: goreleaser-dsv-cli-$(why).$(Date:yyyyMMdd)-$(Rev:r)
+# Trigger the pipeline to release binaries only on the changelog being updated, using the same changie release process.
 pr:
-  autoCancel: true
-  drafts: false
+  false
+  # autoCancel: true
+  # drafts: false
 trigger:
   batch: true
-  branches:
-    include:
-      - feat/448642/*
   paths:
-    exclude:
-      - .devcontainer/*
-      - .github/*
-      - '*.md'
-      - '**/*.md'
+    include:
+      - CHANGELOG.md
 parameters:
   - name: TIMEOUT_MIN
     type: number
