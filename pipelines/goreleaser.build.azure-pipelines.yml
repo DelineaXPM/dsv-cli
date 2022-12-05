@@ -2,7 +2,10 @@
 name: goreleaser-dsv-cli-$(why).$(Date:yyyyMMdd)-$(Rev:r)
 # Trigger the pipeline to release binaries only on the changelog being updated, using the same changie release process.
 pr:
-  false
+  autoCancel: true
+  drafts: false
+  branches:
+    include: [] # not including anything right now
   # autoCancel: true
   # drafts: false
 trigger:
@@ -36,14 +39,14 @@ jobs:
           friendlyName: dsv-cli-linux
           imageName: ubuntu-latest
         # TODO: RENABLE THIS
-        mac:
-          friendlyName: dsv-cli-darwin
-          imageName: macOS-latest
-          demands: xcode
-        windows:
-          friendlyName: dsv-cli-windows
-          imageName: windows-latest
-          demands: xcode
+        # mac:
+        #   friendlyName: dsv-cli-darwin
+        #   imageName: macOS-latest
+        #   demands: xcode
+        # windows:
+        #   friendlyName: dsv-cli-windows
+        #   imageName: windows-latest
+        #   demands: xcode
 
     timeoutInMinutes: ${{ parameters.TIMEOUT_MIN }}
     pool:
@@ -63,13 +66,8 @@ jobs:
         fetchDepth: 0
         path: $(Build.Repository.Name)
         persistCredentials: true
-      - task: InstallAppleCertificate@2
-        displayName: macos-install-cert-to-keychain
-        condition: eq(variables['Agent.OS'], 'Darwin') # 👉 DARWIN ONLY
-        inputs:
-          certSecureFile: $(certSecureFile)
-          certPwd: $(cert.password)
-          setUpPartitionIdACLForPrivateKey: false
+
+      # Grab The Cert for Signing
       - task: thycotic-software.thycotic-dsv-task.thycotic-dsv-build-release-task.ThycoticDSV@0
         displayName: retrieve-cert-for-signing-code
         inputs:
@@ -77,6 +75,20 @@ jobs:
           ClientId: $(ClientId)
           ClientSecret: $(ClientSecret)
           SecretPath: ado/cli
+      - task: DownloadSecureFile@1
+        name: signCert
+        displayName: download-cert
+        inputs:
+          secureFile: $(certSecureFile)
+      # NOT REQUIRED ANYMORE: Using Quill for cross platform signing capability
+      # - task: InstallAppleCertificate@2
+      #   displayName: macos-install-cert-to-keychain
+      #   condition: eq(variables['Agent.OS'], 'Darwin') # 👉 DARWIN ONLY
+      #   inputs:
+      #     certSecureFile: $(certSecureFile)
+      #     certPwd: $(cert.password)
+      #     setUpPartitionIdACLForPrivateKey: false
+
       - task: GoTool@0
         displayName: install-go-$(GO_VERSION)
         # aqua will replace later, but this prevents prior conflicts with Windows using the Go install commands.
@@ -204,10 +216,14 @@ jobs:
         env:
           CERT_PASSWORD: $(cert.password)
           CERT_SECURE_FILE: $(certSecureFile)
+
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
           GOROOT: $(goenv.GOROOT)
           GITHUB_TOKEN: $(GITHUB_TOKEN)
           GOPATH: $(GOPATH)
+
+          QUILL_SIGN_P12: $(certSecureFile) # TODO: rename to p12 from pfx in script if required
+          QUILL_SIGN_PASSWORD: $(cert.password)
       - task: PublishBuildArtifacts@1
         displayName: 'Build Artifact: PRTestBuilds'
         inputs:
