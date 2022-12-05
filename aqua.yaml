@@ -28,3 +28,5 @@ packages:
     tags: ['ci']
   - name: thycotic/dsv-cli@1.39.0
     tags: ['ci']
+  - name: anchore/quill@v0.2.0
+    tags: ['ci']
