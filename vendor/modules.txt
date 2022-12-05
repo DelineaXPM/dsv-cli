@@ -291,7 +291,7 @@ github.com/pmezard/go-difflib/difflib
 github.com/posener/complete
 github.com/posener/complete/cmd
 github.com/posener/complete/cmd/install
-# github.com/pterm/pterm v0.12.49
+# github.com/pterm/pterm v0.12.50
 ## explicit; go 1.18
 github.com/pterm/pterm
 github.com/pterm/pterm/internal
