@@ -12,6 +12,7 @@ env:
   - COSIGN_PASSWORD={{ if index .Env "COSIGN_PASSWORD" }}{{ .Env.COSIGN_PASSWORD }}{{else}}{{end}}
   - COSIGN_KEY={{ .Env.COSIGN_KEY }}
   - DOCKER_CLI_EXPERIMENTAL=enabled
+  - S3_BUCKET={{ if index .Env "S3_BUCKET" }}{{ .Env.S3_BUCKET }}{{else}}{{end}}
 before:
   hooks:
     - go mod download
@@ -146,7 +147,7 @@ release:
   name_template: '{{.ProjectName}} - v{{.Version}}'
   extra_files:
     - glob: .artifacts/goreleaser/**/*.sig
-    - glob: .artifacts/cli-versions.json
+    - glob: .artifacts/cli-version.json
 
 sboms:
   - artifacts: binary
@@ -176,3 +177,15 @@ changelog:
       - '^docs:'
       - '^test:'
       - '^style:'
+# .goreleaser.yaml
+blobs:
+  # Binaries, signatures, and SBOMs
+  - provider: s3
+    region: us-east-1
+    disableSSL: true
+    bucket: '{{ .Env.S3_BUCKET }}'
+    folder: 'cli/{{.Version}}'
+    extra_files:
+      - glob: .artifacts/goreleaser/**/*.sig
+      # - glob: .artifacts/cli-version.json
+      #   name_template: cli-version.json # note that this only works if glob matches 1 file only

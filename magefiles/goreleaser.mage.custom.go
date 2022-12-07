@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -14,6 +15,10 @@ import (
 	"github.com/magefile/mage/sh"
 	"github.com/pterm/pterm"
 	"github.com/sheldonhull/magetools/pkg/magetoolsutils"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 // Build contains mage tasks specific to building without a release.
@@ -97,7 +102,10 @@ func (Build) All() error {
 // 🔨 All generates a release with goreleaser. This does the whole shebang, including build, publish, and notify.
 func (Release) All() error {
 	magetoolsutils.CheckPtermDebug()
-
+	// opting to always remove after running release to avoid possible non-snapshot artifact persisting.
+	defer func() {
+		_ = sh.Rm(constants.TargetCLIVersionArtifact)
+	}()
 	// TODO: this will be checked once we publish cli to github
 	// if _, err := checkEnvVar("DOCKER_ORG", true); err != nil {
 	// 	return err
@@ -125,12 +133,16 @@ func (Release) All() error {
 	}
 	pterm.Debug.Printfln("goreleaser: %+v", releaserArgs)
 
-	return sh.RunWithV(map[string]string{
+	if err := sh.RunWithV(map[string]string{
 		"GORELEASER_CURRENT_TAG": cleanVersion,
 	},
 		"goreleaser",
 		releaserArgs...,
-	)
+	); err != nil {
+		return err
+	}
+	pterm.Println("(Release).All() completed successfully")
+	return nil
 }
 
 // getGoreleaserConfig returns the path to the goreleaser config file based on the current OS.
@@ -158,7 +170,6 @@ func (Release) GenerateCLIVersionFile() error {
 	magetoolsutils.CheckPtermDebug()
 
 	urlBase := "https://dsv.secretsvaultcloud.com/downloads/cli/%s/%s"
-	targetJSONFile := filepath.Join(constants.ArtifactDirectory, "cli-versions.json")
 	releaseVersion, _, err := getVersion()
 	if err != nil {
 		return err
@@ -193,7 +204,7 @@ func (Release) GenerateCLIVersionFile() error {
 	}
 
 	// Write the json file.
-	jf, err := os.Create(targetJSONFile)
+	jf, err := os.Create(constants.TargetCLIVersionArtifact)
 	if err != nil {
 		pterm.Error.Printfln("error creating json file: %v", err)
 		return err
@@ -226,4 +237,52 @@ func getVersion() (releaseVersion, cleanPath string, err error) {
 		cleanPath = filepath.Join(os.Getenv("GITHUB_WORKSPACE"), ".changes", cleanVersion+".md")
 	}
 	return cleanVersion, cleanPath, nil
+}
+
+// UploadCLIVersion uploads the cli-versions.json file to the secrets s3 bucket.
+func (Release) UploadCLIVersion() error {
+	// BucketInQuestion contains S3Client, an Amazon S3 service client that is used to perform bucket
+	// and object actions.
+	//
+	// Example from aws https://github.com/awsdocs/aws-doc-sdk-examples/blob/f45333bde292926451ba626e17be1c6a49c037f6/gov2/s3/actions/bucket_basics.go#LL103-L120
+	mg.Deps(Release{}.GenerateCLIVersionFile)
+	type BucketInQuestion struct {
+		S3Client *s3.Client
+	}
+
+	// Load the Shared AWS Configuration (~/.aws/config)
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(constants.AWSDefaultS3Region))
+	if err != nil {
+		return err
+	}
+	bucket := BucketInQuestion{
+		S3Client: s3.NewFromConfig(cfg),
+	}
+	file, err := os.Open(constants.TargetCLIVersionArtifact)
+	if err != nil {
+		pterm.Error.Printfln("Couldn't open file %v to upload. Here's why: %v", constants.TargetCLIVersionArtifact, err)
+		return err
+	} else {
+		defer file.Close()
+		_, err := bucket.S3Client.PutObject(context.TODO(), &s3.PutObjectInput{
+			Bucket: aws.String(os.Getenv("S3_BUCKET")),
+			Key:    aws.String(constants.S3CLIVersionPath),
+			Body:   file,
+		})
+		if err != nil {
+			pterm.Error.Printfln("Couldn't upload file %v to %v:%v. Here's why: %v",
+				constants.TargetCLIVersionArtifact,
+				os.Getenv("S3_BUCKET"), constants.S3CLIVersionPath,
+				err,
+			)
+			return err
+		}
+	}
+	pterm.Success.Printfln("(Release) successfully uploaded file %v to %v:%v",
+		constants.TargetCLIVersionArtifact,
+		os.Getenv("S3_BUCKET"), constants.S3CLIVersionPath,
+	)
+	return err
+
+	return nil
 }
