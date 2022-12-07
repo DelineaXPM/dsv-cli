@@ -30,3 +30,8 @@ packages:
     tags: ['ci']
   - name: anchore/quill@v0.2.0
     tags: ['ci']
+  - name: anchore/grype@v0.53.1
+  - name: sigstore/sget
+    version: 'main'
+    tags: ['experimental', 'goinstall']
+  - name: charmbracelet/vhs@v0.2.0

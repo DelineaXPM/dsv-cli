@@ -2,15 +2,25 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 
+	"github.com/DelineaXPM/dsv-cli/magefiles/constants"
+	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 	"github.com/pterm/pterm"
 	"github.com/sheldonhull/magetools/pkg/magetoolsutils"
+)
+
+// Build contains mage tasks specific to building without a release.
+type (
+	Build mg.Namespace
+	// Release contains mage tasks specific to the release process, including upload of assets to s3, github, etc.
+	Release mg.Namespace
 )
 
 func checkEnvVar(varName string, tbl pterm.TableData, isSecret bool, notes string) (string, bool, pterm.TableData) {
@@ -52,42 +62,29 @@ func checkEnvVar(varName string, tbl pterm.TableData, isSecret bool, notes strin
 // 	return envVarValue, nil
 // }
 
-// 🔨 Build builds the project for the current platform.
-func Build() error {
+// 🔨 Single builds the project for the current platform.
+func (Build) Single() error {
 	magetoolsutils.CheckPtermDebug()
-
-	configfile, err := getGoreleaserConfig()
-	if err != nil {
-		return err
-	}
 	releaserArgs := []string{
 		"build",
 		"--rm-dist",
 		"--snapshot",
 		"--single-target",
-		"--config", configfile,
 	}
 	pterm.Debug.Printfln("goreleaser: %+v", releaserArgs)
 
 	return sh.RunV("goreleaser", releaserArgs...) // "--skip-announce",.
 }
 
-// 🔨 BuildAll builds all the binaries defined in the project, for all platforms. This includes Docker image generation but skips publish.
+// 🔨 All builds all the binaries defined in the project, for all platforms. This includes Docker image generation but skips publish.
 // If there is no additional platforms configured in the task, then basically this will just be the same as `mage build`.
-func BuildAll() error {
+func (Build) All() error {
 	magetoolsutils.CheckPtermDebug()
-
-	configfile, err := getGoreleaserConfig()
-	if err != nil {
-		return err
-	}
-
 	releaserArgs := []string{
 		"release",
 		"--snapshot",
 		"--rm-dist",
 		"--skip-publish",
-		"--config", configfile,
 	}
 	pterm.Debug.Printfln("goreleaser: %+v", releaserArgs)
 	return sh.RunV("goreleaser", releaserArgs...)
@@ -97,14 +94,16 @@ func BuildAll() error {
 	// }, binary, releaserArgs...)
 }
 
-// 🔨 Release generates a release for the current platform.
-func Release() error {
+// 🔨 All generates a release with goreleaser. This does the whole shebang, including build, publish, and notify.
+func (Release) All() error {
 	magetoolsutils.CheckPtermDebug()
 
 	// TODO: this will be checked once we publish cli to github
 	// if _, err := checkEnvVar("DOCKER_ORG", true); err != nil {
 	// 	return err
 	// }
+	// Run any dependent tasks first.
+	mg.SerialDeps(Release{}.GenerateCLIVersionFile)
 
 	releaseVersion, err := sh.Output("changie", "latest")
 	if err != nil {
@@ -116,18 +115,13 @@ func Release() error {
 	if os.Getenv("GITHUB_WORKSPACE") != "" {
 		cleanpath = filepath.Join(os.Getenv("GITHUB_WORKSPACE"), ".changes", cleanVersion+".md")
 	}
-
-	configfile, err := getGoreleaserConfig()
-	if err != nil {
-		return err
-	}
+	// NOTE: Merging all of this into a single goreleaser, not per-platform anymore.
 
 	releaserArgs := []string{
 		"release",
 		"--rm-dist",
 		"--skip-validate",
 		fmt.Sprintf("--release-notes=%s", cleanpath),
-		"--config", configfile,
 	}
 	pterm.Debug.Printfln("goreleaser: %+v", releaserArgs)
 
@@ -157,4 +151,79 @@ func getGoreleaserConfig() (string, error) {
 	}
 	pterm.Info.Printfln("using config file: %s", configfile)
 	return configfile, nil
+}
+
+// GenerateCLIVersionFile generates a json object with an array of the containing a list of all the artifact versions and their links based on our standard download url.
+func (Release) GenerateCLIVersionFile() error {
+	magetoolsutils.CheckPtermDebug()
+
+	urlBase := "https://dsv.secretsvaultcloud.com/downloads/cli/%s/%s"
+	targetJSONFile := filepath.Join(constants.ArtifactDirectory, "cli-versions.json")
+	releaseVersion, _, err := getVersion()
+	if err != nil {
+		return err
+	}
+	// Links is the url for all the assets published.
+	//nolint:tagliatelle // this is specifically what the CLI requires.
+	type Links struct {
+		DarwinAmd64  string `json:"darwin/amd64"`
+		DarwinArm64  string `json:"darwin/arm64"`
+		LinuxAmd64   string `json:"linux/amd64"`
+		Linux386     string `json:"linux/386"`
+		WindowsAmd64 string `json:"windows/amd64"`
+		Windows386   string `json:"windows/386"`
+	}
+
+	// cliVersions is the struct that will be turned into a json file.
+	type cliVersions struct {
+		Latest string `json:"latest"`
+		Links  Links  `json:"links"`
+	}
+
+	newJSON := cliVersions{
+		Latest: releaseVersion,
+		Links: Links{
+			DarwinAmd64:  fmt.Sprintf(urlBase, releaseVersion, "darwin-amd64"),
+			DarwinArm64:  fmt.Sprintf(urlBase, releaseVersion, "darwin-arm64"),
+			LinuxAmd64:   fmt.Sprintf(urlBase, releaseVersion, "linux-amd64"),
+			Linux386:     fmt.Sprintf(urlBase, releaseVersion, "linux-x86"),
+			WindowsAmd64: fmt.Sprintf(urlBase, releaseVersion, "windows-amd64"),
+			Windows386:   fmt.Sprintf(urlBase, releaseVersion, "windows-x86"),
+		},
+	}
+
+	// Write the json file.
+	jf, err := os.Create(targetJSONFile)
+	if err != nil {
+		pterm.Error.Printfln("error creating json file: %v", err)
+		return err
+	}
+
+	b, err := json.MarshalIndent(newJSON, "", "  ")
+	if err != nil {
+		pterm.Error.Printfln("error marshaling json: %v", err)
+		return err
+	}
+	if _, err := jf.Write(b); err != nil {
+		pterm.Error.Printfln("error writing json file: %v", err)
+		return err
+	}
+	pterm.Success.Printfln("json file written: %s", jf.Name())
+
+	return nil
+}
+
+// getVersion returns the version and path for the changefile to use for the semver and release notes.
+func getVersion() (releaseVersion, cleanPath string, err error) {
+	releaseVersion, err = sh.Output("changie", "latest")
+	if err != nil {
+		pterm.Error.Printfln("changie pulling latest release note version failure: %v", err)
+		return "", "", err
+	}
+	cleanVersion := strings.TrimSpace(releaseVersion)
+	cleanPath = filepath.Join(".changes", cleanVersion+".md")
+	if os.Getenv("GITHUB_WORKSPACE") != "" {
+		cleanPath = filepath.Join(os.Getenv("GITHUB_WORKSPACE"), ".changes", cleanVersion+".md")
+	}
+	return cleanVersion, cleanPath, nil
 }

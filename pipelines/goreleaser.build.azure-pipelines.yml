@@ -76,10 +76,17 @@ jobs:
           ClientSecret: $(ClientSecret)
           SecretPath: ado/cli
       - task: DownloadSecureFile@1
-        name: signCert
-        displayName: download-cert
+        name: downloadCertPFXFormat
+        displayName: download-cert-pfx-format
         inputs:
           secureFile: $(certSecureFile)
+
+      # used for cosign based signature
+      - task: DownloadSecureFile@1
+        name: downloadCertKeyFormat
+        displayName: download-cert-key-format
+        inputs:
+          secureFile: $(secureFileKeyFormat)
       # NOT REQUIRED ANYMORE: Using Quill for cross platform signing capability
       # - task: InstallAppleCertificate@2
       #   displayName: macos-install-cert-to-keychain
@@ -215,15 +222,19 @@ jobs:
         failOnStderr: false
         env:
           CERT_PASSWORD: $(cert.password)
-          CERT_SECURE_FILE: $(certSecureFile)
+          CERT_SECURE_FILE: $(downloadCertPFXFormat.secureFilePath)
 
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
           GOROOT: $(goenv.GOROOT)
           GITHUB_TOKEN: $(GITHUB_TOKEN)
           GOPATH: $(GOPATH)
 
-          QUILL_SIGN_P12: $(certSecureFile) # TODO: rename to p12 from pfx in script if required
+          QUILL_SIGN_P12: $(downloadCertPFXFormat.secureFilePath) # pfx format is the same as p12
           QUILL_SIGN_PASSWORD: $(cert.password)
+
+          COSIGN_PASSWORD: $(cert.password)
+          COSIGN_KEY: $(downloadCertKeyFormat.secureFilePath)
+
       - task: PublishBuildArtifacts@1
         displayName: 'Build Artifact: PRTestBuilds'
         inputs:

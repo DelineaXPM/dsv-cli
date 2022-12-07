@@ -4,11 +4,15 @@
 package main
 
 import (
+	"os"
 	"runtime"
 	"strings"
 	"time"
 
+	"github.com/DelineaXPM/dsv-cli/magefiles/constants"
 	"github.com/dustin/go-humanize"
+	"github.com/magefile/mage/mg"
+	"github.com/magefile/mage/sh"
 	"github.com/pterm/pterm"
 	"github.com/sheldonhull/magetools/ci"
 	"github.com/sheldonhull/magetools/pkg/magetoolsutils"
@@ -25,6 +29,50 @@ import (
 // relTime returns just a simple relative time humanized, without the "ago" suffix.
 func relTime(t time.Time) string {
 	return strings.ReplaceAll(humanize.Time(t), " ago", "")
+}
+
+// createDirectories creates the local working directories for build artifacts and tooling.
+func createDirectories() error {
+	magetoolsutils.CheckPtermDebug()
+	for _, dir := range []string{constants.ArtifactDirectory} {
+		if err := os.MkdirAll(dir, constants.PermissionUserReadWriteExecute); err != nil {
+			pterm.Error.Printf("failed to create dir: [%s] with error: %v\n", dir, err)
+
+			return err
+		}
+		pterm.Success.Printf("✅ [%s] dir created\n", dir)
+	}
+
+	return nil
+}
+
+// 🧹 Clean up after yourself, artifacts removed, but cache preserved.
+func Clean() {
+	magetoolsutils.CheckPtermDebug()
+	pterm.Info.Println("Cleaning...")
+	for _, dir := range []string{constants.ArtifactDirectory} {
+		err := sh.Rm(dir)
+		if err != nil {
+			pterm.Error.Printf("failed to removeall: [%s] with error: %v\n", dir, err)
+		}
+		pterm.Success.Printf("🧹 [%s] dir removed\n", dir)
+	}
+	mg.Deps(createDirectories)
+}
+
+// 🧹 DeepClean removes both artifacts and cache directory contents.
+// Use this when you want to start over including any locally cached certs, files, or other things that normally you'd preserve between test runs.
+func DeepClean() {
+	magetoolsutils.CheckPtermDebug()
+	pterm.Info.Println("🔥 Deep Cleaning...")
+	for _, dir := range []string{constants.ArtifactDirectory, constants.CacheDirectory} {
+		err := sh.Rm(dir)
+		if err != nil {
+			pterm.Error.Printf("failed to removeall: [%s] with error: %v\n", dir, err)
+		}
+		pterm.Success.Printf("🧹 [%s] dir removed\n", dir)
+	}
+	mg.Deps(createDirectories)
 }
 
 func Init() error {
