@@ -282,7 +282,5 @@ func (Release) UploadCLIVersion() error {
 		constants.TargetCLIVersionArtifact,
 		os.Getenv("S3_BUCKET"), constants.S3CLIVersionPath,
 	)
-	return err
-
 	return nil
 }

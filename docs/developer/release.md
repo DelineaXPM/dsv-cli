@@ -27,7 +27,7 @@ Keep your summary of changes that users would care about in the `.changes/` file
 
 ### Release
 
-Update [CHANGELOG.md](CHANGELOG.md) by running `changie merge` which will rebuild the changelog file with all the documented notes.
+Update [CHANGELOG.md](../../CHANGELOG.md) by running `changie merge` which will rebuild the changelog file with all the documented notes.
 
 ## FAQ
 
