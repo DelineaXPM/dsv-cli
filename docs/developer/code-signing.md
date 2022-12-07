@@ -34,6 +34,7 @@ The two keys required for the signed binaries:
 For visually verifying signing you can install: `brew install whatsyoursign` and then run `open '/usr/local/Caskroom/whatsyoursign/2.0.1/WhatsYourSign Installer.app'` or whatever version you find.
 This will add a Finder button when right-clicking that is called "Signing Info" and provide a visual way to look at the signing information on a Mac system.
 
+<!-- trunk-ignore(markdownlint/MD033) -->
 <details closed>
 <!-- trunk-ignore(markdownlint/MD033) -->
 <summary>ℹ️ Deprecated Codesign Details</summary>
