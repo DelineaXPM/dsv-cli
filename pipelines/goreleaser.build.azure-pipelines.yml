@@ -6,8 +6,7 @@ pr:
   drafts: false
   branches:
     include: [] # not including anything right now
-  # autoCancel: true
-  # drafts: false
+    exclude: ['*']
 trigger:
   batch: true
   paths:
@@ -28,6 +27,7 @@ variables:
   - group: 'CLi-pipeline-variables' # TODO: replace with dsv cli calls
   - group: 'CLI End-to-End tests' # TODO: replace with dsv cli calls
   - group: GITHUB # to avoid api rate issues
+  - group: AWS-DSV-CLI-PROD # for AWS asset upload
   - template: templates/vars.common.yml
 
 jobs:
