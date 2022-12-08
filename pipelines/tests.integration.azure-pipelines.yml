@@ -222,11 +222,11 @@ jobs:
           # ORPHANED_CLIENT_SECRET: $(ORPHANED_CLIENT_SECRET)
           # ORPHANED_USER_PASSWORD: $(ORPHANED_USER_PASSWORD)
           # ORPHANED_USER1_PASSWORD: $(ORPHANED_USER1_PASSWORD)
+          # USER1_NAME: $(USER1_NAME)
 
           ## Other config values just for clarity
           TEST_TENANT: $(TEST_TENANT)
           USER_NAME: $(USER_NAME)
-          USER1_NAME: $(USER1_NAME)
 
           LOCAL_DOMAIN: $(LOCAL_DOMAIN)
           DEV_DOMAIN: $(DEV_DOMAIN)

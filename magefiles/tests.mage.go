@@ -116,10 +116,11 @@ func (Test) Integration() error {
 	if err != nil {
 		errorCount++
 	}
-	_, tbl, err = checkEnvVar(checkEnv{Name: "USER_NAME1", IsSecret: false, IsRequired: true, Tbl: tbl, Notes: "required environment variable"})
-	if err != nil {
-		errorCount++
-	}
+	// Not used in this repos test, maybe robot?
+	// _, tbl, err = checkEnvVar(checkEnv{Name: "USER_NAME1", IsSecret: false, IsRequired: true, Tbl: tbl, Notes: "required environment variable"})
+	// if err != nil {
+	// 	errorCount++
+	// }
 	_, tbl, err = checkEnvVar(checkEnv{Name: "LOCAL_DOMAIN", IsSecret: false, IsRequired: true, Tbl: tbl, Notes: "required environment variable"})
 	if err != nil {
 		errorCount++
