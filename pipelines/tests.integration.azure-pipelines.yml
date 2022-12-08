@@ -185,8 +185,8 @@ jobs:
           Write-Host ('[mage] binary: {0} version: {1}' -f $(Get-Command mage -ErrorAction SilentlyContinue).Path, [string]$(mage -version)) -ForegroundColor Gray
           Write-Host ('[changie] binary: {0} version: {1}' -f $(Get-Command changie -ErrorAction SilentlyContinue).Path, [string]$(changie --version)) -ForegroundColor Gray
           Write-Host "Changie Detected Version: [$(changie latest)]"
-          &mage build
-        displayName: mage build
+          &mage build:single
+        displayName: mage build:single
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
         failOnStderr: false
         env:
