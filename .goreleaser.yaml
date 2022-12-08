@@ -19,7 +19,7 @@ before:
 
 builds:
   - id: dsv-darwin
-    binary: &build-binary-name-template dsv-{{ replace .Os "windows" "win" }}-{{ if eq .Arch "386" }}x86{{ else }}{{ .Arch }}{{end}}
+    binary: &build-binary-name-template dsv-{{ replace .Os "windows" "win" }}-{{ if eq .Arch "386" }}x86{{ else if eq .Arch "amd64" }}x64{{ else }}{{ .Arch }}{{end}}
     mod_timestamp: '{{ .CommitTimestamp }}'
     ldflags:
       - -s -w

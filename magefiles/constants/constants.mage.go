@@ -20,4 +20,7 @@ const (
 
 	// AWSDefaultS3Region is the default region for S3 buckets, at this time a single configured value for us-east-1.
 	AWSDefaultS3Region = "us-east-1"
+
+	// Download URL base for replacement in other generation of the cli-version file.
+	DownloadURLFString = "https://dsv.secretsvaultcloud.com/downloads/cli/%s/%s"
 )
