@@ -14,9 +14,9 @@ Testing currently is covered in three layers.
   - A newer approach is implemented in "tests/e2e" directory.
     It supports testing workflows/wizards.
 
-### Coverage
-
 ### CICD Integration Tests
+
+To invoke, all the required environment vars are checked and correct flags are passed via: `mage test:integration`.
 
 Two important notes for "cicd-integration" tests:
 

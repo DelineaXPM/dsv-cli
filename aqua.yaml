@@ -35,3 +35,5 @@ packages:
     version: 'main'
     tags: ['experimental', 'goinstall']
   - name: charmbracelet/vhs@v0.2.0
+  - name: gotestyourself/gotestsum@v1.8.2
+    tags: ['ci']

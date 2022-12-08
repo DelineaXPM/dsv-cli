@@ -60,16 +60,15 @@ const (
 
 // Vars managed by TestMain function.
 var (
-	binPath    = ""
-	tmpDirPath = ""
-	covDirPath = ""
+	binPath                 = ""
+	tmpDirPath              = ""
+	targetArtifactDirectory = ""
 )
 
 func TestMain(m *testing.M) {
 	workDir, err := os.Getwd()
 
-	targetArtifactDirectory := filepath.Join("..", "..", ".artifacts", "coverage", "e2e")
-	outfile := filepath.Join(targetArtifactDirectory, tt.name+"coverage.out")
+	targetArtifactDirectory = filepath.Join("..", "..", ".artifacts", "coverage", "e2e")
 	if _, err := os.Stat(targetArtifactDirectory); os.IsNotExist(err) {
 		err = os.MkdirAll(targetArtifactDirectory, 0o755)
 	}
@@ -122,16 +121,15 @@ func TestMain(m *testing.M) {
 	fmt.Fprintf(os.Stderr, "[TestMain] Temp directory path: %s.\n", tmpDirPath)
 
 	// Coverage directory.
-	covDirPath = filepath.Join(workDir, ".artifacts", "coverage")
-	fmt.Fprintf(os.Stderr, "[TestMain] Coverage directory path: %s.\n", covDirPath)
+	fmt.Fprintf(os.Stderr, "[TestMain] Coverage directory path: %s.\n", targetArtifactDirectory)
 	fmt.Fprintln(os.Stderr, "[TestMain] Removing directory with old coverage data.")
-	err = os.RemoveAll(covDirPath)
+	err = os.RemoveAll(targetArtifactDirectory)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[TestMain] Error: Failed to delete directory with old coverage data: %v.\n", err)
 		os.Exit(1)
 	}
 	fmt.Fprintln(os.Stderr, "[TestMain] Creating directory where new coverage data will be collected.")
-	err = os.Mkdir(covDirPath, 0o755)
+	err = os.Mkdir(targetArtifactDirectory, 0o755)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[TestMain] Error: Failed to create directory for coverage data: %v.\n", err)
 		os.Exit(1)
@@ -260,7 +258,7 @@ func prepCmd(t *testing.T, args []string) *exec.Cmd {
 	} else {
 		covName = fmt.Sprintf("%s-%d.out", args[0], time.Now().UnixNano())
 	}
-	covPath := filepath.Join(covDirPath, covName)
+	covPath := filepath.Join(targetArtifactDirectory, covName)
 	t.Logf("Coverage report: %s", covPath)
 	binArgs := append(
 		[]string{

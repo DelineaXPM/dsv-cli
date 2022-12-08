@@ -9,6 +9,8 @@ import (
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 	"github.com/pterm/pterm"
+
+	"github.com/sheldonhull/magetools/pkg/req"
 )
 
 // &mage go:testsum ./tests/e2e/...
@@ -58,6 +60,7 @@ type Test mg.Namespace
 
 func (Test) Integration() error {
 	var err error
+
 	// track total failing conditions and report back.
 	var errorCount int
 	tbl := pterm.TableData{
@@ -135,10 +138,18 @@ func (Test) Integration() error {
 		return fmt.Errorf("terminating task since errorCount '%d' exceeds 0", errorCount)
 	}
 
+	gotestsum, err := req.ResolveBinaryByInstall("gotestsum", "gotest.tools/gotestsum@latest")
+	if err != nil {
+		pterm.Error.WithShowLineNumber(true).
+			WithLineNumberOffset(1).
+			Printfln("unable to find %s: %v", "gotestsum", err)
+		return err
+	}
+
 	return sh.RunWithV(map[string]string{
 		"GO_INTEGRATION_TEST": "1",
 	},
-		"gotestsum",
+		gotestsum,
 		"--format", "pkgname",
 		// normal test args go after the dash dash. Args before this are for gotestsum.
 		"--",
