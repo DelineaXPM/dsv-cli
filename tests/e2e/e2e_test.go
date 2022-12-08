@@ -67,6 +67,12 @@ var (
 
 func TestMain(m *testing.M) {
 	workDir, err := os.Getwd()
+
+	targetArtifactDirectory := filepath.Join("..", "..", ".artifacts", "coverage", "e2e")
+	outfile := filepath.Join(targetArtifactDirectory, tt.name+"coverage.out")
+	if _, err := os.Stat(targetArtifactDirectory); os.IsNotExist(err) {
+		err = os.MkdirAll(targetArtifactDirectory, 0o755)
+	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[TestMain] Unable to determine working directory: %v.\n", err)
 		os.Exit(1)
@@ -116,7 +122,7 @@ func TestMain(m *testing.M) {
 	fmt.Fprintf(os.Stderr, "[TestMain] Temp directory path: %s.\n", tmpDirPath)
 
 	// Coverage directory.
-	covDirPath = filepath.Join(workDir, "coverage")
+	covDirPath = filepath.Join(workDir, ".artifacts", "coverage")
 	fmt.Fprintf(os.Stderr, "[TestMain] Coverage directory path: %s.\n", covDirPath)
 	fmt.Fprintln(os.Stderr, "[TestMain] Removing directory with old coverage data.")
 	err = os.RemoveAll(covDirPath)
