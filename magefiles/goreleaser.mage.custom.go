@@ -28,24 +28,47 @@ type (
 	Release mg.Namespace
 )
 
-func checkEnvVar(varName string, tbl pterm.TableData, isSecret bool, notes string) (string, bool, pterm.TableData) {
-	var value, valueOfVar string
-	var isSet bool
+// checkEnv is the struct to pass into the checkEnvVar function to check and validate the environment variables.
+// This builds a nice table summary when used to help summarize all the failed checks rather than doing this piecemeal.
+type checkEnv struct {
+	Name       string
+	IsSecret   bool
+	IsRequired bool
+	Tbl        pterm.TableData
+	Notes      string
+}
 
-	value, isSet = os.LookupEnv(varName)
+// checkEnvVar performs a check on environment variable and helps build a report summary of the failing conditions, missing variables, and bypasses logging if it's a secret.
+// Yes this could be replaced by the `env` package but I had this in place and the output is nice for debugging so I left it. - Sheldon 😀
+func checkEnvVar(ck checkEnv) (string, pterm.TableData, error) {
+	// loggedValue is used to make sure any secret isn't put into the table output.
+	var value, loggedValue string
+	var isSet bool
+	tbl := ck.Tbl
+	value, isSet = os.LookupEnv(ck.Name)
+
+	if ck.IsSecret {
+		loggedValue = "***** secret set, but not logged *****"
+	} else {
+		loggedValue = value
+	}
+
+	// Required but not set is an error condition to report back to the user.
+	if !isSet && ck.IsRequired {
+		tbl = append(ck.Tbl, []string{"❌", ck.Name, loggedValue, ck.Notes})
+		return "", tbl, fmt.Errorf("%s is required and not set", ck.Name)
+	}
+	// Required but not a terminating error, then just put as information different from success, and no error.
+	if !isSet && !ck.IsRequired {
+		tbl = append(ck.Tbl, []string{"👉", ck.Name, loggedValue, ck.Notes})
+		return value, tbl, nil
+	}
 
 	if isSet {
-		if isSecret {
-			valueOfVar = "***** secret set, but not logged *****"
-		} else {
-			valueOfVar = value
-		}
-
-		tbl = append(tbl, []string{"✅", varName, valueOfVar, notes})
-		return value, true, tbl
+		tbl = append(ck.Tbl, []string{"✅", ck.Name, loggedValue, ck.Notes})
+		return value, tbl, nil
 	}
-	tbl = append(tbl, []string{"❌", varName, valueOfVar, notes})
-	return "", false, tbl
+	return "", tbl, fmt.Errorf("unknown error (no conditions were hit so it's a PEKAB issue 😁) with evaluation of: %s", ck.Name)
 }
 
 // func checkEnvVar(envVar string, required bool) (string, error) { //nolint:unused // leaving this as will use in future releases

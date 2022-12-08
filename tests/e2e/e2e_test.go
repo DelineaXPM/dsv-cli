@@ -21,7 +21,7 @@ import (
 )
 
 const info = `
- ______ ___  ______ 
+ ______ ___  ______
 |  ____|__ \|  ____|        Go version:  %s
 | |__     ) | |__           OS/Arch:     %s/%s
 |  __|   / /|  __|          Working dir: %s
@@ -95,6 +95,7 @@ func TestMain(m *testing.M) {
 
 	// Binary.
 	fmt.Fprintln(os.Stderr, "[TestMain] Compiling test binary.")
+	// compile (-c) the test binary with coverage enabled (-covermode=count)
 	cmd := exec.Command("go", "test", "-c", "-covermode=count", "-coverpkg=./...", "-o=./tests/e2e/dsv.test")
 	cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
 	cmd.Dir = filepath.Join(workDir, "..", "..")
@@ -124,7 +125,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 	fmt.Fprintln(os.Stderr, "[TestMain] Creating directory where new coverage data will be collected.")
-	err = os.Mkdir(covDirPath, 0755)
+	err = os.Mkdir(covDirPath, 0o755)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[TestMain] Error: Failed to create directory for coverage data: %v.\n", err)
 		os.Exit(1)

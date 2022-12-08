@@ -24,3 +24,12 @@ const (
 	// Download URL base for replacement in other generation of the cli-version file.
 	DownloadURLFString = "https://dsv.secretsvaultcloud.com/downloads/cli/%s/%s"
 )
+
+// Testing Constants
+const (
+	// E2EDirectoryTestPath is the relative path to the e2e tests.
+	E2EDirectoryTestPath = "./tests/e2e/..."
+
+	// IntegrationDirectoryTestPath is the relative path to the integration tests.
+	IntegrationDirectoryTestPath = "./cicd-integration/..."
+)

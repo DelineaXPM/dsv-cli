@@ -198,8 +198,9 @@ jobs:
           Write-Host ('[mage] binary: {0} version: {1}' -f $(Get-Command mage -ErrorAction SilentlyContinue).Path, [string]$(mage -version)) -ForegroundColor Gray
           Write-Host ('[changie] binary: {0} version: {1}' -f $(Get-Command changie -ErrorAction SilentlyContinue).Path, [string]$(changie --version)) -ForegroundColor Gray
           Write-Host "Changie Detected Version: [$(changie latest)]"
-          &mage go:testsum ./cicd-integration/...
-        displayName: mage test
+          # &mage go:testsum ./cicd-integration/...
+          &mage test:integration
+        displayName: mage test:integration
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
         failOnStderr: false
         env:
@@ -207,7 +208,7 @@ jobs:
           GOROOT: $(goenv.GOROOT)
           GOPATH: $(GOPATH)
           GO_INTEGRATION_TEST: 1 # REQUIRED TO ALLOW INTEGRATION TEST TO TRIGGER
-          GOTEST_DISABLE_RACE: 1
+          GOTEST_DISABLE_RACE: 1 # NOTE: if not using go:testsum, can remove race condition flag
 
           # secrets that have to be exposed to script to be visible
           ADMIN_USER: $(ADMIN_USER)
@@ -216,9 +217,16 @@ jobs:
           CLIENT_ID: $(CLIENT_ID)
           DSV_CLIENT_SECRET: $(DSV_CLIENT_SECRET)
 
+          ORPHANED_ADMIN_PASS: $(ORPHANED_ADMIN_PASS)
+          ORPHANED_CLIENT_SECRET: $(ORPHANED_CLIENT_SECRET)
+          ORPHANED_USER_PASSWORD: $(ORPHANED_USER_PASSWORD)
+          ORPHANED_USER1_PASSWORD: $(ORPHANED_USER1_PASSWORD)
+
           ## Other config values just for clarity
           TEST_TENANT: $(TEST_TENANT)
           USER_NAME: $(USER_NAME)
+          USER1_NAME: $(USER1_NAME)
+
           LOCAL_DOMAIN: $(LOCAL_DOMAIN)
           DEV_DOMAIN: $(DEV_DOMAIN)
 # TEMPLATE: TO DO - CODECOV REPORT
