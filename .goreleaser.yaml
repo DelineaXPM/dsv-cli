@@ -33,7 +33,7 @@ builds:
     hooks:
       post:
         # Quill tool is installed in environment by aqua.
-        - cmd: quill sign "{{ .Path }}" --ad-hoc={{ .IsSnapshot }} -vv
+        - cmd: '{{ if index .Env "QUILL_SIGN_P12_PASSWORD"  }}quill sign "{{ .Path }}" --ad-hoc={{ .IsSnapshot }} -vv{{ else }}echo "👉 no QUILL_SIGN_P12_PASSWORD provided so bypassing"{{ end }}'
           env:
             - QUILL_LOG_FILE=.cache/quill-{{ .Target }}.log
             - QUILL_SIGN_P12={{ .Env.QUILL_SIGN_P12 }}
