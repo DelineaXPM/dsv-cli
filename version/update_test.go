@@ -88,6 +88,7 @@ func TestReadCache(t *testing.T) {
 			},
 		},
 	}
+	t.Parallel()
 
 	for _, tc := range testCases {
 		testCase := tc
