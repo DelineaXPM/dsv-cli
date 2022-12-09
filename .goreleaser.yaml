@@ -13,6 +13,7 @@ env:
   - COSIGN_KEY={{ if index .Env "COSIGN_KEY" }}{{ .Env.COSIGN_KEY }}{{else}}{{end}}
   - DOCKER_CLI_EXPERIMENTAL=enabled
   - S3_BUCKET={{ if index .Env "S3_BUCKET" }}{{ .Env.S3_BUCKET }}{{else}}{{end}}
+  - CGO_ENABLED=0
 before:
   hooks:
     - go mod download
