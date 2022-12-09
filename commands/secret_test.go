@@ -285,6 +285,66 @@ func TestHandleSecretSearchCmd(t *testing.T) {
 	}
 }
 
+func TestHandleSecretServiceprincipalSearchCmd(t *testing.T) {
+	testCase := []struct {
+		name        string
+		args        string
+		apiResponse []byte
+		out         []byte
+		expectedErr *errors.ApiError
+	}{
+		{
+			name:        "Happy path",
+			args:        "sp",
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			expectedErr: nil,
+		},
+		{
+			name:        "api Error",
+			args:        "sp",
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			expectedErr: errors.NewS("error"),
+		},
+	}
+
+	for _, tt := range testCase {
+		t.Run(tt.name, func(t *testing.T) {
+			var data []byte
+			var err *errors.ApiError
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+				data = bytes
+				err = apiError
+			}
+
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+				return tt.out, tt.expectedErr
+			}
+
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
+			}
+
+			viper.Reset()
+
+			_ = handleServiceprincipalSearchCmd(vcli, []string{tt.args})
+			if tt.expectedErr == nil {
+				assert.Equal(t, data, tt.out)
+			} else {
+				assert.Equal(t, err, tt.expectedErr)
+			}
+		})
+	}
+}
+
 func TestHandleSecretDeleteCmd(t *testing.T) {
 	testCase := []struct {
 		name        string
@@ -368,6 +428,91 @@ func TestHandleSecretDeleteCmd(t *testing.T) {
 			viper.Set(cst.ID, tt.fID)
 
 			_ = handleSecretDeleteCmd(vcli, cst.NounSecret, []string{tt.args})
+			if tt.expectedErr == nil {
+				assert.Equal(t, data, tt.out)
+			} else {
+				assert.Equal(t, err, tt.expectedErr)
+			}
+		})
+	}
+}
+
+func TestHandleServiceprincipalDeleteCmd(t *testing.T) {
+	testCase := []struct {
+		name        string
+		ID          string
+		args        string
+		apiResponse []byte
+		out         []byte
+		expectedErr *errors.ApiError
+	}{
+		{
+			name:        "Happy ID",
+			args:        "49971f41-846b-4e4e-bbec-544fefa32ace",
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			expectedErr: nil,
+		},
+		{
+			name:        "Happy ID",
+			ID:          "49971f41-846b-4e4e-bbec-544fefa32ace",
+			args:        "",
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			expectedErr: nil,
+		},
+		{
+			name:        "api Error",
+			args:        "user1",
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			expectedErr: errors.NewS("error"),
+		},
+		{
+			name:        "api Error",
+			args:        "49971f41-846b-4e4e-bbec-544fefa32ace",
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			expectedErr: errors.NewS("error"),
+		},
+		{
+			name:        "api Error",
+			ID:          "49971f41-846b-4e4e-bbec-544fefa32ace",
+			args:        "",
+			apiResponse: []byte(`test`),
+			out:         []byte(`test`),
+			expectedErr: errors.NewS("error"),
+		},
+	}
+
+	for _, tt := range testCase {
+		t.Run(tt.name, func(t *testing.T) {
+			var data []byte
+			var err *errors.ApiError
+
+			outClient := &fake.FakeOutClient{}
+			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
+				data = bytes
+				err = apiError
+			}
+
+			httpClient := &fake.FakeClient{}
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+				return tt.out, tt.expectedErr
+			}
+
+			vcli, rerr := vaultcli.NewWithOpts(
+				vaultcli.WithHTTPClient(httpClient),
+				vaultcli.WithOutClient(outClient),
+			)
+			if rerr != nil {
+				t.Fatalf("Unexpected error during vaultCLI init: %v", err)
+			}
+
+			viper.Reset()
+			viper.Set(cst.ID, tt.ID)
+
+			_ = handleServiceprincipalDeleteCmd(vcli, []string{tt.args})
 			if tt.expectedErr == nil {
 				assert.Equal(t, data, tt.out)
 			} else {
