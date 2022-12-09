@@ -40,35 +40,37 @@ type checkEnv struct {
 
 // checkEnvVar performs a check on environment variable and helps build a report summary of the failing conditions, missing variables, and bypasses logging if it's a secret.
 // Yes this could be replaced by the `env` package but I had this in place and the output is nice for debugging so I left it. - Sheldon 😀
-func checkEnvVar(ck checkEnv) (string, pterm.TableData, error) {
+//
+//nolint:unparam,appendAssign // ignoring as i'll want to use the values in the future, ok to leave for now. appendAssign is ok as well, though it could be much cleaner, it works for now.
+func checkEnvVar(ckv checkEnv) (string, pterm.TableData, error) {
 	// loggedValue is used to make sure any secret isn't put into the table output.
 	var value, loggedValue string
 	var isSet bool
-	tbl := ck.Tbl
-	value, isSet = os.LookupEnv(ck.Name)
+	tbl := ckv.Tbl
+	value, isSet = os.LookupEnv(ckv.Name)
 
-	if ck.IsSecret {
+	if ckv.IsSecret {
 		loggedValue = "***** secret set, but not logged *****"
 	} else {
 		loggedValue = value
 	}
 
 	// Required but not set is an error condition to report back to the user.
-	if !isSet && ck.IsRequired {
-		tbl = append(ck.Tbl, []string{"❌", ck.Name, loggedValue, ck.Notes})
-		return "", tbl, fmt.Errorf("%s is required and not set", ck.Name)
+	if !isSet && ckv.IsRequired {
+		tbl = append(ckv.Tbl, []string{"❌", ckv.Name, loggedValue, ckv.Notes}) //nolint:appendAssign // might refactor in future, for now it's ok - sheldon
+		return "", tbl, fmt.Errorf("%s is required and not set", ckv.Name)
 	}
 	// Required but not a terminating error, then just put as information different from success, and no error.
-	if !isSet && !ck.IsRequired {
-		tbl = append(ck.Tbl, []string{"👉", ck.Name, loggedValue, ck.Notes})
+	if !isSet && !ckv.IsRequired {
+		tbl = append(ckv.Tbl, []string{"👉", ckv.Name, loggedValue, ckv.Notes}) //nolint:appendAssign // might refactor in future, for now it's ok - sheldon
 		return value, tbl, nil
 	}
 
 	if isSet {
-		tbl = append(ck.Tbl, []string{"✅", ck.Name, loggedValue, ck.Notes})
+		tbl = append(ckv.Tbl, []string{"✅", ckv.Name, loggedValue, ckv.Notes}) //nolint:appendAssign // might refactor in future, for now it's ok - sheldon
 		return value, tbl, nil
 	}
-	return "", tbl, fmt.Errorf("unknown error (no conditions were hit so it's a PEKAB issue 😁) with evaluation of: %s", ck.Name)
+	return "", tbl, fmt.Errorf("unknown error (no conditions were hit so it's a PEKAB issue 😁) with evaluation of: %s", ckv.Name)
 }
 
 // func checkEnvVar(envVar string, required bool) (string, error) { //nolint:unused // leaving this as will use in future releases
