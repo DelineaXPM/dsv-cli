@@ -57,16 +57,19 @@ func checkEnvVar(ckv checkEnv) (string, pterm.TableData, error) {
 
 	// Required but not set is an error condition to report back to the user.
 	if !isSet && ckv.IsRequired {
-		tbl = append(ckv.Tbl, []string{"❌", ckv.Name, loggedValue, ckv.Notes}) //nolint:appendAssign // might refactor in future, for now it's ok - sheldon
+		// trunk-ignore(golangci-lint/gocritic)
+		tbl = append(ckv.Tbl, []string{"❌", ckv.Name, loggedValue, ckv.Notes})
 		return "", tbl, fmt.Errorf("%s is required and not set", ckv.Name)
 	}
 	// Required but not a terminating error, then just put as information different from success, and no error.
 	if !isSet && !ckv.IsRequired {
+		// trunk-ignore(golangci-lint/gocritic)
 		tbl = append(ckv.Tbl, []string{"👉", ckv.Name, loggedValue, ckv.Notes}) //nolint:appendAssign // might refactor in future, for now it's ok - sheldon
 		return value, tbl, nil
 	}
 
 	if isSet {
+		// trunk-ignore(golangci-lint/gocritic)
 		tbl = append(ckv.Tbl, []string{"✅", ckv.Name, loggedValue, ckv.Notes}) //nolint:appendAssign // might refactor in future, for now it's ok - sheldon
 		return value, tbl, nil
 	}
