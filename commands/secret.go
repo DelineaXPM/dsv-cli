@@ -292,6 +292,42 @@ Usage:
 	})
 }
 
+func GetSecretServiceprincipalSearchCmd() (cli.Command, error) {
+	return NewCommand(CommandArgs{
+		Path:         []string{cst.NounServiceprincipals, cst.Search},
+		SynopsisText: "secret sp search ",
+		HelpText: fmt.Sprintf(`Search for a %[1]s from %[2]s
+
+Usage:
+   • secret sp search 
+`, cst.NounServiceprincipals, cst.ProductName),
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Limit, Shorthand: "l", Usage: cst.LimitHelpMessage},
+			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
+		},
+		RunFunc: handleServiceprincipalSearchCmd,
+	})
+}
+
+func GetSecretServiceprincipalDeleteCmd() (cli.Command, error) {
+	return NewCommand(CommandArgs{
+		Path:         []string{cst.NounServiceprincipal, cst.Delete},
+		SynopsisText: "secret sp  delete  (<id> | --id)",
+		HelpText: fmt.Sprintf(`Delete a %[1]s from %[2]s
+
+Usage:
+   • secret sp  delete %[3]s
+   • secret sp  delete --id %[3]s --force
+`, cst.NounServiceprincipal, cst.ProductName, cst.ExampleServicePrincipalID),
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.ID, Usage: fmt.Sprintf("%s of %s to fetch (required)", cst.ID, cst.NounServiceprincipal)},
+			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s", cst.NounServiceprincipal), ValueType: "bool"},
+		},
+		MinNumberArgs: 1,
+		RunFunc:       handleServiceprincipalDeleteCmd,
+	})
+}
+
 func handleBustCacheCmd(vcli vaultcli.CLI, args []string) int {
 	st := viper.GetString(cst.StoreType)
 	s, err := vcli.Store(st)
@@ -403,6 +439,28 @@ func handleSecretSearchCmd(vcli vaultcli.CLI, secretType string, args []string) 
 	return utils.GetExecStatus(err)
 }
 
+func handleServiceprincipalSearchCmd(vcli vaultcli.CLI, args []string) int {
+	limit := viper.GetString(cst.Limit)
+	cursor := viper.GetString(cst.Cursor)
+	sort := viper.GetString(cst.Sort)
+
+	queryParams := map[string]string{}
+	if limit != "" {
+		queryParams[cst.Limit] = limit
+	}
+	if cursor != "" {
+		queryParams[cst.Cursor] = cursor
+	}
+	if sort != "" {
+		queryParams[cst.Sort] = sort
+	}
+	uri := paths.CreateURI(cst.NounSecrets+"/"+cst.NounServiceprincipals, queryParams)
+	data, apiErr := vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
+
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
+}
+
 func handleSecretDeleteCmd(vcli vaultcli.CLI, secretType string, args []string) int {
 	id := viper.GetString(cst.ID)
 	path := viper.GetString(cst.Path)
@@ -427,6 +485,28 @@ func handleSecretDeleteCmd(vcli vaultcli.CLI, secretType string, args []string) 
 
 	vcli.Out().WriteResponse(resp, err)
 	return utils.GetExecStatus(err)
+}
+
+func handleServiceprincipalDeleteCmd(vcli vaultcli.CLI, args []string) int {
+	id := viper.GetString(cst.ID)
+	force := viper.GetBool(cst.Force)
+
+	if id == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		id = args[0]
+	}
+
+	if id == "" {
+		err := errors.NewS("error: must specify " + cst.ID)
+		vcli.Out().WriteResponse(nil, err)
+		return utils.GetExecStatus(err)
+	}
+
+	query := map[string]string{"force": strconv.FormatBool(force)}
+	uri := paths.CreateResourceURI(cst.NounSecrets+"/"+cst.NounServiceprincipals, id, "", true, query)
+	data, apiErr := vcli.HTTPClient().DoRequest(http.MethodDelete, uri, nil)
+
+	vcli.Out().WriteResponse(data, apiErr)
+	return utils.GetExecStatus(apiErr)
 }
 
 func handleSecretRollbackCmd(vcli vaultcli.CLI, secretType string, args []string) int {

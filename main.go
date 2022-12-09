@@ -56,6 +56,8 @@ func runCLI(args []string) (exitStatus int, err error) {
 		"secret rollback":               cmd.GetSecretRollbackCmd,
 		"secret edit":                   cmd.GetSecretEditCmd,
 		"secret bustcache":              cmd.GetSecretBustCacheCmd,
+		"secret sp search":              cmd.GetSecretServiceprincipalSearchCmd,
+		"secret sp delete":              cmd.GetSecretServiceprincipalDeleteCmd,
 		"policy":                        cmd.GetPolicyCmd,
 		"policy read":                   cmd.GetPolicyReadCmd,
 		"policy search":                 cmd.GetPolicySearchCmd,
