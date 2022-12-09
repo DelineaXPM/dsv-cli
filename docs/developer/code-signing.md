@@ -16,6 +16,14 @@ You should be able to do this on any OS, but this is primarily tested in Darwin 
 - For mac signing: [Quill](https://github.com/anchore/quill) to allow signing and notarization of the binary without using a darwin based build system.
 - For windows & linux binary signing: [cosign](https://github.com/sigstore/cosign)
 
+## Keys
+
+The two keys required for the signed binaries:
+
+- For signing with mac, pfx format (see internal team for details).
+- For cosign (sig file generation), take the pfx and run `cosign import-key-pair --key myfile.pfx` and it will generate a `import-cosign.pub` and `import-cosign.key` in the repo root.
+- Securely store the `import-cosign.key` for usage and rename for simplicity to the same name as the pfx, instead leaving `.key` as the file extension.
+
 ## Mac Specific
 
 ### Validation
@@ -26,7 +34,10 @@ You should be able to do this on any OS, but this is primarily tested in Darwin 
 For visually verifying signing you can install: `brew install whatsyoursign` and then run `open '/usr/local/Caskroom/whatsyoursign/2.0.1/WhatsYourSign Installer.app'` or whatever version you find.
 This will add a Finder button when right-clicking that is called "Signing Info" and provide a visual way to look at the signing information on a Mac system.
 
-### [DEPRECATED] Codesign
+<details closed> <!-- trunk-ignore(markdownlint/MD033) -->
+<summary>ℹ️ Deprecated Codesign Details</summary> <!-- trunk-ignore(markdownlint/MD033) -->
+
+## Deprecated Codesign Details
 
 The following notes are more specific to working with Apple certificate signing.
 
@@ -34,6 +45,13 @@ The following certs from Apple are required to sign correctly.
 To do this automatically on a Darwin based system just run `mage certs:init`.
 
 If the dates are incorrect, update this to the latest from this page [Apple Public Certificates](https://www.apple.com/certificateauthority/) in `magefile/certs` to add it to the download and install list.
+
+## Type of Cert
+
+To sign a mac binary correctly, quill can be used, which is included in the this repo and CI tooling.
+It also runs as part of the `mage release:all` task.
+
+- Apple Developer ID Cert. Secured with SS Vault.
 
 ### Mac Resource Links
 
@@ -49,3 +67,5 @@ If the dates are incorrect, update this to the latest from this page [Apple Publ
 [common-issues]: https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution/resolving_common_notarization_issues#3087735
 [stack-error-help]: https://stackoverflow.com/a/8766966/68698
 [apple-support-error-help]: https://developer.apple.com/library/archive/technotes/tn2250/_index.html#//apple_ref/doc/uid/DTS40009933-CH1-TNTAG19
+
+</details>

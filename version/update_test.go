@@ -73,21 +73,22 @@ func TestReadCache(t *testing.T) {
 			filename: "old_cached_content_*.json",
 			// content:  time.Now().Add(checkFrequencyDays*-2*time.Hour*24).Format(dateLayout) + "\nWrong JSON string",
 			content: time.Now().Add(checkFrequencyDays*-2*time.Hour*24).Format(dateLayout) + `
-{"latest":"1.29.0","links": {"darwin/amd64":"https://dsv.thycotic.com/downloads/cli/1.29.0/dsv-darwin-x64", "linux/amd64":"https://dsv.thycotic.com/downloads/cli/1.29.0/dsv-linux-x64"}}`,
+{"latest":"1.29.0","links": {"darwin/amd64":"https://dsv.secretsvaultcloud.com/downloads/cli/1.29.0/dsv-darwin-x64", "linux/amd64":"https://dsv.secretsvaultcloud.com/downloads/cli/1.29.0/dsv-linux-x64"}}`,
 			result: nil,
 		},
 		{
 			name:     "Correct case",
 			filename: "correct_case_*.json",
 			content: time.Now().Add(-1*(checkFrequencyDays-1)*time.Hour*24).Format(dateLayout) + `
-		{"latest":"1.29.0","links": {"darwin/amd64":"https://dsv.thycotic.com/downloads/cli/1.29.0/dsv-darwin-x64"}}` +
+		{"latest":"1.29.0","links": {"darwin/amd64":"https://dsv.secretsvaultcloud.com/downloads/cli/1.29.0/dsv-darwin-x64"}}` +
 				"\n",
 			result: &latestInfo{
 				Latest: "1.29.0",
-				Links:  map[string]string{"darwin/amd64": "https://dsv.thycotic.com/downloads/cli/1.29.0/dsv-darwin-x64"},
+				Links:  map[string]string{"darwin/amd64": "https://dsv.secretsvaultcloud.com/downloads/cli/1.29.0/dsv-darwin-x64"},
 			},
 		},
 	}
+	t.Parallel()
 
 	for _, tc := range testCases {
 		testCase := tc

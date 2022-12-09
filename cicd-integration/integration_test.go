@@ -40,6 +40,14 @@ func TestCliArgs(t *testing.T) {
 	t.Logf("[TestCliArgs] Path to binary: %s", binary)
 
 	err = os.Mkdir("coverage", os.ModeDir)
+	targetArtifactDirectory := filepath.Join(".artifacts", "coverage", "integration")
+	if _, err := os.Stat(targetArtifactDirectory); os.IsNotExist(err) {
+		err = os.MkdirAll(targetArtifactDirectory, 0o755)
+		if err != nil {
+			t.Fatalf("unable to create code coverage directory %s: %v", targetArtifactDirectory, err)
+		}
+	}
+	t.Logf("[TestCliArgs] Coverage Results: %s", targetArtifactDirectory)
 
 	// if the error is not nil AND it's not an already exists error
 	if err != nil && !os.IsExist(err) {
@@ -49,7 +57,7 @@ func TestCliArgs(t *testing.T) {
 
 	for _, tt := range synchronousCases {
 		t.Run(tt.name, func(t *testing.T) {
-			outfile := path.Join("coverage", tt.name+"coverage.out")
+			outfile := filepath.Join(targetArtifactDirectory, tt.name+"coverage.out")
 
 			args := []string{"-test.coverprofile", outfile}
 			args = append(args, tt.args...)

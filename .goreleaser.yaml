@@ -3,19 +3,23 @@
 project_name: dsv
 dist: .artifacts/goreleaser
 env:
-  - GITHUB_TOKEN='null' # required to bypass check as this tool integrates heavily with those systems
+  - GITHUB_TOKEN={{ if index .Env "GITHUB_TOKEN" }}{{ .Env.GITHUB_TOKEN }}{{else}}''{{end}}
   - GITLAB_TOKEN=''
   - GITEA_TOKEN=''
-  - LOCAL_DEBUGGING=
-  - QUILL_SIGN_P12=
-  - QUILL_SIGN_PASSWORD=
+  - LOCAL_DEBUGGING={{ if index .Env "LOCAL_DEBUGGING" }}{{ .Env.LOCAL_DEBUGGING }}{{else}}{{end}}
+  - QUILL_SIGN_P12={{ if index .Env "QUILL_SIGN_P12" }}{{ .Env.QUILL_SIGN_P12 }}{{else}}{{end}}
+  - QUILL_SIGN_PASSWORD={{ if index .Env "QUILL_SIGN_PASSWORD" }}{{ .Env.QUILL_SIGN_PASSWORD }}{{else}}{{end}}
+  - COSIGN_PASSWORD={{ if index .Env "COSIGN_PASSWORD" }}{{ .Env.COSIGN_PASSWORD }}{{else}}{{end}}
+  - COSIGN_KEY={{ if index .Env "COSIGN_KEY" }}{{ .Env.COSIGN_KEY }}{{else}}{{end}}
+  - DOCKER_CLI_EXPERIMENTAL=enabled
+  - S3_BUCKET={{ if index .Env "S3_BUCKET" }}{{ .Env.S3_BUCKET }}{{else}}{{end}}
 before:
   hooks:
     - go mod download
 
 builds:
   - id: dsv-darwin
-    binary: dsv
+    binary: &build-binary-name-template dsv-{{ replace .Os "windows" "win" }}-{{ if eq .Arch "386" }}x86{{ else if eq .Arch "amd64" }}x64{{ else }}{{ .Arch }}{{end}}
     mod_timestamp: '{{ .CommitTimestamp }}'
     ldflags:
       - -s -w
@@ -29,13 +33,17 @@ builds:
     hooks:
       post:
         # Quill tool is installed in environment by aqua.
-        - cmd: quill sign "{{ .Path }}" --ad-hoc={{ .IsSnapshot }} -vv
+        - cmd: '{{ if index .Env "QUILL_SIGN_P12_PASSWORD"  }}quill sign "{{ .Path }}" --ad-hoc={{ .IsSnapshot }} -vv{{ else }}echo "👉 no QUILL_SIGN_P12_PASSWORD provided so bypassing"{{ end }}'
           env:
             - QUILL_LOG_FILE=.cache/quill-{{ .Target }}.log
             - QUILL_SIGN_P12={{ .Env.QUILL_SIGN_P12 }}
             - QUILL_SIGN_P12_PASSWORD={{ .Env.QUILL_SIGN_PASSWORD }}
+        - cmd: &hook-sign-blob '{{ if index .Env "COSIGN_PASSWORD"  }}cosign sign-blob --key={{.Env.COSIGN_KEY }} --output-signature="{{ .Path }}.sig" --output-file=".cache/cosign-{{ .Target }}.log" --verbose --yes "{{ .Path }}" {{ else }}echo "👉 no COSIGN_PASSWORD provided so bypassing"{{ end }}'
+          env:
+            - COSIGN_KEY={{ .Env.COSIGN_KEY }}
+            - COSIGN_PASSWORD={{ .Env.COSIGN_PASSWORD }}
   - id: dsv-linux
-    binary: dsv-{{ replace .Os "windows" "win" }}-{{ if eq .Arch "386" }}x86{{ else if eq .Arch "amd64" }}x64{{ else }}{{ .Arch }}{{end}}
+    binary: *build-binary-name-template
     mod_timestamp: '{{ .CommitTimestamp }}'
     ldflags:
       - -s -w
@@ -46,8 +54,14 @@ builds:
     goarch:
       - amd64
       - '386'
+    hooks:
+      post:
+        - cmd: *hook-sign-blob
+          env:
+            - COSIGN_KEY={{ .Env.COSIGN_KEY }}
+            - COSIGN_PASSWORD={{ .Env.COSIGN_PASSWORD }}
   - id: dsv-windows
-    binary: dsv
+    binary: *build-binary-name-template
     mod_timestamp: '{{ .CommitTimestamp }}'
     ldflags:
       - -s -w
@@ -58,6 +72,12 @@ builds:
     goarch:
       - amd64
       - '386'
+    hooks:
+      post:
+        - cmd: *hook-sign-blob
+          env:
+            - COSIGN_KEY={{ .Env.COSIGN_KEY }}
+            - COSIGN_PASSWORD={{ .Env.COSIGN_PASSWORD }}
 archives:
   # Name template is: 'dsv-{{ .Os }}-{{ .Arch }}',
   # but we replace:
@@ -65,48 +85,22 @@ archives:
   #     - "386" with "x86"
   #     - "amd64" with "x64"
   # Example: "dsv-windows-amd64.exe" -> "dsv-win-x64.exe"
+  # - id: archives
+  #   builds:
+  #     - dsv-darwin
+  #     - dsv-linux
+  #     - dsv-windows
+  #   name_template: dsv-{{ replace .Os "windows" "win" }}-{{ if eq .Arch "386" }}x86{{ else }}{{ .Arch }}{{end}}
+  #   files:
+  #     - dsv
+  #     - '.artifacts/goreleaser/*.sig'
+
   - format: binary
-    name_template: dsv-{{ replace .Os "windows" "win" }}-{{ if eq .Arch "386" }}x86{{ else if eq .Arch "amd64" }}x64{{ else }}{{ .Arch }}{{end}}
+    name_template: dsv-{{ replace .Os "windows" "win" }}-{{ if eq .Arch "386" }}x86{{ else }}{{ .Arch }}{{end}}
 checksum:
   name_template: '{{ .ProjectName }}-{{.Runtime.Goos}}-sha256.txt'
   algorithm: sha256
   disable: false
-  # ids:
-  #   - dsv-linux
-
-# signs:
-# - artifacts: checksum  # NOTE: Uses GPG to sign checksums by default
-# - id: signtool
-#   ids:
-#     - dsv-windows
-#   cmd: signtool
-#   args:
-#     [
-#       sign,
-#       /tr,
-#       http,
-#       //timestamp.digicert.com,
-#       /td,
-#       sha256,
-#       /fd,
-#       sha256,
-#       /sha1,
-#       668feb4178afea4d3c4ae833459b09c2bcf6b64e,
-#       '${artifact}',
-#     ]
-#   artifacts: binary
-# - id: codesign
-#   ids:
-#     - dsv-darwin
-#   cmd: codesign
-#   args: [-s, 'Thycotic Software', '${artifact}']
-#   artifacts: binary
-# - id: sign-darwin
-#   ids:
-#     - dsv-darwin
-#   cmd: quill
-#   args: [sign, '${artifact}']
-#   artifacts: binary
 
 release:
   prerelease: auto
@@ -114,12 +108,16 @@ release:
   mode: replace
   skip_upload: false
   replace_existing_draft: true
-  name_template: '{{.ProjectName}}-v{{.Version}}'
+  name_template: '{{.ProjectName}} - v{{.Version}}'
+  extra_files:
+    - glob: .artifacts/goreleaser/**/*.sig
+    - glob: .artifacts/cli-version.json
 
 sboms:
   - artifacts: binary
+    id: sbom-binaries
     documents:
-      - '${artifact}.{{.Runtime.Goos}}.spdx.sbom'
+      - '${artifact}.{{.Runtime.Goos}}.{{.Runtime.Goarch}}.spdx.json'
 changelog:
   skip: false
   sort: asc
@@ -141,3 +139,12 @@ changelog:
       - '^docs:'
       - '^test:'
       - '^style:'
+blobs:
+  # Binaries, signatures, and SBOMs
+  - provider: s3
+    region: us-east-1
+    disableSSL: true
+    bucket: '{{ .Env.S3_BUCKET }}'
+    folder: 'cli/{{.Version}}'
+    extra_files:
+      - glob: .artifacts/goreleaser/**/*.sig

@@ -1,8 +1,0 @@
-kind: "\U0001F528 Refactor"
-body: Apply basic steps on goreleaser templates for creating [reproducible builds](https://goreleaser.com/customization/build/#reproducible-builds).
-time: 2022-11-30T18:17:43.274443646Z
-custom:
-  azure-boards-workitemid-fixed: ''
-  azure-boards-workitemid-related: '448642'
-  github-contributor: sheldonhull
-  github-link: ''

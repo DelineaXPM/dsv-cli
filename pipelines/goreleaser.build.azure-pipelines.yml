@@ -6,8 +6,7 @@ pr:
   drafts: false
   branches:
     include: [] # not including anything right now
-  # autoCancel: true
-  # drafts: false
+    exclude: ['*']
 trigger:
   batch: true
   paths:
@@ -28,6 +27,7 @@ variables:
   - group: 'CLi-pipeline-variables' # TODO: replace with dsv cli calls
   - group: 'CLI End-to-End tests' # TODO: replace with dsv cli calls
   - group: GITHUB # to avoid api rate issues
+  - group: AWS-DSV-CLI-PROD # for AWS asset upload
   - template: templates/vars.common.yml
 
 jobs:
@@ -76,10 +76,17 @@ jobs:
           ClientSecret: $(ClientSecret)
           SecretPath: ado/cli
       - task: DownloadSecureFile@1
-        name: signCert
-        displayName: download-cert
+        name: downloadCertPFXFormat
+        displayName: download-cert-pfx-format
         inputs:
           secureFile: $(certSecureFile)
+
+      # used for cosign based signature
+      - task: DownloadSecureFile@1
+        name: downloadCertKeyFormat
+        displayName: download-cert-key-format
+        inputs:
+          secureFile: $(secureFileKeyFormat)
       # NOT REQUIRED ANYMORE: Using Quill for cross platform signing capability
       # - task: InstallAppleCertificate@2
       #   displayName: macos-install-cert-to-keychain
@@ -209,21 +216,25 @@ jobs:
           Write-Host ('[mage] binary: {0} version: {1}' -f $(Get-Command mage -ErrorAction SilentlyContinue).Path, [string]$(mage -version)) -ForegroundColor Gray
           Write-Host ('[changie] binary: {0} version: {1}' -f $(Get-Command changie -ErrorAction SilentlyContinue).Path, [string]$(changie --version)) -ForegroundColor Gray
           Write-Host "Changie Detected Version: [$(changie latest)]"
-          &mage release
-        displayName: mage release
+          &mage release:all
+        displayName: mage release:all
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
         failOnStderr: false
         env:
           CERT_PASSWORD: $(cert.password)
-          CERT_SECURE_FILE: $(certSecureFile)
+          CERT_SECURE_FILE: $(downloadCertPFXFormat.secureFilePath)
 
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
           GOROOT: $(goenv.GOROOT)
           GITHUB_TOKEN: $(GITHUB_TOKEN)
           GOPATH: $(GOPATH)
 
-          QUILL_SIGN_P12: $(certSecureFile) # TODO: rename to p12 from pfx in script if required
+          QUILL_SIGN_P12: $(downloadCertPFXFormat.secureFilePath) # pfx format is the same as p12
           QUILL_SIGN_PASSWORD: $(cert.password)
+
+          COSIGN_PASSWORD: $(cert.password)
+          COSIGN_KEY: $(downloadCertKeyFormat.secureFilePath)
+
       - task: PublishBuildArtifacts@1
         displayName: 'Build Artifact: PRTestBuilds'
         inputs:

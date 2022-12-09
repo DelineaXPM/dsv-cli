@@ -15,7 +15,10 @@ import (
 
 type Certs mg.Namespace
 
-// Init downloads and installs the required certs for signing binaries from Apple. See docs/developer/code-signing.md for more info on Mac local signing.
+// [deprecated] Init downloads and installs the required certs for signing binaries from Apple.
+// See docs/developer/code-signing.md for more info on Mac local signing.
+//
+// This isn't currently being used as not signing with Apple based cert approach.
 func (Certs) Init() error {
 	magetoolsutils.CheckPtermDebug()
 	var err error

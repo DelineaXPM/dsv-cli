@@ -16,6 +16,8 @@ Testing currently is covered in three layers.
 
 ### CICD Integration Tests
 
+To invoke, all the required environment vars are checked and correct flags are passed via: `mage test:integration`.
+
 Two important notes for "cicd-integration" tests:
 
 - all test cases must be run one by one, because sometimes they depend on each other, e.g. one will create a secret and a next one will try to read it
@@ -42,6 +44,17 @@ This allows multiple runs of the suite simultaneously.
 In the same way as `cicd-integration`, the `tests/e2e` testing suite also compiles the binary and collects the code coverage.
 
 > WIP: Currently, this is a work in progress for migrating all tests from cicd-integration to tests/e2e.
+
+### Code Coverage
+
+The `end2end` test performs actions as a compiled cli.
+Using `go test -c` this generates a compiled binary that is able to track the code coverage for what it performs.
+
+This is inspired by the article by Elastic [Code Coverage for your Golang System Tests](https://www.elastic.co/blog/code-coverage-for-your-golang-system-tests).
+
+This means that if running locally, you'll have to `go test -cacheclean` as the test caching isn't able to detect changes outside the code in the `e2e` directory.
+
+To simplify this and invocation of the tests: `mage test:integration` and `mage test:endtoend` handle this automatically for you.
 
 ## Other
 
