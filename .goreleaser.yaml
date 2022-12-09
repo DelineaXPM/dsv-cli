@@ -13,11 +13,11 @@ env:
   - COSIGN_KEY={{ if index .Env "COSIGN_KEY" }}{{ .Env.COSIGN_KEY }}{{else}}{{end}}
   - DOCKER_CLI_EXPERIMENTAL=enabled
   - S3_BUCKET={{ if index .Env "S3_BUCKET" }}{{ .Env.S3_BUCKET }}{{else}}{{end}}
+  - S3_KEY_PREFIX={{ if index .Env "S3_KEY_PREFIX" }}{{ .Env.S3_KEY_PREFIX }}{{else}}{{end}}
   - CGO_ENABLED=0
 before:
   hooks:
     - go mod download
-
 builds:
   - id: dsv-darwin
     binary: &build-binary-name-template dsv-{{ replace .Os "windows" "win" }}-{{ if eq .Arch "386" }}x86{{ else if eq .Arch "amd64" }}x64{{ else }}{{ .Arch }}{{end}}
@@ -105,7 +105,7 @@ checksum:
 
 release:
   prerelease: auto
-  draft: true
+  draft: false
   mode: replace
   skip_upload: false
   replace_existing_draft: true
@@ -146,6 +146,6 @@ blobs:
     region: us-east-1
     disableSSL: true
     bucket: '{{ .Env.S3_BUCKET }}'
-    folder: 'cli/{{.Version}}'
+    folder: '{{ .Env.S3_KEY_PREFIX }}/{{.Version}}'
     extra_files:
       - glob: .artifacts/goreleaser/**/*.sig
