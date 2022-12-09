@@ -221,6 +221,11 @@ jobs:
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
         failOnStderr: false
         env:
+          AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+          AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+          AWS_DEFAULT_REGION: $(AWS_DEFAULT_REGION)
+          S3_BUCKET: $(S3_BUCKET) # not a sensitive value, but leaving here for clarity
+
           CERT_PASSWORD: $(cert.password)
           CERT_SECURE_FILE: $(downloadCertPFXFormat.secureFilePath)
 
