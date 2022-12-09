@@ -26,7 +26,7 @@ variables:
   - group: 'CLI_integration_test' # TODO: replace with dsv cli calls
   - group: 'CLi-pipeline-variables' # TODO: replace with dsv cli calls
   - group: 'CLI End-to-End tests' # TODO: replace with dsv cli calls
-  - group: GITHUB # to avoid api rate issues
+  - group: GORELEASER # to avoid api rate issues
   - group: AWS-DSV-CLI-PROD # for AWS asset upload
   - template: templates/vars.common.yml
 
