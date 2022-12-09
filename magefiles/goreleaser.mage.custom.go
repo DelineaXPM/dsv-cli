@@ -132,7 +132,10 @@ func (Release) All() error {
 	magetoolsutils.CheckPtermDebug()
 	// opting to always remove after running release to avoid possible non-snapshot artifact persisting.
 	defer func() {
-		_ = sh.Rm(constants.TargetCLIVersionArtifact)
+		err := sh.Rm(constants.TargetCLIVersionArtifact)
+		if err != nil {
+			pterm.Error.Printfln("error removing %s: %v", constants.TargetCLIVersionArtifact, err)
+		}
 	}()
 	// TODO: this will be checked once we publish cli to github
 	// if _, err := checkEnvVar("DOCKER_ORG", true); err != nil {
@@ -230,6 +233,9 @@ func (Release) GenerateCLIVersionFile() error {
 		},
 	}
 
+	if err := os.MkdirAll(constants.ArtifactDirectory, constants.PermissionUserReadWriteExecute); err != nil {
+		return err
+	}
 	// Write the json file.
 	jf, err := os.Create(constants.TargetCLIVersionArtifact)
 	if err != nil {
