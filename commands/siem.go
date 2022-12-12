@@ -136,6 +136,7 @@ func handleSiemCreate(vcli vaultcli.CLI, args []string) int {
 		vcli.Out().WriteResponse(nil, errors.New(survErr))
 		return utils.GetExecStatus(survErr)
 	}
+	name = strings.TrimSpace(name)
 
 	answers, err := promptSiemData(vcli)
 	if err != nil {
