@@ -320,7 +320,7 @@ func handleSiemRead(vcli vaultcli.CLI, args []string) int {
 		name = viper.GetString(cst.Path)
 	}
 	if name == "" {
-		vcli.Out().FailF("error: must specify %s", cst.Path)
+		vcli.Out().FailF("error: must specify %s", cst.DataName)
 		return 1
 	}
 	data, apiErr := siemRead(vcli, name)
