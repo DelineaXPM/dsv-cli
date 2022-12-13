@@ -1,0 +1,10 @@
+kind: "\U0001F389 Feature"
+body:
+  Add --name flag instead of --path flag for read/update/delete SIEM. Continue
+  to support --path flag. Use --name flag primarly.
+time: 2022-12-13T15:04:22.940430294+02:00
+custom:
+  azure-boards-workitemid-fixed: '471546'
+  azure-boards-workitemid-related: ''
+  github-contributor: ''
+  github-link: ''
