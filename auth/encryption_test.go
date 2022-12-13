@@ -20,5 +20,5 @@ func TestEncrypt(t *testing.T) {
 
 func TestEncipherPassword(t *testing.T) {
 	_, err := EncipherPassword("password")
-	assert.NotNil(t, err)
+	assert.Nil(t, err)
 }
