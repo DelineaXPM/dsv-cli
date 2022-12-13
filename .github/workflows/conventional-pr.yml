@@ -2,8 +2,7 @@
 name: conventional-commit-pr-title
 on:
   workflow_call:
-  pull_request_target:
-    # pull_request:
+  pull_request:
     types:
       - opened
       - edited
