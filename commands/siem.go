@@ -55,10 +55,11 @@ func GetSiemUpdateCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`
 Usage:
    • siem update %[1]s
-   • siem update --path %[1]s
+   • siem update --name %[1]s
 `, cst.ExampleSIEM),
 		FlagsPredictor: []*predictor.Params{
-			{Name: cst.Path, Usage: "Path to existing SIEM"},
+			{Name: cst.DataName, Usage: "Name of existing SIEM"},
+			{Name: cst.Path, Usage: "Path to existing SIEM", Hidden: true},
 		},
 		RunFunc: handleSiemUpdate,
 	})
@@ -71,10 +72,11 @@ func GetSiemReadCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`
 Usage:
    • siem read %[1]s
-   • siem read --path %[1]s
+   • siem read --name %[1]s
 `, cst.ExampleSIEM),
 		FlagsPredictor: []*predictor.Params{
-			{Name: cst.Path, Usage: "Path to existing SIEM"},
+			{Name: cst.DataName, Usage: "Name of existing SIEM"},
+			{Name: cst.Path, Usage: "Path to existing SIEM", Hidden: true},
 		},
 		MinNumberArgs: 1,
 		RunFunc:       handleSiemRead,
@@ -88,10 +90,11 @@ func GetSiemDeleteCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`
 Usage:
    • siem delete %[1]s
-   • siem delete --path %[1]s
+   • siem delete --name %[1]s
 `, cst.ExampleSIEM),
 		FlagsPredictor: []*predictor.Params{
-			{Name: cst.Path, Usage: "Path to existing SIEM"},
+			{Name: cst.DataName, Usage: "Name of existing SIEM"},
+			{Name: cst.Path, Usage: "Path to existing SIEM", Hidden: true},
 		},
 		MinNumberArgs: 1,
 		RunFunc:       handleSiemDelete,
@@ -162,9 +165,12 @@ func handleSiemCreate(vcli vaultcli.CLI, args []string) int {
 }
 
 func handleSiemUpdate(vcli vaultcli.CLI, args []string) int {
-	name := viper.GetString(cst.Path)
+	name := viper.GetString(cst.DataName)
 	if name == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		name = args[0]
+	}
+	if name == "" {
+		name = viper.GetString(cst.Path)
 	}
 	if name == "" {
 		namePrompt := &survey.Input{Message: "Name of SIEM endpoint:"}
@@ -306,9 +312,12 @@ func promptSiemData(vcli vaultcli.CLI) (*siemUpdateRequest, error) {
 }
 
 func handleSiemRead(vcli vaultcli.CLI, args []string) int {
-	name := viper.GetString(cst.Path)
+	name := viper.GetString(cst.DataName)
 	if name == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		name = args[0]
+	}
+	if name == "" {
+		name = viper.GetString(cst.Path)
 	}
 	if name == "" {
 		vcli.Out().FailF("error: must specify %s", cst.Path)
@@ -320,12 +329,15 @@ func handleSiemRead(vcli vaultcli.CLI, args []string) int {
 }
 
 func handleSiemDelete(vcli vaultcli.CLI, args []string) int {
-	name := viper.GetString(cst.Path)
+	name := viper.GetString(cst.DataName)
 	if name == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		name = args[0]
 	}
 	if name == "" {
-		vcli.Out().FailF("error: must specify %s", cst.Path)
+		name = viper.GetString(cst.Path)
+	}
+	if name == "" {
+		vcli.Out().FailF("error: must specify %s", cst.DataName)
 		return 1
 	}
 	data, apiErr := siemDelete(vcli, name)
