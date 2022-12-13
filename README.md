@@ -97,6 +97,13 @@ See [LICENSE](https://github.com/DelineaXPM/dsv-cli/blob/main/LICENSE) for the f
             <br />
             <sub><b>Andrii Zakurenyi</b></sub>
         </a>
+    </td>
+    <td align="center">
+        <a href="https://github.com/mariiatuzovska">
+            <img src="https://avatars.githubusercontent.com/u/41679258?v=4" width="100;" alt="mariiatuzovska"/>
+            <br />
+            <sub><b>Mariia</b></sub>
+        </a>
     </td></tr>
 </table>
 <!-- readme: collaborators,contributors -end -->
