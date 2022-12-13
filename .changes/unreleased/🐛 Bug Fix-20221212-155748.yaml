@@ -1,0 +1,8 @@
+kind: "\U0001F41B Bug Fix"
+body: Remove --name flag check while using --data flag on create siem.
+time: 2022-12-12T15:57:48.453165006+02:00
+custom:
+  azure-boards-workitemid-fixed: '475389'
+  azure-boards-workitemid-related: '477345'
+  github-contributor: ''
+  github-link: ''

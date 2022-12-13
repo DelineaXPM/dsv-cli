@@ -254,13 +254,7 @@ func handleAuthProviderRestoreCmd(vcli vaultcli.CLI, args []string) int {
 }
 
 func handleAuthProviderCreate(vcli vaultcli.CLI, args []string) int {
-	name := getAuthProviderName(args)
-	if name == "" {
-		return cli.RunResultHelp
-	}
-
 	var model authProviderCreateRequest
-
 	data := viper.GetString(cst.Data)
 	if data != "" {
 		if err := json.Unmarshal([]byte(data), &model); err != nil {
@@ -269,6 +263,7 @@ func handleAuthProviderCreate(vcli vaultcli.CLI, args []string) int {
 		}
 	} else {
 		model = authProviderCreateRequest{
+			Name: getAuthProviderName(args),
 			Type: viper.GetString(cst.DataType),
 			Properties: AuthProviderProperties{
 				AccountID:    viper.GetString(cst.DataAccountID),
@@ -280,7 +275,9 @@ func handleAuthProviderCreate(vcli vaultcli.CLI, args []string) int {
 			},
 		}
 	}
-	model.Name = name
+	if model.Name == "" {
+		return cli.RunResultHelp
+	}
 
 	if model.Type == cst.ThyOne {
 		sendWelcomeEmail, err := strconv.ParseBool(viper.GetString(cst.SendWelcomeEmail))
