@@ -24,11 +24,14 @@ func GetSiemCmd() (cli.Command, error) {
 		SynopsisText: "Manage SIEM endpoints",
 		HelpText:     "Work with SIEM endpoints",
 		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			path := viper.GetString(cst.Path)
-			if path == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
-				path = args[0]
+			name := viper.GetString(cst.DataName)
+			if name == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+				name = args[0]
 			}
-			if path == "" {
+			if name == "" {
+				name = viper.GetString(cst.Path)
+			}
+			if name == "" {
 				return cli.RunResultHelp
 			}
 			return handleSiemRead(vcli, args)
