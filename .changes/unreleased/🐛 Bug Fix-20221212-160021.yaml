@@ -1,8 +1,0 @@
-kind: "\U0001F41B Bug Fix"
-body: Trim space in name on create siem.
-time: 2022-12-12T16:00:21.543911571+02:00
-custom:
-  azure-boards-workitemid-fixed: '471545'
-  azure-boards-workitemid-related: '477323'
-  github-contributor: ''
-  github-link: ''

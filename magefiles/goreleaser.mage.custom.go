@@ -383,7 +383,7 @@ func (Release) Bump(bumpType string) error {
 	if err := sh.RunV("changie", "batch", bumpType); err != nil {
 		return err
 	}
-	if err := sh.RunV("changie merge"); err != nil {
+	if err := sh.RunV("changie", "merge"); err != nil {
 		return err
 	}
 	if err := sh.RunV("trunk", "fmt"); err != nil {
