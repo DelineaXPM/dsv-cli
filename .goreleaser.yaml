@@ -133,7 +133,8 @@ sboms:
   - artifacts: binary
     id: sbom-binaries
     documents:
-      - '${artifact}.{{.Runtime.Goos}}.{{.Runtime.Goarch}}.spdx.json'
+      - '{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}.sbom.json'
+      #- '${artifact}.{{.Runtime.Goos}}.{{.Runtime.Goarch}}.spdx.json'
 changelog:
   skip: false
   sort: asc
