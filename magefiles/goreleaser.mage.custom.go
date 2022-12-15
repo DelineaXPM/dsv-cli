@@ -19,8 +19,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-
-	"golang.org/x/exp/slices"
 )
 
 // Build contains mage tasks specific to building without a release.
@@ -241,7 +239,7 @@ func getGoreleaserConfig() (string, error) {
 	case "linux":
 		configfile = ".goreleaser.linux.yaml"
 	case "windows":
-		configfile = ".goreleaser.windows.yaml"
+		configfile = ".goreleaser.windows.yaml" //nolint:goconst // windows is used multiple times but not appropriate to be a constant
 	default:
 		pterm.Error.Printfln("Unsupported OS: %s", runtime.GOOS)
 		return "", fmt.Errorf("unsupported platform: %s", runtime.GOOS)
@@ -312,6 +310,8 @@ func (Release) GenerateCLIVersionFile() error {
 }
 
 // getVersion returns the version and path for the changefile to use for the semver and release notes.
+//
+//nolint:unparam // this is a helper function, i'm ok leaving the additional parameter in there for now. - Sheldon 2022-12-15
 func getVersion() (releaseVersion, cleanPath string, err error) {
 	releaseVersion, err = sh.Output("changie", "latest")
 	if err != nil {
@@ -372,13 +372,11 @@ func (Release) UploadCLIVersion() error {
 	return nil
 }
 
-// 📦 Bump the application. (param: bumpType: [patch, minor, major]). Generates a bumped changelog and runs required tooling to commit just this content.
-func (Release) Bump(bumpType string) error {
-	validBumpTypes := []string{"patch", "minor", "major"}
-	if !slices.Contains(validBumpTypes, bumpType) {
-		pterm.Error.Printfln("invalid bump type: %s (patch, minor, major allowed)", bumpType)
-		return fmt.Errorf("invalid bump type: %s", bumpType)
-	}
+// 📦 Bump the application. Interactive Command. Generates a bumped changelog and runs required tooling to commit just this content.
+func (Release) Bump() error {
+	bumpType, _ := pterm.DefaultInteractiveSelect.
+		WithOptions([]string{"patch", "minor", "major"}).
+		Show()
 	pterm.Info.Printfln("bumping by: %s", bumpType)
 	if err := sh.RunV("changie", "batch", bumpType); err != nil {
 		return err

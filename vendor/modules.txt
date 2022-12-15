@@ -502,8 +502,6 @@ golang.org/x/crypto/pkcs12/internal/rc2
 golang.org/x/crypto/scrypt
 # golang.org/x/exp v0.0.0-20221215174704-0915cd710c24
 ## explicit; go 1.18
-golang.org/x/exp/constraints
-golang.org/x/exp/slices
 # golang.org/x/mod v0.6.0
 ## explicit; go 1.17
 golang.org/x/mod/internal/lazyregexp

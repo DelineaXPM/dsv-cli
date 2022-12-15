@@ -13,6 +13,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.17.2
 	github.com/aws/aws-sdk-go-v2/config v1.18.4
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.29.5
+	github.com/bitfield/script v0.20.2
 	github.com/caarlos0/env/v6 v6.10.1
 	github.com/creack/pty v1.1.18
 	github.com/danieljoos/wincred v1.0.1
@@ -38,7 +39,6 @@ require (
 	github.com/spf13/viper v1.14.0
 	github.com/stretchr/testify v1.8.1
 	github.com/tidwall/pretty v1.2.0
-	golang.org/x/exp v0.0.0-20221215174704-0915cd710c24
 	golang.org/x/oauth2 v0.0.0-20221014153046-6fdb5e3db783
 	golang.org/x/sys v0.1.0
 	google.golang.org/api v0.102.0
@@ -77,7 +77,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.17.6 // indirect
 	github.com/aws/smithy-go v1.13.5 // indirect
 	github.com/bgentry/speakeasy v0.1.0 // indirect
-	github.com/bitfield/script v0.20.2 // indirect
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
@@ -122,6 +121,7 @@ require (
 	github.com/ztrue/tracerr v0.3.0 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	golang.org/x/crypto v0.1.0 // indirect
+	golang.org/x/exp v0.0.0-20221215174704-0915cd710c24 // indirect
 	golang.org/x/mod v0.6.0 // indirect
 	golang.org/x/net v0.1.0 // indirect
 	golang.org/x/term v0.1.0 // indirect

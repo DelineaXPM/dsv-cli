@@ -15,7 +15,7 @@ MD004:
   style: dash
 
 # MD041 - First line in a file should be a top-level heading: https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md#md041---first-line-in-a-file-should-be-a-top-level-heading
-MD041: true
+MD041: false
 # MD007 - Unordered list indentation: https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md#md007---unordered-list-indentation
 # This rule is triggered when list items are not indented by the configured number of spaces (default: 2).
 MD007: true
