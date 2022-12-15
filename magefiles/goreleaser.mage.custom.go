@@ -380,7 +380,7 @@ func (Release) Bump(bumpType string) error {
 		return fmt.Errorf("invalid bump type: %s", bumpType)
 	}
 	pterm.Info.Printfln("bumping by: %s", bumpType)
-	if err := sh.RunV("changie batch", bumpType); err != nil {
+	if err := sh.RunV("changie", "batch", bumpType); err != nil {
 		return err
 	}
 	if err := sh.RunV("changie merge"); err != nil {
