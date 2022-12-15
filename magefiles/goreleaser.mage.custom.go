@@ -372,8 +372,8 @@ func (Release) UploadCLIVersion() error {
 	return nil
 }
 
-// 📦 Package the application. (param: bumpType: [patch, minor, major]). Generates a bumped changelog and runs required tooling to commit just this content.
-func (Release) Package(bumpType string) error {
+// 📦 Bump the application. (param: bumpType: [patch, minor, major]). Generates a bumped changelog and runs required tooling to commit just this content.
+func (Release) Bump(bumpType string) error {
 	validBumpTypes := []string{"patch", "minor", "major"}
 	if slices.Contains(validBumpTypes, bumpType) {
 		pterm.Error.Printfln("invalid bump type: %s (patch, minor, major allowed)", bumpType)
