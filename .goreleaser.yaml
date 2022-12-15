@@ -23,11 +23,11 @@ builds:
     binary: &build-binary-name-template dsv
     # dsv-{{ replace .Os "windows" "win" }}-{{ if eq .Arch "386" }}x86{{ else if eq .Arch "amd64" }}x64{{ else }}{{ .Arch }}{{end}}
     mod_timestamp: '{{ .CommitTimestamp }}'
-    ldflags:
-      - -s -w
-      - -X thy/version.Version={{ .Summary }}
-      - -X thy/version.GitCommit={{ .FullCommit }}
-      - -X thy/version.BuildDate={{ .CommitDate }}
+    ldflags: &common-ldflags |
+      -s -w
+      -X thy/version.Version={{.Version}}
+      -X thy/version.GitCommit={{ .FullCommit }}
+      -X thy/version.BuildDate={{ .CommitDate }}
     goos: [darwin]
     goarch:
       - amd64
@@ -47,11 +47,7 @@ builds:
   - id: build-linux
     binary: *build-binary-name-template
     mod_timestamp: '{{ .CommitTimestamp }}'
-    ldflags:
-      - -s -w
-      - -X thy/version.Version={{ .Summary }}
-      - -X thy/version.GitCommit={{ .FullCommit }}
-      - -X thy/version.BuildDate={{ .CommitDate }}
+    ldflags: *common-ldflags
     goos: [linux]
     goarch:
       - amd64
@@ -65,11 +61,7 @@ builds:
   - id: build-windows
     binary: *build-binary-name-template
     mod_timestamp: '{{ .CommitTimestamp }}'
-    ldflags:
-      - -s -w
-      - -X thy/version.Version={{ .Summary }}
-      - -X thy/version.GitCommit={{ .FullCommit }}
-      - -X thy/version.BuildDate={{ .CommitDate }}
+    ldflags: *common-ldflags
     goos: [windows]
     goarch:
       - amd64
