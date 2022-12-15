@@ -171,8 +171,6 @@ brews:
     ids:
       - archive-binary-linux
       - archive-binary-darwin
-    goarm: 6
-    goamd64: v3
     tap:
       owner: DelineaXPM
       name: homebrew-tap
