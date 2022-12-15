@@ -375,7 +375,7 @@ func (Release) UploadCLIVersion() error {
 // 📦 Bump the application. (param: bumpType: [patch, minor, major]). Generates a bumped changelog and runs required tooling to commit just this content.
 func (Release) Bump(bumpType string) error {
 	validBumpTypes := []string{"patch", "minor", "major"}
-	if slices.Contains(validBumpTypes, bumpType) {
+	if !slices.Contains(validBumpTypes, bumpType) {
 		pterm.Error.Printfln("invalid bump type: %s (patch, minor, major allowed)", bumpType)
 		return fmt.Errorf("invalid bump type: %s", bumpType)
 	}
