@@ -238,8 +238,8 @@ func getGoreleaserConfig() (string, error) {
 		configfile = ".goreleaser.darwin.yaml"
 	case "linux":
 		configfile = ".goreleaser.linux.yaml"
-	case "windows":
-		configfile = ".goreleaser.windows.yaml" //nolint:goconst // windows is used multiple times but not appropriate to be a constant
+	case "windows": //nolint:goconst // windows is used multiple times but not appropriate to be a constant
+		configfile = ".goreleaser.windows.yaml"
 	default:
 		pterm.Error.Printfln("Unsupported OS: %s", runtime.GOOS)
 		return "", fmt.Errorf("unsupported platform: %s", runtime.GOOS)
