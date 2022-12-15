@@ -1,6 +1,6 @@
 ---
 # INFO: Why is there a _v1 suffix on amd64 builds?  https://goreleaser.com/customization/build/#why-is-there-a-_v1-suffix-on-amd64-builds
-project_name: dsv
+project_name: dsv-cli
 dist: .artifacts/goreleaser
 env:
   - GITHUB_TOKEN={{ if index .Env "GITHUB_TOKEN" }}{{ .Env.GITHUB_TOKEN }}{{else}}''{{end}}
@@ -19,8 +19,9 @@ before:
   hooks:
     - go mod download
 builds:
-  - id: dsv-darwin
-    binary: &build-binary-name-template dsv-{{ replace .Os "windows" "win" }}-{{ if eq .Arch "386" }}x86{{ else if eq .Arch "amd64" }}x64{{ else }}{{ .Arch }}{{end}}
+  - id: build-darwin
+    binary: &build-binary-name-template dsv
+    # dsv-{{ replace .Os "windows" "win" }}-{{ if eq .Arch "386" }}x86{{ else if eq .Arch "amd64" }}x64{{ else }}{{ .Arch }}{{end}}
     mod_timestamp: '{{ .CommitTimestamp }}'
     ldflags:
       - -s -w
@@ -43,7 +44,7 @@ builds:
           env:
             - COSIGN_KEY={{ .Env.COSIGN_KEY }}
             - COSIGN_PASSWORD={{ .Env.COSIGN_PASSWORD }}
-  - id: dsv-linux
+  - id: build-linux
     binary: *build-binary-name-template
     mod_timestamp: '{{ .CommitTimestamp }}'
     ldflags:
@@ -61,7 +62,7 @@ builds:
           env:
             - COSIGN_KEY={{ .Env.COSIGN_KEY }}
             - COSIGN_PASSWORD={{ .Env.COSIGN_PASSWORD }}
-  - id: dsv-windows
+  - id: build-windows
     binary: *build-binary-name-template
     mod_timestamp: '{{ .CommitTimestamp }}'
     ldflags:
@@ -85,19 +86,33 @@ archives:
   #     - "windows" with "win"
   #     - "386" with "x86"
   #     - "amd64" with "x64"
-  # Example: "dsv-windows-amd64.exe" -> "dsv-win-x64.exe"
+  # Example: "build-windows-amd64.exe" -> "dsv-win-x64.exe"
   # - id: archives
   #   builds:
-  #     - dsv-darwin
-  #     - dsv-linux
-  #     - dsv-windows
+  #     - build-darwin
+  #     - build-linux
+  #     - build-windows
   #   name_template: dsv-{{ replace .Os "windows" "win" }}-{{ if eq .Arch "386" }}x86{{ else }}{{ .Arch }}{{end}}
   #   files:
   #     - dsv
   #     - '.artifacts/goreleaser/*.sig'
 
   - format: binary
-    name_template: dsv-{{ replace .Os "windows" "win" }}-{{ if eq .Arch "386" }}x86{{ else }}{{ .Arch }}{{end}}
+    id: archive-binary-darwin
+    name_template: &artifact-build-name dsv-{{ replace .Os "windows" "win" }}-{{ if eq .Arch "386" }}x86{{ else }}{{ .Arch }}{{end}}
+    builds:
+      - build-darwin
+  - format: binary
+    id: archive-binary-linux
+    name_template: *artifact-build-name
+    builds:
+      - build-linux
+  - format: binary
+    id: archive-binary-windows
+    name_template: *artifact-build-name
+    builds:
+      - build-windows
+
 checksum:
   name_template: '{{ .ProjectName }}-{{.Runtime.Goos}}-sha256.txt'
   algorithm: sha256
@@ -153,135 +168,27 @@ blobs:
 brews:
   - name: dsv-cli
     ids:
-      - dsv-darwin
-      - dsv-linux
-    # GOARM to specify which 32-bit arm version to use if there are multiple
-    # versions from the build section. Brew formulas support only one 32-bit
-    # version.
-    # Default is 6 for all artifacts or each id if there a multiple versions.
+      - archive-binary-linux
+      - archive-binary-darwin
     goarm: 6
-
-    # GOAMD64 to specify which amd64 version to use if there are multiple
-    # versions from the build section.
-    # Default is v1.
     goamd64: v3
-
-    # NOTE: make sure the url_template, the token and given repo (github or
-    # gitlab) owner and name are from the same kind.
-    # We will probably unify this in the next major version like it is
-    # done with scoop.
-
-    # GitHub/GitLab repository to push the formula to
     tap:
-      # Repository owner template. (templateable)
       owner: DelineaXPM
-
-      # Repository name. (templateable)
       name: homebrew-tap
-
-      # Optionally a branch can be provided. (templateable)
-      #
-      # Defaults to the default repository branch.
       branch: main
-
-      # Optionally a token can be provided, if it differs from the token
-      # provided to GoReleaser
       token: '{{ .Env.GITHUB_TOKEN }}'
-
-    # Template for the url which is determined by the given Token (github,
-    # gitlab or gitea)
-    #
-    # Default depends on the client.
-    #    url_template: 'https://github.mycompany.com/foo/bar/releases/download/{{ .Tag }}/{{ .ArtifactName }}'
-
-    # Allows you to set a custom download strategy. Note that you'll need
-    # to implement the strategy and add it to your tap repository.
-    # Example: https://docs.brew.sh/Formula-Cookbook#specifying-the-download-strategy-explicitly
-    # Default is empty.
     download_strategy: CurlDownloadStrategy
-
-    # Allows you to add a custom require_relative at the top of the formula
-    # template.
-    # Default is empty
-    #   custom_require: custom_download_strategy
-
-    # Git author used to commit to the repository.
-    # Defaults are shown.
     commit_author:
       name: goreleaserbot
       email: bot@goreleaser.com
-
-    # The project name and current git tag are used in the format string.
     commit_msg_template: 'Brew formula update for {{ .ProjectName }} version {{ .Tag }}'
-
-    # Folder inside the repository to put the formula.
-    # Default is the root folder.
     folder: Formula
-
-    # Caveats for the user of your binary.
-    # Default is empty.
-    #  caveats: 'How to use this binary'
-
-    # Your app's homepage.
-    # Default is empty.
     homepage: 'https://github.com/DelineaXPM/dsv-cli'
-
-    # Template of your app's description.
-    # Default is empty.
-    description: '⚡ A cross-platform swiss army knife tool for DevOps secrets management.'
-
-    # SPDX identifier of your app's license.
-    # Default is empty.
+    description: '⚡ A cross-platform swiss army knife tool for DevOps secrets management from Delinea.'
     license: 'Apache-2.0 license'
-
-    # Setting this will prevent goreleaser to actually try to commit the updated
-    # formula - instead, the formula file will be stored on the dist folder only,
-    # leaving the responsibility of publishing it to the user.
-    # If set to auto, the release will not be uploaded to the homebrew tap
-    # in case there is an indicator for prerelease in the tag e.g. v1.0.0-rc1
-    # Default is false.
-    skip_upload: false
-
-    # Custom block for brew.
-    # Can be used to specify alternate downloads for devel or head releases.
-    # Default is empty.
-    # custom_block: |
-    #   head "https://github.com/some/package.git"
-    #   ...
-
-    # Packages your package depends on.
+    skip_upload: '{{ if .IsSnapshot }}true{{else}}false{{end}}'
     dependencies:
       - name: git
     conflicts: []
-
-    # # Specify for packages that run as a service.
-    # # Default is empty.
-    # plist: |
-    #   <?xml version="1.0" encoding="UTF-8"?>
-    #   # ...
-
-    # Service block.
-    #
-    # Since: v1.7.
-    # service: |
-    #   run: foo/bar
-    #   # ...
-
-    # So you can `brew test` your formula.
-    # Default is empty.
     test: |
-      system "#{bin}/dsv-cli --version"
-
-    # Custom install script for brew.
-    # Default is 'bin.install "the binary name"'.
-    # install: |
-    #   bin.install "some_other_name"
-    #   bash_completion.install "completions/foo.bash" => "foo"
-    #   # ...
-
-    # Custom post_install script for brew.
-    # Could be used to do any additional work after the "install" script
-    # Default is empty.
-    # post_install: |
-    #   etc.install "app-config.conf"
-    #   ...
+      assert_equal "{{.Version}}", shell_output("#{bin}/dsv --version").strip
