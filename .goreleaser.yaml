@@ -106,7 +106,7 @@ archives:
       - build-windows
 
 checksum:
-  name_template: '{{ .ProjectName }}-{{.Runtime.Goos}}-sha256.txt'
+  name_template: checksums-sha256.txt
   algorithm: sha256
   disable: false
 
@@ -183,3 +183,15 @@ brews:
     conflicts: []
     test: |
       assert_equal "{{.Version}}", shell_output("#{bin}/dsv --version").strip
+scoop:
+  bucket:
+    owner: DelineaXPM
+    name: scoop-bucket
+    branch: main
+  commit_author:
+    name: goreleaserbot
+    email: bot@goreleaser.com
+  homepage: 'https://github.com/DelineaXPM/dsv-cli'
+  description: '⚡ A cross-platform swiss army knife tool for DevOps secrets management from Delinea.'
+  license: 'Apache-2.0 license'
+  skip_upload: '{{ if .IsSnapshot }}true{{else}}false{{end}}'
