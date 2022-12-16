@@ -172,7 +172,7 @@ func (Release) All() error {
 	); err != nil {
 		return err
 	}
-	mg.SerialDeps(Release{}.UploadCLIVersion())
+	mg.SerialDeps(Release{}.UploadCLIVersion)
 
 	pterm.Println("(Release).All() completed successfully")
 	return nil
