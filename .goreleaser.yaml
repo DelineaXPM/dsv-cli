@@ -116,7 +116,7 @@ release:
   mode: replace
   skip_upload: false
   replace_existing_draft: true
-  name_template: '{{.ProjectName}} - v{{.Version}}'
+  name_template: '{{.ProjectName}}-v{{.Version}}'
   extra_files:
     - glob: .artifacts/goreleaser/**/*.sig
     - glob: .artifacts/cli-version.json
@@ -125,7 +125,7 @@ sboms:
   - artifacts: binary
     id: sbom-binaries
     documents:
-      - '{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}.sbom.json'
+      - '{{ .Binary }}-{{ .Os }}-{{ .Arch }}.sbom.json'
       #- '${artifact}.{{.Runtime.Goos}}.{{.Runtime.Goarch}}.spdx.json'
 changelog:
   skip: false
