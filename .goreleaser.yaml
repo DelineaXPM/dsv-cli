@@ -25,9 +25,9 @@ builds:
     mod_timestamp: '{{ .CommitTimestamp }}'
     ldflags: &common-ldflags |
       -s -w
-      -X thy/version.Version={{.Version}}
-      -X thy/version.GitCommit={{ .FullCommit }}
-      -X thy/version.BuildDate={{ .CommitDate }}
+      -X github.com/DelineaXPM/dsv-cli/version.Version={{.Version}}
+      -X github.com/DelineaXPM/dsv-cli/version.GitCommit={{ .FullCommit }}
+      -X github.com/DelineaXPM/dsv-cli/version.BuildDate={{ .CommitDate }}
     goos: [darwin]
     goarch:
       - amd64
@@ -91,7 +91,7 @@ archives:
 
   - format: binary
     id: archive-binary-darwin
-    name_template: &artifact-build-name dsv-{{ replace .Os "windows" "win" }}-{{ if eq .Arch "386" }}x86{{ else }}{{ .Arch }}{{end}}
+    name_template: &artifact-build-name dsv-{{ replace .Os "windows" "win" }}-{{ if eq .Arch "386" }}x86{{ else if eq .Arch "amd64" }}x64{{ else }}{{ .Arch }}{{end}}
     builds:
       - build-darwin
   - format: binary

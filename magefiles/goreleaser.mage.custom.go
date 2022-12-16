@@ -211,7 +211,7 @@ func (Release) Test() error {
 		"--snapshot",
 		"--skip-publish",
 		"--skip-sign",
-		// "--skip-sbom",
+		"--skip-sbom",
 		fmt.Sprintf("--release-notes=%s", cleanpath),
 	}
 	pterm.Debug.Printfln("goreleaser: %+v", releaserArgs)
