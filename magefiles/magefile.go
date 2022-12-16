@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/DelineaXPM/dsv-cli/magefiles/constants"
+	"github.com/bitfield/script"
 	"github.com/dustin/go-humanize"
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
@@ -110,8 +111,29 @@ func Init() error {
 				return err
 			}
 		}
+		pterm.Success.Printfln("Init() completed (exited early due to ci.IsCI()) [%s]\n", relTime(start))
+		return nil
+	}
+
+	if runtime.GOOS == "windows" {
+		pterm.Warning.Printfln("Trunk is not supported on windows, must run in WSL2, skipping trunk install")
+	} else {
+		if err = InstallTrunk(); err != nil {
+			pterm.Error.Printfln("failed to install trunk (try installing manually from: https://trunk.io/): %v", err)
+			return err
+		}
 	}
 
 	pterm.Success.Printfln("Init() completed [%s]\n", relTime(start))
+	return nil
+}
+
+// InstallTrunk installs trunk.io tooling for linting and formatting.
+func InstallTrunk() error {
+	_, err := script.Exec("curl https://get.trunk.io -fsSL").Exec("bash -s -- -y").Stdout()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

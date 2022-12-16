@@ -41,7 +41,7 @@ type checkEnv struct {
 // checkEnvVar performs a check on environment variable and helps build a report summary of the failing conditions, missing variables, and bypasses logging if it's a secret.
 // Yes this could be replaced by the `env` package but I had this in place and the output is nice for debugging so I left it. - Sheldon 😀
 //
-//nolint:unparam,appendAssign // ignoring as i'll want to use the values in the future, ok to leave for now. appendAssign is ok as well, though it could be much cleaner, it works for now.
+//nolint:unparam // ignoring as i'll want to use the values in the future, ok to leave for now.
 func checkEnvVar(ckv checkEnv) (string, pterm.TableData, error) {
 	// loggedValue is used to make sure any secret isn't put into the table output.
 	var value, loggedValue string
@@ -64,13 +64,13 @@ func checkEnvVar(ckv checkEnv) (string, pterm.TableData, error) {
 	// Required but not a terminating error, then just put as information different from success, and no error.
 	if !isSet && !ckv.IsRequired {
 		// trunk-ignore(golangci-lint/gocritic)
-		tbl = append(ckv.Tbl, []string{"👉", ckv.Name, loggedValue, ckv.Notes}) //nolint:appendAssign // might refactor in future, for now it's ok - sheldon
+		tbl = append(ckv.Tbl, []string{"👉", ckv.Name, loggedValue, ckv.Notes})
 		return value, tbl, nil
 	}
 
 	if isSet {
 		// trunk-ignore(golangci-lint/gocritic)
-		tbl = append(ckv.Tbl, []string{"✅", ckv.Name, loggedValue, ckv.Notes}) //nolint:appendAssign // might refactor in future, for now it's ok - sheldon
+		tbl = append(ckv.Tbl, []string{"✅", ckv.Name, loggedValue, ckv.Notes})
 		return value, tbl, nil
 	}
 	return "", tbl, fmt.Errorf("unknown error (no conditions were hit so it's a PEKAB issue 😁) with evaluation of: %s", ckv.Name)
@@ -176,6 +176,58 @@ func (Release) All() error {
 	return nil
 }
 
+// 🔨 Test runs release but with snapshot enabled and skips any type of remote push.
+func (Release) Test() error {
+	magetoolsutils.CheckPtermDebug()
+	defer func() {
+		err := sh.Rm(constants.TargetCLIVersionArtifact)
+		if err != nil {
+			pterm.Error.Printfln("error removing %s: %v", constants.TargetCLIVersionArtifact, err)
+		}
+	}()
+	// TODO: this will be checked once we publish cli to github
+	// if _, err := checkEnvVar("DOCKER_ORG", true); err != nil {
+	// 	return err
+	// }
+	// Run any dependent tasks first.
+	mg.SerialDeps(Release{}.GenerateCLIVersionFile)
+
+	releaseVersion, err := sh.Output("changie", "latest")
+	if err != nil {
+		pterm.Error.Printfln("changie pulling latest release note version failure: %v", err)
+		return err
+	}
+	cleanVersion := strings.TrimSpace(releaseVersion)
+	cleanpath := filepath.Join(".changes", cleanVersion+".md")
+	if os.Getenv("GITHUB_WORKSPACE") != "" {
+		cleanpath = filepath.Join(os.Getenv("GITHUB_WORKSPACE"), ".changes", cleanVersion+".md")
+	}
+	// NOTE: Merging all of this into a single goreleaser, not per-platform anymore.
+
+	releaserArgs := []string{
+		"release",
+		"--rm-dist",
+		"--skip-validate",
+		"--snapshot",
+		"--skip-publish",
+		"--skip-sign",
+		"--skip-sbom",
+		fmt.Sprintf("--release-notes=%s", cleanpath),
+	}
+	pterm.Debug.Printfln("goreleaser: %+v", releaserArgs)
+
+	if err := sh.RunWithV(map[string]string{
+		"GORELEASER_CURRENT_TAG": cleanVersion,
+	},
+		"goreleaser",
+		releaserArgs...,
+	); err != nil {
+		return err
+	}
+	pterm.Println("(Release).Test() completed successfully")
+	return nil
+}
+
 // getGoreleaserConfig returns the path to the goreleaser config file based on the current OS.
 func getGoreleaserConfig() (string, error) {
 	magetoolsutils.CheckPtermDebug()
@@ -186,7 +238,7 @@ func getGoreleaserConfig() (string, error) {
 		configfile = ".goreleaser.darwin.yaml"
 	case "linux":
 		configfile = ".goreleaser.linux.yaml"
-	case "windows":
+	case "windows": //nolint:goconst // windows is used multiple times but not appropriate to be a constant
 		configfile = ".goreleaser.windows.yaml"
 	default:
 		pterm.Error.Printfln("Unsupported OS: %s", runtime.GOOS)
@@ -258,6 +310,8 @@ func (Release) GenerateCLIVersionFile() error {
 }
 
 // getVersion returns the version and path for the changefile to use for the semver and release notes.
+//
+//nolint:unparam // this is a helper function, i'm ok leaving the additional parameter in there for now. - Sheldon 2022-12-15
 func getVersion() (releaseVersion, cleanPath string, err error) {
 	releaseVersion, err = sh.Output("changie", "latest")
 	if err != nil {
@@ -315,5 +369,38 @@ func (Release) UploadCLIVersion() error {
 		constants.TargetCLIVersionArtifact,
 		os.Getenv("S3_BUCKET"), constants.S3CLIVersionPath,
 	)
+	return nil
+}
+
+// 📦 Bump the application. Interactive Command. Generates a bumped changelog and runs required tooling to commit just this content.
+func (Release) Bump() error {
+	bumpType, _ := pterm.DefaultInteractiveSelect.
+		WithOptions([]string{"patch", "minor", "major"}).
+		Show()
+	pterm.Info.Printfln("bumping by: %s", bumpType)
+	if err := sh.RunV("changie", "batch", bumpType); err != nil {
+		return err
+	}
+	if err := sh.RunV("changie", "merge"); err != nil {
+		return err
+	}
+	if err := sh.RunV("trunk", "fmt"); err != nil {
+		return err
+	}
+	if err := sh.RunV("git", "add", ".changes/*"); err != nil {
+		return err
+	}
+	if err := sh.RunV("git", "add", "CHANGELOG.md"); err != nil {
+		return err
+	}
+
+	releaseVersion, _, err := getVersion()
+	if err != nil {
+		return err
+	}
+
+	if err := sh.RunV("git", "commit", "-m", fmt.Sprintf("feat: 🚀 create release %s", releaseVersion)); err != nil {
+		return err
+	}
 	return nil
 }
