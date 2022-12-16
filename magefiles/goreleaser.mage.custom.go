@@ -142,7 +142,7 @@ func (Release) All() error {
 	// 	return err
 	// }
 	// Run any dependent tasks first.
-	mg.SerialDeps(Release{}.GenerateCLIVersionFile)
+	mg.SerialDeps(Release{}.GenerateCLIVersionFile) // Allowing it to run first as an uploaded artifact so even if failure to s3, the github json asset file is still available.
 
 	releaseVersion, err := sh.Output("changie", "latest")
 	if err != nil {
@@ -172,6 +172,8 @@ func (Release) All() error {
 	); err != nil {
 		return err
 	}
+	mg.SerialDeps(Release{}.UploadCLIVersion())
+
 	pterm.Println("(Release).All() completed successfully")
 	return nil
 }
