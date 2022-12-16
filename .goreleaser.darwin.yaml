@@ -21,9 +21,9 @@ builds:
     mod_timestamp: '{{ .CommitTimestamp }}'
     ldflags:
       - -s -w
-      - -X thy/version.Version={{ .Summary }}
-      - -X thy/version.GitCommit={{ .FullCommit }}
-      - -X thy/version.BuildDate={{ .CommitDate }}
+      - -X github.com/DelineaXPM/dsv-cli/version.Version={{ .Summary }}
+      - -X github.com/DelineaXPM/dsv-cli/version.GitCommit={{ .FullCommit }}
+      - -X github.com/DelineaXPM/dsv-cli/version.BuildDate={{ .CommitDate }}
     goos: [darwin]
     goarch:
       - amd64

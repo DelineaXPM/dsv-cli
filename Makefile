@@ -18,9 +18,9 @@ VERSION     = $(shell git describe --always --dirty --tags)
 BUILD_DATE  = $(shell date +%s)
 GIT_COMMIT  = $(shell git rev-parse HEAD)
 
-LDFLAGS     = -X thy/version.Version=$(VERSION)
-LDFLAGS     += -X thy/version.BuildDate=$(BUILD_DATE)
-LDFLAGS     += -X thy/version.GitCommit=$(GIT_COMMIT)
+LDFLAGS     = -X github.com/DelineaXPM/dsv-cli/version.Version=$(VERSION)
+LDFLAGS     += -X github.com/DelineaXPM/dsv-cli/version.BuildDate=$(BUILD_DATE)
+LDFLAGS     += -X github.com/DelineaXPM/dsv-cli/version.GitCommit=$(GIT_COMMIT)
 LDFLAGS_REL = $(LDFLAGS) -s -w
 
 .DEFAULT_GOAL := build
