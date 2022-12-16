@@ -12,7 +12,8 @@ An automation tool for the management of credentials for applications, databases
 
 ## Quick Start Install
 
-### Any Platform
+<details closed>
+<summary>ℹ️ Any Platform</summary>
 
 - 🔨 Download from [prebuilt-binaries] manually.
 - [Aquaproject][aqua-project]: `aqua generate 'DelineaXPM/dsv-cli' -i` and update your `aqua.yml` file.
@@ -34,11 +35,17 @@ An automation tool for the management of credentials for applications, databases
   $download | ForEach-Object { Invoke-WebRequest -Uri $_.DownloadLink -OutFile $_.OutFileName -UseBasicParsing }
   ```
 
+</details>
+
+<details closed>
+<summary>ℹ️ Mac & Linux</summary>
+
 ## Mac & Linux
 
 - [aqua-project] provides a binary tool manager similar to Brew.
-- 👉 PENDING: [Brew][brew-install]: `brew install dsv-cli`.
-- Curl (if you have go installed):
+- [🍺 Brew][brew-install]: `brew install DelineaXPM/tap/dsv-cli`.
+  - Upgrade with: `brew update && brew upgrade dsv-cli`
+- Curl (requires Go installed):
 
   ```shell
   version=$(curl -sb -H "Accept: application/json" https://s3.amazonaws.com/dsv.secretsvaultcloud.com/cli-version.json | $(go env GOPATH)/bin/yq '.latest')
@@ -46,13 +53,18 @@ An automation tool for the management of credentials for applications, databases
   curl -fSsl https://dsv.secretsvaultcloud.com/downloads/cli/$version/dsv-darwin-x64 -o dsv && chmod +x ./dsv && sudo mv ./dsv /usr/local/bin
   ```
 
-- Only curl (requires specifying the version):
+- Curl (no Go required). Requires specifying the version:
 
   ```shell
-  curl -fSsl https://dsv.secretsvaultcloud.com/downloads/cli/1.39.0/dsv-darwin-x64 -o dsv && chmod +x ./dsv && sudo mv ./dsv /usr/local/bin
+  curl -fSsl https://dsv.secretsvaultcloud.com/downloads/cli/1.39.5/dsv-darwin-x64 -o dsv && chmod +x ./dsv && sudo mv ./dsv /usr/local/bin
   ```
 
 > **note**: It is not required to install to `/usr/local/bin`. If you choose to install to another location you'll want to make sure it's added to your PATH for the tool to be found.
+
+</details>
+
+<details closed>
+<summary>ℹ️ Windows</summary>
 
 ### Windows
 
@@ -64,6 +76,8 @@ An automation tool for the management of credentials for applications, databases
   # Change this to windows/386 if required to install x86.
   Invoke-WebRequest -Uri $json.links.'windows/amd64' -OutFile 'dsv.exe' -UseBasicParsing
   ```
+
+</details>
 
 ## License
 
