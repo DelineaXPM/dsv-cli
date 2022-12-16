@@ -1,0 +1,10 @@
+kind: "\U0001F528 Refactor"
+body:
+  Adjust the artifact path for goreleaser generated checksum back to standard
+  asset-platform-etc.
+time: 2022-12-16T15:53:18.031157-06:00
+custom:
+  azure-boards-workitemid-fixed: ''
+  azure-boards-workitemid-related: ''
+  github-contributor: sheldonhull
+  github-link: ''
