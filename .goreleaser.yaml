@@ -104,7 +104,11 @@ archives:
     name_template: *artifact-build-name
     builds:
       - build-windows
-
+  - format: zip
+    id: archive-zip-windows
+    name_template: *artifact-build-name
+    builds:
+      - build-windows
 checksum:
   name_template: checksums-sha256.txt
   algorithm: sha256
@@ -184,15 +188,15 @@ brews:
     test: |
       assert_equal "{{.Version}}", shell_output("#{bin}/dsv --version").strip
 
-# scoop:
-#   bucket:
-#     owner: DelineaXPM
-#     name: scoop-bucket
-#     branch: main
-#   commit_author:
-#     name: goreleaserbot
-#     email: bot@goreleaser.com
-#   homepage: 'https://github.com/DelineaXPM/dsv-cli'
-#   description: '⚡ A cross-platform swiss army knife tool for DevOps secrets management from Delinea.'
-#   license: 'Apache-2.0 license'
-#   skip_upload: '{{ if .IsSnapshot }}true{{else}}false{{end}}'
+scoop:
+  bucket:
+    owner: DelineaXPM
+    name: scoop-bucket
+    branch: main
+  commit_author:
+    name: goreleaserbot
+    email: bot@goreleaser.com
+  homepage: 'https://github.com/DelineaXPM/dsv-cli'
+  description: '⚡ A cross-platform swiss army knife tool for DevOps secrets management from Delinea.'
+  license: 'Apache-2.0 license'
+  skip_upload: '{{ if .IsSnapshot }}true{{else}}false{{end}}'

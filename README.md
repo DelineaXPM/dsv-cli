@@ -68,7 +68,10 @@ An automation tool for the management of credentials for applications, databases
 
 ### Windows
 
-- 👉 PENDING: Possible choco/scoop installations depending on demand.
+- Scoop:
+  - First time setup: `scoop bucket add org https://github.com/DelineaXPM/scoop-bucket.git`.
+  - Install: `scoop install DelineaXPM/dsv-cli`.
+  - Update: `scoop update DelineaXPM/dsv-cli`.
 - Using curl in Windows PowerShell (for cross-platform pwsh see top section) and move to whatever directory you want:
 
   ```powershell
