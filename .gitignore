@@ -119,3 +119,7 @@ id_dsa
 
 # install for powershell resulted in .deb file getting into repo. let's remove that!
 *.deb
+
+# Generated credential file should never get committed
+snapcraft-login
+**/*/snapcraft-login

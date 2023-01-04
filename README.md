@@ -64,6 +64,13 @@ An automation tool for the management of credentials for applications, databases
 </details>
 
 <details closed>
+<summary>ℹ️ Linux Only</summary>
+
+[![Get it from the Snap Store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/dsv-cli)
+
+</details>
+
+<details closed>
 <summary>ℹ️ Windows</summary>
 
 ### Windows

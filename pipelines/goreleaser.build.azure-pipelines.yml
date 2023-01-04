@@ -32,7 +32,8 @@ variables:
   - group: GORELEASER # to avoid api rate issues
   - group: AWS-DSV-CLI-PROD # for AWS asset upload
   - template: templates/vars.common.yml
-
+  - name: SnapcraftSecureFile
+    value: SNAPCRAFT
 jobs:
   - job: build
     displayName: build-dsv-cli
@@ -78,6 +79,11 @@ jobs:
           ClientId: $(ClientId)
           ClientSecret: $(ClientSecret)
           SecretPath: ado/cli
+      - task: DownloadSecureFile@1
+        name: downloadSnapcraftLogin
+        displayName: download-snapcraft-login
+        inputs:
+          secureFile: $(SnapcraftSecureFile)
       - task: DownloadSecureFile@1
         name: downloadCertPFXFormat
         displayName: download-cert-pfx-format
@@ -208,6 +214,17 @@ jobs:
           Write-Host ('[mage] binary: {0} version: {1}' -f $(Get-Command mage -ErrorAction SilentlyContinue).Path, [string]$(mage -version)) -ForegroundColor Gray
           &mage init
         displayName: mage init
+        workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
+        failOnStderr: false
+        env:
+          AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
+          GOROOT: $(goenv.GOROOT)
+          GOPATH: $(GOPATH)
+      - pwsh: |
+          Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
+          Write-Host ('[mage] binary: {0} version: {1}' -f $(Get-Command mage -ErrorAction SilentlyContinue).Path, [string]$(mage -version)) -ForegroundColor Gray
+          &mage release:snapcraftlogin '$(downloadSnapcraftLogin.secureFilePath)'
+        displayName: mage release:snapcraftlogin
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
         failOnStderr: false
         env:
