@@ -53,3 +53,7 @@ MD024:
   allow_different_nesting: true
   # Only check sibling headings
   siblings_only: true
+
+# MD033 - Inline HTML
+# Allow this as we use badges and other summary block in html format for better readability.
+MD033: false

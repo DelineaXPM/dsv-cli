@@ -39,4 +39,5 @@ This version number will be used to set the version of the release, so the docs 
 ## Snap Login
 
 - Run `snapcraft login`.
-- After login: `snapcraft export-login snapcraft-login` to create a file `snapcraft-login` for the login to use for CI purposes. Upload this as a secure file in Azure DevOps Secure file vault, or if using a shared team DSV Vault, place it in there (that's pending implementation as of 2023-01).
+- After login: `snapcraft export-login snapcraft-login` to create a file `snapcraft-login` for the login to use for CI purposes.
+  Upload this as a secure file in Azure DevOps Secure file vault, or if using a shared team DSV Vault, place it in there (that's pending implementation as of 2023-01).
