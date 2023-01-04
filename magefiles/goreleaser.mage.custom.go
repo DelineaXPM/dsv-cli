@@ -127,6 +127,16 @@ func (Build) All() error {
 	// }, binary, releaserArgs...)
 }
 
+// SnapcraftLogin (Parameter: secureFilePath string) logs into snapcraft so Goreleaser can publish the snap.
+//
+// Paremeter: secureFilePath string is the path to the file containing the snapcraft login credentials.
+//
+// To generate this file: `snapcraft export-login snapcraft-login`.
+func (Release) SnapcraftLogin(secureFilePath string) error {
+	magetoolsutils.CheckPtermDebug()
+	return sh.RunV("snapcraft", "login", "--with-file="+secureFilePath)
+}
+
 // 🔨 All generates a release with goreleaser. This does the whole shebang, including build, publish, and notify.
 func (Release) All() error {
 	magetoolsutils.CheckPtermDebug()
@@ -374,14 +384,14 @@ func (Release) UploadCLIVersion() error {
 	return nil
 }
 
-// 📦 Bump the application. Interactive Command. Generates a bumped changelog and runs required tooling to commit just this content.
+// 📦 Bump the application as an interactive command, prompting for semver change type, merging changelog, and running format and git add.
 func (Release) Bump() error {
 	bumpType, _ := pterm.DefaultInteractiveSelect.
 		WithOptions([]string{"patch", "minor", "major"}).
 		Show()
 	pterm.Info.Printfln("bumping by: %s", bumpType)
 	if err := sh.RunV("changie", "batch", bumpType); err != nil {
-		return err
+		pterm.Warning.Printf("changie batch failure (non-terminating as might be repeating batch command): %v", err)
 	}
 	if err := sh.RunV("changie", "merge"); err != nil {
 		return err

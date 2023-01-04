@@ -35,3 +35,9 @@ Update [CHANGELOG.md](../../CHANGELOG.md) by running `changie merge` which will 
 
 Changie notes are named like `v1.0.4.md`.
 This version number will be used to set the version of the release, so the docs in essence will be the version source of truth.
+
+## Snap Login
+
+- Run `snapcraft login`.
+- After login: `snapcraft export-login snapcraft-login` to create a file `snapcraft-login` for the login to use for CI purposes.
+  Upload this as a secure file in Azure DevOps Secure file vault, or if using a shared team DSV Vault, place it in there (that's pending implementation as of 2023-01).
