@@ -68,6 +68,9 @@ An automation tool for the management of credentials for applications, databases
 
 [![Get it from the Snap Store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/dsv-cli)
 
+- Via cli: `snap install dsv-cli`.
+- Note: Snaps update automatically (4 times a day as the [default behavior as of 2023-01](https://snapcraft.io/docs/keeping-snaps-up-to-date)), but this can be run manually via `snap refresh`.
+
 </details>
 
 <details closed>
