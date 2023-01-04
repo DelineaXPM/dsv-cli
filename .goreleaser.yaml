@@ -200,3 +200,35 @@ scoop:
   description: '⚡ A cross-platform swiss army knife tool for DevOps secrets management from Delinea.'
   license: 'Apache-2.0 license'
   skip_upload: '{{ if .IsSnapshot }}true{{else}}false{{end}}'
+
+snapcrafts:
+  - id: dsv-cli-snap
+    builds:
+      - '{{ if (eq .Runtime.Goos "linux") }}archive-binary-linux{{else}}{{end}}'
+    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+    name: dsv-cli
+    # must run snapcraft login first
+    publish: true
+    summary: '⚡ A cross-platform swiss army knife tool for DevOps secrets management from Delinea.'
+    description: |
+      The DSV CLI is a cross-platform swiss army knife tool for DevOps secrets management from Delinea.
+      It is designed to be a simple, yet powerful, tool for managing secrets in a variety of
+      environments. It is designed to be used in CI/CD pipelines, as well as locally on developer
+      machines.
+    grade: stable
+    confinement: strict
+    license: Apache-2.0
+    apps:
+      # The name of the app must be the same name as the binary built or the snapcraft name.
+      dsv-cli:
+        plugs: ['home', 'network', 'personal-files']
+        command: bin/dsv
+        aliases: ['dsv']
+    plugs:
+      personal-files:
+        read:
+          - $HOME/.dsv.yml
+          - $HOME/.thy
+        write:
+          - $HOME/.dsv.yml
+          - $HOME/.thy

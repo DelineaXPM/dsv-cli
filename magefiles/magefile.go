@@ -124,6 +124,14 @@ func Init() error {
 		}
 	}
 
+	if runtime.GOOS == "darwin" {
+		pterm.Info.Println("installing snapcraft for Darwin to allow test build and packaging to run")
+		if err := sh.RunWithV(map[string]string{"HOMEBREW_NO_AUTO_UPDATE": "1"}, "brew", "install", "snapcraft"); err != nil {
+			pterm.Error.Printfln("failed to install snapcraft on darwin system with homebrew: %v", err)
+			return err
+		}
+		pterm.Success.Println("snapcraft installed")
+	}
 	pterm.Success.Printfln("Init() completed [%s]\n", relTime(start))
 	return nil
 }

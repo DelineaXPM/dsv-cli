@@ -5,19 +5,17 @@ tags: ['development', 'tooling']
 
 ## Building the CLI
 
-To build the program or contribute to its development, use Go version 1.17 or later.
+To build the program or contribute to its development, use Go version 1.18 or later.
 
-Build:
+Run `mage` command line tool to list tasks for building and testing.
+If using aqua to install tooling, this is automatically added.
+If not, you'll need to install [mage manually](https://magefile.org).
 
-```shell
-make build
-```
+These tasks are documented via `mage -l` or `mage -h taskname` in more detail.
 
-Run tests:
+## Running Local Test Build on Darwin
 
-```shell
-make test
-```
+- Manually run: `brew install snapcraft`.
 
 ## Troubleshooting
 
