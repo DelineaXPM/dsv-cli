@@ -261,6 +261,7 @@ jobs:
           COSIGN_PASSWORD: $(cert.password)
           COSIGN_KEY: $(downloadCertKeyFormat.secureFilePath)
 
+          SNAPCRAFT_STORE_CREDENTIALS: $(SNAPCRAFT_STORE_CREDENTIALS)
       - task: PublishBuildArtifacts@1
         displayName: 'Build Artifact: PRTestBuilds'
         inputs:
