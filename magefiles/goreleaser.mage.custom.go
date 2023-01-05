@@ -135,7 +135,7 @@ func (Build) All() error {
 // To generate this file: `snapcraft export-login snapcraft-login`.
 func (Release) SnapcraftLogin() error {
 	magetoolsutils.CheckPtermDebug()
-	if os.Getenv("SNAPCRAFT_STORE_CREDENTIALS") != "" {
+	if os.Getenv("SNAPCRAFT_STORE_CREDENTIALS") == "" {
 		if ci.IsCI() {
 			pterm.Error.Println("##vso[task.logissue type=error;]SNAPCRAFT_STORE_CREDENTIALS is a required environment variable to be able to run a release")
 		}
