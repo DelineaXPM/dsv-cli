@@ -14,6 +14,7 @@ import (
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 	"github.com/pterm/pterm"
+	"github.com/sheldonhull/magetools/ci"
 	"github.com/sheldonhull/magetools/pkg/magetoolsutils"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -134,7 +135,13 @@ func (Build) All() error {
 // To generate this file: `snapcraft export-login snapcraft-login`.
 func (Release) SnapcraftLogin(secureFilePath string) error {
 	magetoolsutils.CheckPtermDebug()
-	return sh.RunV("snapcraft", "login", "--with", secureFilePath)
+	if os.Getenv("SNAPCRAFT_STORE_CREDENTIALS") != "" {
+		if ci.IsCI() {
+			pterm.Error.Println("##vso[task.logissue type=error;]SNAPCRAFT_STORE_CREDENTIALS is a required environment variable to be able to run a release")
+		}
+		return fmt.Errorf("SNAPCRAFT_STORE_CREDENTIALS is a required environment variable to be able to run a release")
+	}
+	return sh.RunV("snapcraft", "login")
 }
 
 // 🔨 All generates a release with goreleaser. This does the whole shebang, including build, publish, and notify.

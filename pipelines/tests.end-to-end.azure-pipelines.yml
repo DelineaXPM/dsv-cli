@@ -29,8 +29,6 @@ variables:
   - group: 'CLi-pipeline-variables' # TODO: replace with dsv cli calls
   - group: GITHUB # to avoid api rate issues
   - template: templates/vars.common.yml
-  - name: SnapcraftSecureFile
-    value: SNAPCRAFT
 jobs:
   - job: endtoendtest
     displayName: dsv-cli-endtoend-test
@@ -65,11 +63,6 @@ jobs:
           ClientId: $(ClientId)
           ClientSecret: $(ClientSecret)
           SecretPath: ado/cli
-      - task: DownloadSecureFile@1
-        name: downloadSnapcraftLogin
-        displayName: download-snapcraft-login
-        inputs:
-          secureFile: $(SnapcraftSecureFile)
       - task: GoTool@0
         displayName: install-go-$(GO_VERSION)
         # aqua will replace later, but this prevents prior conflicts with Windows using the Go install commands.
