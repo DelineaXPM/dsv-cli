@@ -128,12 +128,12 @@ func (Build) All() error {
 	// }, binary, releaserArgs...)
 }
 
-// SnapcraftLogin (Parameter: secureFilePath string) logs into snapcraft so Goreleaser can publish the snap.
+// SnapcraftLogin logs into snapcraft so Goreleaser can publish the snap.
 //
-// Paremeter: secureFilePath string is the path to the file containing the snapcraft login credentials.
+// Requires environment variable: `SNAPCRAFT_STORE_CREDENTIALS`.
 //
 // To generate this file: `snapcraft export-login snapcraft-login`.
-func (Release) SnapcraftLogin(secureFilePath string) error {
+func (Release) SnapcraftLogin() error {
 	magetoolsutils.CheckPtermDebug()
 	if os.Getenv("SNAPCRAFT_STORE_CREDENTIALS") != "" {
 		if ci.IsCI() {
