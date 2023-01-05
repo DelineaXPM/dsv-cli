@@ -134,7 +134,7 @@ func (Build) All() error {
 // To generate this file: `snapcraft export-login snapcraft-login`.
 func (Release) SnapcraftLogin(secureFilePath string) error {
 	magetoolsutils.CheckPtermDebug()
-	return sh.RunV("snapcraft", "login", "--with-file="+secureFilePath)
+	return sh.RunV("snapcraft", "login", "--with", secureFilePath)
 }
 
 // 🔨 All generates a release with goreleaser. This does the whole shebang, including build, publish, and notify.
