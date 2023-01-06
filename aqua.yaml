@@ -3,7 +3,7 @@
 # https://aquaproj.github.io/
 registries:
   - type: standard
-    ref: v3.102.0 # renovate: depName=aquaproj/aqua-registry
+    ref: v3.116.0 # renovate: depName=aquaproj/aqua-registry
 packages:
   - name: miniscruff/changie@v1.10.0
     tags: ['ci']
@@ -26,8 +26,6 @@ packages:
     tags: ['ci']
   - name: sigstore/cosign@v1.13.1
     tags: ['ci']
-  - name: thycotic/dsv-cli@1.39.0
-    tags: ['ci']
   - name: anchore/quill@v0.2.0
     tags: ['ci']
   - name: anchore/grype@v0.53.1
@@ -36,4 +34,7 @@ packages:
     tags: ['experimental', 'goinstall']
   - name: charmbracelet/vhs@v0.2.0
   - name: gotestyourself/gotestsum@v1.8.2
+    tags: ['ci']
+  - name: charmbracelet/gum@v0.8.0
+  - name: DelineaXPM/dsv-cli@v1.39.10
     tags: ['ci']

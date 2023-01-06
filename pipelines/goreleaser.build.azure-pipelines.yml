@@ -214,23 +214,7 @@ jobs:
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
           GOROOT: $(goenv.GOROOT)
           GOPATH: $(GOPATH)
-      - bash: |
-          sudo apt-get -yyq update
-          sudo apt-get -yyq install snapd
-          sudo snap install --classic snapcraft
-        displayName: install-snapcraft
-      - pwsh: |
-          Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
-          Write-Host ('[mage] binary: {0} version: {1}' -f $(Get-Command mage -ErrorAction SilentlyContinue).Path, [string]$(mage -version)) -ForegroundColor Gray
-          # &mage release:snapcraftlogin
-        displayName: mage release:snapcraftlogin
-        env:
-          AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
-          GOROOT: $(goenv.GOROOT)
-          GOPATH: $(GOPATH)
-          SNAPCRAFT_STORE_CREDENTIALS: $(SNAPCRAFT_STORE_CREDENTIALS)
-        workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
-        failOnStderr: false
+      - templates: templates/task-install-snapcraft.yml
       - pwsh: |
           Write-Host ('[go] binary: {0} version: {1}' -f $(Get-Command go -ErrorAction SilentlyContinue).Path, [string]$(go version)) -ForegroundColor Gray
           Write-Host ('[mage] binary: {0} version: {1}' -f $(Get-Command mage -ErrorAction SilentlyContinue).Path, [string]$(mage -version)) -ForegroundColor Gray

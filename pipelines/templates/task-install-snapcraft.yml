@@ -1,0 +1,9 @@
+---
+steps:
+  - bash: |
+      sudo apt-get -yyq update
+      sudo apt-get -yyq --no-install-suggests --no-install-recommends install snapcraft
+      # workaround for: https://github.com/goreleaser/goreleaser/issues/1715
+      mkdir -p $HOME/.cache/snapcraft/download || true
+      mkdir -p $HOME/.cache/snapcraft/stage-packages || true
+    displayName: install-snapcraft

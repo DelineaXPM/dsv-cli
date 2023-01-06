@@ -204,7 +204,7 @@ scoop:
 snapcrafts:
   - id: dsv-cli-snap
     builds:
-      - '{{ if (eq .Runtime.Goos "linux") }}archive-binary-linux{{else}}{{end}}'
+      - '{{ if (eq .Runtime.Goos "linux") }}build-linux{{else}}{{end}}'
     name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
     name: dsv-cli
     # must run snapcraft login first
@@ -222,7 +222,7 @@ snapcrafts:
       # The name of the app must be the same name as the binary built or the snapcraft name.
       dsv-cli:
         plugs: ['home', 'network', 'personal-files']
-        command: bin/dsv
+        command: dsv
         aliases: ['dsv']
     plugs:
       personal-files:
