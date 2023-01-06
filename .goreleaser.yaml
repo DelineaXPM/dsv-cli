@@ -204,7 +204,7 @@ scoop:
 snapcrafts:
   - id: dsv-cli-snap
     builds:
-      - '{{ if (eq .Runtime.Goos "linux") }}build-linux{{else}}{{end}}'
+      - build-linux #'{{ if (eq .Runtime.Goos "linux") }}build-linux{{else}}{{end}}'
     name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
     name: dsv-cli
     # must run snapcraft login first
