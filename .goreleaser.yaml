@@ -221,14 +221,21 @@ snapcrafts:
     apps:
       # The name of the app must be the same name as the binary built or the snapcraft name.
       dsv-cli:
-        plugs: ['home', 'network'] # might need personal-files for storing in dotfile directory
+        # https://snapcraft.io/docs/home-interface
+        plugs: ['network'] # removed home, and personal-files as these would persist outside the snap but require special approval. Instead all the data will be contained the snap environment itself.
         command: dsv
-        # aliases: ['dsv']
-    plugs:
-      personal-files:
-        read:
-          - $HOME/.dsv.yml
-          - $HOME/.thy
-        write:
-          - $HOME/.dsv.yml
-          - $HOME/.thy
+
+    # SNAP DOCS:
+    # https://snapcraft.io/docs/environment-variables
+    # For non-classic snaps, this environment variable is re-written to SNAP_USER_DATA by snapd so that each snap appears to have a dedicated home directory that is a subdirectory of the real home directory.
+    # args: --config 'SNAP_USER_COMMON/.dsv.yml'
+    # aliases: ['dsv']
+    # as a result, no plugs for home should be required
+    # plugs:
+    #   personal-files:
+    #     read:
+    #       - $HOME/.dsv.yml
+    #       - $HOME/.thy
+    #     write:
+    #       - $HOME/.dsv.yml
+    #       - $HOME/.thy
