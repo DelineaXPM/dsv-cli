@@ -223,7 +223,7 @@ snapcrafts:
       dsv-cli:
         plugs: ['home', 'network'] # might need personal-files for storing in dotfile directory
         command: dsv
-        aliases: ['dsv']
+        # aliases: ['dsv']
     plugs:
       personal-files:
         read:
