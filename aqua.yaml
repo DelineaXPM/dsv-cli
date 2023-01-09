@@ -3,32 +3,32 @@
 # https://aquaproj.github.io/
 registries:
   - type: standard
-    ref: v3.116.0 # renovate: depName=aquaproj/aqua-registry
+    ref: v3.118.0 # renovate: depName=aquaproj/aqua-registry
 packages:
-  - name: miniscruff/changie@v1.10.0
+  - name: miniscruff/changie@v1.10.2
     tags: ['ci']
-  - name: golang/go@go1.19.3
+  - name: golang/go@go1.19.4
     tags: ['ci']
   - name: direnv/direnv@v2.32.2
   - name: magefile/mage@v1.14.0
     tags: ['ci']
   - name: charmbracelet/glow@v1.4.1
-  - name: goreleaser/goreleaser@v1.13.1
+  - name: goreleaser/goreleaser@v1.14.1
     tags: ['ci']
   - name: mvdan/gofumpt@v0.4.0
-  - name: golang.org/x/tools/gopls@v0.10.1
-  - name: golang/tools/gorename@v0.3.0
-  - name: golang/tools/stringer@v0.3.0
-  - name: golang/tools/gomvpkg@v0.3.0
-  - name: golang/tools/godoc@v0.3.0
-  - name: golang/tools/guru@v0.3.0
-  - name: anchore/syft@v0.62.3
+  - name: golang.org/x/tools/gopls@v0.11.0
+  - name: golang/tools/gorename@v0.5.0
+  - name: golang/tools/stringer@v0.5.0
+  - name: golang/tools/gomvpkg@v0.5.0
+  - name: golang/tools/godoc@v0.5.0
+  - name: golang/tools/guru@v0.5.0
+  - name: anchore/syft@v0.65.0
     tags: ['ci']
   - name: sigstore/cosign@v1.13.1
     tags: ['ci']
   - name: anchore/quill@v0.2.0
     tags: ['ci']
-  - name: anchore/grype@v0.53.1
+  - name: anchore/grype@v0.55.0
   - name: sigstore/sget
     version: 'main'
     tags: ['experimental', 'goinstall']
@@ -36,5 +36,5 @@ packages:
   - name: gotestyourself/gotestsum@v1.8.2
     tags: ['ci']
   - name: charmbracelet/gum@v0.8.0
-  - name: DelineaXPM/dsv-cli@v1.39.10
+  - name: DelineaXPM/dsv-cli@v1.39.13
     tags: ['ci']
