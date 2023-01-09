@@ -82,6 +82,9 @@
       "dockerDashComposeVersion": "v2",
       "username": "vscode"
     },
+    "ghcr.io/devcontainers/features/sshd:1": {
+      "version": "latest"
+    },
     "ghcr.io/devcontainers/features/powershell:1": {}
   }
 }
