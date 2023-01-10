@@ -230,7 +230,7 @@ jobs:
 
           LOCAL_DOMAIN: $(LOCAL_DOMAIN)
           DEV_DOMAIN: $(DEV_DOMAIN)
-  - template: templates/task-codecov.yml
-    parameters:
-      workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
-      CODECOV_TOKEN: $(CODECOV_TOKEN)
+      - template: templates/task-codecov.yml
+        parameters:
+          workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
+          CODECOV_TOKEN: $(CODECOV_TOKEN)
