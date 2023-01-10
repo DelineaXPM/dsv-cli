@@ -29,7 +29,7 @@ variables:
   - group: 'CLi-pipeline-variables' # TODO: replace with dsv cli calls
   - group: GITHUB # to avoid api rate issues
   - template: templates/vars.common.yml
-
+  - group: DSV-CLI-CODECOV # for uploading to codecov which generates a merged code coverage result from all different types of tests (unit, integration, end2end)
 jobs:
   - job: integrationtest
     displayName: dsv-cli-integration-test
@@ -230,4 +230,7 @@ jobs:
 
           LOCAL_DOMAIN: $(LOCAL_DOMAIN)
           DEV_DOMAIN: $(DEV_DOMAIN)
-# TEMPLATE: TO DO - CODECOV REPORT
+  - template: templates/task-codecov.yml
+    parameters:
+      workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
+      CODECOV_TOKEN: $(CODECOV_TOKEN)

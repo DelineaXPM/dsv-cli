@@ -21,3 +21,17 @@ ignore:
   - '.vscode'
   - '.devcontainer'
   - 'vendor'
+# For future possibilities with critical path options in codecov, as Go not yet supported - 2023-01-09 sheldonhull
+profiling:
+  critical_files_paths:
+    - commands/*
+    - auth/*
+    - errors/*
+    - format/*
+    - internal/*
+    - paths/*
+    - requests/*
+    - store/*
+    - utils/*
+    - vaultcli/*
+    - version/*

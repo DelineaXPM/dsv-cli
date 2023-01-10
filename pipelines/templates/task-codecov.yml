@@ -1,0 +1,21 @@
+---
+parameters:
+  - name: workingDirectory
+    type: string
+    default: $(System.DefaultWorkingDirectory)
+  - name: CODECOV_TOKEN
+    type: string
+steps:
+  - bash: |
+      # improved codecov with signature verification
+      curl https://uploader.codecov.io/verification.gpg | gpg --no-default-keyring --keyring trustedkeys.gpg --import # One-time step
+      curl -Os https://uploader.codecov.io/latest/linux/codecov
+      curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
+      curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
+      gpgv codecov.SHA256SUM.sig codecov.SHA256SUM
+      shasum -a 256 -c codecov.SHA256SUM
+      chmod +x codecov
+      ./codecov -t ${{ parameters.CODECOV_TOKEN }}
+    workingDirectory: ${{ parameters.workingDirectory }}
+    displayName: codecov-upload
+    condition: ne(variables['Agent.OS'], 'Windows_NT')
