@@ -78,14 +78,14 @@ jobs:
           ClientId: $(ClientId)
           ClientSecret: $(ClientSecret)
           SecretPath: ado/cli
-      - task: DownloadSecureFile@1
+      - task: DownloadSecureFile@1.212.0
         name: downloadCertPFXFormat
         displayName: download-cert-pfx-format
         inputs:
           secureFile: $(certSecureFile)
 
       # used for cosign based signature
-      - task: DownloadSecureFile@1
+      - task: DownloadSecureFile@1.212.0
         name: downloadCertKeyFormat
         displayName: download-cert-key-format
         inputs:
