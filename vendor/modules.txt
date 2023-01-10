@@ -407,7 +407,7 @@ github.com/pmezard/go-difflib/difflib
 github.com/posener/complete
 github.com/posener/complete/cmd
 github.com/posener/complete/cmd/install
-# github.com/pterm/pterm v0.12.50
+# github.com/pterm/pterm v0.12.53
 ## explicit; go 1.18
 github.com/pterm/pterm
 github.com/pterm/pterm/internal
@@ -537,7 +537,7 @@ golang.org/x/sys/windows
 # golang.org/x/term v0.1.0
 ## explicit; go 1.17
 golang.org/x/term
-# golang.org/x/text v0.4.0
+# golang.org/x/text v0.6.0
 ## explicit; go 1.17
 golang.org/x/text/cases
 golang.org/x/text/internal
