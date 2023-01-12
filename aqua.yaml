@@ -3,7 +3,7 @@
 # https://aquaproj.github.io/
 registries:
   - type: standard
-    ref: v3.118.0 # renovate: depName=aquaproj/aqua-registry
+    ref: v3.120.0 # renovate: depName=aquaproj/aqua-registry
 packages:
   - name: miniscruff/changie@v1.10.2
     tags: ['ci']
@@ -38,3 +38,5 @@ packages:
   - name: charmbracelet/gum@v0.8.0
   - name: DelineaXPM/dsv-cli@v1.39.13
     tags: ['ci']
+  - name: sharkdp/hyperfine@v1.15.0
+  - name: mikefarah/yq@v4.30.6

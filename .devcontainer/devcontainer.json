@@ -22,6 +22,8 @@
     "source=${localEnv:HOME}${localEnv:USERPROFILE}/.kube,target=/home/vscode/.kube/,type=bind,consistency=cached", // support for SSH keys
     "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/vscode/.ssh/,type=bind,consistency=cached", // support for SSH keys
     "source=${localEnv:HOME}${localEnv:USERPROFILE}/.envrc,target=/home/vscode/.envrc,type=bind,consistency=cached", // envrc from home to allow direnv to mount credentials
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.thy,target=/home/vscode/.thy/,type=bind,consistency=cached", // support for dsv-cli filestore based store
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.dsv.yml,target=/home/vscode/.dsv.yml/,type=bind,consistency=cached", // mounting for dsv-config
     // cache gopath directory
     "source=go-path,target=/home/vscode/go/,type=volume"
   ],

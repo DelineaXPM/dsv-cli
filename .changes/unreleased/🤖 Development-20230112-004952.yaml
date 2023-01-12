@@ -1,0 +1,11 @@
+kind: "\U0001F916 Development"
+body:
+  Devcontainer attempts to mount existing dsv cli configuration from filestore
+  if this is available. This will ease local devcontainer usage setup and allow testing
+  and `$HOME/.envrc` configurations to be autoloaded.
+time: 2023-01-12T00:49:52.438142024Z
+custom:
+  azure-boards-workitemid-fixed: ''
+  azure-boards-workitemid-related: ''
+  github-contributor: sheldonhull
+  github-link: ''

@@ -48,6 +48,7 @@ An automation tool for the management of credentials for applications, databases
 - Curl (requires Go installed):
 
   ```shell
+  go install github.com/mikefarah/yq/v4@latest
   version=$(curl -sb -H "Accept: application/json" https://s3.amazonaws.com/dsv.secretsvaultcloud.com/cli-version.json | $(go env GOPATH)/bin/yq '.latest')
   echo "version: $version"
   curl -fSsl https://dsv.secretsvaultcloud.com/downloads/cli/$version/dsv-darwin-x64 -o dsv && chmod +x ./dsv && sudo mv ./dsv /usr/local/bin

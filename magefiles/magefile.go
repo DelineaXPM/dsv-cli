@@ -132,6 +132,13 @@ func Init() error {
 		}
 		pterm.Success.Println("snapcraft installed")
 	}
+	// Aqua install is run in devcontainer/codespace automatically.
+	// If this environment isn't being used, try to jump start, but if failure, output warning and let the developer choose if they want to go install or not.
+	if err := sh.RunV("aqua", "install"); err != nil {
+		pterm.Warning.Printfln("aqua install not successful.\n" +
+			"This is optional, but will ensure every tool for the project is installed and matching version." +
+			"To install see developer docs or go to https://aquaproj.github.io/docs/reference/install")
+	}
 	pterm.Success.Printfln("Init() completed [%s]\n", relTime(start))
 	return nil
 }
@@ -144,4 +151,9 @@ func InstallTrunk() error {
 	}
 
 	return nil
+}
+
+// TrunkInit ensures the required runtimes are installed.
+func TrunkInit() error {
+	return sh.RunV("trunk", "install")
 }
