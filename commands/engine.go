@@ -290,25 +290,25 @@ type engineListParams struct {
 	sortedBy   string
 }
 
-func engineList(vcli vaultcli.CLI, p *engineListParams) ([]byte, *errors.ApiError) {
+func engineList(vcli vaultcli.CLI, params *engineListParams) ([]byte, *errors.ApiError) {
 	queryParams := map[string]string{}
-	if p.searchTerm != "" {
-		queryParams[cst.SearchTerm] = p.searchTerm
+	if params.searchTerm != "" {
+		queryParams[cst.SearchTerm] = params.searchTerm
 	}
-	if p.poolName != "" {
-		queryParams["poolName"] = p.poolName
+	if params.poolName != "" {
+		queryParams["poolName"] = params.poolName
 	}
-	if p.limit != "" {
-		queryParams[cst.Limit] = p.limit
+	if params.limit != "" {
+		queryParams[cst.Limit] = params.limit
 	}
-	if p.cursor != "" {
-		queryParams[cst.Cursor] = p.cursor
+	if params.cursor != "" {
+		queryParams[cst.Cursor] = params.cursor
 	}
-	if p.sort != "" {
-		queryParams[cst.Sort] = p.sort
+	if params.sort != "" {
+		queryParams[cst.Sort] = params.sort
 	}
-	if p.sortedBy != "" {
-		queryParams[cst.SortedBy] = p.sortedBy
+	if params.sortedBy != "" {
+		queryParams[cst.SortedBy] = params.sortedBy
 	}
 	uri := paths.CreateResourceURI(cst.NounEngines, "", "", false, queryParams)
 	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
