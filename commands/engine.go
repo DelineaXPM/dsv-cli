@@ -62,7 +62,7 @@ Usage:
 			{Name: cst.Limit, Shorthand: "l", Usage: cst.LimitHelpMessage},
 			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 			{Name: cst.Sort, Usage: cst.SortHelpMessage, Default: "desc"},
-			{Name: cst.SortedBy, Usage: cst.SortedBy + " order the result by name or created attribute on field search (optional)", Default: "created"},
+			{Name: cst.SortedBy, Usage: "Sorted by order the result by name or created attribute on field search (optional)", Default: "created"},
 		},
 		RunFunc: handleEngineListCmd,
 	})
