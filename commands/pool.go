@@ -75,7 +75,16 @@ func GetPoolListCmd() (cli.Command, error) {
 		HelpText: `
 Usage:
    • pool list
+   • pool list --query mypool --limit 5
+   • pool list --sort asc --sorted-by name --cursor
 `,
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Query, Shorthand: "q", Usage: "Partial search by pool name (optional)"},
+			{Name: cst.Limit, Shorthand: "l", Usage: cst.LimitHelpMessage},
+			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
+			{Name: cst.Sort, Usage: cst.SortHelpMessage, Default: "desc"},
+			{Name: cst.SortedBy, Usage: "Sort by name or created field (optional)", Default: "created"},
+		},
 		RunFunc: handlePoolList,
 	})
 }
@@ -130,7 +139,19 @@ func handlePoolCreate(vcli vaultcli.CLI, args []string) int {
 }
 
 func handlePoolList(vcli vaultcli.CLI, args []string) int {
-	data, apiErr := poolList(vcli)
+	searchTerm := viper.GetString(cst.Query)
+	limit := viper.GetString(cst.Limit)
+	cursor := viper.GetString(cst.Cursor)
+	sort := viper.GetString(cst.Sort)
+	sortedBy := viper.GetString(cst.SortedBy)
+
+	data, apiErr := poolList(vcli, &poolListParams{
+		searchTerm: searchTerm,
+		limit:      limit,
+		cursor:     cursor,
+		sort:       sort,
+		sortedBy:   sortedBy,
+	})
 	vcli.Out().WriteResponse(data, apiErr)
 	return utils.GetExecStatus(apiErr)
 }
@@ -186,7 +207,31 @@ func poolDelete(vcli vaultcli.CLI, name string) ([]byte, *errors.ApiError) {
 	return vcli.HTTPClient().DoRequest(http.MethodDelete, uri, nil)
 }
 
-func poolList(vcli vaultcli.CLI) ([]byte, *errors.ApiError) {
-	uri := paths.CreateResourceURI(cst.NounPools, "", "", false, nil)
+type poolListParams struct {
+	searchTerm string
+	limit      string
+	cursor     string
+	sort       string
+	sortedBy   string
+}
+
+func poolList(vcli vaultcli.CLI, params *poolListParams) ([]byte, *errors.ApiError) {
+	queryParams := map[string]string{}
+	if params.searchTerm != "" {
+		queryParams[cst.SearchTerm] = params.searchTerm
+	}
+	if params.limit != "" {
+		queryParams[cst.Limit] = params.limit
+	}
+	if params.cursor != "" {
+		queryParams[cst.Cursor] = params.cursor
+	}
+	if params.sort != "" {
+		queryParams[cst.Sort] = params.sort
+	}
+	if params.sortedBy != "" {
+		queryParams[cst.SortedBy] = params.sortedBy
+	}
+	uri := paths.CreateResourceURI(cst.NounPools, "", "", false, queryParams)
 	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
 }
