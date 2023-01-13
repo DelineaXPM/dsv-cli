@@ -5,6 +5,7 @@ package e2e
 
 import (
 	"fmt"
+	"sort"
 	"testing"
 )
 
@@ -14,6 +15,8 @@ func TestEngine(t *testing.T) {
 	poolName := makePoolName()
 	engineName1 := makeEngineName()
 	engineName2 := makeEngineName()
+	engineNamesInOrder := []string{engineName1, engineName2}
+	sort.Strings(engineNamesInOrder)
 
 	output := runWithAuth(t, e, fmt.Sprintf("pool create --name=%s", poolName))
 	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName))
@@ -45,7 +48,13 @@ func TestEngine(t *testing.T) {
 	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, engineName2))
 	requireContains(t, output, fmt.Sprintf(`"poolName": "%s"`, poolName))
 
-	output = runWithAuth(t, e, "engine list --limit 1")
+	output = runWithAuth(t, e, "engine list --limit 1 --sort asc --sorted-by name --pool-name "+poolName)
+	requireContains(t, output, `"engines": [`)
+	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, engineNamesInOrder[0]))
+	requireNotContains(t, output, fmt.Sprintf(`"name": "%s"`, engineNamesInOrder[1]))
+	requireContains(t, output, fmt.Sprintf(`"poolName": "%s"`, poolName))
+
+	output = runWithAuth(t, e, "engine list --query "+engineName1)
 	requireContains(t, output, `"engines": [`)
 	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, engineName1))
 	requireNotContains(t, output, fmt.Sprintf(`"name": "%s"`, engineName2))
