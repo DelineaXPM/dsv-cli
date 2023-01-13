@@ -58,6 +58,12 @@ func GetEngineListCmd() (cli.Command, error) {
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s`, cst.NounEngine, cst.List),
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Limit, Shorthand: "l", Usage: cst.LimitHelpMessage},
+			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
+			{Name: cst.Sort, Usage: cst.SortHelpMessage, Default: "desc"},
+			{Name: cst.SortedBy, Usage: cst.SortedBy + " order the result by name or created attribute on field search", Default: "created"},
+		},
 		RunFunc: handleEngineListCmd,
 	})
 }
@@ -125,7 +131,17 @@ func handleEngineReadCmd(vcli vaultcli.CLI, args []string) int {
 }
 
 func handleEngineListCmd(vcli vaultcli.CLI, args []string) int {
-	data, apiErr := engineList(vcli)
+	limit := viper.GetString(cst.Limit)
+	cursor := viper.GetString(cst.Cursor)
+	sort := viper.GetString(cst.Sort)
+	sortedBy := viper.GetString(cst.SortedBy)
+
+	data, apiErr := engineList(vcli, &engineListParams{
+		limit:    limit,
+		cursor:   cursor,
+		sort:     sort,
+		sortedBy: sortedBy,
+	})
 	vcli.Out().WriteResponse(data, apiErr)
 	return utils.GetExecStatus(apiErr)
 }
@@ -256,7 +272,27 @@ func engineDelete(vcli vaultcli.CLI, engineName string) ([]byte, *errors.ApiErro
 	return vcli.HTTPClient().DoRequest(http.MethodDelete, uri, nil)
 }
 
-func engineList(vcli vaultcli.CLI) ([]byte, *errors.ApiError) {
-	uri := paths.CreateResourceURI(cst.NounEngines, "", "", false, nil)
+type engineListParams struct {
+	limit    string
+	cursor   string
+	sort     string
+	sortedBy string
+}
+
+func engineList(vcli vaultcli.CLI, p *engineListParams) ([]byte, *errors.ApiError) {
+	queryParams := map[string]string{}
+	if p.limit != "" {
+		queryParams[cst.Limit] = p.limit
+	}
+	if p.cursor != "" {
+		queryParams[cst.Cursor] = p.cursor
+	}
+	if p.sort != "" {
+		queryParams[cst.Sort] = p.sort
+	}
+	if p.sortedBy != "" {
+		queryParams[cst.SortedBy] = p.sortedBy
+	}
+	uri := paths.CreateResourceURI(cst.NounEngines, "", "", false, queryParams)
 	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
 }

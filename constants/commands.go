@@ -141,6 +141,7 @@ const (
 	EndDate           = "enddate"
 	Force             = "force"
 	Sort              = "sort"
+	SortedBy          = "sorted-by"
 	NewAdmins         = "new-admins"
 	MinNumberOfShares = "min-number-of-shares"
 	Shares            = "shares"
@@ -189,6 +190,7 @@ const (
 const (
 	CursorHelpMessage = "Next cursor for additional results. The cursor is provided at the end of each body response (\"cursor\": \"MQ==\") (optional)"
 	LimitHelpMessage  = "Maximum number of results per cursor (optional)"
+	SortHelpMessage   = "Sort specifies order in aascending (asc) or descending (desc) order (optional)"
 )
 
 // Security
