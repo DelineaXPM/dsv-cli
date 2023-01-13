@@ -55,15 +55,16 @@ func GetEngineListCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounEngine, cst.List},
 		SynopsisText: "List the names of all existing engines and their appropriate pool names",
-		HelpText: fmt.Sprintf(`
+		HelpText: `
 Usage:
-   • %[1]s %[2]s
-   • %[1]s %[2]s %[3]s %[4]s %[5]s`, cst.NounEngine, cst.List, "--sort asc", "--sorted-by name", "--limit 10"),
+   • engine list
+   • engine list --sort asc --sorted-by name --limit 10
+   • engine list --sort desc --sorted-by created --cursor`,
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Limit, Shorthand: "l", Usage: cst.LimitHelpMessage},
 			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 			{Name: cst.Sort, Usage: cst.SortHelpMessage, Default: "desc"},
-			{Name: cst.SortedBy, Usage: "Sorted by order the result by name or created attribute on field search (optional)", Default: "created"},
+			{Name: cst.SortedBy, Usage: "Sort by name or created field (optional)", Default: "created"},
 		},
 		RunFunc: handleEngineListCmd,
 	})
