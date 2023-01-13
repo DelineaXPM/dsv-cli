@@ -57,7 +57,8 @@ func GetEngineListCmd() (cli.Command, error) {
 		SynopsisText: "List the names of all existing engines and their appropriate pool names",
 		HelpText: fmt.Sprintf(`
 Usage:
-   • %[1]s %[2]s`, cst.NounEngine, cst.List),
+   • %[1]s %[2]s
+   • %[1]s %[2]s %[3]s %[4]s %[5]s`, cst.NounEngine, cst.List, "--sort asc", "--sorted-by name", "--limit 10"),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Limit, Shorthand: "l", Usage: cst.LimitHelpMessage},
 			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
