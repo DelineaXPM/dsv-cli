@@ -128,6 +128,7 @@ const (
 	SearchField       = "search.field"
 	Limit             = "limit"
 	OffSet            = "offset"
+	SearchTerm        = "searchTerm"
 	Cursor            = "cursor"
 	RefreshToken      = "refreshtoken"
 	Output            = "out"

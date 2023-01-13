@@ -59,8 +59,11 @@ func GetEngineListCmd() (cli.Command, error) {
 Usage:
    • engine list
    • engine list --sort asc --sorted-by name --limit 10
-   • engine list --sort desc --sorted-by created --cursor`,
+   • engine list --sort desc --sorted-by created --cursor
+   • engine list --query my_engine --pool-name my_pool`,
 		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Query, Shorthand: "q", Usage: "Partial search by engine name (optional)"},
+			{Name: cst.DataPoolName, Usage: "Pool name (optional)"},
 			{Name: cst.Limit, Shorthand: "l", Usage: cst.LimitHelpMessage},
 			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 			{Name: cst.Sort, Usage: cst.SortHelpMessage, Default: "desc"},
@@ -133,16 +136,20 @@ func handleEngineReadCmd(vcli vaultcli.CLI, args []string) int {
 }
 
 func handleEngineListCmd(vcli vaultcli.CLI, args []string) int {
+	searchTerm := viper.GetString(cst.Query)
+	poolName := viper.GetString(cst.DataPoolName)
 	limit := viper.GetString(cst.Limit)
 	cursor := viper.GetString(cst.Cursor)
 	sort := viper.GetString(cst.Sort)
 	sortedBy := viper.GetString(cst.SortedBy)
 
 	data, apiErr := engineList(vcli, &engineListParams{
-		limit:    limit,
-		cursor:   cursor,
-		sort:     sort,
-		sortedBy: sortedBy,
+		searchTerm: searchTerm,
+		poolName:   poolName,
+		limit:      limit,
+		cursor:     cursor,
+		sort:       sort,
+		sortedBy:   sortedBy,
 	})
 	vcli.Out().WriteResponse(data, apiErr)
 	return utils.GetExecStatus(apiErr)
@@ -275,14 +282,22 @@ func engineDelete(vcli vaultcli.CLI, engineName string) ([]byte, *errors.ApiErro
 }
 
 type engineListParams struct {
-	limit    string
-	cursor   string
-	sort     string
-	sortedBy string
+	searchTerm string
+	poolName   string
+	limit      string
+	cursor     string
+	sort       string
+	sortedBy   string
 }
 
 func engineList(vcli vaultcli.CLI, p *engineListParams) ([]byte, *errors.ApiError) {
 	queryParams := map[string]string{}
+	if p.searchTerm != "" {
+		queryParams[cst.SearchTerm] = p.searchTerm
+	}
+	if p.poolName != "" {
+		queryParams["poolName"] = p.poolName
+	}
 	if p.limit != "" {
 		queryParams[cst.Limit] = p.limit
 	}
