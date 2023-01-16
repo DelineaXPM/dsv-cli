@@ -14,8 +14,6 @@ func TestPool(t *testing.T) {
 
 	poolName1 := makePoolName()
 	poolName2 := makePoolName()
-	poolNamesInOrder := []string{engineName1, engineName2}
-	sort.Strings(poolNamesInOrder)
 
 	output := runWithAuth(t, e, "pool")
 	requireLine(t, output, "Work with engine pools")
