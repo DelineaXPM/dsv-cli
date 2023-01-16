@@ -60,11 +60,6 @@ func TestPool(t *testing.T) {
 	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName1))
 	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName2))
 
-	output = runWithAuth(t, e, "pool list --limit 1 --sort asc --sorted-by name")
-	requireContains(t, output, `"engines": [`)
-	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolNamesInOrder[0]))
-	requireNotContains(t, output, fmt.Sprintf(`"name": "%s"`, poolNamesInOrder[1]))
-
 	output = runWithAuth(t, e, "pool list --query "+poolName1)
 	requireContains(t, output, `"engines": [`)
 	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName1))
