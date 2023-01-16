@@ -75,7 +75,7 @@ func GetRoleSearchCmd() (cli.Command, error) {
 Usage:
    • role search adm
    • role search --query adm --limit 10
-   • role search --sort asc --sorted-by name --cursor
+   • role search --sort asc --sorted-by name
 `,
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Query, Shorthand: "q", Usage: "Query of roles to fetch (optional)"},
