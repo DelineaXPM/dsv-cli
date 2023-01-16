@@ -216,7 +216,7 @@ func poolList(vcli vaultcli.CLI, params *poolListParams) ([]byte, *errors.ApiErr
 		queryParams[cst.Sort] = params.sort
 	}
 	if params.sortedBy != "" {
-		queryParams[cst.SortedBy] = params.sortedBy
+		queryParams["sortedBy"] = params.sortedBy
 	}
 	uri := paths.CreateResourceURI(cst.NounPools, "", "", false, queryParams)
 	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
