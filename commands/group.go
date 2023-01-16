@@ -177,13 +177,18 @@ func GetMemberGroupsCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounUser},
 		SynopsisText: "groups (<username> | --username)",
-		HelpText: fmt.Sprintf(`Read a %[2]s's %[1]ss from %[3]s
+		HelpText: `Read a user's groups from DevOps Secrets Vault
 
 Usage:
-   • user %[1]ss --username %[4]s
-`, cst.NounGroup, cst.NounUser, cst.ProductName, cst.ExampleUser),
+   • user groups --username kadmin
+   • user groups --username kadmin --sort asc --limit 5 --query adm
+`,
 		FlagsPredictor: []*predictor.Params{
-			{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s (required)", strings.Title(cst.DataUsername), cst.NounUser)},
+			{Name: cst.DataUsername, Usage: "username of user (required)"},
+			{Name: cst.Query, Shorthand: "q", Usage: "Partial search by path (optional)"},
+			{Name: cst.Limit, Shorthand: "l", Usage: cst.LimitHelpMessage},
+			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
+			{Name: cst.Sort, Usage: cst.SortHelpMessage, Default: "desc"},
 		},
 		MinNumberArgs: 1,
 		RunFunc:       handleUsersGroupReadCmd,
@@ -194,16 +199,19 @@ func GetGroupSearchCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounGroup, cst.Search},
 		SynopsisText: fmt.Sprintf("%s (<query> | --query)", cst.Search),
-		HelpText: fmt.Sprintf(`Search for a %[2]s from %[3]s
+		HelpText: `Search for a groups from DevOps Secrets Vault
 
 Usage:
-   • group %[1]s %[4]s
-   • group %[1]s --query %[4]s
-`, cst.Search, cst.NounGroup, cst.ProductName, cst.ExampleUserSearch),
+   • group search adm
+   • group search --query adm --limit 10
+   • group search --sort asc --sorted-by created
+`,
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("%s of %ss to fetch (optional)", strings.Title(cst.Query), cst.NounGroup)},
 			{Name: cst.Limit, Shorthand: "l", Usage: cst.LimitHelpMessage},
 			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
+			{Name: cst.Sort, Usage: cst.SortHelpMessage},
+			{Name: cst.SortedBy, Usage: "Sort by name, created or lastModified field (optional)", Default: "lastModified"},
 		},
 		RunFunc: handleGroupSearchCmd,
 	})
@@ -360,14 +368,23 @@ func handleUsersGroupReadCmd(vcli vaultcli.CLI, args []string) int {
 	if username == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		username = args[0]
 	}
-
 	if username == "" {
 		err := errors.NewS("error: must specify " + cst.DataUsername)
 		vcli.Out().WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
+	query := viper.GetString(cst.Query)
+	limit := viper.GetString(cst.Limit)
+	cursor := viper.GetString(cst.Cursor)
+	sort := viper.GetString(cst.Sort)
 
-	data, apiErr := userGroupsRead(vcli, username)
+	data, apiErr := userGroupsRead(vcli, &userGroupsSearchParams{
+		username: username,
+		query:    query,
+		limit:    limit,
+		cursor:   cursor,
+		sort:     sort,
+	})
 	vcli.Out().WriteResponse(data, apiErr)
 	return utils.GetExecStatus(apiErr)
 }
@@ -423,12 +440,20 @@ func handleGroupSearchCmd(vcli vaultcli.CLI, args []string) int {
 	query := viper.GetString(cst.Query)
 	limit := viper.GetString(cst.Limit)
 	cursor := viper.GetString(cst.Cursor)
+	sort := viper.GetString(cst.Sort)
+	sortedBy := viper.GetString(cst.SortedBy)
 
 	if query == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		query = args[0]
 	}
 
-	data, apiErr := groupSearch(vcli, &groupSearchParams{query: query, limit: limit, cursor: cursor})
+	data, apiErr := groupSearch(vcli, &groupSearchParams{
+		query:    query,
+		limit:    limit,
+		cursor:   cursor,
+		sort:     sort,
+		sortedBy: sortedBy,
+	})
 	vcli.Out().WriteResponse(data, apiErr)
 	return utils.GetExecStatus(apiErr)
 }
@@ -541,8 +566,29 @@ func groupRead(vcli vaultcli.CLI, name string) ([]byte, *errors.ApiError) {
 	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
 }
 
-func userGroupsRead(vcli vaultcli.CLI, username string) ([]byte, *errors.ApiError) {
-	uri := paths.CreateResourceURI(cst.NounUsers, username, "/groups", true, nil)
+type userGroupsSearchParams struct {
+	username string
+	query    string
+	limit    string
+	cursor   string
+	sort     string
+}
+
+func userGroupsRead(vcli vaultcli.CLI, p *userGroupsSearchParams) ([]byte, *errors.ApiError) {
+	queryParams := map[string]string{}
+	if p.query != "" {
+		queryParams[cst.SearchKey] = p.query
+	}
+	if p.limit != "" {
+		queryParams[cst.Limit] = p.limit
+	}
+	if p.cursor != "" {
+		queryParams[cst.Cursor] = p.cursor
+	}
+	if p.sort != "" {
+		queryParams[cst.Sort] = p.sort
+	}
+	uri := paths.CreateResourceURI(cst.NounUsers, p.username, "/groups", true, queryParams)
 	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
 }
 
@@ -558,9 +604,11 @@ func groupRestore(vcli vaultcli.CLI, name string) ([]byte, *errors.ApiError) {
 }
 
 type groupSearchParams struct {
-	query  string
-	limit  string
-	cursor string
+	query    string
+	limit    string
+	cursor   string
+	sort     string
+	sortedBy string
 }
 
 func groupSearch(vcli vaultcli.CLI, p *groupSearchParams) ([]byte, *errors.ApiError) {
@@ -573,6 +621,12 @@ func groupSearch(vcli vaultcli.CLI, p *groupSearchParams) ([]byte, *errors.ApiEr
 	}
 	if p.cursor != "" {
 		queryParams[cst.Cursor] = p.cursor
+	}
+	if p.sort != "" {
+		queryParams[cst.Sort] = p.sort
+	}
+	if p.sortedBy != "" {
+		queryParams["sortedBy"] = p.sortedBy
 	}
 	uri := paths.CreateURI(cst.NounGroups, queryParams)
 	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
