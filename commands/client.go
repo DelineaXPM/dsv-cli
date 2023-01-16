@@ -126,16 +126,17 @@ func GetClientSearchCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounClient, cst.Search},
 		SynopsisText: fmt.Sprintf("%s (<role> | --role)", cst.Search),
-		HelpText: fmt.Sprintf(`Search for %[1]ss attached to a given %[5]s in %[2]s
+		HelpText: `Search for clients attached to a given role in DevOps Secrets Vault
 
 Usage:
-   • %[1]s %[4]s %[3]s
-   • %[1]s %[4]s --role %[3]s
-`, cst.NounClient, cst.ProductName, cst.ExampleRoleName, cst.Search, cst.NounRole),
+   • role search gcp-svc-1
+   • role search --role gcp-svc-1 --sort asc
+`,
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.NounRole, Usage: "Role that has attached clients (required)"},
 			{Name: cst.Limit, Shorthand: "l", Usage: cst.LimitHelpMessage},
 			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
+			{Name: cst.Sort, Usage: cst.SortHelpMessage},
 		},
 		MinNumberArgs: 1,
 		RunFunc:       handleClientSearchCmd,
@@ -217,6 +218,7 @@ func handleClientSearchCmd(vcli vaultcli.CLI, args []string) int {
 	role := viper.GetString(cst.NounRole)
 	limit := viper.GetString(cst.Limit)
 	cursor := viper.GetString(cst.Cursor)
+	sort := viper.GetString(cst.Sort)
 	if role == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		role = args[0]
 	}
@@ -226,7 +228,12 @@ func handleClientSearchCmd(vcli vaultcli.CLI, args []string) int {
 		return utils.GetExecStatus(err)
 	}
 
-	data, apiErr := clientSearch(vcli, &clientSearchParams{role: role, limit: limit, cursor: cursor})
+	data, apiErr := clientSearch(vcli, &clientSearchParams{
+		role:   role,
+		limit:  limit,
+		cursor: cursor,
+		sort:   sort,
+	})
 	vcli.Out().WriteResponse(data, apiErr)
 	return utils.GetExecStatus(apiErr)
 }
@@ -338,6 +345,7 @@ type clientSearchParams struct {
 	role   string
 	limit  string
 	cursor string
+	sort   string
 }
 
 func clientSearch(vcli vaultcli.CLI, p *clientSearchParams) ([]byte, *errors.ApiError) {
@@ -350,6 +358,9 @@ func clientSearch(vcli vaultcli.CLI, p *clientSearchParams) ([]byte, *errors.Api
 	}
 	if p.cursor != "" {
 		queryParams[cst.Cursor] = p.cursor
+	}
+	if p.sort != "" {
+		queryParams[cst.Sort] = p.sort
 	}
 	uri := paths.CreateResourceURI(cst.NounClients, "", "", false, queryParams)
 	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
