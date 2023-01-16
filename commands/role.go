@@ -70,12 +70,13 @@ func GetRoleSearchCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounRole, cst.Search},
 		SynopsisText: "search (<query> | --query)",
-		HelpText: fmt.Sprintf(`Search for a role from %[1]s
+		HelpText: `Search for a role from DevOps Secrets Vault
 
 Usage:
-   • role search %[2]s
-   • role search --query %[2]s
-`, cst.ProductName, cst.ExampleUserSearch),
+   • role search adm
+   • role search --query adm --limit 10
+   • role search --sort asc --sorted-by name --cursor
+`,
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Query, Shorthand: "q", Usage: "Query of roles to fetch (optional)"},
 			{Name: cst.Limit, Shorthand: "l", Usage: cst.LimitHelpMessage},
