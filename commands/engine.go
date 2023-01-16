@@ -58,9 +58,9 @@ func GetEngineListCmd() (cli.Command, error) {
 		HelpText: `
 Usage:
    • engine list
-   • engine list --sort asc --sorted-by name --limit 10
-   • engine list --sort desc --sorted-by created --cursor
-   • engine list --query my_engine --pool-name my_pool`,
+   • engine list --sort asc --sorted-by name --pool-name my_pool
+   • engine list --sort desc --sorted-by created
+   • engine list --query my_engine`,
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Query, Shorthand: "q", Usage: "Partial search by engine name (optional)"},
 			{Name: cst.DataPoolName, Usage: "Pool name (optional)"},
