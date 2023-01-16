@@ -5,17 +5,15 @@ package e2e
 
 import (
 	"fmt"
-	"sort"
 	"testing"
 )
 
 func TestRole(t *testing.T) {
 	e := newEnv()
 
-	roleName1 := makeRoleName()
-	roleName2 := makeRoleName()
-	sortedRoleNames := []string{roleName1, roleName2}
-	sort.Strings(sortedRoleNames)
+	roleName := makeRoleName()
+	roleName1 := roleName + "1"
+	roleName2 := roleName + "2"
 
 	output := runWithAuth(t, e, "role")
 	requireContains(t, output, "Execute an action on a role")
@@ -71,8 +69,13 @@ func TestRole(t *testing.T) {
 	output = runWithAuth(t, e, fmt.Sprintf("role search --query %s --limit 5", roleName1))
 	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, roleName1))
 
-	output = runWithAuth(t, e, "role search --limit 1 --sort asc --sorted-by name --query e2e-cli-test-roles-")
-	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, sortedRoleNames[0]))
+	output = runWithAuth(t, e, fmt.Sprintf("role search --limit 1 --sort asc --sorted-by name --query %s", roleName))
+	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, roleName1))
+	requireNotContains(t, output, fmt.Sprintf(`"name": "%s"`, roleName2))
+
+	output = runWithAuth(t, e, fmt.Sprintf("role search --limit 1 --sort desc --sorted-by name --query %s", roleName))
+	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, roleName2))
+	requireNotContains(t, output, fmt.Sprintf(`"name": "%s"`, roleName1))
 
 	output = runWithAuth(t, e, "role delete --force")
 	requireContains(t, output, "error: must specify name")
