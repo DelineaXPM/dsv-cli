@@ -138,16 +138,12 @@ func handleEngineReadCmd(vcli vaultcli.CLI, args []string) int {
 func handleEngineListCmd(vcli vaultcli.CLI, args []string) int {
 	searchTerm := viper.GetString(cst.Query)
 	poolName := viper.GetString(cst.DataPoolName)
-	limit := viper.GetString(cst.Limit)
-	cursor := viper.GetString(cst.Cursor)
 	sort := viper.GetString(cst.Sort)
 	sortedBy := viper.GetString(cst.SortedBy)
 
 	data, apiErr := engineList(vcli, &engineListParams{
 		searchTerm: searchTerm,
 		poolName:   poolName,
-		limit:      limit,
-		cursor:     cursor,
 		sort:       sort,
 		sortedBy:   sortedBy,
 	})
@@ -284,8 +280,6 @@ func engineDelete(vcli vaultcli.CLI, engineName string) ([]byte, *errors.ApiErro
 type engineListParams struct {
 	searchTerm string
 	poolName   string
-	limit      string
-	cursor     string
 	sort       string
 	sortedBy   string
 }
@@ -297,12 +291,6 @@ func engineList(vcli vaultcli.CLI, params *engineListParams) ([]byte, *errors.Ap
 	}
 	if params.poolName != "" {
 		queryParams["poolName"] = params.poolName
-	}
-	if params.limit != "" {
-		queryParams[cst.Limit] = params.limit
-	}
-	if params.cursor != "" {
-		queryParams[cst.Cursor] = params.cursor
 	}
 	if params.sort != "" {
 		queryParams[cst.Sort] = params.sort

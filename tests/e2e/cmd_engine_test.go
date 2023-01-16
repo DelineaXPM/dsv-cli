@@ -48,10 +48,10 @@ func TestEngine(t *testing.T) {
 	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, engineName2))
 	requireContains(t, output, fmt.Sprintf(`"poolName": "%s"`, poolName))
 
-	output = runWithAuth(t, e, "engine list --limit 1 --sort asc --sorted-by name --pool-name "+poolName)
+	output = runWithAuth(t, e, "engine list --sort asc --sorted-by name --pool-name "+poolName)
 	requireContains(t, output, `"engines": [`)
 	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, engineNamesInOrder[0]))
-	requireNotContains(t, output, fmt.Sprintf(`"name": "%s"`, engineNamesInOrder[1]))
+	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, engineNamesInOrder[1]))
 	requireContains(t, output, fmt.Sprintf(`"poolName": "%s"`, poolName))
 
 	output = runWithAuth(t, e, "engine list --query "+engineName1)
