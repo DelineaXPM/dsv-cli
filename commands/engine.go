@@ -64,8 +64,6 @@ Usage:
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Query, Shorthand: "q", Usage: "Partial search by engine name (optional)"},
 			{Name: cst.DataPoolName, Usage: "Pool name (optional)"},
-			{Name: cst.Limit, Shorthand: "l", Usage: cst.LimitHelpMessage},
-			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 			{Name: cst.Sort, Usage: cst.SortHelpMessage, Default: "desc"},
 			{Name: cst.SortedBy, Usage: "Sort by name or created field (optional)", Default: "created"},
 		},
