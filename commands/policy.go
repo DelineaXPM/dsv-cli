@@ -206,6 +206,8 @@ Usage:
 			{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("Filter %s of items to fetch (required)", strings.Title(cst.Query))},
 			{Name: cst.Limit, Shorthand: "l", Usage: cst.LimitHelpMessage},
 			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
+			{Name: cst.Sort, Usage: cst.SortHelpMessage},
+			{Name: cst.SortedBy, Usage: "Sort by lastModified or created field (optional)", Default: "lastModified"},
 		},
 		RunFunc: handlePolicySearchCmd,
 	})
@@ -369,11 +371,19 @@ func handlePolicySearchCmd(vcli vaultcli.CLI, args []string) int {
 	query := viper.GetString(cst.Query)
 	limit := viper.GetString(cst.Limit)
 	cursor := viper.GetString(cst.Cursor)
+	sort := viper.GetString(cst.Sort)
+	sortedBy := viper.GetString(cst.SortedBy)
 	if query == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		query = args[0]
 	}
 
-	data, apiErr := policySearch(vcli, &policySearchParams{query: query, limit: limit, cursor: cursor})
+	data, apiErr := policySearch(vcli, &policySearchParams{
+		query:    query,
+		limit:    limit,
+		cursor:   cursor,
+		sort:     sort,
+		sortedBy: sortedBy,
+	})
 	vcli.Out().WriteResponse(data, apiErr)
 	return utils.GetExecStatus(apiErr)
 }
@@ -770,9 +780,11 @@ func policyRestore(vcli vaultcli.CLI, path string) ([]byte, *errors.ApiError) {
 }
 
 type policySearchParams struct {
-	query  string
-	limit  string
-	cursor string
+	query    string
+	limit    string
+	cursor   string
+	sort     string
+	sortedBy string
 }
 
 func policySearch(vcli vaultcli.CLI, p *policySearchParams) ([]byte, *errors.ApiError) {
@@ -785,6 +797,12 @@ func policySearch(vcli vaultcli.CLI, p *policySearchParams) ([]byte, *errors.Api
 	}
 	if p.cursor != "" {
 		queryParams[cst.Cursor] = p.cursor
+	}
+	if p.sort != "" {
+		queryParams[cst.Sort] = p.sort
+	}
+	if p.sortedBy != "" {
+		queryParams["sortedBy"] = p.sortedBy
 	}
 	baseType := strings.Join([]string{cst.Config, cst.NounPolicies}, "/")
 	uri := paths.CreateResourceURI(baseType, "", "", false, queryParams)
