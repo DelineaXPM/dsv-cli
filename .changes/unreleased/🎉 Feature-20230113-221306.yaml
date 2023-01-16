@@ -1,0 +1,8 @@
+kind: "\U0001F389 Feature"
+body: Add query, sort, sorted-by flags to pool list command.
+time: 2023-01-13T22:13:06.626484054+02:00
+custom:
+  azure-boards-workitemid-fixed: '481686'
+  azure-boards-workitemid-related: '481683'
+  github-contributor: ''
+  github-link: ''
