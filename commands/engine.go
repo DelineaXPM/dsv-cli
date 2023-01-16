@@ -55,9 +55,18 @@ func GetEngineListCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounEngine, cst.List},
 		SynopsisText: "List the names of all existing engines and their appropriate pool names",
-		HelpText: fmt.Sprintf(`
+		HelpText: `
 Usage:
-   • %[1]s %[2]s`, cst.NounEngine, cst.List),
+   • engine list
+   • engine list --sort asc --sorted-by name --pool-name my_pool
+   • engine list --sort desc --sorted-by created
+   • engine list --query my_engine`,
+		FlagsPredictor: []*predictor.Params{
+			{Name: cst.Query, Shorthand: "q", Usage: "Partial search by engine name (optional)"},
+			{Name: cst.DataPoolName, Usage: "Pool name (optional)"},
+			{Name: cst.Sort, Usage: cst.SortHelpMessage, Default: "desc"},
+			{Name: cst.SortedBy, Usage: "Sort by name or created field (optional)", Default: "created"},
+		},
 		RunFunc: handleEngineListCmd,
 	})
 }
@@ -125,7 +134,17 @@ func handleEngineReadCmd(vcli vaultcli.CLI, args []string) int {
 }
 
 func handleEngineListCmd(vcli vaultcli.CLI, args []string) int {
-	data, apiErr := engineList(vcli)
+	searchTerm := viper.GetString(cst.Query)
+	poolName := viper.GetString(cst.DataPoolName)
+	sort := viper.GetString(cst.Sort)
+	sortedBy := viper.GetString(cst.SortedBy)
+
+	data, apiErr := engineList(vcli, &engineListParams{
+		searchTerm: searchTerm,
+		poolName:   poolName,
+		sort:       sort,
+		sortedBy:   sortedBy,
+	})
 	vcli.Out().WriteResponse(data, apiErr)
 	return utils.GetExecStatus(apiErr)
 }
@@ -256,7 +275,27 @@ func engineDelete(vcli vaultcli.CLI, engineName string) ([]byte, *errors.ApiErro
 	return vcli.HTTPClient().DoRequest(http.MethodDelete, uri, nil)
 }
 
-func engineList(vcli vaultcli.CLI) ([]byte, *errors.ApiError) {
-	uri := paths.CreateResourceURI(cst.NounEngines, "", "", false, nil)
+type engineListParams struct {
+	searchTerm string
+	poolName   string
+	sort       string
+	sortedBy   string
+}
+
+func engineList(vcli vaultcli.CLI, params *engineListParams) ([]byte, *errors.ApiError) {
+	queryParams := map[string]string{}
+	if params.searchTerm != "" {
+		queryParams[cst.SearchTerm] = params.searchTerm
+	}
+	if params.poolName != "" {
+		queryParams["poolName"] = params.poolName
+	}
+	if params.sort != "" {
+		queryParams[cst.Sort] = params.sort
+	}
+	if params.sortedBy != "" {
+		queryParams[cst.SortedBy] = params.sortedBy
+	}
+	uri := paths.CreateResourceURI(cst.NounEngines, "", "", false, queryParams)
 	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
 }
