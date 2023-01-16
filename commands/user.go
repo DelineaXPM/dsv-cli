@@ -75,16 +75,19 @@ func GetUserSearchCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounUser, cst.Search},
 		SynopsisText: "user search (<query> | --query)",
-		HelpText: fmt.Sprintf(`Search for a %[1]s from %[2]s
+		HelpText: `Search for a users from DevOps Secrets Vault
 
 Usage:
-   • user search %[3]s
-   • user search --query %[3]s
-`, cst.NounUser, cst.ProductName, cst.ExampleUserSearch),
+   • user search adm
+   • user search --query adm --limit 10
+   • user search --sort created --serted-by asc
+`,
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("%s of %ss to fetch (optional)", strings.Title(cst.Query), cst.NounUser)},
 			{Name: cst.Limit, Shorthand: "l", Usage: cst.LimitHelpMessage},
 			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
+			{Name: cst.Sort, Usage: cst.SortHelpMessage},
+			{Name: cst.SortedBy, Usage: "Sort by name, created or lastModified field (optional)", Default: "lastModified"},
 		},
 		RunFunc: handleUserSearchCmd,
 	})
@@ -193,12 +196,20 @@ func handleUserSearchCmd(vcli vaultcli.CLI, args []string) int {
 	query := viper.GetString(cst.Query)
 	limit := viper.GetString(cst.Limit)
 	cursor := viper.GetString(cst.Cursor)
+	sort := viper.GetString(cst.Sort)
+	sortedBy := viper.GetString(cst.SortedBy)
 
 	if query == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		query = args[0]
 	}
 
-	data, apiErr := userSearch(vcli, &userSearchParams{query: query, limit: limit, cursor: cursor})
+	data, apiErr := userSearch(vcli, &userSearchParams{
+		query:    query,
+		limit:    limit,
+		cursor:   cursor,
+		sort:     sort,
+		sortedBy: sortedBy,
+	})
 	vcli.Out().WriteResponse(data, apiErr)
 	return utils.GetExecStatus(apiErr)
 }
@@ -544,9 +555,11 @@ func userRestore(vcli vaultcli.CLI, username string) ([]byte, *errors.ApiError) 
 }
 
 type userSearchParams struct {
-	query  string
-	limit  string
-	cursor string
+	query    string
+	limit    string
+	cursor   string
+	sort     string
+	sortedBy string
 }
 
 func userSearch(vcli vaultcli.CLI, p *userSearchParams) ([]byte, *errors.ApiError) {
@@ -559,6 +572,12 @@ func userSearch(vcli vaultcli.CLI, p *userSearchParams) ([]byte, *errors.ApiErro
 	}
 	if p.cursor != "" {
 		queryParams[cst.Cursor] = p.cursor
+	}
+	if p.sort != "" {
+		queryParams[cst.Sort] = p.sort
+	}
+	if p.sortedBy != "" {
+		queryParams["sortedBy"] = p.sortedBy
 	}
 	uri := paths.CreateURI(cst.NounUsers, queryParams)
 	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
