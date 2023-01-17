@@ -12,7 +12,8 @@ import (
 func TestPool(t *testing.T) {
 	e := newEnv()
 
-	poolName := makePoolName()
+	poolName1 := makePoolName()
+	poolName2 := makePoolName()
 
 	output := runWithAuth(t, e, "pool")
 	requireLine(t, output, "Work with engine pools")
@@ -23,9 +24,9 @@ func TestPool(t *testing.T) {
 	output = runWithAuth(t, e, "pool create --help")
 	requireContains(t, output, "Create a new empty pool of engines")
 
-	output = runWithAuth(t, e, fmt.Sprintf("pool create --name=%s", poolName))
+	output = runWithAuth(t, e, fmt.Sprintf("pool create --name=%s", poolName1))
 	requireContains(t, output, fmt.Sprintf(`"createdBy": "users:%s",`, e.username))
-	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName))
+	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName1))
 
 	output = runWithAuth(t, e, "pool read --help")
 	requireContains(t, output, "Get information on an existing pool of engines")
@@ -33,24 +34,29 @@ func TestPool(t *testing.T) {
 	output = runWithAuth(t, e, "pool read")
 	requireContains(t, output, "error: must specify name")
 
-	output = runWithAuth(t, e, fmt.Sprintf("pool read --name=%s", poolName))
+	output = runWithAuth(t, e, fmt.Sprintf("pool read --name=%s", poolName1))
 	requireContains(t, output, fmt.Sprintf(`"createdBy": "users:%s",`, e.username))
-	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName))
+	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName1))
 
-	output = runWithAuth(t, e, fmt.Sprintf("pool read %s", poolName))
+	output = runWithAuth(t, e, fmt.Sprintf("pool read %s", poolName1))
 	requireContains(t, output, fmt.Sprintf(`"createdBy": "users:%s",`, e.username))
-	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName))
+	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName1))
 
-	output = runWithAuth(t, e, fmt.Sprintf("pool %s", poolName))
+	output = runWithAuth(t, e, fmt.Sprintf("pool %s", poolName1))
 	requireContains(t, output, fmt.Sprintf(`"createdBy": "users:%s",`, e.username))
-	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName))
+	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName1))
+
+	output = runWithAuth(t, e, fmt.Sprintf("pool create --name=%s", poolName2))
+	requireContains(t, output, fmt.Sprintf(`"createdBy": "users:%s",`, e.username))
+	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName2))
 
 	output = runWithAuth(t, e, "pool list --help")
 	requireContains(t, output, "List the names of all existing pools")
 
 	output = runWithAuth(t, e, "pool list")
 	requireContains(t, output, `"pools": [`)
-	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName))
+	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName1))
+	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName2))
 
 	output = runWithAuth(t, e, "pool delete --help")
 	requireContains(t, output, "Delete an existing pool of engines")
@@ -58,11 +64,15 @@ func TestPool(t *testing.T) {
 	output = runWithAuth(t, e, "pool delete")
 	requireContains(t, output, "error: must specify name")
 
-	output = runWithAuth(t, e, fmt.Sprintf("pool delete --name=%s", poolName))
+	output = runWithAuth(t, e, fmt.Sprintf("pool delete --name=%s", poolName1))
 	if output != "" {
 		t.Fatalf("Unexpected output: \n%s\n", output)
 	}
-	output = runWithAuth(t, e, fmt.Sprintf("pool delete %s", poolName))
+	output = runWithAuth(t, e, fmt.Sprintf("pool delete --name=%s", poolName2))
+	if output != "" {
+		t.Fatalf("Unexpected output: \n%s\n", output)
+	}
+	output = runWithAuth(t, e, fmt.Sprintf("pool delete %s", poolName1))
 	requireContains(t, output, `"message": "unable to find item with specified identifier"`)
 }
 
