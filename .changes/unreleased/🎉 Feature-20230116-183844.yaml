@@ -1,5 +1,5 @@
 kind: "\U0001F389 Feature"
-body: Add sort flag to specify ascending or descending order to client search command.
+body: Add `sort` flag to specify ascending or descending order to client search command.
 time: 2023-01-16T18:38:44.325469988+02:00
 custom:
   azure-boards-workitemid-fixed: '481688'
