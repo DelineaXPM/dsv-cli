@@ -294,7 +294,7 @@ func engineList(vcli vaultcli.CLI, params *engineListParams) ([]byte, *errors.Ap
 		queryParams[cst.Sort] = params.sort
 	}
 	if params.sortedBy != "" {
-		queryParams[cst.SortedBy] = params.sortedBy
+		queryParams["sortedBy"] = params.sortedBy
 	}
 	uri := paths.CreateResourceURI(cst.NounEngines, "", "", false, queryParams)
 	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
