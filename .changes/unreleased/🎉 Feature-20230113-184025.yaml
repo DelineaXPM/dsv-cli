@@ -1,5 +1,5 @@
 kind: "\U0001F389 Feature"
-body: Add new flags to engine list command. Query flag for partial search, pool-name flag for search by pool name, sort flag for represanting data in ascending or descending order, sorted-by flag for specifying field to sort.
+body: Add new flags to engine list command. Query flag for partial search, pool-name flag for search by pool name, sort flag for representing data in ascending or descending order, sorted-by flag for specifying field to sort.
 time: 2023-01-13T18:40:25.515559032+02:00
 custom:
   azure-boards-workitemid-fixed: '481685'
