@@ -129,8 +129,8 @@ func GetClientSearchCmd() (cli.Command, error) {
 		HelpText: `Search for clients attached to a given role in DevOps Secrets Vault
 
 Usage:
-   • role search gcp-svc-1
-   • role search --role gcp-svc-1 --sort asc
+   • client search gcp-svc-1
+   • client search --role gcp-svc-1 --sort asc
 `,
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.NounRole, Usage: "Role that has attached clients (required)"},
