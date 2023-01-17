@@ -1,5 +1,5 @@
 kind: "\U0001F389 Feature"
-body: Add sort, sorted-by flags to pool list command.
+body: Add sort flag for represanting data in ascending or descending order and sorted-by flag for specifying by which field to sort data to pool list command.
 time: 2023-01-13T22:13:06.626484054+02:00
 custom:
   azure-boards-workitemid-fixed: '481686'
