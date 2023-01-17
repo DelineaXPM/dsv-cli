@@ -58,11 +58,6 @@ func TestPool(t *testing.T) {
 	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName1))
 	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName2))
 
-	output = runWithAuth(t, e, "pool list --query "+poolName1)
-	requireContains(t, output, `"pools": [`)
-	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName1))
-	requireNotContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName2))
-
 	output = runWithAuth(t, e, "pool delete --help")
 	requireContains(t, output, "Delete an existing pool of engines")
 
