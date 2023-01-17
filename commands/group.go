@@ -184,7 +184,7 @@ Usage:
    • user groups --username kadmin --sort asc --limit 5 --query adm
 `,
 		FlagsPredictor: []*predictor.Params{
-			{Name: cst.DataUsername, Usage: "username of user (required)"},
+			{Name: cst.DataUsername, Usage: "Username of user (required)"},
 			{Name: cst.Query, Shorthand: "q", Usage: "Partial search by path (optional)"},
 			{Name: cst.Limit, Shorthand: "l", Usage: cst.LimitHelpMessage},
 			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
