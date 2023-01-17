@@ -1,5 +1,5 @@
 kind: "\U0001F389 Feature"
-body: Add sort flag for represanting data in ascending or descending order and sorted-by flag for specifying by which field to sort data to role list command.
+body: Add `sort` flag for representing data in ascending or descending order. Add `sorted-by` flag for specifying which field to sort data on with the role list command.
 time: 2023-01-16T16:25:27.206845876+02:00
 custom:
   azure-boards-workitemid-fixed: '481687'
