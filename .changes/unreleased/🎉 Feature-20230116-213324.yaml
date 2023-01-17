@@ -1,5 +1,5 @@
 kind: "\U0001F389 Feature"
-body: Add query, limit, cursor, sort flags to user groups command.
+body: Add `query` flag for partial search. Add `limit` flag to specify number of items which will be returned and `cursor` flag to retrieve additional results. Add `sort` flag for representing data in ascending or descending order with the user groups command.
 time: 2023-01-16T21:33:24.409501952+02:00
 custom:
   azure-boards-workitemid-fixed: '482144'
