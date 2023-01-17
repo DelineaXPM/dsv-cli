@@ -1,5 +1,5 @@
 kind: "\U0001F389 Feature"
-body: Add sort, sorted-by flags to policy search command. Sort specifies the ascending or descending order. The sorting can be customized by any available field with a sorted-by flag.
+body: Add `sort` flag for representing data in ascending or descending order. Add `sorted-by` flag for specifying which field to sort data on with the policy search command.
 time: 2023-01-16T18:43:05.47579277+02:00
 custom:
   azure-boards-workitemid-fixed: '481928'
