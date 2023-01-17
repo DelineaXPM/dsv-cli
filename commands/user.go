@@ -80,7 +80,7 @@ func GetUserSearchCmd() (cli.Command, error) {
 Usage:
    • user search adm
    • user search --query adm --limit 10
-   • user search --sort created --serted-by asc
+   • user search --sort created --sorted-by asc
 `,
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("%s of %ss to fetch (optional)", strings.Title(cst.Query), cst.NounUser)},
