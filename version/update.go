@@ -87,7 +87,7 @@ func readCache(updateFilePath string) *latestInfo {
 		return nil
 	}
 
-	contents := strings.Split(string(fileContent), "\n")
+	contents := strings.SplitN(string(fileContent), "\n", 2)
 	if len(contents) < 2 {
 		log.Printf("Wrong file %s format", updateFilePath)
 		return nil
@@ -105,7 +105,7 @@ func readCache(updateFilePath string) *latestInfo {
 	}
 
 	versions := &latestInfo{}
-	err = json.Unmarshal([]byte(strings.Join(contents[1:], " ")), versions)
+	err = json.Unmarshal([]byte(contents[1]), versions)
 	if err != nil {
 		log.Printf("Wrong file content: '%s'", contents[1])
 		return nil
