@@ -75,12 +75,12 @@ func GetUserSearchCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounUser, cst.Search},
 		SynopsisText: "user search (<query> | --query)",
-		HelpText: `Search for a users from DevOps Secrets Vault
+		HelpText: `Search for users from DevOps Secrets Vault
 
 Usage:
    • user search adm
    • user search --query adm --limit 10
-   • user search --sort created --sorted-by asc
+   • user search --sort asc --sorted-by created
 `,
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Query, Shorthand: "q", Usage: fmt.Sprintf("%s of %ss to fetch (optional)", strings.Title(cst.Query), cst.NounUser)},
