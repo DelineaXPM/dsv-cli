@@ -87,8 +87,9 @@ func readCache(updateFilePath string) *latestInfo {
 		return nil
 	}
 
-	contents := strings.SplitN(string(fileContent), "\n", 2)
-	if len(contents) < 2 {
+	const fileParts int = 2
+	contents := strings.SplitN(string(fileContent), "\n", fileParts)
+	if len(contents) < fileParts {
 		log.Printf("Wrong file %s format", updateFilePath)
 		return nil
 	}
