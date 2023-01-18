@@ -41,26 +41,31 @@ func CheckLatestVersion() (*update, error) {
 		return nil, err
 	}
 	cacheFilePath := filepath.Join(thyDir, cacheFileName)
-
+	arm := runtime.GOOS + "/" + runtime.GOARCH
 	latest := readCache(cacheFilePath)
-
 	if latest == nil {
 		pageContent, err := fetchContent(versionsURL)
 		if err != nil {
 			return nil, err
 		}
-
 		latest = &latestInfo{}
 		err = json.Unmarshal(pageContent, latest)
 		if err != nil {
 			return nil, err
 		}
-
+		actualLink, ok := latest.Links[arm]
+		if !ok {
+			return nil, errors.New("links malformed")
+		}
+		latest.Links = map[string]string{arm: actualLink}
+		pageContent, err = json.Marshal(latest)
+		if err != nil {
+			return nil, err
+		}
 		updateCache(cacheFilePath, pageContent)
 	}
-
 	if isVersionOutdated(Version, latest.Latest) {
-		actualLink, ok := latest.Links[runtime.GOOS+"/"+runtime.GOARCH]
+		actualLink, ok := latest.Links[arm]
 		if !ok {
 			return nil, errors.New("links malformed")
 		}
@@ -100,7 +105,7 @@ func readCache(updateFilePath string) *latestInfo {
 	}
 
 	versions := &latestInfo{}
-	err = json.Unmarshal([]byte(contents[1]), versions)
+	err = json.Unmarshal([]byte(strings.Join(contents[1:], " ")), versions)
 	if err != nil {
 		log.Printf("Wrong file content: '%s'", contents[1])
 		return nil
