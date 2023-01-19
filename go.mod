@@ -26,7 +26,7 @@ require (
 	github.com/jarcoal/httpmock v1.2.0
 	github.com/magefile/mage v1.14.0
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.5.0
-	github.com/mitchellh/cli v1.1.4
+	github.com/mitchellh/cli v1.1.5
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/peterbourgon/diskv/v3 v3.0.1
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
