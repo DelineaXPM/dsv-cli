@@ -1,0 +1,8 @@
+kind: "\U0001F389 Feature"
+body: Use new DelineaSS azure dev ops build task instead of deprecated ThycoticDSV.
+time: 2023-01-19T18:52:31.466046608+02:00
+custom:
+  azure-boards-workitemid-fixed: '482320'
+  azure-boards-workitemid-related: '481124'
+  github-contributor: ''
+  github-link: ''
