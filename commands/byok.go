@@ -52,17 +52,17 @@ func handleBYOKUpdateCmd(vcli vaultcli.CLI, args []string) int {
 	primaryKey := viper.GetString(cst.PrimaryKey)
 	secondaryKey := viper.GetString(cst.SecondaryKey)
 	if provider != "AWS" && provider != "GCP" {
-		err := errors.NewS("error: provider must be specified from list: AWS, GCP")
+		err := errors.NewS("error: provider must be specified as AWS or GCP")
 		vcli.Out().WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
 	if primaryKey == "" {
-		err := errors.NewS("error: must specify " + cst.DataProvider)
+		err := errors.NewS("error: must specify " + cst.PrimaryKey)
 		vcli.Out().WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
 	if secondaryKey == "" {
-		err := errors.NewS("error: must specify " + cst.DataProvider)
+		err := errors.NewS("error: must specify " + cst.SecondaryKey)
 		vcli.Out().WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
