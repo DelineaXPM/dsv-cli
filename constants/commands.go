@@ -72,6 +72,7 @@ const (
 	NounEncryption      = "crypto"
 	NounReport          = "report"
 	NounBreakGlass      = "breakglass"
+	NounBYOK            = "byok"
 	NounCert            = "certificate"
 	NounPrivateKey      = "privateKey"
 )
@@ -147,6 +148,8 @@ const (
 	MinNumberOfShares = "min-number-of-shares"
 	Shares            = "shares"
 	SendToEngine      = "send-to-engine"
+	PrimaryKey        = "primary-key"
+	SecondaryKey      = "secondary-key"
 )
 
 // Data Flags
