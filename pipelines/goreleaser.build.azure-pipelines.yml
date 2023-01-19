@@ -71,7 +71,7 @@ jobs:
         persistCredentials: true
 
       # Grab The Cert for Signing
-      - task: thycotic-software.thycotic-dsv-task.thycotic-dsv-build-release-task.ThycoticDSV@0
+      - task: Delinea.delinea-ss-task.delinea-ss-build-release-task.DelineaSS@0
         displayName: retrieve-cert-for-signing-code
         inputs:
           ServerUrl: $(ServerUrl)
