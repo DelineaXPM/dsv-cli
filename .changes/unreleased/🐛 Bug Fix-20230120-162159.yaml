@@ -1,0 +1,10 @@
+kind: "\U0001F41B Bug Fix"
+body:
+  Use endpoint prompting only when selected transport protocol is either HTTP
+  or HTTPS for `siem create`.
+time: 2023-01-20T16:21:59.690798546+02:00
+custom:
+  azure-boards-workitemid-fixed: '482838'
+  azure-boards-workitemid-related: '468923'
+  github-contributor: ''
+  github-link: ''
