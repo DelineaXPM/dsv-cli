@@ -266,12 +266,18 @@ func promptSiemData(vcli vaultcli.CLI) (*siemUpdateRequest, error) {
 		Prompt:    &survey.Input{Message: "Endpoint:"},
 		Transform: vaultcli.SurveyTrimSpace,
 	}
-	questionAuth := &survey.Question{
+	questionAuthMethod := &survey.Question{
 		Name: "AuthMethod",
 		Prompt: &survey.Select{
 			Message: "Select authentication method:",
 			Options: []string{"token"},
 		},
+	}
+	questionAuth := &survey.Question{
+		Name:      "Auth",
+		Prompt:    &survey.Password{Message: "Authentication:"},
+		Validate:  vaultcli.SurveyRequired,
+		Transform: vaultcli.SurveyTrimSpace,
 	}
 	questionLoggingFormat := &survey.Question{
 		Name: "LoggingFormat",
@@ -298,7 +304,7 @@ func promptSiemData(vcli vaultcli.CLI) (*siemUpdateRequest, error) {
 	if protocol == "http" || protocol == "https" {
 		qs = append(qs, questionEndpoint)
 	}
-	qs = append(qs, questionAuth, questionLoggingFormat, questionSendToEngine)
+	qs = append(qs, questionAuthMethod, questionAuth, questionLoggingFormat, questionSendToEngine)
 	if protocol == "https" {
 		qs = append(qs, questionAllowSelfSigned)
 	}
