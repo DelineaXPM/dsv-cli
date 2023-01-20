@@ -202,7 +202,7 @@ func handleSiemUpdate(vcli vaultcli.CLI, args []string) int {
 }
 
 func promptSiemData(vcli vaultcli.CLI) (*siemUpdateRequest, error) {
-	actionPrompt := &survey.Select{
+	selectType := &survey.Select{
 		Message: "Select SIEM type:",
 		Options: []string{
 			"syslog",
@@ -212,7 +212,7 @@ func promptSiemData(vcli vaultcli.CLI) (*siemUpdateRequest, error) {
 		},
 	}
 	var siemType string
-	survErr := survey.AskOne(actionPrompt, &siemType)
+	survErr := survey.AskOne(selectType, &siemType)
 	if survErr != nil {
 		return nil, errors.New(survErr)
 	}
@@ -235,64 +235,74 @@ func promptSiemData(vcli vaultcli.CLI) (*siemUpdateRequest, error) {
 		return nil, fmt.Errorf("unknown siem type")
 	}
 
-	qs := []*survey.Question{
-		{
-			Name: "Protocol",
-			Prompt: &survey.Select{
-				Message: fmt.Sprintf("Select protocol for %s SIEM type:", siemType),
-				Options: protocolOptions,
-			},
-		},
-		{
-			Name:      "Host",
-			Prompt:    &survey.Input{Message: "Host:"},
-			Validate:  vaultcli.SurveyRequired,
-			Transform: vaultcli.SurveyTrimSpace,
-		},
-		{
-			Name:     "Port",
-			Prompt:   &survey.Input{Message: "Port:"},
-			Validate: vaultcli.SurveyRequiredPortNumber,
-			Transform: func(ans interface{}) (newAns interface{}) {
-				answer := strings.TrimSpace(ans.(string))
-				val, _ := strconv.Atoi(answer)
-				return val
-			},
-		},
-		{
-			Name:      "Endpoint",
-			Prompt:    &survey.Input{Message: "Endpoint:"},
-			Transform: vaultcli.SurveyTrimSpace,
-		},
-		{
-			Name: "AuthMethod",
-			Prompt: &survey.Select{
-				Message: "Select authentication method:",
-				Options: []string{"token"},
-			},
-		},
-		{
-			Name:      "Auth",
-			Prompt:    &survey.Password{Message: "Authentication:"},
-			Validate:  vaultcli.SurveyRequired,
-			Transform: vaultcli.SurveyTrimSpace,
-		},
-		{
-			Name: "LoggingFormat",
-			Prompt: &survey.Select{
-				Message: "Select logging format:",
-				Options: []string{loggingFormat},
-			},
-		},
-		{
-			Name: "SendToEngine",
-			Prompt: &survey.Confirm{
-				Message: "Route through DSV engine:",
-				Default: false,
-			},
+	selectProtocol := &survey.Select{
+		Message: fmt.Sprintf("Select protocol for %s SIEM type:", siemType),
+		Options: protocolOptions,
+	}
+	var protocol string
+	survErr = survey.AskOne(selectProtocol, &protocol)
+	if survErr != nil {
+		return nil, errors.New(survErr)
+	}
+
+	questionHost := &survey.Question{
+		Name:      "Host",
+		Prompt:    &survey.Input{Message: "Host:"},
+		Validate:  vaultcli.SurveyRequired,
+		Transform: vaultcli.SurveyTrimSpace,
+	}
+	questionPort := &survey.Question{
+		Name:     "Port",
+		Prompt:   &survey.Input{Message: "Port:"},
+		Validate: vaultcli.SurveyRequiredPortNumber,
+		Transform: func(ans interface{}) (newAns interface{}) {
+			answer := strings.TrimSpace(ans.(string))
+			val, _ := strconv.Atoi(answer)
+			return val
 		},
 	}
-	answers := siemUpdateRequest{SIEMType: siemType}
+	questionEndpoint := &survey.Question{
+		Name:      "Endpoint",
+		Prompt:    &survey.Input{Message: "Endpoint:"},
+		Transform: vaultcli.SurveyTrimSpace,
+	}
+	questionAuth := &survey.Question{
+		Name: "AuthMethod",
+		Prompt: &survey.Select{
+			Message: "Select authentication method:",
+			Options: []string{"token"},
+		},
+	}
+	questionLoggingFormat := &survey.Question{
+		Name: "LoggingFormat",
+		Prompt: &survey.Select{
+			Message: "Select logging format:",
+			Options: []string{loggingFormat},
+		},
+	}
+	questionSendToEngine := &survey.Question{
+		Name: "SendToEngine",
+		Prompt: &survey.Confirm{
+			Message: "Route through DSV engine:",
+			Default: false,
+		},
+	}
+	questionAllowSelfSigned := &survey.Question{
+		Name: "AllowSelfSigned",
+		Prompt: &survey.Confirm{
+			Message: "Allow self signed (for https):",
+			Default: false,
+		},
+	}
+	qs := []*survey.Question{questionHost, questionPort}
+	if protocol == "http" || protocol == "https" {
+		qs = append(qs, questionEndpoint)
+	}
+	qs = append(qs, questionAuth, questionLoggingFormat, questionSendToEngine)
+	if protocol == "https" {
+		qs = append(qs, questionAllowSelfSigned)
+	}
+	answers := siemUpdateRequest{SIEMType: siemType, Protocol: protocol}
 	survErr = survey.Ask(qs, &answers)
 	if survErr != nil {
 		return nil, errors.New(survErr)
@@ -300,13 +310,6 @@ func promptSiemData(vcli vaultcli.CLI) (*siemUpdateRequest, error) {
 	if answers.SendToEngine {
 		poolPrompt := &survey.Input{Message: "Engine pool:"}
 		survErr := survey.AskOne(poolPrompt, &answers.Pool, survey.WithValidator(vaultcli.SurveyRequiredName))
-		if survErr != nil {
-			return nil, errors.New(survErr)
-		}
-	}
-	if answers.Protocol == "https" {
-		allowSelfSignedPrompt := &survey.Confirm{Message: "Allow self signed (for https):", Default: false}
-		survErr := survey.AskOne(allowSelfSignedPrompt, &answers.AllowSelfSigned)
 		if survErr != nil {
 			return nil, errors.New(survErr)
 		}
