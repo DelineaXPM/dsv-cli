@@ -27,7 +27,6 @@ func TestBYOKUpdateCmd(t *testing.T) {
 func TestByokUpdateCmd(t *testing.T) {
 	testCase := []struct {
 		name         string
-		provider     string
 		primaryKey   string
 		secondaryKey string
 		apiOut       []byte
@@ -37,7 +36,6 @@ func TestByokUpdateCmd(t *testing.T) {
 	}{
 		{
 			name:         "success",
-			provider:     "AWS",
 			primaryKey:   "key",
 			secondaryKey: "key",
 			apiOut:       []byte(`{"response":"success"}`),
@@ -45,27 +43,18 @@ func TestByokUpdateCmd(t *testing.T) {
 		},
 		{
 			name:         "API error",
-			provider:     "AWS",
 			primaryKey:   "key",
 			secondaryKey: "key",
 			apiErr:       errors.NewS(`{"error":"message"}`),
 			wantErr:      errors.NewS(`{"error":"message"}`),
 		},
 		{
-			name:         "missing --provider",
-			primaryKey:   "key",
-			secondaryKey: "key",
-			wantErr:      errors.NewS("error: provider must be specified as AWS or GCP"),
-		},
-		{
 			name:         "missing --primary-key",
-			provider:     "AWS",
 			secondaryKey: "key",
 			wantErr:      errors.NewS("error: must specify primary-key"),
 		},
 		{
 			name:       "missing --secondary-key",
-			provider:   "AWS",
 			primaryKey: "key",
 			apiOut:     []byte(`{"response":"success"}`),
 			wantOut:    []byte(`{"response":"success"}`),
@@ -97,7 +86,6 @@ func TestByokUpdateCmd(t *testing.T) {
 			}
 
 			viper.Reset()
-			viper.Set(cst.DataProvider, tc.provider)
 			viper.Set(cst.PrimaryKey, tc.primaryKey)
 			viper.Set(cst.SecondaryKey, tc.secondaryKey)
 

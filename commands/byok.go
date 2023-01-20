@@ -31,14 +31,13 @@ Usage:
 func GetBYOKUpdateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounBYOK, cst.Update},
-		SynopsisText: "Update encryption key to a new one",
+		SynopsisText: "Update AWS encryption key to a new one",
 		HelpText: `
 Usage:
    • byok update
-   • byok update --provider AWS --primary-key arn:aws:kms:us-west-1:012345678999:key/abcdef --secondary-key arn:aws:kms:us-east-1:012345678999:key/abcdef
+   • byok update --primary-key arn:aws:kms:us-west-1:012345678999:key/abcdef --secondary-key arn:aws:kms:us-east-1:012345678999:key/abcdef
 `,
 		FlagsPredictor: []*predictor.Params{
-			{Name: cst.DataProvider, Usage: "Key provider AWS/GCP (required)"},
 			{Name: cst.PrimaryKey, Usage: "Primary key (required)"},
 			{Name: cst.SecondaryKey, Usage: "Secondary key"},
 		},
@@ -48,30 +47,20 @@ Usage:
 }
 
 func handleBYOKUpdateCmd(vcli vaultcli.CLI, args []string) int {
-	provider := viper.GetString(cst.DataProvider)
 	primaryKey := viper.GetString(cst.PrimaryKey)
 	secondaryKey := viper.GetString(cst.SecondaryKey)
-	if provider != "AWS" && provider != "GCP" {
-		err := errors.NewS("error: provider must be specified as AWS or GCP")
-		vcli.Out().WriteResponse(nil, err)
-		return utils.GetExecStatus(err)
-	}
 	if primaryKey == "" {
 		err := errors.NewS("error: must specify " + cst.PrimaryKey)
 		vcli.Out().WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
-	data, err := byokUpdate(vcli, provider, primaryKey, secondaryKey)
+	data, err := byokUpdate(vcli, primaryKey, secondaryKey)
 	vcli.Out().WriteResponse(data, err)
 	return utils.GetExecStatus(err)
 }
 
 func handleBYOKUpdateWizard(vcli vaultcli.CLI) int {
 	qs := []*survey.Question{
-		{
-			Name:   "Provider",
-			Prompt: &survey.Select{Message: "Provider:", Options: []string{"AWS", "GCP"}},
-		},
 		{
 			Name:      "PrimaryKey",
 			Prompt:    &survey.Input{Message: "Primary key:"},
@@ -85,7 +74,6 @@ func handleBYOKUpdateWizard(vcli vaultcli.CLI) int {
 		},
 	}
 	answers := struct {
-		Provider     string
 		PrimaryKey   string
 		SecondaryKey string
 	}{}
@@ -94,15 +82,15 @@ func handleBYOKUpdateWizard(vcli vaultcli.CLI) int {
 		vcli.Out().WriteResponse(nil, errors.New(survErr))
 		return utils.GetExecStatus(survErr)
 	}
-	data, err := byokUpdate(vcli, answers.Provider, answers.PrimaryKey, answers.SecondaryKey)
+	data, err := byokUpdate(vcli, answers.PrimaryKey, answers.SecondaryKey)
 	vcli.Out().WriteResponse(data, err)
 	return utils.GetExecStatus(err)
 }
 
-func byokUpdate(vcli vaultcli.CLI, provider, primaryKey, secondaryKey string) ([]byte, *errors.ApiError) {
+func byokUpdate(vcli vaultcli.CLI, primaryKey, secondaryKey string) ([]byte, *errors.ApiError) {
 	uri := paths.CreateURI("config/keys", nil)
 	body := map[string]interface{}{
-		"keyprovider":  provider,
+		"keyprovider":  "AWS",
 		"primaryKey":   primaryKey,
 		"secondaryKey": secondaryKey,
 	}
