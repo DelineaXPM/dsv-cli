@@ -67,7 +67,8 @@ func TestByokUpdateCmd(t *testing.T) {
 			name:       "missing --secondary-key",
 			provider:   "AWS",
 			primaryKey: "key",
-			wantErr:    errors.NewS("error: must specify secondary-key"),
+			apiOut:     []byte(`{"response":"success"}`),
+			wantOut:    []byte(`{"response":"success"}`),
 		},
 	}
 

@@ -40,7 +40,7 @@ Usage:
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataProvider, Usage: "Key provider AWS/GCP (required)"},
 			{Name: cst.PrimaryKey, Usage: "Primary key (required)"},
-			{Name: cst.SecondaryKey, Usage: "Secondary key (required)"},
+			{Name: cst.SecondaryKey, Usage: "Secondary key"},
 		},
 		RunFunc:    handleBYOKUpdateCmd,
 		WizardFunc: handleBYOKUpdateWizard,
@@ -58,11 +58,6 @@ func handleBYOKUpdateCmd(vcli vaultcli.CLI, args []string) int {
 	}
 	if primaryKey == "" {
 		err := errors.NewS("error: must specify " + cst.PrimaryKey)
-		vcli.Out().WriteResponse(nil, err)
-		return utils.GetExecStatus(err)
-	}
-	if secondaryKey == "" {
-		err := errors.NewS("error: must specify " + cst.SecondaryKey)
 		vcli.Out().WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}
@@ -86,7 +81,6 @@ func handleBYOKUpdateWizard(vcli vaultcli.CLI) int {
 		{
 			Name:      "SecondaryKey",
 			Prompt:    &survey.Input{Message: "Secondary key:"},
-			Validate:  vaultcli.SurveyRequired,
 			Transform: vaultcli.SurveyTrimSpace,
 		},
 	}
