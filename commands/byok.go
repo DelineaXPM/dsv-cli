@@ -106,5 +106,5 @@ func byokUpdate(vcli vaultcli.CLI, provider, primaryKey, secondaryKey string) ([
 		"primaryKey":   primaryKey,
 		"secondaryKey": secondaryKey,
 	}
-	return vcli.HTTPClient().DoRequest(http.MethodPost, uri, body)
+	return vcli.HTTPClient().DoRequest(http.MethodPut, uri, body)
 }
