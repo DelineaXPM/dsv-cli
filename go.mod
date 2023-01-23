@@ -17,7 +17,7 @@ require (
 	github.com/caarlos0/env/v6 v6.10.1
 	github.com/creack/pty v1.1.18
 	github.com/danieljoos/wincred v1.0.1
-	github.com/dustin/go-humanize v1.0.0
+	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.13.0
 	github.com/gobuffalo/uuid v2.0.5+incompatible
 	github.com/golang-jwt/jwt/v4 v4.4.3
