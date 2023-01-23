@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 
 	cst "github.com/DelineaXPM/dsv-cli/constants"
@@ -270,8 +269,7 @@ func enginePing(vcli vaultcli.CLI, engineName string) ([]byte, *errors.ApiError)
 }
 
 func engineDelete(vcli vaultcli.CLI, engineName string) ([]byte, *errors.ApiError) {
-	query := map[string]string{"force": strconv.FormatBool(true)}
-	uri := paths.CreateResourceURI(cst.NounEngines, engineName, "", true, query)
+	uri := paths.CreateResourceURI(cst.NounEngines, engineName, "", true, nil)
 	return vcli.HTTPClient().DoRequest(http.MethodDelete, uri, nil)
 }
 
