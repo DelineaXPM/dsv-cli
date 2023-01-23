@@ -12,7 +12,7 @@ jobs:
       name: DSV-Golang-AWS
 
     steps:
-      - task: Delinea.delinea-ss-task.delinea-ss-build-release-task.DelineaSS@0
+      - task: Delinea.delinea-dsv-task.dsv-azure-pipelines-task.DelineaDSV@0
         displayName: 'Retrieve ado/cli from Thycotic DevOps Secrets Vault'
         inputs:
           ServerUrl: '$(ServerUrl)'
