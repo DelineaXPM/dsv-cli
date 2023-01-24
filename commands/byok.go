@@ -31,7 +31,7 @@ Usage:
 func GetBYOKUpdateCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounBYOK, cst.Update},
-		SynopsisText: "Update AWS encryption key to a new one",
+		SynopsisText: "Update AWS encryption key to a new",
 		HelpText: `
 Usage:
    • byok update
