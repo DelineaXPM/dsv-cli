@@ -187,6 +187,8 @@ func runCLI(args []string) (exitStatus int, err error) {
 		"breakglass status":             cmd.GetBreakGlassGetStatusCmd,
 		"breakglass generate":           cmd.GetBreakGlassGenerateCmd,
 		"breakglass apply":              cmd.GetBreakGlassApplyCmd,
+		"byok":                          cmd.GetBYOKCmd,
+		"byok update":                   cmd.GetBYOKUpdateCmd,
 	}
 
 	c.Autocomplete = true
