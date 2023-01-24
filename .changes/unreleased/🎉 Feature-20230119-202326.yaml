@@ -1,6 +1,6 @@
 kind: "\U0001F389 Feature"
 body:
-  Add new `byok update` cli command which provides possibility to change master encryption
+  Add new `byok update` cli command which allows to change master encryption
   key for a new user's one.
 time: 2023-01-19T20:23:26.167884129+02:00
 custom:
