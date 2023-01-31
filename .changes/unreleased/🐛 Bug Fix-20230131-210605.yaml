@@ -1,0 +1,10 @@
+kind: "\U0001F41B Bug Fix"
+body:
+  Return error on init with flags about non-existent store-path and fail on the
+  command.
+time: 2023-01-31T21:06:05.480545242+02:00
+custom:
+  azure-boards-workitemid-fixed: '473745'
+  azure-boards-workitemid-related: '484003'
+  github-contributor: ''
+  github-link: ''
