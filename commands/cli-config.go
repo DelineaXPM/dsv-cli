@@ -628,6 +628,10 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 			return utils.GetExecStatus(err)
 		}
 
+		if _, err = os.Stat(fileStorePath); os.IsNotExist(err) {
+			vcli.Out().FailF("Failed to resolve path: %v", err)
+			return utils.GetExecStatus(err)
+		}
 		prf.Set(fileStorePath, cst.Store, cst.Path)
 		viper.Set(cst.StorePath, fileStorePath)
 	}
