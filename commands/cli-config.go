@@ -628,7 +628,10 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 			return utils.GetExecStatus(err)
 		}
 
-		if _, err = os.Stat(fileStorePath); os.IsNotExist(err) {
+		if pathInfo, err := os.Stat(fileStorePath); err == nil && !pathInfo.IsDir() {
+			vcli.Out().FailF("Failed to resolve path: %s is not a directory", fileStorePath)
+			return 1
+		} else if err != nil && !os.IsNotExist(err) {
 			vcli.Out().FailF("Failed to resolve path: %v", err)
 			return utils.GetExecStatus(err)
 		}
