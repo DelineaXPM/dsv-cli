@@ -1,8 +1,0 @@
-kind: "\U0001F41B Bug Fix"
-body: Delete engine without useless force flag.
-time: 2023-01-23T15:08:58.320023709+02:00
-custom:
-  azure-boards-workitemid-fixed: '468104'
-  azure-boards-workitemid-related: ''
-  github-contributor: ''
-  github-link: ''
