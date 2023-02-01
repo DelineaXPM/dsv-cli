@@ -1,7 +1,5 @@
 kind: "\U0001F41B Bug Fix"
-body:
-  Return error on init with flags about non-directory store-path and fail on the
-  command.
+body: During dsv init if the file store selected check that a file under given store path is a directory or does not exist.
 time: 2023-01-31T21:06:05.480545242+02:00
 custom:
   azure-boards-workitemid-fixed: '473745'
