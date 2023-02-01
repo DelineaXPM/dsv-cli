@@ -89,7 +89,7 @@ Usage:
 func GetAutoKeyDeleteCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounEncryption, cst.NounKey + "/" + cst.Delete},
-		SynopsisText: "Delete an existingn auto key",
+		SynopsisText: "Delete an existing auto key",
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s %[3]s --%[4]s mykeys/key1
@@ -106,7 +106,7 @@ Usage:
 func GetAutoKeyRestoreCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
 		Path:         []string{cst.NounEncryption, cst.NounKey + "/" + cst.Restore},
-		SynopsisText: "Restore a previously soft-deletedn auto key",
+		SynopsisText: "Restore a previously soft-deleted auto key",
 		HelpText: fmt.Sprintf(`
 Usage:
    • %[1]s %[2]s %[3]s --%[4]s mykeys/key1
