@@ -18,7 +18,7 @@ require (
 	github.com/creack/pty v1.1.18
 	github.com/danieljoos/wincred v1.0.1
 	github.com/dustin/go-humanize v1.0.1
-	github.com/fatih/color v1.13.0
+	github.com/fatih/color v1.14.1
 	github.com/gobuffalo/uuid v2.0.5+incompatible
 	github.com/golang-jwt/jwt/v4 v4.4.3
 	github.com/hinshun/vt10x v0.0.0-20220301184237-5011da428d02
@@ -102,7 +102,7 @@ require (
 	github.com/logrusorgru/aurora v2.0.3+incompatible // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.16 // indirect
+	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
