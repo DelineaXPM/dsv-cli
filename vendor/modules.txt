@@ -465,7 +465,7 @@ github.com/stretchr/testify/assert
 # github.com/subosito/gotenv v1.4.1
 ## explicit; go 1.18
 github.com/subosito/gotenv
-# github.com/tidwall/pretty v1.2.0
+# github.com/tidwall/pretty v1.2.1
 ## explicit; go 1.16
 github.com/tidwall/pretty
 # github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e
