@@ -5,6 +5,7 @@ package main
 
 import (
 	"os"
+	"os/exec"
 	"runtime"
 	"strings"
 	"time"
@@ -143,13 +144,19 @@ func Init() error {
 	return nil
 }
 
-// InstallTrunk installs trunk.io tooling for linting and formatting.
+// InstallTrunk installs trunk.io tooling if it isn't already found.
 func InstallTrunk() error {
-	_, err := script.Exec("curl https://get.trunk.io -fsSL").Exec("bash -s -- -y").Stdout()
-	if err != nil {
-		return err
+	magetoolsutils.CheckPtermDebug()
+	_, err := exec.LookPath("trunk")
+	if err != nil && os.IsNotExist(err) {
+		pterm.Warning.Printfln("unable to resolve aqua cli tool, please install for automated project tooling setup: https://aquaproj.github.io/docs/tutorial-basics/quick-start#install-aqua")
+		_, err := script.Exec("curl https://get.trunk.io -fsSL").Exec("bash -s -- -y").Stdout()
+		if err != nil {
+			return err
+		}
+	} else {
+		pterm.Success.Printfln("trunk.io already installed, skipping")
 	}
-
 	return nil
 }
 
