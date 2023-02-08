@@ -77,8 +77,17 @@ function dsv() {
 - 🍺 Homebrew: `brew install DelineaXPM/tap/dsv-cli`.
   - Upgrade with: `brew update && brew upgrade dsv-cli`
 - Via Go (this will take longer than a binary install since it will build it):
-  <!-- trunk-ignore(markdownlint/MD013) -->
-  - run: `go install github.com/DelineaXPM/dsv-cli@latest && mv $(go env GOPATH)/bin/dsv-cli $(go env GOPATH)/bin/dsv && echo "dsv is installed at: $(go env GOPATH)/bin" && echo "Add to your profile to ensure Go binaries are in path by using:\n\n" && echo "export PATH=\"\$(go env GOPATH)/bin:\${PATH}\"\n\n" && echo "Current DSV Binaries installed: \n$(which -a dsv)"`
+  - run:
+
+```shell
+go install github.com/DelineaXPM/dsv-cli@latest
+mv $(go env GOPATH)/bin/dsv-cli $(go env GOPATH)/bin/dsv
+echo "dsv is installed at: $(go env GOPATH)/bin"
+echo "Add to your profile to ensure Go binaries are in path by using:\n\n"
+echo "export PATH=\"\$(go env GOPATH)/bin:\${PATH}\"\n\n"
+echo "Current DSV Binaries installed: \n$(which -a dsv)"
+```
+
 - Curl (requires Go installed):
 
   ```shell
