@@ -16,12 +16,6 @@ packages:
   - name: goreleaser/goreleaser@v1.14.1
     tags: ['ci']
   - name: mvdan/gofumpt@v0.4.0
-  - name: golang.org/x/tools/gopls@v0.11.0
-  - name: golang/tools/gorename@v0.5.0
-  - name: golang/tools/stringer@v0.5.0
-  - name: golang/tools/gomvpkg@v0.5.0
-  - name: golang/tools/godoc@v0.5.0
-  - name: golang/tools/guru@v0.5.0
   - name: anchore/syft@v0.65.0
     tags: ['ci']
   - name: sigstore/cosign@v1.13.1
