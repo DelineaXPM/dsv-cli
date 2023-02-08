@@ -1,0 +1,4 @@
+# https://goreleaser.com/customization/docker/?h=scrat#how-it-works
+FROM cgr.dev/chainguard/go:latest
+COPY dsv /app/dsv
+ENTRYPOINT [ "/app/dsv" ]

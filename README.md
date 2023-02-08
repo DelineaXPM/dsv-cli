@@ -15,6 +15,37 @@ An automation tool for the management of credentials for applications, databases
 <details closed>
 <summary>ℹ️ Any Platform</summary>
 
+- Use with Docker.
+
+  ![Docker Image Version (latest semver)](https://img.shields.io/docker/v/delineaxpm/dsv-cli?style=for-the-badge)
+
+Examples:
+
+```shell
+# Make sure these files exists already so they aren't created by docker with the incorrect permissions
+mkdir $HOME/.thy/
+touch $HOME/.dsv.yml
+
+# Use CLI and have the credentials mounted to home
+docker run --rm -it \
+    -v ${HOME}/.thy/:/root/.thy/ \
+    -v ${HOME}/.dsv.yml:/root/.dsv.yml \
+    dsv-cli:latest --version version
+# Example reading config
+docker run --rm -it \
+    -v ${HOME}/.thy/:/root/.thy/ \
+    -v ${HOME}/.dsv.yml:/root/.dsv.yml \
+    dsv-cli:latest cli-config read
+
+# Wrap in a shell function for easier invoking via your zsh or bash profile.
+function dsv() {
+  docker run --rm -it \
+      -v ${HOME}/.thy/:/root/.thy/ \
+      -v ${HOME}/.dsv.yml:/root/.dsv.yml \
+      dsv-cli:latest "$@"
+}
+```
+
 - 🔨 Download from [prebuilt-binaries] manually.
 - [Aquaproject][aqua-project]: `aqua generate 'DelineaXPM/dsv-cli' -i` and update your `aqua.yml` file.
 - PowerShell Cross-Platform (pwsh) with console selector (move to directory in `$ENV:PATH` for it to be universally discoverable):
