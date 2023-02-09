@@ -25,6 +25,10 @@ parameters:
   - name: workingDirectory
     type: string
     default: $(Pipeline.Workspace)
+  - name: SERVICE_CONNECTION_NAME_DOCKER
+    type: string
+    default: docker-registry-dsv-azure-devops-vault-project
+    values: [docker-registry-dsv-azure-devops-vault-project]
 variables:
   - group: 'CLI_integration_test' # TODO: replace with dsv cli calls
   - group: 'CLi-pipeline-variables' # TODO: replace with dsv cli calls
@@ -33,6 +37,8 @@ variables:
   - group: AWS-DSV-CLI-PROD # for AWS asset upload
   - template: templates/vars.common.yml
   - group: SNAPCRAFT
+  - name: DOCKER_ORG
+    value: delineaxpm
 jobs:
   - job: build
     displayName: build-dsv-cli
@@ -69,6 +75,11 @@ jobs:
         fetchDepth: 0
         path: $(Build.Repository.Name)
         persistCredentials: true
+      - task: Docker@2
+        displayName: docker-login
+        inputs:
+          containerRegistry: ${{ parameters.SERVICE_CONNECTION_NAME_DOCKER }}
+          command: login
 
       # Grab The Cert for Signing
       - task: Delinea.delinea-dsv-task.dsv-azure-pipelines-task.DelineaDSV@0
