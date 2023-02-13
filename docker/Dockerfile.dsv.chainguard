@@ -1,5 +1,5 @@
 # https://goreleaser.com/customization/docker/?h=scrat#how-it-works
 # trunk-ignore(hadolint/DL3007)
-FROM cgr.dev/chainguard/go:latest
+FROM cgr.dev/chainguard/static:latest
 COPY dsv /app/dsv
 ENTRYPOINT [ "/app/dsv" ]

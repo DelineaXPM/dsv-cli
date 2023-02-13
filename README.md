@@ -28,20 +28,21 @@ touch $HOME/.dsv.yml
 
 # Use CLI and have the credentials mounted to home
 docker run --rm -it \
-    -v ${HOME}/.thy/:/root/.thy/ \
-    -v ${HOME}/.dsv.yml:/root/.dsv.yml \
+    -v ${HOME}/.thy/:/home/nonroot/.thy/ \
+    -v ${HOME}/.dsv.yml:/home/nonroot/.dsv.yml \
     dsv-cli:latest --version version
 # Example reading config
 docker run --rm -it \
-    -v ${HOME}/.thy/:/root/.thy/ \
-    -v ${HOME}/.dsv.yml:/root/.dsv.yml \
+    --user 65532 \
+    -v ${HOME}/.thy/:/home/nonroot/.thy/ \
+    -v ${HOME}/.dsv.yml:/home/nonroot/.dsv.yml \
     dsv-cli:latest cli-config read
 
 # Wrap in a shell function for easier invoking via your zsh or bash profile.
 function dsv() {
   docker run --rm -it \
-      -v ${HOME}/.thy/:/root/.thy/ \
-      -v ${HOME}/.dsv.yml:/root/.dsv.yml \
+      -v ${HOME}/.thy/:/home/nonroot/.thy/ \
+      -v ${HOME}/.dsv.yml:/home/nonroot/.dsv.yml \
       dsv-cli:latest "$@"
 }
 ```
