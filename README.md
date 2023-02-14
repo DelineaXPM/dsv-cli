@@ -30,20 +30,20 @@ touch $HOME/.dsv.yml
 docker run --rm -it \
     -v ${HOME}/.thy/:/home/nonroot/.thy/ \
     -v ${HOME}/.dsv.yml:/home/nonroot/.dsv.yml \
-    dsv-cli:latest --version version
+    delineaxpm/dsv-cli:latest --version version
 # Example reading config
 docker run --rm -it \
     --user 65532 \
     -v ${HOME}/.thy/:/home/nonroot/.thy/ \
     -v ${HOME}/.dsv.yml:/home/nonroot/.dsv.yml \
-    dsv-cli:latest cli-config read
+    delineaxpm/dsv-cli:latest cli-config read
 
 # Wrap in a shell function for easier invoking via your zsh or bash profile.
 function dsv() {
   docker run --rm -it \
       -v ${HOME}/.thy/:/home/nonroot/.thy/ \
       -v ${HOME}/.dsv.yml:/home/nonroot/.dsv.yml \
-      dsv-cli:latest "$@"
+      delineaxpm/dsv-cli:latest "$@"
 }
 ```
 
