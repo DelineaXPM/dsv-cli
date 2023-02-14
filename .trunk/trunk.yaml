@@ -1,7 +1,7 @@
 ---
 version: 0.1
 cli:
-  version: 1.3.1
+  version: 1.4.1
 actions:
   enabled:
     - go-mod-vendor
@@ -32,14 +32,14 @@ plugins:
 lint:
   enabled:
     - taplo@0.7.0
-    - yamllint@1.28.0
-    - actionlint@1.6.22
+    - yamllint@1.29.0
+    - actionlint@1.6.23
     - git-diff-check@SYSTEM
-    - gitleaks@8.15.2
-    - golangci-lint@1.50.1
+    - gitleaks@8.15.3
+    - golangci-lint@1.51.1
     - hadolint@2.12.0
-    - markdownlint@0.32.2
-    - prettier@2.8.1
+    - markdownlint@0.33.0
+    - prettier@2.8.3
     - shellcheck@0.9.0
     - shfmt@3.5.0
     - gofumpt@0.4.0
@@ -70,5 +70,5 @@ lint:
 runtimes:
   enabled:
     - python@3.10.3
-    - go@1.18.3
+    - go@1.19.4
     - node@16.14.2

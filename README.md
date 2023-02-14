@@ -15,6 +15,38 @@ An automation tool for the management of credentials for applications, databases
 <details closed>
 <summary>ℹ️ Any Platform</summary>
 
+- Use with Docker.
+
+  ![Docker Image Version (latest semver)](https://img.shields.io/docker/v/delineaxpm/dsv-cli?style=for-the-badge)
+
+Examples:
+
+```shell
+# Make sure these files exists already so they aren't created by docker with the incorrect permissions
+mkdir $HOME/.thy/
+touch $HOME/.dsv.yml
+
+# Use CLI and have the credentials mounted to home
+docker run --rm -it \
+    -v ${HOME}/.thy/:/home/nonroot/.thy/ \
+    -v ${HOME}/.dsv.yml:/home/nonroot/.dsv.yml \
+    dsv-cli:latest --version version
+# Example reading config
+docker run --rm -it \
+    --user 65532 \
+    -v ${HOME}/.thy/:/home/nonroot/.thy/ \
+    -v ${HOME}/.dsv.yml:/home/nonroot/.dsv.yml \
+    dsv-cli:latest cli-config read
+
+# Wrap in a shell function for easier invoking via your zsh or bash profile.
+function dsv() {
+  docker run --rm -it \
+      -v ${HOME}/.thy/:/home/nonroot/.thy/ \
+      -v ${HOME}/.dsv.yml:/home/nonroot/.dsv.yml \
+      dsv-cli:latest "$@"
+}
+```
+
 - 🔨 Download from [prebuilt-binaries] manually.
 - [Aquaproject][aqua-project]: `aqua generate 'DelineaXPM/dsv-cli' -i` and update your `aqua.yml` file.
 - PowerShell Cross-Platform (pwsh) with console selector (move to directory in `$ENV:PATH` for it to be universally discoverable):
@@ -43,10 +75,20 @@ An automation tool for the management of credentials for applications, databases
 ## Mac & Linux
 
 - [aqua-project] provides a binary tool manager similar to Brew.
-- [🍺 Brew][brew-install]: `brew install DelineaXPM/tap/dsv-cli`.
+- 🍺 Homebrew: `brew install DelineaXPM/tap/dsv-cli`.
   - Upgrade with: `brew update && brew upgrade dsv-cli`
 - Via Go (this will take longer than a binary install since it will build it):
-  - run: `go install github.com/DelineaXPM/dsv-cli@latest && mv $(go env GOPATH)/bin/dsv-cli $(go env GOPATH)/bin/dsv && echo "dsv is installed at: $(go env GOPATH)/bin" && echo "Add to your profile to ensure Go binaries are in path by using:\n\n" && echo "export PATH=\"\$(go env GOPATH)/bin:\${PATH}\"\n\n" && echo "Current DSV Binaries installed: \n$(which -a dsv)"`
+  - run:
+
+```shell
+go install github.com/DelineaXPM/dsv-cli@latest
+mv $(go env GOPATH)/bin/dsv-cli $(go env GOPATH)/bin/dsv
+echo "dsv is installed at: $(go env GOPATH)/bin"
+echo "Add to your profile to ensure Go binaries are in path by using:\n\n"
+echo "export PATH=\"\$(go env GOPATH)/bin:\${PATH}\"\n\n"
+echo "Current DSV Binaries installed: \n$(which -a dsv)"
+```
+
 - Curl (requires Go installed):
 
   ```shell
@@ -144,4 +186,3 @@ See [LICENSE](https://github.com/DelineaXPM/dsv-cli/blob/main/LICENSE) for the f
 
 [prebuilt-binaries]: https://dsv.secretsvaultcloud.com/downloads
 [aqua-project]: https://aquaproj.github.io/
-[brew-install]: PENDING

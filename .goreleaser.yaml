@@ -239,3 +239,36 @@ snapcrafts:
     #     write:
     #       - $HOME/.dsv.yml
     #       - $HOME/.thy
+dockers:
+  - id: docker-publish-cli
+    ids: [build-linux]
+    goos: linux
+    image_templates:
+      - '{{ if index .Env "DOCKER_ORG" }}{{ .Env.DOCKER_ORG }}/{{ .ProjectName }}:{{ .Tag }}{{ end }}'
+      - '{{ if index .Env "DOCKER_ORG" }}{{ .Env.DOCKER_ORG }}/{{ .ProjectName }}:latest{{ end }}'
+    skip_push: false
+    dockerfile: ./docker/Dockerfile.dsv.chainguard
+    use: buildx
+    build_flag_templates:
+      - --platform=linux/amd64
+      - --label=org.opencontainers.image.created={{.Date}}
+      - --label=org.opencontainers.image.title={{ .ProjectName }}
+      - --label=org.opencontainers.image.revision={{ .FullCommit }}
+      - --label=org.opencontainers.image.version={{.Version}}
+  # local builds
+  - id: docker-publish-local
+    ids: [build-linux]
+    goos: linux
+    image_templates:
+      - '{{ .ProjectName }}:{{ .Tag }}'
+      - '{{ .ProjectName }}:latest' # This one is for dev usage so latest version, no tagged semver required in docker compose or local testing
+    skip_push: true
+    dockerfile: ./docker/Dockerfile.dsv.chainguard
+    use: buildx
+    build_flag_templates:
+      - --platform=linux/amd64
+      - --label=org.opencontainers.image.created={{.Date}}
+      - --label=org.opencontainers.image.title={{ .ProjectName }}
+      - --label=org.opencontainers.image.revision={{ .FullCommit }}
+      - --label=org.opencontainers.image.version={{.Version}}
+      - --label=org.opencontainers.image.version="{{ .Tag }}"

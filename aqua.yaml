@@ -16,14 +16,6 @@ packages:
   - name: goreleaser/goreleaser@v1.15.2
     tags: ['ci']
   - name: mvdan/gofumpt@v0.4.0
-  - name: golang.org/x/tools/gopls@v0.11.0
-  - name: golang/tools/gorename@v0.6.0
-  - name: golang/tools/stringer@v0.6.0
-  - name: golang/tools/gomvpkg@v0.6.0
-  - name: golang/tools/godoc@v0.6.0
-  - name: golang/tools/guru@v0.6.0
-  - name: anchore/syft@v0.71.0
-    tags: ['ci']
   - name: sigstore/cosign@v1.13.1
     tags: ['ci']
   - name: anchore/quill@v0.2.0
@@ -40,3 +32,5 @@ packages:
     tags: ['ci']
   - name: sharkdp/hyperfine@v1.15.0
   - name: mikefarah/yq@v4.30.8
+  - name: anchore/syft@v0.71.0
+    tags: ['ci']
