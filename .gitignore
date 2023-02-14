@@ -123,3 +123,6 @@ id_dsa
 # Generated credential file should never get committed
 snapcraft-login
 **/*/snapcraft-login
+
+# mac
+.DS_Store
