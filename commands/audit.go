@@ -1,14 +1,13 @@
 package cmd
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
 	cst "github.com/DelineaXPM/dsv-cli/constants"
-	"github.com/DelineaXPM/dsv-cli/errors"
 	"github.com/DelineaXPM/dsv-cli/internal/predictor"
 	"github.com/DelineaXPM/dsv-cli/paths"
-	"github.com/DelineaXPM/dsv-cli/utils"
 	"github.com/DelineaXPM/dsv-cli/vaultcli"
 
 	"github.com/mitchellh/cli"
@@ -37,26 +36,22 @@ Usage:
 			{Name: cst.Sort, Usage: "Change result sorting order (asc|desc) [default: desc] when search field is specified (optional)"},
 		},
 		MinNumberArgs: 1,
-		RunFunc:       handleAuditSearch,
+		RunFuncE:      handleAuditSearch,
 	})
 }
 
-func handleAuditSearch(vcli vaultcli.CLI, args []string) int {
+func handleAuditSearch(vcli vaultcli.CLI, args []string) error {
 	vipConstStartDate := viper.GetString(cst.StartDate)
 	vipConstEndDate := viper.GetString(cst.EndDate)
 	if vipConstStartDate == "" {
-		err := errors.NewS("error: must specify " + cst.StartDate)
-		vcli.Out().WriteResponse(nil, err)
-		return utils.GetExecStatus(err)
+		return fmt.Errorf("error: must specify --startdate")
 	}
 
 	const layout = "2006-01-02"
 
 	startDate, parsingErr := time.Parse(layout, vipConstStartDate)
 	if parsingErr != nil {
-		err := errors.NewS("error: must correctly specify " + cst.StartDate)
-		vcli.Out().WriteResponse(nil, err)
-		return utils.GetExecStatus(err)
+		return fmt.Errorf("error: must correctly specify --startdate")
 	}
 
 	var endDate time.Time
@@ -67,22 +62,16 @@ func handleAuditSearch(vcli vaultcli.CLI, args []string) int {
 	} else {
 		endDate, parsingErr = time.Parse(layout, vipConstEndDate)
 		if parsingErr != nil {
-			err := errors.NewS("error: must correctly specify " + cst.EndDate)
-			vcli.Out().WriteResponse(nil, err)
-			return utils.GetExecStatus(err)
+			return fmt.Errorf("error: must correctly specify --enddate")
 		}
 	}
 
 	if time.Now().Before(startDate) {
-		err := errors.NewS("error: start date cannot be in the future")
-		vcli.Out().WriteResponse(nil, err)
-		return utils.GetExecStatus(err)
+		return fmt.Errorf("error: start date cannot be in the future")
 	}
 
 	if endDate.Before(startDate) {
-		err := errors.NewS("error: start date cannot be after end date")
-		vcli.Out().WriteResponse(nil, err)
-		return utils.GetExecStatus(err)
+		return fmt.Errorf("error: start date cannot be after end date")
 	}
 
 	// Always add one day to the end date to include data for that day.
@@ -111,7 +100,10 @@ func handleAuditSearch(vcli vaultcli.CLI, args []string) int {
 	}
 	uri := paths.CreateURI("audit", queryParams)
 	data, err := vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)
+	if err != nil {
+		return err
+	}
 
-	vcli.Out().WriteResponse(data, err)
-	return utils.GetExecStatus(err)
+	vcli.Out().WriteResponse(data, nil)
+	return nil
 }

@@ -40,14 +40,14 @@ Usage:
 		},
 		MinNumberArgs: 1,
 		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			userData := viper.GetString(cst.DataUsername)
-			if userData == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
-				userData = args[0]
+			name := viper.GetString(cst.DataUsername)
+			if name == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+				name = args[0]
 			}
-			if userData == "" {
+			if name == "" {
 				return cli.RunResultHelp
 			}
-			return handleUserReadCmd(vcli, args)
+			return wrapError(handleUserReadCmd)(vcli, args)
 		},
 	})
 }
@@ -67,7 +67,7 @@ Usage:
 			{Name: cst.Version, Usage: "List the current and last (n) versions"},
 		},
 		MinNumberArgs: 1,
-		RunFunc:       handleUserReadCmd,
+		RunFuncE:      handleUserReadCmd,
 	})
 }
 
@@ -89,7 +89,7 @@ Usage:
 			{Name: cst.Sort, Usage: cst.SortHelpMessage},
 			{Name: cst.SortedBy, Usage: "Sort by name, created or lastModified field (optional)", Default: "lastModified"},
 		},
-		RunFunc: handleUserSearchCmd,
+		RunFuncE: handleUserSearchCmd,
 	})
 }
 
@@ -108,7 +108,7 @@ Usage:
 			{Name: cst.Force, Usage: fmt.Sprintf("Immediately delete %s", cst.NounUser), ValueType: "bool"},
 		},
 		MinNumberArgs: 1,
-		RunFunc:       handleUserDeleteCmd,
+		RunFuncE:      handleUserDeleteCmd,
 	})
 }
 
@@ -125,7 +125,7 @@ Usage:
 			{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to fetch (required)", strings.Title(cst.DataUsername), cst.NounUser)},
 		},
 		MinNumberArgs: 1,
-		RunFunc:       handleUserRestoreCmd,
+		RunFuncE:      handleUserRestoreCmd,
 	})
 }
 
@@ -146,7 +146,7 @@ Usage:
 			{Name: cst.DataExternalID, Usage: fmt.Sprintf("%s of %s to be updated", strings.Title(strings.Replace(cst.DataExternalID, ".", " ", -1)), cst.NounUser)},
 			{Name: cst.DataProvider, Usage: fmt.Sprintf("External %s of %s to be updated", strings.Title(cst.DataProvider), cst.NounUser)},
 		},
-		RunFunc:    handleUserCreateCmd,
+		RunFuncE:   handleUserCreateCmd,
 		WizardFunc: handleUserCreateWizard,
 	})
 }
@@ -165,20 +165,18 @@ Usage:
 			{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to be updated (required)", strings.Title(cst.DataUsername), cst.NounUser)},
 			{Name: cst.DataDisplayname, Usage: fmt.Sprintf("%s of %s to be updated", strings.Title(cst.DataDisplayname), cst.NounUser)},
 		},
-		RunFunc:    handleUserUpdateCmd,
+		RunFuncE:   handleUserUpdateCmd,
 		WizardFunc: handleUserUpdateWizard,
 	})
 }
 
-func handleUserReadCmd(vcli vaultcli.CLI, args []string) int {
+func handleUserReadCmd(vcli vaultcli.CLI, args []string) error {
 	userName := viper.GetString(cst.DataUsername)
 	if userName == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		userName = args[0]
 	}
 	if userName == "" {
-		err := errors.NewS("error: must specify " + cst.DataUsername)
-		vcli.Out().WriteResponse(nil, err)
-		return utils.GetExecStatus(err)
+		return fmt.Errorf("error: must specify --username")
 	}
 
 	userName = paths.ProcessResource(userName)
@@ -188,11 +186,14 @@ func handleUserReadCmd(vcli vaultcli.CLI, args []string) int {
 	}
 
 	data, err := userRead(vcli, userName)
-	vcli.Out().WriteResponse(data, err)
-	return utils.GetExecStatus(err)
+	if err != nil {
+		return err
+	}
+	vcli.Out().WriteResponse(data, nil)
+	return nil
 }
 
-func handleUserSearchCmd(vcli vaultcli.CLI, args []string) int {
+func handleUserSearchCmd(vcli vaultcli.CLI, args []string) error {
 	query := viper.GetString(cst.Query)
 	limit := viper.GetString(cst.Limit)
 	cursor := viper.GetString(cst.Cursor)
@@ -210,59 +211,61 @@ func handleUserSearchCmd(vcli vaultcli.CLI, args []string) int {
 		sort:     sort,
 		sortedBy: sortedBy,
 	})
-	vcli.Out().WriteResponse(data, apiErr)
-	return utils.GetExecStatus(apiErr)
+	if apiErr != nil {
+		return apiErr
+	}
+	vcli.Out().WriteResponse(data, nil)
+	return nil
 }
 
-func handleUserDeleteCmd(vcli vaultcli.CLI, args []string) int {
+func handleUserDeleteCmd(vcli vaultcli.CLI, args []string) error {
 	userName := viper.GetString(cst.DataUsername)
 	force := viper.GetBool(cst.Force)
 	if userName == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		userName = args[0]
 	}
 	if userName == "" {
-		err := errors.NewS("error: must specify " + cst.DataUsername)
-		vcli.Out().WriteResponse(nil, err)
-		return utils.GetExecStatus(err)
+		return fmt.Errorf("error: must specify --username")
 	}
 
 	data, apiErr := userDelete(vcli, paths.ProcessResource(userName), force)
-	vcli.Out().WriteResponse(data, apiErr)
-	return utils.GetExecStatus(apiErr)
+	if apiErr != nil {
+		return apiErr
+	}
+	vcli.Out().WriteResponse(data, nil)
+	return nil
 }
 
-func handleUserRestoreCmd(vcli vaultcli.CLI, args []string) int {
+func handleUserRestoreCmd(vcli vaultcli.CLI, args []string) error {
 	userName := viper.GetString(cst.DataUsername)
 	if userName == "" && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		userName = args[0]
 	}
 	if userName == "" {
-		err := errors.NewS("error: must specify " + cst.DataUsername)
-		vcli.Out().WriteResponse(nil, err)
-		return utils.GetExecStatus(err)
+		return fmt.Errorf("error: must specify --username")
 	}
 
 	data, apiErr := userRestore(vcli, paths.ProcessResource(userName))
-	vcli.Out().WriteResponse(data, apiErr)
-	return utils.GetExecStatus(apiErr)
+	if apiErr != nil {
+		return apiErr
+	}
+	vcli.Out().WriteResponse(data, nil)
+	return nil
 }
 
-func handleUserCreateCmd(vcli vaultcli.CLI, args []string) int {
+func handleUserCreateCmd(vcli vaultcli.CLI, args []string) error {
 	userName := viper.GetString(cst.DataUsername)
 	password := viper.GetString(cst.DataPassword)
 	provider := viper.GetString(cst.DataProvider)
 	externalID := viper.GetString(cst.DataExternalID)
 
 	if err := vaultcli.ValidateUsername(userName); err != nil {
-		vcli.Out().FailF("error: %s %q is invalid: %v", cst.DataUsername, userName, err)
-		return utils.GetExecStatus(err)
+		return fmt.Errorf("error: username %q is invalid: %w", userName, err)
 	}
 
 	isUserLocal := provider == "" && externalID == ""
 	if password == "" && isUserLocal {
-		err := errors.NewS("error: must specify password for local users")
-		vcli.Out().WriteResponse(nil, err)
-		return utils.GetExecStatus(err)
+		return fmt.Errorf("error: must specify password for local users")
 	}
 
 	if !isUserLocal {
@@ -279,38 +282,38 @@ func handleUserCreateCmd(vcli vaultcli.CLI, args []string) int {
 		ExternalID:  externalID,
 	}
 	resp, apiError := userCreate(vcli, body)
-	vcli.Out().WriteResponse(resp, apiError)
-	return utils.GetExecStatus(apiError)
+	if apiError != nil {
+		return apiError
+	}
+	vcli.Out().WriteResponse(resp, nil)
+	return nil
 }
 
-func handleUserUpdateCmd(vcli vaultcli.CLI, args []string) int {
+func handleUserUpdateCmd(vcli vaultcli.CLI, args []string) error {
 	username := viper.GetString(cst.DataUsername)
 	if username == "" {
-		err := errors.NewS("error: must specify " + cst.DataUsername)
-		vcli.Out().WriteResponse(nil, err)
-		return utils.GetExecStatus(err)
+		return fmt.Errorf("error: must specify --username")
 	}
 
 	displayNameExists := hasFlag(args, "--"+cst.DataDisplayname)
 	passData := viper.GetString(cst.DataPassword)
 	displayName := viper.GetString(cst.DataDisplayname)
 	if passData == "" && !displayNameExists {
-		err := errMustSpecifyPasswordOrDisplayname
-		vcli.Out().WriteResponse(nil, err)
-		return utils.GetExecStatus(err)
+		return errMustSpecifyPasswordOrDisplayname
 	}
 
 	displayNameLen := len(displayName)
 	if displayNameExists && (displayNameLen < 3 || displayNameLen > 100) {
-		err := errWrongDisplayName
-		vcli.Out().WriteResponse(nil, err)
-		return utils.GetExecStatus(err)
+		return errWrongDisplayName
 	}
 
 	body := &userUpdateRequest{Password: passData, DisplayName: displayName}
 	resp, apiError := userUpdate(vcli, username, body)
-	vcli.Out().WriteResponse(resp, apiError)
-	return utils.GetExecStatus(apiError)
+	if apiError != nil {
+		return apiError
+	}
+	vcli.Out().WriteResponse(resp, nil)
+	return nil
 }
 
 // Wizards:
