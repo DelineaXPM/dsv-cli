@@ -1,0 +1,10 @@
+kind: "\U0001F528 Refactor"
+body:
+  Allow defining command handlers which could return an error instead of exit
+  code.
+time: 2023-02-17T12:40:51.730534195+02:00
+custom:
+  azure-boards-workitemid-fixed: ''
+  azure-boards-workitemid-related: ''
+  github-contributor: andrii-zakurenyi
+  github-link: https://github.com/andrii-zakurenyi

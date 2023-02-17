@@ -63,6 +63,7 @@ func BasePredictorWrappers() []*predictor.Params {
 type CommandArgs struct {
 	Path           []string
 	RunFunc        func(vcli vaultcli.CLI, args []string) int
+	RunFuncE       func(vcli vaultcli.CLI, args []string) error
 	WizardFunc     func(vcli vaultcli.CLI) int
 	HelpText       string
 	SynopsisText   string
@@ -78,15 +79,10 @@ func NewCommand(args CommandArgs) (cli.Command, error) {
 		return nil, fmt.Errorf("command path must be defined")
 	}
 
-	runFunc := args.RunFunc
-	if runFunc == nil {
-		// Show help by default.
-		runFunc = func(vcli vaultcli.CLI, args []string) int { return cli.RunResultHelp }
-	}
-
 	cmd := &baseCommand{
 		path:           args.Path,
-		runFunc:        runFunc,
+		runFunc:        args.RunFunc,
+		runFuncE:       args.RunFuncE,
 		wizardFunc:     args.WizardFunc,
 		helpText:       args.HelpText,
 		synopsisText:   args.SynopsisText,
@@ -112,6 +108,7 @@ func NewCommand(args CommandArgs) (cli.Command, error) {
 type baseCommand struct {
 	path           []string
 	runFunc        func(vcli vaultcli.CLI, args []string) int
+	runFuncE       func(vcli vaultcli.CLI, args []string) error
 	wizardFunc     func(vcli vaultcli.CLI) int
 	helpText       string
 	synopsisText   string
@@ -134,7 +131,7 @@ func (c *baseCommand) Run(args []string) int {
 	onlyGlobalFlags, err := c.parseFlags()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Flags error: %v.\n", err)
-		fmt.Fprintf(os.Stderr, "See %s %s --help.\n", os.Args[0], strings.Join(c.path, " "))
+		fmt.Fprintf(os.Stderr, "See '%s %s --help'.\n", os.Args[0], strings.Join(c.path, " "))
 		return 1
 	}
 
@@ -196,10 +193,19 @@ func (c *baseCommand) Run(args []string) int {
 		viper.Set("token", tokenResponse.Token)
 	}
 
-	if onlyGlobalFlags && c.wizardFunc != nil {
+	switch {
+	case onlyGlobalFlags && c.wizardFunc != nil:
 		return c.wizardFunc(vcli)
+
+	case c.runFuncE != nil:
+		return wrapError(c.runFuncE)(vcli, args)
+
+	case c.runFunc != nil:
+		return c.runFunc(vcli, args)
+
+	default:
+		return cli.RunResultHelp
 	}
-	return c.runFunc(vcli, args)
 }
 
 func (c *baseCommand) parseFlags() (bool, error) {
@@ -344,4 +350,15 @@ func ValidateParams(params map[string]string, requiredKeys []string) *errors.Api
 		}
 	}
 	return nil
+}
+
+func wrapError(in func(vaultcli.CLI, []string) error) func(vaultcli.CLI, []string) int {
+	return func(vcli vaultcli.CLI, args []string) int {
+		err := in(vcli, args)
+		if err != nil {
+			vcli.Out().Fail(err)
+			return 1
+		}
+		return 0
+	}
 }
