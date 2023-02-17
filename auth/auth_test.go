@@ -14,8 +14,8 @@ import (
 	"github.com/DelineaXPM/dsv-cli/auth"
 	cst "github.com/DelineaXPM/dsv-cli/constants"
 	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/internal/store"
 	"github.com/DelineaXPM/dsv-cli/requests"
-	"github.com/DelineaXPM/dsv-cli/store"
 	"github.com/DelineaXPM/dsv-cli/tests/fake"
 	"github.com/DelineaXPM/dsv-cli/utils/test_helpers"
 
@@ -72,12 +72,12 @@ func TestNewAuthenticatorDefault(t *testing.T) {
 func TestWipeCachedTokens(t *testing.T) {
 	st := &fake.FakeStore{}
 
-	st.ListStub = func(s string) ([]string, *errors.ApiError) {
+	st.ListStub = func(s string) ([]string, error) {
 		return []string{"token-a-profilename", "token-b-differentprofile", "b"}, nil
 	}
 
 	deleteCalledFor := []string{}
-	st.DeleteStub = func(s string) *errors.ApiError {
+	st.DeleteStub = func(s string) error {
 		deleteCalledFor = append(deleteCalledFor, s)
 		return nil
 	}
@@ -115,7 +115,7 @@ func TestGetToken_CachedToken(t *testing.T) {
 	st := &fake.FakeStore{}
 
 	var usedCacheKey string
-	st.GetStub = func(s string, out interface{}) *errors.ApiError {
+	st.GetStub = func(s string, out any) error {
 		usedCacheKey = s
 
 		tr := out.(*auth.TokenResponse)
@@ -154,7 +154,7 @@ func TestGetToken_CachedRefreshToken(t *testing.T) {
 	st := &fake.FakeStore{}
 
 	var usedCacheKey string
-	st.GetStub = func(s string, out interface{}) *errors.ApiError {
+	st.GetStub = func(s string, out any) error {
 		usedCacheKey = s
 
 		tr := out.(*auth.TokenResponse)
@@ -349,7 +349,7 @@ func TestGetToken_SecurePassword(t *testing.T) {
 	viper.Set("auth.securePassword", securePass)
 
 	st := &fake.FakeStore{}
-	st.GetStub = func(s string, i interface{}) *errors.ApiError {
+	st.GetStub = func(s string, i any) error {
 		t.Logf("fakeStore.Get(%s)", s)
 		return nil
 	}

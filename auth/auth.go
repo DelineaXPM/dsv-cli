@@ -10,9 +10,9 @@ import (
 
 	cst "github.com/DelineaXPM/dsv-cli/constants"
 	"github.com/DelineaXPM/dsv-cli/errors"
+	"github.com/DelineaXPM/dsv-cli/internal/store"
 	"github.com/DelineaXPM/dsv-cli/paths"
 	"github.com/DelineaXPM/dsv-cli/requests"
-	"github.com/DelineaXPM/dsv-cli/store"
 
 	"github.com/spf13/viper"
 )
@@ -79,7 +79,7 @@ func getTokenCacheKey(a AuthType, tenant string, profile string) string {
 // Authenticator is the interface used for authentication funcs.
 type Authenticator interface {
 	GetToken() (*TokenResponse, *errors.ApiError)
-	WipeCachedTokens() *errors.ApiError
+	WipeCachedTokens() error
 }
 
 type authenticator struct {
@@ -133,7 +133,7 @@ func (a *authenticator) GetToken() (*TokenResponse, *errors.ApiError) {
 }
 
 // WipeCachedTokens removes all cached tokens for the current profile.
-func (a *authenticator) WipeCachedTokens() *errors.ApiError {
+func (a *authenticator) WipeCachedTokens() error {
 	profile := viper.GetString(cst.Profile)
 	if profile == "" {
 		profile = cst.DefaultProfile
@@ -158,7 +158,7 @@ func (a *authenticator) getToken(at AuthType, cacheKey string) (*TokenResponse, 
 		tr := &TokenResponse{}
 		err := a.store.Get(cacheKey, tr)
 		if err != nil {
-			return nil, err
+			return nil, errors.New(err).Grow("Failed to read token from cache.")
 		}
 
 		if !tr.IsNil() {
@@ -187,7 +187,7 @@ func (a *authenticator) getToken(at AuthType, cacheKey string) (*TokenResponse, 
 				} else {
 					log.Printf("Refresh authentication succeeded.")
 					if err := a.store.Store(cacheKey, tr); err != nil {
-						return nil, err.Grow("Failed caching token.")
+						return nil, errors.New(err).Grow("Failed caching token")
 					}
 					return tr, nil
 				}
@@ -217,7 +217,7 @@ func (a *authenticator) getToken(at AuthType, cacheKey string) (*TokenResponse, 
 
 	if cacheKey != "" {
 		if err := a.store.Store(cacheKey, tr); err != nil {
-			return nil, err.Grow("Failed caching token")
+			return nil, errors.New(err).Grow("Failed caching token")
 		}
 	}
 	return tr, nil

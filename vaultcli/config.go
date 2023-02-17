@@ -29,6 +29,8 @@ const (
 )
 
 // Supproted versions of configuration files.
+//
+//nolint:varnamelen // the length is good enough.
 const (
 	v1 = "v1"
 	v2 = "v2"

@@ -11,8 +11,9 @@ import (
 type FakeAuthenticator struct {
 	GetTokenStub        func() (*auth.TokenResponse, *errors.ApiError)
 	getTokenMutex       sync.RWMutex
-	getTokenArgsForCall []struct{}
-	getTokenReturns     struct {
+	getTokenArgsForCall []struct {
+	}
+	getTokenReturns struct {
 		result1 *auth.TokenResponse
 		result2 *errors.ApiError
 	}
@@ -20,14 +21,15 @@ type FakeAuthenticator struct {
 		result1 *auth.TokenResponse
 		result2 *errors.ApiError
 	}
-	WipeCachedTokensStub        func() *errors.ApiError
+	WipeCachedTokensStub        func() error
 	wipeCachedTokensMutex       sync.RWMutex
-	wipeCachedTokensArgsForCall []struct{}
-	wipeCachedTokensReturns     struct {
-		result1 *errors.ApiError
+	wipeCachedTokensArgsForCall []struct {
+	}
+	wipeCachedTokensReturns struct {
+		result1 error
 	}
 	wipeCachedTokensReturnsOnCall map[int]struct {
-		result1 *errors.ApiError
+		result1 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -36,7 +38,8 @@ type FakeAuthenticator struct {
 func (fake *FakeAuthenticator) GetToken() (*auth.TokenResponse, *errors.ApiError) {
 	fake.getTokenMutex.Lock()
 	ret, specificReturn := fake.getTokenReturnsOnCall[len(fake.getTokenArgsForCall)]
-	fake.getTokenArgsForCall = append(fake.getTokenArgsForCall, struct{}{})
+	fake.getTokenArgsForCall = append(fake.getTokenArgsForCall, struct {
+	}{})
 	stub := fake.GetTokenStub
 	fakeReturns := fake.getTokenReturns
 	fake.recordInvocation("GetToken", []interface{}{})
@@ -88,10 +91,11 @@ func (fake *FakeAuthenticator) GetTokenReturnsOnCall(i int, result1 *auth.TokenR
 	}{result1, result2}
 }
 
-func (fake *FakeAuthenticator) WipeCachedTokens() *errors.ApiError {
+func (fake *FakeAuthenticator) WipeCachedTokens() error {
 	fake.wipeCachedTokensMutex.Lock()
 	ret, specificReturn := fake.wipeCachedTokensReturnsOnCall[len(fake.wipeCachedTokensArgsForCall)]
-	fake.wipeCachedTokensArgsForCall = append(fake.wipeCachedTokensArgsForCall, struct{}{})
+	fake.wipeCachedTokensArgsForCall = append(fake.wipeCachedTokensArgsForCall, struct {
+	}{})
 	stub := fake.WipeCachedTokensStub
 	fakeReturns := fake.wipeCachedTokensReturns
 	fake.recordInvocation("WipeCachedTokens", []interface{}{})
@@ -111,32 +115,32 @@ func (fake *FakeAuthenticator) WipeCachedTokensCallCount() int {
 	return len(fake.wipeCachedTokensArgsForCall)
 }
 
-func (fake *FakeAuthenticator) WipeCachedTokensCalls(stub func() *errors.ApiError) {
+func (fake *FakeAuthenticator) WipeCachedTokensCalls(stub func() error) {
 	fake.wipeCachedTokensMutex.Lock()
 	defer fake.wipeCachedTokensMutex.Unlock()
 	fake.WipeCachedTokensStub = stub
 }
 
-func (fake *FakeAuthenticator) WipeCachedTokensReturns(result1 *errors.ApiError) {
+func (fake *FakeAuthenticator) WipeCachedTokensReturns(result1 error) {
 	fake.wipeCachedTokensMutex.Lock()
 	defer fake.wipeCachedTokensMutex.Unlock()
 	fake.WipeCachedTokensStub = nil
 	fake.wipeCachedTokensReturns = struct {
-		result1 *errors.ApiError
+		result1 error
 	}{result1}
 }
 
-func (fake *FakeAuthenticator) WipeCachedTokensReturnsOnCall(i int, result1 *errors.ApiError) {
+func (fake *FakeAuthenticator) WipeCachedTokensReturnsOnCall(i int, result1 error) {
 	fake.wipeCachedTokensMutex.Lock()
 	defer fake.wipeCachedTokensMutex.Unlock()
 	fake.WipeCachedTokensStub = nil
 	if fake.wipeCachedTokensReturnsOnCall == nil {
 		fake.wipeCachedTokensReturnsOnCall = make(map[int]struct {
-			result1 *errors.ApiError
+			result1 error
 		})
 	}
 	fake.wipeCachedTokensReturnsOnCall[i] = struct {
-		result1 *errors.ApiError
+		result1 error
 	}{result1}
 }
 

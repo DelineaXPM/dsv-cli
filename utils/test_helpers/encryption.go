@@ -2,7 +2,7 @@ package test_helpers
 
 import (
 	"github.com/DelineaXPM/dsv-cli/auth"
-	"github.com/DelineaXPM/dsv-cli/store"
+	"github.com/DelineaXPM/dsv-cli/internal/store"
 )
 
 // AddEncryptionKey creates a password encryption key in a user's home directory.

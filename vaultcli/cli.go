@@ -4,8 +4,8 @@ import (
 	"github.com/DelineaXPM/dsv-cli/auth"
 	"github.com/DelineaXPM/dsv-cli/errors"
 	"github.com/DelineaXPM/dsv-cli/format"
+	"github.com/DelineaXPM/dsv-cli/internal/store"
 	"github.com/DelineaXPM/dsv-cli/requests"
-	"github.com/DelineaXPM/dsv-cli/store"
 )
 
 type CLI interface {
@@ -14,7 +14,7 @@ type CLI interface {
 	Out() format.OutClient
 	Edit(data []byte, saveFunc SaveFunc) (edited []byte, err *errors.ApiError)
 	Authenticator() auth.Authenticator
-	Store(t string) (store.Store, *errors.ApiError)
+	Store(t string) (store.Store, error)
 }
 
 type vaultCLI struct {
@@ -68,11 +68,15 @@ func (v *vaultCLI) Out() format.OutClient {
 	return v.outClient
 }
 
-func (v *vaultCLI) Store(t string) (store.Store, *errors.ApiError) {
+func (v *vaultCLI) Store(t string) (store.Store, error) {
 	if v.store != nil {
 		return v.store, nil
 	}
-	return store.GetStore(t)
+	s, err := store.GetStore(t)
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 func (v *vaultCLI) Edit(data []byte, save SaveFunc) (edited []byte, err *errors.ApiError) {

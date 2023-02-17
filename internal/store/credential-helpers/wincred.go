@@ -5,35 +5,41 @@ package credhelpers
 
 import (
 	"bytes"
+	"errors"
 	"strings"
 
 	winc "github.com/danieljoos/wincred"
+)
+
+const (
+	credsLabelKey   = "label"
+	credsLabelValue = "Vault Token"
 )
 
 // Wincred handles secrets using the Windows credential service.
 type Wincred struct{}
 
 // GetName gets friendly name of service
-func (h Wincred) GetName() string {
-	return "windows credential manager"
-}
+func (Wincred) GetName() string { return "windows credential manager" }
 
 // Add adds new credentials to the windows credentials manager.
-func (h Wincred) Add(creds *Credentials) error {
-	creds.ServerURL = externalUrlToInternalUrl(creds.ServerURL)
-	credsLabels := []byte(CredsLabel)
+func (Wincred) Add(creds *Credentials) error {
+	creds.ServerURL = externalToInternal(creds.ServerURL)
+
 	g := winc.NewGenericCredential(creds.ServerURL)
 	g.UserName = creds.Username
 	g.CredentialBlob = []byte(creds.Secret)
 	g.Persist = winc.PersistLocalMachine
-	g.Attributes = []winc.CredentialAttribute{{Keyword: "label", Value: credsLabels}}
+	g.Attributes = []winc.CredentialAttribute{
+		{Keyword: credsLabelKey, Value: []byte(credsLabelValue)},
+	}
 
 	return g.Write()
 }
 
 // Delete removes credentials from the windows credentials manager.
-func (h Wincred) Delete(serverURL string) error {
-	serverURL = externalUrlToInternalUrl(serverURL)
+func (Wincred) Delete(serverURL string) error {
+	serverURL = externalToInternal(serverURL)
 	g, err := winc.GetGenericCredential(serverURL)
 	if g == nil {
 		return nil
@@ -45,47 +51,40 @@ func (h Wincred) Delete(serverURL string) error {
 }
 
 // Get retrieves credentials from the windows credentials manager.
-func (h Wincred) Get(serverURL string) (string, string, error) {
-	serverURL = externalUrlToInternalUrl(serverURL)
+func (Wincred) Get(serverURL string) (string, error) {
+	serverURL = externalToInternal(serverURL)
 	g, _ := winc.GetGenericCredential(serverURL)
-	if g == nil {
-		return "", "", NewErrCredentialsNotFound()
-	}
-	for _, attr := range g.Attributes {
-		if strings.Compare(attr.Keyword, "label") == 0 &&
-			bytes.Compare(attr.Value, []byte(CredsLabel)) == 0 {
-
-			return g.UserName, string(g.CredentialBlob), nil
+	if g != nil {
+		for _, attr := range g.Attributes {
+			if attr.Keyword == credsLabelKey && bytes.Compare(attr.Value, []byte(credsLabelValue)) == 0 {
+				return string(g.CredentialBlob), nil
+			}
 		}
 	}
-	return "", "", NewErrCredentialsNotFound()
+	return "", errors.New("credentials not found in native keychain")
 }
 
 // List returns the stored URLs and corresponding usernames for a given credentials label.
-func (h Wincred) List(prefix string) (map[string]string, error) {
-	prefix = externalUrlToInternalUrl(prefix)
+func (Wincred) List(prefix string) ([]string, error) {
+	prefix = externalToInternal(prefix)
 	creds, err := winc.List()
 	if err != nil {
 		return nil, err
 	}
 
-	resp := make(map[string]string)
+	resp := []string{}
 	for i := range creds {
 		tName := creds[i].TargetName
 		if !strings.HasPrefix(tName, prefix) {
 			continue
 		}
-		tNameExternal := internalUrlToExternalUrl(tName)
+		tNameExternal := internalToExternal(tName)
 		attrs := creds[i].Attributes
 		for _, attr := range attrs {
-			if strings.Compare(attr.Keyword, "label") == 0 &&
-				bytes.Compare(attr.Value, []byte(CredsLabel)) == 0 {
-
-				resp[tNameExternal] = creds[i].UserName
+			if attr.Keyword == credsLabelKey && bytes.Compare(attr.Value, []byte(credsLabelValue)) == 0 {
+				resp = append(resp, tNameExternal)
 			}
 		}
-
 	}
-
 	return resp, nil
 }

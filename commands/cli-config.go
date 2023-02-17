@@ -16,8 +16,8 @@ import (
 	"github.com/DelineaXPM/dsv-cli/errors"
 	"github.com/DelineaXPM/dsv-cli/internal/pki"
 	"github.com/DelineaXPM/dsv-cli/internal/predictor"
+	"github.com/DelineaXPM/dsv-cli/internal/store"
 	"github.com/DelineaXPM/dsv-cli/paths"
-	"github.com/DelineaXPM/dsv-cli/store"
 	"github.com/DelineaXPM/dsv-cli/utils"
 	"github.com/DelineaXPM/dsv-cli/vaultcli"
 
@@ -596,7 +596,7 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 			return 1
 		}
 	}
-	if err := store.ValidateCredentialStore(storeType); err != nil {
+	if err := store.ValidateStoreType(storeType); err != nil {
 		ui.Error(fmt.Sprintf("Failed to get store: %v.", err))
 		return 1
 	}
@@ -916,12 +916,12 @@ Example:
 func tryAuthenticate() error {
 	authenticator := auth.NewAuthenticatorDefault()
 
-	apiError := authenticator.WipeCachedTokens()
-	if apiError != nil {
-		return apiError
+	err := authenticator.WipeCachedTokens()
+	if err != nil {
+		return err
 	}
 
-	_, apiError = authenticator.GetToken()
+	_, apiError := authenticator.GetToken()
 	if apiError != nil {
 		return apiError
 	}

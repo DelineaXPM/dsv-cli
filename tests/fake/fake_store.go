@@ -4,87 +4,86 @@ package fake
 import (
 	"sync"
 
-	"github.com/DelineaXPM/dsv-cli/errors"
-	"github.com/DelineaXPM/dsv-cli/store"
+	"github.com/DelineaXPM/dsv-cli/internal/store"
 )
 
 type FakeStore struct {
-	DeleteStub        func(string) *errors.ApiError
+	DeleteStub        func(string) error
 	deleteMutex       sync.RWMutex
 	deleteArgsForCall []struct {
 		arg1 string
 	}
 	deleteReturns struct {
-		result1 *errors.ApiError
+		result1 error
 	}
 	deleteReturnsOnCall map[int]struct {
-		result1 *errors.ApiError
+		result1 error
 	}
-	GetStub        func(string, interface{}) *errors.ApiError
+	GetStub        func(string, any) error
 	getMutex       sync.RWMutex
 	getArgsForCall []struct {
 		arg1 string
-		arg2 interface{}
+		arg2 any
 	}
 	getReturns struct {
-		result1 *errors.ApiError
+		result1 error
 	}
 	getReturnsOnCall map[int]struct {
-		result1 *errors.ApiError
+		result1 error
 	}
-	ListStub        func(string) ([]string, *errors.ApiError)
+	ListStub        func(string) ([]string, error)
 	listMutex       sync.RWMutex
 	listArgsForCall []struct {
 		arg1 string
 	}
 	listReturns struct {
 		result1 []string
-		result2 *errors.ApiError
+		result2 error
 	}
 	listReturnsOnCall map[int]struct {
 		result1 []string
-		result2 *errors.ApiError
+		result2 error
 	}
-	StoreStub        func(string, interface{}) *errors.ApiError
+	StoreStub        func(string, any) error
 	storeMutex       sync.RWMutex
 	storeArgsForCall []struct {
 		arg1 string
-		arg2 interface{}
+		arg2 any
 	}
 	storeReturns struct {
-		result1 *errors.ApiError
+		result1 error
 	}
 	storeReturnsOnCall map[int]struct {
-		result1 *errors.ApiError
+		result1 error
 	}
-	StoreStringStub        func(string, string) *errors.ApiError
+	StoreStringStub        func(string, string) error
 	storeStringMutex       sync.RWMutex
 	storeStringArgsForCall []struct {
 		arg1 string
 		arg2 string
 	}
 	storeStringReturns struct {
-		result1 *errors.ApiError
+		result1 error
 	}
 	storeStringReturnsOnCall map[int]struct {
-		result1 *errors.ApiError
+		result1 error
 	}
-	WipeStub        func(string) *errors.ApiError
+	WipeStub        func(string) error
 	wipeMutex       sync.RWMutex
 	wipeArgsForCall []struct {
 		arg1 string
 	}
 	wipeReturns struct {
-		result1 *errors.ApiError
+		result1 error
 	}
 	wipeReturnsOnCall map[int]struct {
-		result1 *errors.ApiError
+		result1 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeStore) Delete(arg1 string) *errors.ApiError {
+func (fake *FakeStore) Delete(arg1 string) error {
 	fake.deleteMutex.Lock()
 	ret, specificReturn := fake.deleteReturnsOnCall[len(fake.deleteArgsForCall)]
 	fake.deleteArgsForCall = append(fake.deleteArgsForCall, struct {
@@ -109,7 +108,7 @@ func (fake *FakeStore) DeleteCallCount() int {
 	return len(fake.deleteArgsForCall)
 }
 
-func (fake *FakeStore) DeleteCalls(stub func(string) *errors.ApiError) {
+func (fake *FakeStore) DeleteCalls(stub func(string) error) {
 	fake.deleteMutex.Lock()
 	defer fake.deleteMutex.Unlock()
 	fake.DeleteStub = stub
@@ -122,35 +121,35 @@ func (fake *FakeStore) DeleteArgsForCall(i int) string {
 	return argsForCall.arg1
 }
 
-func (fake *FakeStore) DeleteReturns(result1 *errors.ApiError) {
+func (fake *FakeStore) DeleteReturns(result1 error) {
 	fake.deleteMutex.Lock()
 	defer fake.deleteMutex.Unlock()
 	fake.DeleteStub = nil
 	fake.deleteReturns = struct {
-		result1 *errors.ApiError
+		result1 error
 	}{result1}
 }
 
-func (fake *FakeStore) DeleteReturnsOnCall(i int, result1 *errors.ApiError) {
+func (fake *FakeStore) DeleteReturnsOnCall(i int, result1 error) {
 	fake.deleteMutex.Lock()
 	defer fake.deleteMutex.Unlock()
 	fake.DeleteStub = nil
 	if fake.deleteReturnsOnCall == nil {
 		fake.deleteReturnsOnCall = make(map[int]struct {
-			result1 *errors.ApiError
+			result1 error
 		})
 	}
 	fake.deleteReturnsOnCall[i] = struct {
-		result1 *errors.ApiError
+		result1 error
 	}{result1}
 }
 
-func (fake *FakeStore) Get(arg1 string, arg2 interface{}) *errors.ApiError {
+func (fake *FakeStore) Get(arg1 string, arg2 any) error {
 	fake.getMutex.Lock()
 	ret, specificReturn := fake.getReturnsOnCall[len(fake.getArgsForCall)]
 	fake.getArgsForCall = append(fake.getArgsForCall, struct {
 		arg1 string
-		arg2 interface{}
+		arg2 any
 	}{arg1, arg2})
 	stub := fake.GetStub
 	fakeReturns := fake.getReturns
@@ -171,43 +170,43 @@ func (fake *FakeStore) GetCallCount() int {
 	return len(fake.getArgsForCall)
 }
 
-func (fake *FakeStore) GetCalls(stub func(string, interface{}) *errors.ApiError) {
+func (fake *FakeStore) GetCalls(stub func(string, any) error) {
 	fake.getMutex.Lock()
 	defer fake.getMutex.Unlock()
 	fake.GetStub = stub
 }
 
-func (fake *FakeStore) GetArgsForCall(i int) (string, interface{}) {
+func (fake *FakeStore) GetArgsForCall(i int) (string, any) {
 	fake.getMutex.RLock()
 	defer fake.getMutex.RUnlock()
 	argsForCall := fake.getArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeStore) GetReturns(result1 *errors.ApiError) {
+func (fake *FakeStore) GetReturns(result1 error) {
 	fake.getMutex.Lock()
 	defer fake.getMutex.Unlock()
 	fake.GetStub = nil
 	fake.getReturns = struct {
-		result1 *errors.ApiError
+		result1 error
 	}{result1}
 }
 
-func (fake *FakeStore) GetReturnsOnCall(i int, result1 *errors.ApiError) {
+func (fake *FakeStore) GetReturnsOnCall(i int, result1 error) {
 	fake.getMutex.Lock()
 	defer fake.getMutex.Unlock()
 	fake.GetStub = nil
 	if fake.getReturnsOnCall == nil {
 		fake.getReturnsOnCall = make(map[int]struct {
-			result1 *errors.ApiError
+			result1 error
 		})
 	}
 	fake.getReturnsOnCall[i] = struct {
-		result1 *errors.ApiError
+		result1 error
 	}{result1}
 }
 
-func (fake *FakeStore) List(arg1 string) ([]string, *errors.ApiError) {
+func (fake *FakeStore) List(arg1 string) ([]string, error) {
 	fake.listMutex.Lock()
 	ret, specificReturn := fake.listReturnsOnCall[len(fake.listArgsForCall)]
 	fake.listArgsForCall = append(fake.listArgsForCall, struct {
@@ -232,7 +231,7 @@ func (fake *FakeStore) ListCallCount() int {
 	return len(fake.listArgsForCall)
 }
 
-func (fake *FakeStore) ListCalls(stub func(string) ([]string, *errors.ApiError)) {
+func (fake *FakeStore) ListCalls(stub func(string) ([]string, error)) {
 	fake.listMutex.Lock()
 	defer fake.listMutex.Unlock()
 	fake.ListStub = stub
@@ -245,38 +244,38 @@ func (fake *FakeStore) ListArgsForCall(i int) string {
 	return argsForCall.arg1
 }
 
-func (fake *FakeStore) ListReturns(result1 []string, result2 *errors.ApiError) {
+func (fake *FakeStore) ListReturns(result1 []string, result2 error) {
 	fake.listMutex.Lock()
 	defer fake.listMutex.Unlock()
 	fake.ListStub = nil
 	fake.listReturns = struct {
 		result1 []string
-		result2 *errors.ApiError
+		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeStore) ListReturnsOnCall(i int, result1 []string, result2 *errors.ApiError) {
+func (fake *FakeStore) ListReturnsOnCall(i int, result1 []string, result2 error) {
 	fake.listMutex.Lock()
 	defer fake.listMutex.Unlock()
 	fake.ListStub = nil
 	if fake.listReturnsOnCall == nil {
 		fake.listReturnsOnCall = make(map[int]struct {
 			result1 []string
-			result2 *errors.ApiError
+			result2 error
 		})
 	}
 	fake.listReturnsOnCall[i] = struct {
 		result1 []string
-		result2 *errors.ApiError
+		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeStore) Store(arg1 string, arg2 interface{}) *errors.ApiError {
+func (fake *FakeStore) Store(arg1 string, arg2 any) error {
 	fake.storeMutex.Lock()
 	ret, specificReturn := fake.storeReturnsOnCall[len(fake.storeArgsForCall)]
 	fake.storeArgsForCall = append(fake.storeArgsForCall, struct {
 		arg1 string
-		arg2 interface{}
+		arg2 any
 	}{arg1, arg2})
 	stub := fake.StoreStub
 	fakeReturns := fake.storeReturns
@@ -297,43 +296,43 @@ func (fake *FakeStore) StoreCallCount() int {
 	return len(fake.storeArgsForCall)
 }
 
-func (fake *FakeStore) StoreCalls(stub func(string, interface{}) *errors.ApiError) {
+func (fake *FakeStore) StoreCalls(stub func(string, any) error) {
 	fake.storeMutex.Lock()
 	defer fake.storeMutex.Unlock()
 	fake.StoreStub = stub
 }
 
-func (fake *FakeStore) StoreArgsForCall(i int) (string, interface{}) {
+func (fake *FakeStore) StoreArgsForCall(i int) (string, any) {
 	fake.storeMutex.RLock()
 	defer fake.storeMutex.RUnlock()
 	argsForCall := fake.storeArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeStore) StoreReturns(result1 *errors.ApiError) {
+func (fake *FakeStore) StoreReturns(result1 error) {
 	fake.storeMutex.Lock()
 	defer fake.storeMutex.Unlock()
 	fake.StoreStub = nil
 	fake.storeReturns = struct {
-		result1 *errors.ApiError
+		result1 error
 	}{result1}
 }
 
-func (fake *FakeStore) StoreReturnsOnCall(i int, result1 *errors.ApiError) {
+func (fake *FakeStore) StoreReturnsOnCall(i int, result1 error) {
 	fake.storeMutex.Lock()
 	defer fake.storeMutex.Unlock()
 	fake.StoreStub = nil
 	if fake.storeReturnsOnCall == nil {
 		fake.storeReturnsOnCall = make(map[int]struct {
-			result1 *errors.ApiError
+			result1 error
 		})
 	}
 	fake.storeReturnsOnCall[i] = struct {
-		result1 *errors.ApiError
+		result1 error
 	}{result1}
 }
 
-func (fake *FakeStore) StoreString(arg1 string, arg2 string) *errors.ApiError {
+func (fake *FakeStore) StoreString(arg1 string, arg2 string) error {
 	fake.storeStringMutex.Lock()
 	ret, specificReturn := fake.storeStringReturnsOnCall[len(fake.storeStringArgsForCall)]
 	fake.storeStringArgsForCall = append(fake.storeStringArgsForCall, struct {
@@ -359,7 +358,7 @@ func (fake *FakeStore) StoreStringCallCount() int {
 	return len(fake.storeStringArgsForCall)
 }
 
-func (fake *FakeStore) StoreStringCalls(stub func(string, string) *errors.ApiError) {
+func (fake *FakeStore) StoreStringCalls(stub func(string, string) error) {
 	fake.storeStringMutex.Lock()
 	defer fake.storeStringMutex.Unlock()
 	fake.StoreStringStub = stub
@@ -372,30 +371,30 @@ func (fake *FakeStore) StoreStringArgsForCall(i int) (string, string) {
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeStore) StoreStringReturns(result1 *errors.ApiError) {
+func (fake *FakeStore) StoreStringReturns(result1 error) {
 	fake.storeStringMutex.Lock()
 	defer fake.storeStringMutex.Unlock()
 	fake.StoreStringStub = nil
 	fake.storeStringReturns = struct {
-		result1 *errors.ApiError
+		result1 error
 	}{result1}
 }
 
-func (fake *FakeStore) StoreStringReturnsOnCall(i int, result1 *errors.ApiError) {
+func (fake *FakeStore) StoreStringReturnsOnCall(i int, result1 error) {
 	fake.storeStringMutex.Lock()
 	defer fake.storeStringMutex.Unlock()
 	fake.StoreStringStub = nil
 	if fake.storeStringReturnsOnCall == nil {
 		fake.storeStringReturnsOnCall = make(map[int]struct {
-			result1 *errors.ApiError
+			result1 error
 		})
 	}
 	fake.storeStringReturnsOnCall[i] = struct {
-		result1 *errors.ApiError
+		result1 error
 	}{result1}
 }
 
-func (fake *FakeStore) Wipe(arg1 string) *errors.ApiError {
+func (fake *FakeStore) Wipe(arg1 string) error {
 	fake.wipeMutex.Lock()
 	ret, specificReturn := fake.wipeReturnsOnCall[len(fake.wipeArgsForCall)]
 	fake.wipeArgsForCall = append(fake.wipeArgsForCall, struct {
@@ -420,7 +419,7 @@ func (fake *FakeStore) WipeCallCount() int {
 	return len(fake.wipeArgsForCall)
 }
 
-func (fake *FakeStore) WipeCalls(stub func(string) *errors.ApiError) {
+func (fake *FakeStore) WipeCalls(stub func(string) error) {
 	fake.wipeMutex.Lock()
 	defer fake.wipeMutex.Unlock()
 	fake.WipeStub = stub
@@ -433,26 +432,26 @@ func (fake *FakeStore) WipeArgsForCall(i int) string {
 	return argsForCall.arg1
 }
 
-func (fake *FakeStore) WipeReturns(result1 *errors.ApiError) {
+func (fake *FakeStore) WipeReturns(result1 error) {
 	fake.wipeMutex.Lock()
 	defer fake.wipeMutex.Unlock()
 	fake.WipeStub = nil
 	fake.wipeReturns = struct {
-		result1 *errors.ApiError
+		result1 error
 	}{result1}
 }
 
-func (fake *FakeStore) WipeReturnsOnCall(i int, result1 *errors.ApiError) {
+func (fake *FakeStore) WipeReturnsOnCall(i int, result1 error) {
 	fake.wipeMutex.Lock()
 	defer fake.wipeMutex.Unlock()
 	fake.WipeStub = nil
 	if fake.wipeReturnsOnCall == nil {
 		fake.wipeReturnsOnCall = make(map[int]struct {
-			result1 *errors.ApiError
+			result1 error
 		})
 	}
 	fake.wipeReturnsOnCall[i] = struct {
-		result1 *errors.ApiError
+		result1 error
 	}{result1}
 }
 

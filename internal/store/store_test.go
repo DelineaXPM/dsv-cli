@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	cst "github.com/DelineaXPM/dsv-cli/constants"
-	"github.com/DelineaXPM/dsv-cli/errors"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -69,6 +68,7 @@ func testStore(t *testing.T, storeType string) {
 	// assert
 	obj3 := tokenData{}
 	err = s.Get("token", &obj2)
+	assert.Nil(t, err)
 	assert.Empty(t, obj3)
 
 	// arrange
@@ -81,6 +81,7 @@ func testStore(t *testing.T, storeType string) {
 	// assert
 	obj2 = tokenData{}
 	err = s.Get("token", &obj2)
+	assert.Nil(t, err)
 	assert.Empty(t, obj2)
 }
 
@@ -92,9 +93,9 @@ func TestGetSecureSetting(t *testing.T) {
 		expectedError error
 		expectedVal   string
 	}{
-		{"missing-key", "", "some-profile", errors.NewS("key cannot be empty"), ""},
+		{"missing-key", "", "some-profile", fmt.Errorf("key cannot be empty"), ""},
 		{"empty-value", "hello", "some-profile", nil, ""},
-		{"missing-profile", "hello", "", errors.NewS("profile cannot be empty"), ""},
+		{"missing-profile", "hello", "", fmt.Errorf("profile cannot be empty"), ""},
 	}
 
 	for _, tt := range tests {
