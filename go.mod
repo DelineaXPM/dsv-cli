@@ -20,7 +20,7 @@ require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.14.1
 	github.com/gobuffalo/uuid v2.0.5+incompatible
-	github.com/golang-jwt/jwt/v4 v4.4.3
+	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/hinshun/vt10x v0.0.0-20220301184237-5011da428d02
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
 	github.com/jarcoal/httpmock v1.3.0
