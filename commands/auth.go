@@ -11,7 +11,6 @@ import (
 	"github.com/DelineaXPM/dsv-cli/errors"
 	"github.com/DelineaXPM/dsv-cli/format"
 	"github.com/DelineaXPM/dsv-cli/paths"
-	"github.com/DelineaXPM/dsv-cli/store"
 	"github.com/DelineaXPM/dsv-cli/utils"
 	"github.com/DelineaXPM/dsv-cli/vaultcli"
 
@@ -46,7 +45,7 @@ Usage:
    • auth clear
 `, cst.NounAuth, cst.ProductName, cst.NounToken),
 		NoPreAuth: true,
-		RunFunc:   handleAuthClear,
+		RunFuncE:  handleAuthClear,
 	})
 }
 
@@ -60,7 +59,7 @@ Usage:
    • auth list
 `, cst.NounAuth, cst.ProductName, cst.NounToken),
 		NoPreAuth: true,
-		RunFunc:   handleAuthList,
+		RunFuncE:  handleAuthList,
 	})
 }
 
@@ -124,39 +123,38 @@ func handleAuth(vcli vaultcli.CLI, args []string) int {
 	return 0
 }
 
-func handleAuthClear(vcli vaultcli.CLI, args []string) int {
-	var err *errors.ApiError
-	var s store.Store
+func handleAuthClear(vcli vaultcli.CLI, args []string) error {
 	st := viper.GetString(cst.StoreType)
-	if s, err = vcli.Store(st); err == nil {
-		err = s.Wipe(cst.TokenRoot)
+	s, err := vcli.Store(st)
+	if err != nil {
+		return err
 	}
-	if err == nil {
-		log.Print("Successfully cleared local cache")
+	if err := s.Wipe(cst.TokenRoot); err != nil {
+		return err
 	}
-
-	vcli.Out().WriteResponse(nil, err)
-	return 0
+	log.Print("Successfully cleared local cache")
+	return nil
 }
 
-func handleAuthList(vcli vaultcli.CLI, args []string) int {
-	var err *errors.ApiError
+func handleAuthList(vcli vaultcli.CLI, args []string) error {
 	st := viper.GetString(cst.StoreType)
-	var keysBytes []byte
-	if s, e := vcli.Store(st); e == nil {
-		if keys, e := s.List(cst.TokenRoot); e != nil {
-			err = e
-		} else if len(keys) > 0 {
-			for i := range keys {
-				keys[i] = strings.Replace(keys[i], "%2D", "-", -1)
-			}
-			keysBytes = []byte(strings.Join(keys, "\n"))
-		}
-	} else {
-		err = e
+	s, err := vcli.Store(st)
+	if err != nil {
+		return err
 	}
-	vcli.Out().WriteResponse(keysBytes, err)
-	return 0
+	keys, err := s.List(cst.TokenRoot)
+	if err != nil {
+		return err
+	}
+	if len(keys) == 0 {
+		return nil
+	}
+	for i := range keys {
+		keys[i] = strings.ReplaceAll(keys[i], "%2D", "-")
+	}
+	keysBytes := []byte(strings.Join(keys, "\n"))
+	vcli.Out().WriteResponse(keysBytes, nil)
+	return nil
 }
 
 func handleAuthChangePassword(vcli vaultcli.CLI, args []string) int {

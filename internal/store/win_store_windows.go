@@ -4,7 +4,7 @@
 package store
 
 import (
-	ch "github.com/DelineaXPM/dsv-cli/store/credential-helpers"
+	ch "github.com/DelineaXPM/dsv-cli/internal/store/credential-helpers"
 )
 
 func NewWinStore() Store {

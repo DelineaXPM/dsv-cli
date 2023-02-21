@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -76,7 +77,6 @@ func TestHandleSecretDescribeCmd(t *testing.T) {
 		cacheStrategy string
 		out           []byte
 		storeType     string
-		expectedErr   *errors.ApiError
 		apiError      *errors.ApiError
 	}{
 		{
@@ -85,7 +85,6 @@ func TestHandleSecretDescribeCmd(t *testing.T) {
 			cacheStrategy: "",
 			out:           []byte(`test data`),
 			storeType:     "",
-			expectedErr:   nil,
 			apiError:      nil,
 		},
 		{
@@ -94,7 +93,6 @@ func TestHandleSecretDescribeCmd(t *testing.T) {
 			cacheStrategy: "",
 			out:           []byte(`test data`),
 			storeType:     "",
-			expectedErr:   nil,
 			apiError:      nil,
 		},
 		{
@@ -104,7 +102,6 @@ func TestHandleSecretDescribeCmd(t *testing.T) {
 			cacheStrategy: "",
 			out:           []byte(`test data`),
 			storeType:     "",
-			expectedErr:   nil,
 			apiError:      nil,
 		},
 		{
@@ -113,7 +110,6 @@ func TestHandleSecretDescribeCmd(t *testing.T) {
 			cacheStrategy: "cache.server",
 			out:           []byte(`test data from cache`),
 			storeType:     "",
-			expectedErr:   nil,
 			apiError:      nil,
 		},
 		{
@@ -122,7 +118,6 @@ func TestHandleSecretDescribeCmd(t *testing.T) {
 			cacheStrategy: "cache.server",
 			out:           []byte(`test data from cache`),
 			storeType:     "",
-			expectedErr:   nil,
 			apiError:      nil,
 		},
 		{
@@ -132,7 +127,6 @@ func TestHandleSecretDescribeCmd(t *testing.T) {
 			cacheStrategy: "cache.server",
 			out:           []byte(`test data from cache`),
 			storeType:     "",
-			expectedErr:   nil,
 			apiError:      nil,
 		},
 		{
@@ -141,7 +135,6 @@ func TestHandleSecretDescribeCmd(t *testing.T) {
 			cacheStrategy: "server.cache",
 			out:           []byte(`test data from cache`),
 			storeType:     "",
-			expectedErr:   nil,
 			apiError:      errors.NewS("error"),
 		},
 		{
@@ -150,7 +143,6 @@ func TestHandleSecretDescribeCmd(t *testing.T) {
 			cacheStrategy: "server.cache",
 			out:           []byte(`test data from cache`),
 			storeType:     "",
-			expectedErr:   nil,
 			apiError:      errors.NewS("error"),
 		},
 		{
@@ -160,7 +152,6 @@ func TestHandleSecretDescribeCmd(t *testing.T) {
 			cacheStrategy: "server.cache",
 			out:           []byte(`test data from cache`),
 			storeType:     "",
-			expectedErr:   nil,
 			apiError:      errors.NewS("error"),
 		},
 	}
@@ -182,17 +173,15 @@ func TestHandleSecretDescribeCmd(t *testing.T) {
 			}
 
 			st := &fake.FakeStore{}
-			st.GetStub = func(s string, d interface{}) *errors.ApiError {
+			st.GetStub = func(s string, d interface{}) error {
 				sData, ok := d.(*secretData)
 				if ok {
 					sData.Date = time.Now().Add(60 * time.Minute)
 					sData.Data = tt.out
 				}
-				return tt.expectedErr
+				return nil
 			}
-			st.StoreStub = func(s string, i interface{}) *errors.ApiError {
-				return tt.expectedErr
-			}
+			st.StoreStub = func(s string, i interface{}) error { return nil }
 
 			vcli, rerr := vaultcli.NewWithOpts(
 				vaultcli.WithHTTPClient(httpClient),
@@ -209,11 +198,8 @@ func TestHandleSecretDescribeCmd(t *testing.T) {
 			viper.Set(cst.ID, tt.fID)
 
 			_ = handleSecretDescribeCmd(vcli, cst.NounSecret, tt.arg)
-			if tt.expectedErr == nil {
-				assert.Equal(t, data, tt.out)
-			} else {
-				assert.Equal(t, err, tt.expectedErr)
-			}
+			assert.Equal(t, data, tt.out)
+			assert.Nil(t, err)
 		})
 	}
 }
@@ -477,7 +463,6 @@ func TestHandleSecretReadCmd(t *testing.T) {
 		cacheStrategy string
 		out           []byte
 		storeType     string
-		expectedErr   *errors.ApiError
 		apiError      *errors.ApiError
 	}{
 		{
@@ -486,7 +471,6 @@ func TestHandleSecretReadCmd(t *testing.T) {
 			cacheStrategy: "",
 			out:           []byte(`test data`),
 			storeType:     "",
-			expectedErr:   nil,
 			apiError:      nil,
 		},
 		{
@@ -496,7 +480,6 @@ func TestHandleSecretReadCmd(t *testing.T) {
 			cacheStrategy: "",
 			out:           []byte(`test data`),
 			storeType:     "",
-			expectedErr:   nil,
 			apiError:      nil,
 		},
 		{
@@ -505,7 +488,6 @@ func TestHandleSecretReadCmd(t *testing.T) {
 			cacheStrategy: "",
 			out:           []byte(`test data`),
 			storeType:     "",
-			expectedErr:   nil,
 			apiError:      nil,
 		},
 		{
@@ -514,7 +496,6 @@ func TestHandleSecretReadCmd(t *testing.T) {
 			cacheStrategy: "cache.server",
 			out:           []byte(`test data from cache`),
 			storeType:     "",
-			expectedErr:   nil,
 			apiError:      nil,
 		},
 		{
@@ -524,7 +505,6 @@ func TestHandleSecretReadCmd(t *testing.T) {
 			cacheStrategy: "cache.server",
 			out:           []byte(`test data from cache`),
 			storeType:     "",
-			expectedErr:   nil,
 			apiError:      nil,
 		},
 		{
@@ -533,7 +513,6 @@ func TestHandleSecretReadCmd(t *testing.T) {
 			cacheStrategy: "cache.server",
 			out:           []byte(`test data from cache`),
 			storeType:     "",
-			expectedErr:   nil,
 			apiError:      nil,
 		},
 		{
@@ -542,7 +521,6 @@ func TestHandleSecretReadCmd(t *testing.T) {
 			cacheStrategy: "server.cache",
 			out:           []byte(`test data from cache`),
 			storeType:     "",
-			expectedErr:   nil,
 			apiError:      errors.NewS("error"),
 		},
 		{
@@ -552,7 +530,6 @@ func TestHandleSecretReadCmd(t *testing.T) {
 			cacheStrategy: "server.cache",
 			out:           []byte(`test data from cache`),
 			storeType:     "",
-			expectedErr:   nil,
 			apiError:      errors.NewS("error"),
 		},
 		{
@@ -561,7 +538,6 @@ func TestHandleSecretReadCmd(t *testing.T) {
 			cacheStrategy: "server.cache",
 			out:           []byte(`test data from cache`),
 			storeType:     "",
-			expectedErr:   nil,
 			apiError:      errors.NewS("error"),
 		},
 	}
@@ -583,17 +559,15 @@ func TestHandleSecretReadCmd(t *testing.T) {
 			}
 
 			st := &fake.FakeStore{}
-			st.GetStub = func(s string, d interface{}) *errors.ApiError {
+			st.GetStub = func(s string, d interface{}) error {
 				sData, ok := d.(*secretData)
 				if ok {
 					sData.Date = time.Now().Add(60 * time.Minute)
 					sData.Data = tt.out
 				}
-				return tt.expectedErr
+				return nil
 			}
-			st.StoreStub = func(s string, i interface{}) *errors.ApiError {
-				return tt.expectedErr
-			}
+			st.StoreStub = func(s string, i interface{}) error { return nil }
 
 			vcli, rerr := vaultcli.NewWithOpts(
 				vaultcli.WithHTTPClient(httpClient),
@@ -611,11 +585,8 @@ func TestHandleSecretReadCmd(t *testing.T) {
 			viper.Set(cst.ID, tt.fID)
 
 			_ = handleSecretReadCmd(vcli, cst.NounSecret, tt.arg)
-			if tt.expectedErr == nil {
-				assert.Equal(t, data, tt.out)
-			} else {
-				assert.Equal(t, err, tt.expectedErr)
-			}
+			assert.Equal(t, data, tt.out)
+			assert.Nil(t, err)
 		})
 	}
 }
@@ -702,7 +673,7 @@ func TestHandleSecretUpsertCmd(t *testing.T) {
 			outClient.FailFStub = func(format string, args ...interface{}) { err = errors.NewF(format, args...) }
 
 			httpClient := &fake.FakeClient{}
-			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) ([]byte, *errors.ApiError) {
 				return tt.out, tt.expectedErr
 			}
 
@@ -735,38 +706,39 @@ func TestHandleBustCacheCmd(t *testing.T) {
 		arg         []string
 		out         []byte
 		storeType   string
-		expectedErr *errors.ApiError
+		expectedErr string
 	}{
 		{
 			name:        "Happy Path",
 			arg:         []string{},
 			out:         nil,
 			storeType:   "",
-			expectedErr: nil,
+			expectedErr: "",
 		},
 		{
 			name:        "Error",
 			arg:         []string{},
 			out:         nil,
 			storeType:   "",
-			expectedErr: errors.NewS("error"),
+			expectedErr: "one two",
 		},
 	}
 
 	for _, tt := range testCase {
 		t.Run(tt.name, func(t *testing.T) {
 			var data []byte
-			var err *errors.ApiError
 
 			outClient := &fake.FakeOutClient{}
 			outClient.WriteResponseStub = func(bytes []byte, apiError *errors.ApiError) {
 				data = bytes
-				err = apiError
 			}
 
 			st := &fake.FakeStore{}
-			st.WipeStub = func(s string) *errors.ApiError {
-				return tt.expectedErr
+			st.WipeStub = func(s string) error {
+				if tt.expectedErr == "" {
+					return nil
+				}
+				return fmt.Errorf(tt.expectedErr)
 			}
 
 			vcli, rerr := vaultcli.NewWithOpts(
@@ -780,11 +752,11 @@ func TestHandleBustCacheCmd(t *testing.T) {
 			viper.Reset()
 			viper.Set(cst.StoreType, tt.storeType)
 
-			_ = handleBustCacheCmd(vcli, tt.arg)
-			if tt.expectedErr == nil {
+			err := handleBustCacheCmd(vcli, tt.arg)
+			if tt.expectedErr == "" {
 				assert.Equal(t, data, tt.out)
 			} else {
-				assert.Equal(t, err, tt.expectedErr)
+				assert.Contains(t, err.Error(), tt.expectedErr)
 			}
 		})
 	}
@@ -852,12 +824,12 @@ func TestHandleSecretEditCmd(t *testing.T) {
 			}
 
 			httpClient := &fake.FakeClient{}
-			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) (bytes []byte, apiError *errors.ApiError) {
+			httpClient.DoRequestStub = func(s string, s2 string, i interface{}) ([]byte, *errors.ApiError) {
 				return tt.out, tt.apiError
 			}
 
 			st := &fake.FakeStore{}
-			st.GetStub = func(s string, d interface{}) *errors.ApiError {
+			st.GetStub = func(s string, d interface{}) error {
 				sData, ok := d.(*secretData)
 				if ok {
 					sData.Date = time.Now().Add(60 * time.Minute)
@@ -865,7 +837,7 @@ func TestHandleSecretEditCmd(t *testing.T) {
 				}
 				return tt.expectedErr
 			}
-			st.StoreStub = func(s string, i interface{}) *errors.ApiError {
+			st.StoreStub = func(s string, i interface{}) error {
 				return tt.expectedErr
 			}
 

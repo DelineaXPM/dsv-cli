@@ -265,9 +265,7 @@ func GetSecretBustCacheCmd() (cli.Command, error) {
 Usage:
    • secret bustcache
 `,
-		RunFunc: func(vcli vaultcli.CLI, args []string) int {
-			return handleBustCacheCmd(vcli, args)
-		},
+		RunFuncE: handleBustCacheCmd,
 	})
 }
 
@@ -292,20 +290,23 @@ Usage:
 	})
 }
 
-func handleBustCacheCmd(vcli vaultcli.CLI, args []string) int {
+func handleBustCacheCmd(vcli vaultcli.CLI, args []string) error {
 	st := viper.GetString(cst.StoreType)
 	s, err := vcli.Store(st)
 	if err != nil {
-		vcli.Out().WriteResponse(nil, err)
+		return err
 	}
 
 	err = s.Wipe(getSecretCachePrefix())
-	err = s.Wipe(getSecretDescCachePrefix()).And(err)
 	if err != nil {
-		vcli.Out().WriteResponse(nil, err)
+		return err
+	}
+	err = s.Wipe(getSecretDescCachePrefix())
+	if err != nil {
+		return err
 	}
 	log.Print("Successfully cleared local cache")
-	return 0
+	return nil
 }
 
 func handleSecretDescribeCmd(vcli vaultcli.CLI, secretType string, args []string) int {

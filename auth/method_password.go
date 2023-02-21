@@ -3,7 +3,7 @@ package auth
 import (
 	cst "github.com/DelineaXPM/dsv-cli/constants"
 	"github.com/DelineaXPM/dsv-cli/errors"
-	"github.com/DelineaXPM/dsv-cli/store"
+	"github.com/DelineaXPM/dsv-cli/internal/store"
 
 	"github.com/spf13/viper"
 )

@@ -12,7 +12,7 @@ import (
 
 	cst "github.com/DelineaXPM/dsv-cli/constants"
 	"github.com/DelineaXPM/dsv-cli/errors"
-	"github.com/DelineaXPM/dsv-cli/store"
+	"github.com/DelineaXPM/dsv-cli/internal/store"
 )
 
 // StorePassword takes a fileName in which it tries to find an encryption key. It also receives data to encrypt (password).

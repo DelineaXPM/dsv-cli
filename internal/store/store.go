@@ -1,29 +1,29 @@
 package store
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"strings"
 	"sync"
 
 	cst "github.com/DelineaXPM/dsv-cli/constants"
-	"github.com/DelineaXPM/dsv-cli/errors"
 	"github.com/DelineaXPM/dsv-cli/utils"
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -o ../tests/fake/fake_store.go . Store
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -o ../../tests/fake/fake_store.go . Store
 
 // Store interface provides common methods for storing data.
 type Store interface {
-	Store(key string, secret interface{}) *errors.ApiError
-	StoreString(key string, data string) *errors.ApiError
-	Get(key string, outSecret interface{}) *errors.ApiError
-	Delete(key string) *errors.ApiError
-	Wipe(prefix string) *errors.ApiError
-	List(prefix string) ([]string, *errors.ApiError)
+	Store(key string, data any) error
+	StoreString(key string, data string) error
+	Get(key string, out any) error
+	Delete(key string) error
+	Wipe(prefix string) error
+	List(prefix string) ([]string, error)
 }
 
 // Supported store types.
@@ -35,19 +35,20 @@ const (
 	File      = "file"
 )
 
+//nolint:gochecknoglobals // these vars are used to ensure a proper initialization.
 var (
 	store     Store
 	storeType string
 	once      sync.Once
 )
 
-func GetStore(st string) (Store, *errors.ApiError) {
+func GetStore(st string) (Store, error) {
 	if storeType == Unset {
-		if err := ValidateCredentialStore(st); err != nil {
+		if err := ValidateStoreType(st); err != nil {
 			return nil, err
 		}
 	} else if storeType != st {
-		return nil, errors.NewS("Store type cannot be changed during execution")
+		return nil, fmt.Errorf("store type cannot be changed during execution (old: %s, new: %s)", storeType, st)
 	}
 
 	once.Do(func() {
@@ -67,76 +68,83 @@ func GetStore(st string) (Store, *errors.ApiError) {
 	return store, nil
 }
 
-func ValidateCredentialStore(st string) *errors.ApiError {
+func ValidateStoreType(storeType string) error {
 	// TODO : support osxkeychain, secretservice
-	switch st {
-	case "pass_linux":
+	switch storeType {
+	case PassLinux:
 		if utils.GetEnvProviderFunc().GetOs() != "linux" {
-			return errors.NewS("'pass_linux' option for store.type is supported on linux only")
+			return fmt.Errorf("'pass_linux' option for store.type is supported on linux only")
 		}
 		return nil
-	case "wincred":
+	case WinCred:
 		if utils.GetEnvProviderFunc().GetOs() != "windows" {
-			return errors.NewS("'wincred' option for store.type is supported on windows only")
+			return fmt.Errorf("'wincred' option for store.type is supported on windows only")
 		}
 		return nil
-	case "file", "none", "":
+	case File, None, Unset:
 		return nil
 	default:
-		return errors.NewF("'%s' key store not supported. Please choose from: ['pass_linux','wincred','file', and 'none']", st)
+		return fmt.Errorf(
+			"'%s' key store not supported. Please choose from: ['pass_linux','wincred','file', and 'none']",
+			storeType,
+		)
 	}
 }
 
-func StoreSecureSetting(key string, val string, sType string) *errors.ApiError {
+func StoreSecureSetting(key string, val string, sType string) error {
 	if key == "" || val == "" {
-		return errors.NewS("neither key nor value can be empty")
+		return fmt.Errorf("neither key nor value can be empty")
 	}
 
 	if sType != PassLinux && sType != WinCred {
-		return errors.NewS("store.type is not secure store")
+		return fmt.Errorf("store.type is not secure store")
 	}
 
 	s, err := GetStore(sType)
 	if err != nil {
-		return errors.New(err).Grow("failed to fetch store")
+		return err
 	}
-	keyFull := cst.CliConfigRoot + "-" + strings.Replace(key, ".", "-", -1)
+	keyFull := cst.CliConfigRoot + "-" + strings.ReplaceAll(key, ".", "-")
 	return s.Store(keyFull, val)
 }
 
-func getSecureSettingForProfile(key string, profile string) (string, *errors.ApiError) {
+func getSecureSettingForProfile(key string, profile string) (string, error) {
 	if key == "" {
-		return "", errors.NewS("key cannot be empty")
+		return "", fmt.Errorf("key cannot be empty")
 	}
 	if val := viper.GetString(key); val != "" {
 		return val, nil
 	}
 
 	if profile == "" {
-		return "", errors.NewS("profile cannot be empty")
+		return "", fmt.Errorf("profile cannot be empty")
 	}
 	keyProfile := profile + "-" + key
 
 	storeType := viper.GetString(cst.StoreType)
 	s, err := GetStore(storeType)
 	if err != nil {
-		return "", errors.New(err).Grow("failed to fetch store")
+		return "", fmt.Errorf("failed to fetch store: %w", err)
 	}
-	keyFull := cst.CliConfigRoot + "-" + strings.Replace(keyProfile, ".", "-", -1)
+	keyFull := cst.CliConfigRoot + "-" + strings.ReplaceAll(keyProfile, ".", "-")
 	var res string
 	err = s.Get(keyFull, &res)
 	return res, err
 }
 
-func GetSecureSetting(key string) (string, *errors.ApiError) {
+func GetSecureSetting(key string) (string, error) {
 	if key == "" {
-		return "", errors.NewS("key cannot be empty")
+		return "", fmt.Errorf("key cannot be empty")
 	}
 	profile := viper.GetString(cst.Profile)
 	if profile == "" {
 		profile = cst.DefaultProfile
 	}
-	return getSecureSettingForProfile(key, profile)
+	s, err := getSecureSettingForProfile(key, profile)
+	if err != nil {
+		return "", err
+	}
+	return s, nil
 }
 
 // GetDefaultPath retrieves an OS-independent default path for secrets, tokens, encrypted key files. By default, it is /home/{username}/.thy/.

@@ -8,9 +8,9 @@ import (
 
 func TestGetPathFromUrl(t *testing.T) {
 	testPath := "some-path"
-	path := getPathFromUrl(testPath)
+	path := getPathFromURL(testPath)
 	assert.Equal(t, path, "thy/some/cGF0aA==")
-	url, err := getUrlFromPath(path)
+	url, err := getURLFromPath(path)
 	assert.Nil(t, err)
 	assert.Equal(t, url, testPath)
 }

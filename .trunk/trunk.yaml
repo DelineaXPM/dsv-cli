@@ -64,6 +64,7 @@ lint:
         - .devcontainer/init
         - vendor/*
         - '**/*/mage_output_file.go'
+        - tests/fake
     - linters: [yamllint]
       paths:
         - .changes/unreleased/*.yaml

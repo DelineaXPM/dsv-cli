@@ -21,15 +21,11 @@ import (
 	cst "github.com/DelineaXPM/dsv-cli/constants"
 )
 
-const PASS_FOLDER = cst.CmdRoot
-
 // Pass handles secrets using Linux secret-service as a store.
 type Pass struct{}
 
 // GetName gets friendly name of service
-func (h Pass) GetName() string {
-	return "pass service"
-}
+func (Pass) GetName() string { return "pass service" }
 
 // Ideally these would be stored as members of Pass, but since all of Pass's
 // methods have value receivers, not pointer receivers, and changing that is
@@ -37,42 +33,37 @@ func (h Pass) GetName() string {
 
 // initializationMutex is held while initializing so that only one 'pass'
 // round-tripping is done to check pass is functioning.
+//
+//nolint:gochecknoglobals // these vars are used to ensure a proper initialization.
 var (
 	initializationMutex sync.Mutex
 	passInitialized     bool
 )
 
-// CheckInitialized checks whether the password helper can be used. It
-// internally caches and so may be safely called multiple times with no impact
-// on performance, though the first call may take longer.
-func (p Pass) CheckInitialized() bool {
-	return p.checkInitialized() == nil
-}
-
-func (p Pass) checkInitialized() error {
+func (Pass) checkInitialized() error {
 	initializationMutex.Lock()
 	defer initializationMutex.Unlock()
 	if passInitialized {
 		return nil
 	}
 	// We just run a `pass ls`, if it fails then pass is not initialized.
-	_, err := p.runPassHelper("", "ls")
+	_, err := runPassHelper("", "ls")
 	if err != nil {
-		return fmt.Errorf("pass not initialized: %v", err)
+		return fmt.Errorf("pass not initialized: %w", err)
 	}
 	passInitialized = true
 	return nil
 }
 
-func (p Pass) runPass(stdinContent string, args ...string) (string, error) {
-	if err := p.checkInitialized(); err != nil {
+func (h Pass) runPass(stdinContent string, args ...string) (string, error) {
+	if err := h.checkInitialized(); err != nil {
 		return "", err
 	}
-	return p.runPassHelper(stdinContent, args...)
+	return runPassHelper(stdinContent, args...)
 }
 
-func getPathFromUrl(url string) string {
-	url = externalUrlToInternalUrl(url)
+func getPathFromURL(url string) string {
+	url = externalToInternal(url)
 	path := strings.Split(url, "-")
 
 	// encode identifier as only part that could be unicode
@@ -84,7 +75,7 @@ func getPathFromUrl(url string) string {
 	return assembled
 }
 
-func getUrlFromPath(p string) (string, error) {
+func getURLFromPath(p string) (string, error) {
 	paths := strings.Split(p, "/")
 
 	idIndex := len(paths) - 1
@@ -97,24 +88,8 @@ func getUrlFromPath(p string) (string, error) {
 	paths[idIndex] = id
 	// drop first item to remove cst.StoreRoot
 	assembled := strings.Join(paths, "-")
-	assembled = internalUrlToExternalUrl(assembled)
+	assembled = internalToExternal(assembled)
 	return assembled, nil
-}
-
-func (p Pass) runPassHelper(stdinContent string, args ...string) (string, error) {
-	var stdout, stderr bytes.Buffer
-	cmd := execabs.Command("pass", args...)
-	cmd.Stdin = strings.NewReader(stdinContent)
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
-	if err != nil {
-		return "", fmt.Errorf("%s: %s", err, stderr.String())
-	}
-
-	// trim newlines; pass v1.7.1+ includes a newline at the end of `show` output
-	return strings.TrimRight(stdout.String(), "\n\r"), nil
 }
 
 // Add adds new credentials to the keychain.
@@ -125,7 +100,7 @@ func (h Pass) Add(creds *Credentials) error {
 		return errors.New("missing key")
 	}
 
-	path := getPathFromUrl(creds.ServerURL)
+	path := getPathFromURL(creds.ServerURL)
 
 	_, err := h.runPass(creds.Secret, "insert", "-f", "-m", path)
 	return err
@@ -137,7 +112,7 @@ func (h Pass) Delete(serverURL string) error {
 		return errors.New("missing server url")
 	}
 
-	path := getPathFromUrl(serverURL)
+	path := getPathFromURL(serverURL)
 	_, err := h.runPass("", "rm", "-rf", path)
 	return err
 }
@@ -157,23 +132,23 @@ func listPassDir(recurse bool, includeDirs bool, relative bool, args ...string) 
 	passDir := getPassDir()
 	dirPath := path.Join(append([]string{passDir}, args...)...)
 	paths = []string{}
-	if !recurse {
+	if !recurse { //nolint: nestif // TODO: refactor.
 		contents, err := os.ReadDir(dirPath)
 		if err != nil {
 			if os.IsNotExist(err) {
 				return []string{}, nil
 			}
 			return nil, err
-		} else {
-			for _, f := range contents {
-				paths = append(paths, path.Join(dirPath, f.Name()))
-			}
+		}
+		for _, f := range contents {
+			paths = append(paths, path.Join(dirPath, f.Name()))
 		}
 	} else {
-		if err := filepath.Walk(dirPath, func(p string, f os.FileInfo, err error) error {
+		err := filepath.Walk(dirPath, func(p string, f os.FileInfo, err error) error {
 			if err != nil {
 				return err
-			} else if !includeDirs && f.IsDir() {
+			}
+			if !includeDirs && f.IsDir() {
 				return nil
 			}
 			if relative {
@@ -182,75 +157,88 @@ func listPassDir(recurse bool, includeDirs bool, relative bool, args ...string) 
 			}
 			paths = append(paths, p)
 			return nil
-		}); err != nil {
+		})
+		if err != nil {
 			if os.IsNotExist(err) {
 				return paths, nil
 			}
 			return nil, err
-		} else {
-			return paths, err
 		}
 	}
 	return paths, nil
 }
 
 // Get returns the username and secret to use for a given registry server URL.
-func (h Pass) Get(url string) (string, string, error) {
+func (h Pass) Get(url string) (string, error) {
 	if url == "" {
-		return "", "", errors.New("missing secret url")
+		return "", errors.New("missing secret url")
 	}
 
-	p := getPathFromUrl(url)
-	paths := strings.Split(p, "/")
+	pathToGet := getPathFromURL(url)
+	paths := strings.Split(pathToGet, "/")
 	pWithoutIdentifier := strings.Join(paths[0:len(paths)-1], "/")
-	urlSplit := strings.Split(url, "-")
-	identifier := urlSplit[len(urlSplit)-1]
 
 	// All checks for better error message
 	if _, err := os.Stat(path.Join(getPassDir(), pWithoutIdentifier)); err != nil {
 		if os.IsNotExist(err) {
 			log.Println("os not found")
-			return "", "", nil
+			return "", nil
 		}
 		log.Println("other error")
-		return "", "", err
+		return "", err
 	}
 	identifiers, err := listPassDir(false, true, false, pWithoutIdentifier)
 	if err != nil {
 		log.Println("some other error")
-		return "", "", err
+		return "", err
 	}
 	if len(identifiers) < 1 {
 		log.Println("no identifiers")
-		return "", "", fmt.Errorf("no identifiers for %s", url)
+		return "", fmt.Errorf("no identifiers for %s", url)
 	}
 
-	secret, err := h.runPass("", "show", p)
-	return identifier, secret, err
+	secret, err := h.runPass("", "show", pathToGet)
+	return secret, err
 }
 
-// List returns the stored URLs and corresponding usernames for a given credentials label
-func (h Pass) List(prefix string) (map[string]string, error) {
+// List returns the stored URLs for a given credentials label
+func (h Pass) List(prefix string) ([]string, error) {
 	prefix = cst.StoreRoot + "/" + prefix
 	paths, err := listPassDir(true, false, true, prefix)
 	if err != nil {
 		return nil, err
 	}
 
-	resp := map[string]string{}
+	resp := []string{}
 
 	for _, p := range paths {
 		if !strings.HasSuffix(p, ".gpg") {
 			// directory
 			continue
 		}
-		p := strings.TrimSuffix(p, ".gpg")
-		url, err := getUrlFromPath(p)
+		p = strings.TrimSuffix(p, ".gpg")
+		url, err := getURLFromPath(p)
 		if err != nil {
 			continue
 		}
-		resp[url] = url
+		resp = append(resp, url)
 	}
 
 	return resp, nil
+}
+
+func runPassHelper(stdinContent string, args ...string) (string, error) {
+	var stdout, stderr bytes.Buffer
+	cmd := execabs.Command("pass", args...)
+	cmd.Stdin = strings.NewReader(stdinContent)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", err, stderr.String())
+	}
+
+	// trim newlines; pass v1.7.1+ includes a newline at the end of `show` output
+	return strings.TrimRight(stdout.String(), "\n\r"), nil
 }

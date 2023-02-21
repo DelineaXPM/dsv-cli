@@ -161,6 +161,7 @@ run:
     - _tools
     - vendor
     - vendor$
+    - tests/fake
   build-tags:
     - mage
     - tools
