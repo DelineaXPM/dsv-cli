@@ -39,7 +39,7 @@ require (
 	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.8.1
 	github.com/tidwall/pretty v1.2.1
-	golang.org/x/oauth2 v0.0.0-20221014153046-6fdb5e3db783
+	golang.org/x/oauth2 v0.5.0
 	golang.org/x/sys v0.5.0
 	google.golang.org/api v0.107.0
 	gopkg.in/yaml.v3 v3.0.1
