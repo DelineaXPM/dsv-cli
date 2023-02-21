@@ -62,7 +62,7 @@ func TestSIEM_CRUD(t *testing.T) {
 		c.ExpectEOF()
 	})
 
-	output := runWithAuth(t, e, fmt.Sprintf("siem read %s", siemName))
+	output := runWithProfile(t, fmt.Sprintf("siem read %s", siemName))
 	requireContains(t, output, siemName)
 	requireContains(t, output, siemAuthType)
 	requireContains(t, output, siemHost)
@@ -109,7 +109,7 @@ func TestSIEM_CRUD(t *testing.T) {
 		c.ExpectEOF()
 	})
 
-	output = runWithAuth(t, e, fmt.Sprintf("siem read %s", siemName))
+	output = runWithProfile(t, fmt.Sprintf("siem read %s", siemName))
 	requireContains(t, output, siemName)
 	requireContains(t, output, siemAuthType)
 	requireContains(t, output, siemHost)
@@ -121,7 +121,7 @@ func TestSIEM_CRUD(t *testing.T) {
 	requireContains(t, output, siemType)
 	requireContains(t, output, siemPool)
 
-	output = runWithAuth(t, e, fmt.Sprintf("siem delete %s", siemName))
+	output = runWithProfile(t, fmt.Sprintf("siem delete %s", siemName))
 	if output != "" {
 		t.Fatalf("Unexpected output on delete: \n%s\n", output)
 	}

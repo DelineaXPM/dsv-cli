@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -62,6 +63,8 @@ const (
 var (
 	binPath                 = ""
 	tmpDirPath              = ""
+	cliConfigPath           = ""
+	cliConfigProfile        = ""
 	targetArtifactDirectory = ""
 )
 
@@ -132,6 +135,37 @@ func TestMain(m *testing.M) {
 	err = os.Mkdir(targetArtifactDirectory, 0o755)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[TestMain] Error: Failed to create directory for coverage data: %v.\n", err)
+		os.Exit(1)
+	}
+
+	// Prepare CLI profile for tests.
+	e := newEnv()
+	cliConfigPath = path.Join(tmpDirPath, ".dsv.yml")
+	cliConfigProfile = "e2e-profile"
+	fmt.Fprintf(os.Stderr, "[TestMain] Creating a new profile '%s' in '%s' config file.\n", cliConfigProfile, cliConfigPath)
+
+	args := []string{
+		"init",
+		fmt.Sprintf("--config=%s", cliConfigPath),
+		fmt.Sprintf("--profile=%s", cliConfigProfile),
+		fmt.Sprintf("--tenant=%s", e.tenant),
+		fmt.Sprintf("--domain=%s", e.domain),
+		"--store-type=file",
+		fmt.Sprintf("--store-path=%s", tmpDirPath),
+		"--cache-strategy=server",
+		"--auth-type=password",
+		fmt.Sprintf("--auth-username=%s", e.username),
+		fmt.Sprintf("--auth-password=%s", e.password),
+	}
+	cmd = exec.Command(binPath, args...)
+	cmd.Env = append(os.Environ(), "IS_SYSTEM_TEST=true")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[TestMain] Error: Failed to prepare CLI config profile: %v.\n\t%s\n", err, output)
+		os.Exit(1)
+	}
+	if strings.Contains(string(output), "Failed to authenticate") {
+		fmt.Fprintf(os.Stderr, "[TestMain] Error: Failed to prepare CLI config profile: failed to authenticate.\n")
 		os.Exit(1)
 	}
 
@@ -289,15 +323,12 @@ func run(t *testing.T, command []string) string {
 	return out[:strings.Index(out, `PASS`)]
 }
 
-func runWithAuth(t *testing.T, e *environment, command string) string {
+func runWithProfile(t *testing.T, command string) string {
 	t.Helper()
 	args := strings.Split(command, " ")
 	args = append(args,
-		"--auth-type=password",
-		fmt.Sprintf("--auth-username=%s", e.username),
-		fmt.Sprintf("--auth-password=%s", e.password),
-		fmt.Sprintf("--tenant=%s", e.tenant),
-		fmt.Sprintf("--domain=%s", e.domain),
+		fmt.Sprintf("--config=%s", cliConfigPath),
+		fmt.Sprintf("--profile=%s", cliConfigProfile),
 	)
 	return run(t, args)
 }

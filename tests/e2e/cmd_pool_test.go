@@ -15,64 +15,64 @@ func TestPool(t *testing.T) {
 	poolName1 := makePoolName()
 	poolName2 := makePoolName()
 
-	output := runWithAuth(t, e, "pool")
+	output := runWithProfile(t, "pool")
 	requireLine(t, output, "Work with engine pools")
 
-	output = runWithAuth(t, e, "pool --help")
+	output = runWithProfile(t, "pool --help")
 	requireLine(t, output, "Work with engine pools")
 
-	output = runWithAuth(t, e, "pool create --help")
+	output = runWithProfile(t, "pool create --help")
 	requireContains(t, output, "Create a new empty pool of engines")
 
-	output = runWithAuth(t, e, fmt.Sprintf("pool create --name=%s", poolName1))
+	output = runWithProfile(t, fmt.Sprintf("pool create --name=%s", poolName1))
 	requireContains(t, output, fmt.Sprintf(`"createdBy": "users:%s",`, e.username))
 	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName1))
 
-	output = runWithAuth(t, e, "pool read --help")
+	output = runWithProfile(t, "pool read --help")
 	requireContains(t, output, "Get information on an existing pool of engines")
 
-	output = runWithAuth(t, e, "pool read")
+	output = runWithProfile(t, "pool read")
 	requireContains(t, output, "error: must specify name")
 
-	output = runWithAuth(t, e, fmt.Sprintf("pool read --name=%s", poolName1))
+	output = runWithProfile(t, fmt.Sprintf("pool read --name=%s", poolName1))
 	requireContains(t, output, fmt.Sprintf(`"createdBy": "users:%s",`, e.username))
 	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName1))
 
-	output = runWithAuth(t, e, fmt.Sprintf("pool read %s", poolName1))
+	output = runWithProfile(t, fmt.Sprintf("pool read %s", poolName1))
 	requireContains(t, output, fmt.Sprintf(`"createdBy": "users:%s",`, e.username))
 	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName1))
 
-	output = runWithAuth(t, e, fmt.Sprintf("pool %s", poolName1))
+	output = runWithProfile(t, fmt.Sprintf("pool %s", poolName1))
 	requireContains(t, output, fmt.Sprintf(`"createdBy": "users:%s",`, e.username))
 	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName1))
 
-	output = runWithAuth(t, e, fmt.Sprintf("pool create --name=%s", poolName2))
+	output = runWithProfile(t, fmt.Sprintf("pool create --name=%s", poolName2))
 	requireContains(t, output, fmt.Sprintf(`"createdBy": "users:%s",`, e.username))
 	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName2))
 
-	output = runWithAuth(t, e, "pool list --help")
+	output = runWithProfile(t, "pool list --help")
 	requireContains(t, output, "List the names of all existing pools")
 
-	output = runWithAuth(t, e, "pool list")
+	output = runWithProfile(t, "pool list")
 	requireContains(t, output, `"pools": [`)
 	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName1))
 	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName2))
 
-	output = runWithAuth(t, e, "pool delete --help")
+	output = runWithProfile(t, "pool delete --help")
 	requireContains(t, output, "Delete an existing pool of engines")
 
-	output = runWithAuth(t, e, "pool delete")
+	output = runWithProfile(t, "pool delete")
 	requireContains(t, output, "error: must specify name")
 
-	output = runWithAuth(t, e, fmt.Sprintf("pool delete --name=%s", poolName1))
+	output = runWithProfile(t, fmt.Sprintf("pool delete --name=%s", poolName1))
 	if output != "" {
 		t.Fatalf("Unexpected output: \n%s\n", output)
 	}
-	output = runWithAuth(t, e, fmt.Sprintf("pool delete --name=%s", poolName2))
+	output = runWithProfile(t, fmt.Sprintf("pool delete --name=%s", poolName2))
 	if output != "" {
 		t.Fatalf("Unexpected output: \n%s\n", output)
 	}
-	output = runWithAuth(t, e, fmt.Sprintf("pool delete %s", poolName1))
+	output = runWithProfile(t, fmt.Sprintf("pool delete %s", poolName1))
 	requireContains(t, output, `"message": "unable to find item with specified identifier"`)
 }
 
@@ -98,7 +98,7 @@ func TestPoolInteractiveCreate(t *testing.T) {
 		c.SendLine(poolName)
 		c.ExpectEOF()
 	})
-	output := runWithAuth(t, e, fmt.Sprintf("pool delete --name=%s", poolName))
+	output := runWithProfile(t, fmt.Sprintf("pool delete --name=%s", poolName))
 	if output != "" {
 		t.Fatalf("Unexpected output: \n%s\n", output)
 	}
