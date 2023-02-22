@@ -13,7 +13,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.17.2
 	github.com/aws/aws-sdk-go-v2/config v1.18.4
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.29.5
-	github.com/bitfield/script v0.20.2
+	github.com/bitfield/script v0.21.4
 	github.com/caarlos0/env/v6 v6.10.1
 	github.com/creack/pty v1.1.18
 	github.com/danieljoos/wincred v1.0.1
