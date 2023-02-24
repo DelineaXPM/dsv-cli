@@ -268,7 +268,7 @@ func getGoreleaserConfig() (string, error) {
 func (Release) GenerateCLIVersionFile() error {
 	magetoolsutils.CheckPtermDebug()
 
-	releaseVersion, err := getVersion()
+	releaseVersion, _, err := getVersion()
 	if err != nil {
 		return err
 	}
@@ -325,16 +325,21 @@ func (Release) GenerateCLIVersionFile() error {
 	return nil
 }
 
-// getVersion returns the version for the changefile to use for the semver and release notes.
-func getVersion() (string, error) {
-	releaseVersion, err := sh.Output("changie", "latest")
+// getVersion returns the version and path for the changefile to use for the semver and release notes.
+//
+//nolint:unparam // this is a helper function, i'm ok leaving the additional parameter in there for now. - Sheldon 2022-12-15
+func getVersion() (releaseVersion, cleanPath string, err error) {
+	releaseVersion, err = sh.Output("changie", "latest")
 	if err != nil {
 		pterm.Error.Printfln("changie pulling latest release note version failure: %v", err)
-		return "", err
+		return "", "", err
 	}
 	cleanVersion := strings.TrimSpace(releaseVersion)
-	cleanVersion = strings.TrimPrefix(cleanVersion, "v")
-	return cleanVersion, nil
+	cleanPath = filepath.Join(".changes", cleanVersion+".md")
+	if os.Getenv("GITHUB_WORKSPACE") != "" {
+		cleanPath = filepath.Join(os.Getenv("GITHUB_WORKSPACE"), ".changes", cleanVersion+".md")
+	}
+	return cleanVersion, cleanPath, nil
 }
 
 // UploadCLIVersion uploads the cli-versions.json file to the secrets s3 bucket.
@@ -405,7 +410,7 @@ func (Release) Bump() error {
 		return err
 	}
 
-	releaseVersion, err := getVersion()
+	releaseVersion, _, err := getVersion()
 	if err != nil {
 		return err
 	}
