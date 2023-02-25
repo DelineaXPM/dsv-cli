@@ -290,7 +290,7 @@ func (Release) GenerateCLIVersionFile() error {
 	}
 
 	newJSON := cliVersions{
-		Latest: releaseVersion,
+		Latest: strings.TrimPrefix(releaseVersion, "v"),
 		Links: Links{
 			DarwinAmd64:  fmt.Sprintf(constants.DownloadURLFString, releaseVersion, "darwin-x64"),
 			DarwinArm64:  fmt.Sprintf(constants.DownloadURLFString, releaseVersion, "darwin-arm64"),
