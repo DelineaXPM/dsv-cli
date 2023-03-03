@@ -1,32 +1,15 @@
+// +build windows
+
 package wincred
 
 import (
 	"encoding/binary"
 	"reflect"
-	"syscall"
 	"time"
-	"unicode/utf16"
 	"unsafe"
-)
 
-// uf16PtrToString creates a Go string from a pointer to a UTF16 encoded zero-terminated string.
-// Such pointers are returned from the Windows API calls.
-// The function creates a copy of the string.
-func utf16PtrToString(wstr *uint16) string {
-	if wstr != nil {
-		for len := 0; ; len++ {
-			ptr := unsafe.Pointer(uintptr(unsafe.Pointer(wstr)) + uintptr(len)*unsafe.Sizeof(*wstr)) // see https://golang.org/pkg/unsafe/#Pointer (3)
-			if *(*uint16)(ptr) == 0 {
-				return string(utf16.Decode(*(*[]uint16)(unsafe.Pointer(&reflect.SliceHeader{
-					Data: uintptr(unsafe.Pointer(wstr)),
-					Len:  len,
-					Cap:  len,
-				}))))
-			}
-		}
-	}
-	return ""
-}
+	syscall "golang.org/x/sys/windows"
+)
 
 // utf16ToByte creates a byte array from a given UTF 16 char array.
 func utf16ToByte(wstr []uint16) (result []byte) {
@@ -35,6 +18,15 @@ func utf16ToByte(wstr []uint16) (result []byte) {
 		binary.LittleEndian.PutUint16(result[(i*2):(i*2)+2], wstr[i])
 	}
 	return
+}
+
+// utf16FromString creates a UTF16 char array from a string.
+func utf16FromString(str string) []uint16 {
+	res, err := syscall.UTF16FromString(str)
+	if err != nil {
+		return []uint16{}
+	}
+	return res
 }
 
 // goBytes copies the given C byte array to a Go byte array (see `C.GoBytes`).
@@ -53,27 +45,27 @@ func goBytes(src uintptr, len uint32) []byte {
 }
 
 // Convert the given CREDENTIAL struct to a more usable structure
-func nativeToCredential(cred *nativeCREDENTIAL) (result *Credential) {
+func sysToCredential(cred *sysCREDENTIAL) (result *Credential) {
 	if cred == nil {
 		return nil
 	}
 	result = new(Credential)
-	result.Comment = utf16PtrToString(cred.Comment)
-	result.TargetName = utf16PtrToString(cred.TargetName)
-	result.TargetAlias = utf16PtrToString(cred.TargetAlias)
-	result.UserName = utf16PtrToString(cred.UserName)
+	result.Comment = syscall.UTF16PtrToString(cred.Comment)
+	result.TargetName = syscall.UTF16PtrToString(cred.TargetName)
+	result.TargetAlias = syscall.UTF16PtrToString(cred.TargetAlias)
+	result.UserName = syscall.UTF16PtrToString(cred.UserName)
 	result.LastWritten = time.Unix(0, cred.LastWritten.Nanoseconds())
 	result.Persist = CredentialPersistence(cred.Persist)
 	result.CredentialBlob = goBytes(cred.CredentialBlob, cred.CredentialBlobSize)
 	result.Attributes = make([]CredentialAttribute, cred.AttributeCount)
-	attrSlice := *(*[]nativeCREDENTIAL_ATTRIBUTE)(unsafe.Pointer(&reflect.SliceHeader{
+	attrSlice := *(*[]sysCREDENTIAL_ATTRIBUTE)(unsafe.Pointer(&reflect.SliceHeader{
 		Data: cred.Attributes,
 		Len:  int(cred.AttributeCount),
 		Cap:  int(cred.AttributeCount),
 	}))
 	for i, attr := range attrSlice {
 		resultAttr := &result.Attributes[i]
-		resultAttr.Keyword = utf16PtrToString(attr.Keyword)
+		resultAttr.Keyword = syscall.UTF16PtrToString(attr.Keyword)
 		resultAttr.Value = goBytes(attr.Value, attr.ValueSize)
 	}
 	return result
@@ -81,11 +73,11 @@ func nativeToCredential(cred *nativeCREDENTIAL) (result *Credential) {
 
 // Convert the given Credential object back to a CREDENTIAL struct, which can be used for calling the
 // Windows APIs
-func nativeFromCredential(cred *Credential) (result *nativeCREDENTIAL) {
+func sysFromCredential(cred *Credential) (result *sysCREDENTIAL) {
 	if cred == nil {
 		return nil
 	}
-	result = new(nativeCREDENTIAL)
+	result = new(sysCREDENTIAL)
 	result.Flags = 0
 	result.Type = 0
 	result.TargetName, _ = syscall.UTF16PtrFromString(cred.TargetName)
@@ -99,7 +91,7 @@ func nativeFromCredential(cred *Credential) (result *nativeCREDENTIAL) {
 	}
 	result.Persist = uint32(cred.Persist)
 	result.AttributeCount = uint32(len(cred.Attributes))
-	attributes := make([]nativeCREDENTIAL_ATTRIBUTE, len(cred.Attributes))
+	attributes := make([]sysCREDENTIAL_ATTRIBUTE, len(cred.Attributes))
 	if len(attributes) > 0 {
 		result.Attributes = uintptr(unsafe.Pointer(&attributes[0]))
 	} else {
