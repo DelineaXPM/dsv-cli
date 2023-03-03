@@ -7,7 +7,7 @@ variables:
   - name: GOBIN
     value: $(GOPATH)/bin
   - name: GO_VERSION
-    value: 1.19.5 # this has to match aqua.yml for success
+    value: 1.20.1 # this has to match aqua.yml for success
   - name: GOLANGCI_LINT_VERSION
     value: v1.49.0
   - name: GORELEASER_VERSION
