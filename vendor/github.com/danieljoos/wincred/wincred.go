@@ -2,19 +2,28 @@
 // This includes functions for retrieval, listing and storage of credentials as well as Go structures for convenient access to the credential data.
 //
 // A more detailed description of Windows Credentials Management can be found on
-// MSDN: https://msdn.microsoft.com/en-us/library/windows/desktop/aa374789(v=vs.85).aspx
+// Docs: https://docs.microsoft.com/en-us/windows/desktop/SecAuthN/credentials-management
 package wincred
 
-import (
-	"syscall"
+import "errors"
+
+const (
+	// ErrElementNotFound is the error that is returned if a requested element cannot be found.
+	// This error constant can be used to check if a credential could not be found.
+	ErrElementNotFound = sysERROR_NOT_FOUND
+
+	// ErrInvalidParameter is the error that is returned for invalid parameters.
+	// This error constant can be used to check if the given function parameters were invalid.
+	// For example when trying to create a new generic credential with an empty target name.
+	ErrInvalidParameter = sysERROR_INVALID_PARAMETER
 )
 
 // GetGenericCredential fetches the generic credential with the given name from Windows credential manager.
 // It returns nil and an error if the credential could not be found or an error occurred.
 func GetGenericCredential(targetName string) (*GenericCredential, error) {
-	cred, err := nativeCredRead(targetName, naCRED_TYPE_GENERIC)
+	cred, err := sysCredRead(targetName, sysCRED_TYPE_GENERIC)
 	if cred != nil {
-		return &GenericCredential{*cred}, err
+		return &GenericCredential{Credential: *cred}, err
 	}
 	return nil, err
 }
@@ -31,22 +40,22 @@ func NewGenericCredential(targetName string) (result *GenericCredential) {
 
 // Write persists the generic credential object to Windows credential manager.
 func (t *GenericCredential) Write() (err error) {
-	err = nativeCredWrite(&t.Credential, naCRED_TYPE_GENERIC)
+	err = sysCredWrite(&t.Credential, sysCRED_TYPE_GENERIC)
 	return
 }
 
 // Delete removes the credential object from Windows credential manager.
 func (t *GenericCredential) Delete() (err error) {
-	err = nativeCredDelete(&t.Credential, naCRED_TYPE_GENERIC)
+	err = sysCredDelete(&t.Credential, sysCRED_TYPE_GENERIC)
 	return
 }
 
 // GetDomainPassword fetches the domain-password credential with the given target host name from Windows credential manager.
 // It returns nil and an error if the credential could not be found or an error occurred.
 func GetDomainPassword(targetName string) (*DomainPassword, error) {
-	cred, err := nativeCredRead(targetName, naCRED_TYPE_DOMAIN_PASSWORD)
+	cred, err := sysCredRead(targetName, sysCRED_TYPE_DOMAIN_PASSWORD)
 	if cred != nil {
-		return &DomainPassword{*cred}, err
+		return &DomainPassword{Credential: *cred}, err
 	}
 	return nil, err
 }
@@ -63,25 +72,37 @@ func NewDomainPassword(targetName string) (result *DomainPassword) {
 
 // Write persists the domain-password credential to Windows credential manager.
 func (t *DomainPassword) Write() (err error) {
-	err = nativeCredWrite(&t.Credential, naCRED_TYPE_DOMAIN_PASSWORD)
+	err = sysCredWrite(&t.Credential, sysCRED_TYPE_DOMAIN_PASSWORD)
 	return
 }
 
 // Delete removes the domain-password credential from Windows credential manager.
 func (t *DomainPassword) Delete() (err error) {
-	err = nativeCredDelete(&t.Credential, naCRED_TYPE_DOMAIN_PASSWORD)
+	err = sysCredDelete(&t.Credential, sysCRED_TYPE_DOMAIN_PASSWORD)
 	return
 }
 
 // SetPassword sets the CredentialBlob field of a domain password credential to the given string.
 func (t *DomainPassword) SetPassword(pw string) {
-	t.CredentialBlob = utf16ToByte(syscall.StringToUTF16(pw))
+	t.CredentialBlob = utf16ToByte(utf16FromString(pw))
 }
 
 // List retrieves all credentials of the Credentials store.
 func List() ([]*Credential, error) {
-	creds, err := nativeCredEnumerate("", true)
-	if err != nil && err.Error() == naERROR_NOT_FOUND {
+	creds, err := sysCredEnumerate("", true)
+	if err != nil && errors.Is(err, ErrElementNotFound) {
+		// Ignore ERROR_NOT_FOUND and return an empty list instead
+		creds = []*Credential{}
+		err = nil
+	}
+	return creds, err
+}
+
+// FilteredList retrieves the list of credentials from the Credentials store that match the given filter.
+// The filter string defines the prefix followed by an asterisk for the `TargetName` attribute of the credentials.
+func FilteredList(filter string) ([]*Credential, error) {
+	creds, err := sysCredEnumerate(filter, false)
+	if err != nil && errors.Is(err, ErrElementNotFound) {
 		// Ignore ERROR_NOT_FOUND and return an empty list instead
 		creds = []*Credential{}
 		err = nil
