@@ -20,6 +20,7 @@ const (
 	poolsKey   = "pools"
 	enginesKey = "engines"
 	siemKey    = "siem"
+	homeKey    = "home"
 )
 
 var (
@@ -40,6 +41,20 @@ func makeName(key string) string {
 		usedObjects[key] = []string{name}
 	} else {
 		usedObjects[key] = append(usedObjects[key], name)
+	}
+	muxUsedObjects.Unlock()
+
+	return name
+}
+
+func makeHomeSecretPath() string {
+	name := fmt.Sprintf("%s:%s-%d", commonPrefix, homeKey, time.Now().UnixNano())
+
+	muxUsedObjects.Lock()
+	if _, ok := usedObjects[homeKey]; !ok {
+		usedObjects[homeKey] = []string{name}
+	} else {
+		usedObjects[homeKey] = append(usedObjects[homeKey], name)
 	}
 	muxUsedObjects.Unlock()
 
@@ -87,6 +102,13 @@ func resilienceAfter() error {
 		fmt.Fprintf(os.Stderr, "[ResilienceAfter] Recorded %d used siem(s).\n", len(usedObjects[siemKey]))
 		for _, name := range usedObjects[siemKey] {
 			delete(fmt.Sprintf("siem delete %s", name))
+		}
+	}
+
+	if len(usedObjects[homeKey]) > 0 {
+		fmt.Fprintf(os.Stderr, "[ResilienceAfter] Recorded %d used Home Vault secret(s).\n", len(usedObjects[homeKey]))
+		for _, name := range usedObjects[homeKey] {
+			delete(fmt.Sprintf("home delete %s --force", name))
 		}
 	}
 

@@ -251,8 +251,6 @@ func init() {
 	policy2Name = "secrets:servers:" + p2.String()
 	policy2File := strings.Join([]string{"cicd-integration", "data", "test_policy.json"}, string(filepath.Separator))
 
-	homeSecretPath := "sweet/home/secret1"
-
 	existingRootSecret := "existingRoot"
 	certStoreSecret := "myroot"
 	leafSecretPath := "myleaf"
@@ -375,16 +373,6 @@ func init() {
 		{"config-get-implicit-pass", []string{"config"}, outputPattern(`"permissionDocument":`)},
 		{"config-get-pass", []string{"config", "read"}, outputPattern(`"permissionDocument":`)},
 
-		// Home
-		{"home-help", []string{"home", ""}, outputPattern(`Work with secrets in a personal user space`)},
-		{"home-create", []string{"home", "create", homeSecretPath, "--desc", "some description"}, outputPattern(strings.ReplaceAll(homeSecretPath, "/", ":"))},
-		{"home-update", []string{"home", "update", homeSecretPath, "--desc", "updated description"}, outputPattern(strings.ReplaceAll(homeSecretPath, "/", ":"))},
-		{"home-read", []string{"home", "read", homeSecretPath}, outputPattern("updated description")},
-		{"home-delete", []string{"home", "delete", homeSecretPath}, outputPattern("secret marked for deletion")},
-		{"home-restore", []string{"home", "restore", homeSecretPath}, outputEmpty()},
-		{"home-rollback", []string{"home", "rollback", homeSecretPath}, outputPattern(`"version": "2"`)},
-		{"home-get-by-version", []string{"home", "read", homeSecretPath, "version", "2"}, outputPattern(`"version": "2"`)},
-
 		// EaaS-Manual
 		{"crypto-manual-key-upload", []string{"crypto", "manual", "key-upload", "--path", manualKeyPath, "--private-key", manualPrivateKey, "--nonce", manualKeyNonce, "--scheme", "symmetric"}, outputPattern(`"version": "0"`)},
 		{"crypto-manual-key-read", []string{"crypto", "manual", "key-read", "--path", manualKeyPath}, outputPattern(`"version": "0"`)},
@@ -450,7 +438,6 @@ func init() {
 		{"cert-secret-delete", []string{"secret", "delete", "--path", certStoreSecret, "--force"}, outputEmpty()},
 		{"rootCA-secret-delete", []string{"secret", "delete", "--path", existingRootSecret, "--force"}, outputEmpty()},
 		{"leafCA-secret-delete", []string{"secret", "delete", "--path", leafSecretPath, "--force"}, outputEmpty()},
-		{"home-secret-delete", []string{"home", "delete", homeSecretPath, "--force"}, outputEmpty()},
 		{"crypto-manual-key-delete", []string{"crypto", "manual", "key-delete", "--path", manualKeyPath, "--force"}, outputEmpty()},
 	}
 }
