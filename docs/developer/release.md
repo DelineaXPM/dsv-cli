@@ -41,3 +41,15 @@ This version number will be used to set the version of the release, so the docs 
 - Run `snapcraft login`.
 - After login: `snapcraft export-login snapcraft-login` to create a file `snapcraft-login` for the login to use for CI purposes.
   Upload this as a secure file in Azure DevOps Secure file vault, or if using a shared team DSV Vault, place it in there (that's pending implementation as of 2023-01).
+
+### Version Prefix
+
+- Referencing the version number diretly (not assets), is done via `1.0.0` with no prefix.
+  - For example the latest version number in `cli-versions.json` would not have the prefix.
+  - [Scoop](https://github.com/DelineaXPM/scoop-bucket/blob/89cc09954d090f0e5421230db51f8eaa40b63e18/dsv-cli.json#L2) is the same with version not having a prefix.
+- Tags (per Go standard) include `v` prefix.
+  This is created by goreleaser github process automatically.
+- Assets:
+  - GitHub assets include `v` prefix like `v1.0.0`.
+  - Scoop & Brew use version number without prefix in version field, but the download assets uploaded to github do have prefix in the file name.
+- S3 asset folder prefers no `v` prefix.
