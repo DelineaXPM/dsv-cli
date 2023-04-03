@@ -16,8 +16,9 @@ packages:
   - name: goreleaser/goreleaser@v1.15.2
     tags: ['ci']
   - name: mvdan/gofumpt@v0.4.0
-  - name: sigstore/cosign@v1.13.1
+  - name: sigstore/cosign
     tags: ['ci']
+    version: v1.13.1 # pinned as v2.0.0 has breaking changes including items needing investigation like sigstore usage
   - name: anchore/quill@v0.2.0
     tags: ['ci']
   - name: anchore/grype@v0.57.1
