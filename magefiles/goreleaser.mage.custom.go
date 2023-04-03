@@ -289,15 +289,16 @@ func (Release) GenerateCLIVersionFile() error {
 		Links  Links  `json:"links"`
 	}
 
+	ver := strings.TrimPrefix(releaseVersion, "v")
 	newJSON := cliVersions{
-		Latest: strings.TrimPrefix(releaseVersion, "v"),
+		Latest: ver,
 		Links: Links{
-			DarwinAmd64:  fmt.Sprintf(constants.DownloadURLFString, releaseVersion, "darwin-x64"),
-			DarwinArm64:  fmt.Sprintf(constants.DownloadURLFString, releaseVersion, "darwin-arm64"),
-			LinuxAmd64:   fmt.Sprintf(constants.DownloadURLFString, releaseVersion, "linux-x64"),
-			Linux386:     fmt.Sprintf(constants.DownloadURLFString, releaseVersion, "linux-x86"),
-			WindowsAmd64: fmt.Sprintf(constants.DownloadURLFString, releaseVersion, "windows-x64"),
-			Windows386:   fmt.Sprintf(constants.DownloadURLFString, releaseVersion, "windows-x86"),
+			DarwinAmd64:  fmt.Sprintf(constants.DownloadURLFString, ver, "dsv-darwin-x64"),
+			DarwinArm64:  fmt.Sprintf(constants.DownloadURLFString, ver, "dsv-darwin-arm64"),
+			LinuxAmd64:   fmt.Sprintf(constants.DownloadURLFString, ver, "dsv-linux-x64"),
+			Linux386:     fmt.Sprintf(constants.DownloadURLFString, ver, "dsv-linux-x86"),
+			WindowsAmd64: fmt.Sprintf(constants.DownloadURLFString, ver, "dsv-windows-x64.exe"),
+			Windows386:   fmt.Sprintf(constants.DownloadURLFString, ver, "dsv-windows-x86.exe"),
 		},
 	}
 
