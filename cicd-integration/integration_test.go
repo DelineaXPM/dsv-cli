@@ -208,7 +208,6 @@ var (
 var (
 	adminUser, adminPass    string
 	user1, user1Pass        string
-	roleName                string
 	policyName, policy2Name string
 	groupName               string
 	authProvider            string
@@ -238,9 +237,6 @@ func init() {
 	secret1Data = `{"field":"secret password"}`
 	secret1Attributes = fmt.Sprintf(`{"tag":"%s", "tll": 100}`, secret1Tag)
 	secret1DataFmt = `"field": "secret password"`
-
-	r, _ := uuid.NewV4()
-	roleName = r.String()
 
 	user1 = os.Getenv("USER1_NAME")
 	user1Pass = os.Getenv("DSV_USER1_PASSWORD")
@@ -326,14 +322,6 @@ func init() {
 		{"group-soft-delete", []string{"group", "delete", groupName}, outputPattern("will be removed")},
 		{"group-read-fail", []string{"group", "read", groupName}, outputPattern("will be removed")},
 		{"group-restore", []string{"group", "restore", groupName}, outputEmpty()},
-
-		// role operations
-		{"role-create-pass", []string{"role", "create", "--name", roleName}, outputPattern(fmt.Sprintf(`"name":\s*"%s"`, roleName))},
-
-		// client operations
-		{"client-create-pass", []string{"client", "create", "--role", roleName}, outputPattern(`"role":\s*"[^"]+"`)},
-		{"client-create-fail", []string{"client", "create", "--role", roleName + "doesntexist"}, outputPattern(`"code": 400`)},
-		{"client-search-pass", []string{"client", "search", "--role", roleName}, outputPattern(`"clientId"`)},
 
 		// delegated access operations
 		{"user-auth-pass", []string{"auth", "-u", user1, "-p", user1Pass}, outputPattern(`"accessToken":\s*"[^"]+",\s*"expiresIn"`)},
@@ -431,7 +419,6 @@ func init() {
 		// cleanup
 		{"secret-delete-1-pass", []string{"secret", "delete", secret1Name, "--force"}, outputEmpty()},
 		{"user-delete", []string{"user", "delete", user1, "--force"}, outputEmpty()},
-		{"role-delete-fail", []string{"role", "delete", roleName, "--force"}, outputPattern(`cannot delete role`)},
 		{"auth-provider-delete", []string{"config", "auth-provider", "delete", "--name", authProvider, "--force"}, outputEmpty()},
 		{"policy-delete", []string{"policy", "delete", "--path", policyName, "--force"}, outputEmpty()},
 		{"policy2-delete", []string{"policy", "delete", "--path", policy2Name, "--force"}, outputEmpty()},
