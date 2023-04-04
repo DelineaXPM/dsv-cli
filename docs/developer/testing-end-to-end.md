@@ -15,7 +15,7 @@ dsv user create --username <username> --password <password>
 ### Grant Permissions
 
 This E2E testing suite covers most of the commands and actions available in the CLI.
-Therefore it is more convinient to add the newly created user to the list of admins of the tenant.
+It is more convenient to add the newly created user to the list of admins of the tenant.
 Please do not use production tenants for testing purposes since it can mess with your data.
 
 If there is something that must be protected, create a policy that will guard that resource.
