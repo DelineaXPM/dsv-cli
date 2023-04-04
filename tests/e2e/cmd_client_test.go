@@ -35,5 +35,6 @@ func TestClient(t *testing.T) {
 	output = runWithProfile(t, fmt.Sprintf("client search --role %s", roleName))
 	requireContains(t, output, fmt.Sprintf(`"role": "%s"`, roleName))
 
-	runWithProfile(t, fmt.Sprintf("client delete --client-id %s --force", clientID))
+	output = runWithProfile(t, fmt.Sprintf("client delete --client-id %s --force", clientID))
+	requireEmpty(t, output)
 }

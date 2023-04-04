@@ -14,84 +14,20 @@ dsv user create --username <username> --password <password>
 
 ### Grant Permissions
 
-Create policies which will allow actions required for testing to the created user.
+This E2E testing suite covers most of the commands and actions available in the CLI.
+Therefore it is more convinient to add the newly created user to the list of admins of the tenant.
+Please do not use production tenants for testing purposes since it can mess with your data.
 
-- Create, Read, Update and Delete Roles with "e2e-cli-test" prefix
+If there is something that must be protected, create a policy that will guard that resource.
+For example:
 
-```shell
+```bash
 dsv policy create \
-    --path "roles:e2e-cli-test" \
-    --resources "roles:e2e-cli-test<.*>" \
-    --effect allow \
-    --actions "<create|read|update|delete>" \
-    --subjects users:<username>
+    --path "secrets:protected" \
+    --effect "deny" \
+    --actions "<.*>" \
+    --subjects "users:<username>"
 ```
-
-- List all Roles
-
-```shell
-dsv policy create \
-    --path "roles" \
-    --resources "roles" \
-    --effect allow \
-    --actions "list" \
-    --subjects users:<username>
-```
-
-- Create, Read and Delete Pools with "e2e-cli-test" prefix
-
-```shell
-dsv policy create \
-    --path "pools:e2e-cli-test" \
-    --resources "pools:e2e-cli-test<.*>" \
-    --effect allow \
-    --actions "<create|read|delete>" \
-    --subjects users:<username>
-```
-
-- List all Pools
-
-```shell
-dsv policy create \
-    --path "pools" \
-    --resources "pools" \
-    --effect allow \
-    --actions "list" \
-    --subjects users:<username>
-```
-
-- Create, Read and Delete Engines with "e2e-cli-test" prefix
-
-```shell
-dsv policy create \
-    --path "engines:e2e-cli-test" \
-    --resources "engines:e2e-cli-test<.*>" \
-    --effect allow \
-    --actions "<create|read|delete>" \
-    --subjects users:<username>
-```
-
-- List all Engines
-
-````shell
-dsv policy create \
-    --path "engines" \
-    --resources "engines" \
-    --effect allow \
-    --actions "list" \
-    --subjects users:<username>
-```shell
-
-- Create, Read, Update and Delete SIEMs with "e2e-cli-test" prefix
-
-```shell
-dsv policy create \
-    --path "config:siem:e2e-cli-test" \
-    --effect allow \
-    --actions "<create|delete|read|update>" \
-    --resources "config:siem:e2e-cli-test<.*>" \
-    --subjects users:<username>
-````
 
 ### Create certificate data
 

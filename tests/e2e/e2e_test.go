@@ -428,6 +428,13 @@ func requireContains(t *testing.T, s string, substr string) {
 func requireNotContains(t *testing.T, s string, substr string) {
 	t.Helper()
 	if strings.Contains(s, substr) {
-		t.Fatalf("Sould not contain %q not in:\n%s", substr, s)
+		t.Fatalf("Sould not contain %q in:\n%s", substr, s)
+	}
+}
+
+func requireEmpty(t *testing.T, s string) {
+	t.Helper()
+	if s != "" {
+		t.Fatalf("Not empty: %q", s)
 	}
 }
