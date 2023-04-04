@@ -21,7 +21,7 @@ Please do not use production tenants for testing purposes since it can mess with
 If there is something that must be protected, create a policy that will guard that resource.
 For example:
 
-```bash
+```shell
 dsv policy create \
     --path "secrets:protected" \
     --effect "deny" \
