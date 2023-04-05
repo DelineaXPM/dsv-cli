@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	e "errors"
 	"fmt"
 	"testing"
 	"time"
@@ -38,7 +37,7 @@ func TestHandleGetUsageCmd(t *testing.T) {
 			"No start date",
 			"",
 			nil,
-			errors.New(e.New("error: must specify " + cst.StartDate)),
+			errors.NewS("error: must specify --startdate"),
 		},
 	}
 
