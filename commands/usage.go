@@ -34,7 +34,7 @@ func GetUsageCmd() (cli.Command, error) {
 func handleGetUsageCmd(vcli vaultcli.CLI, args []string) int {
 	startDate := viper.GetString(cst.StartDate)
 	if startDate == "" {
-		err := errors.NewS("error: must specify " + cst.StartDate)
+		err := errors.NewS("error: must specify --startdate")
 		vcli.Out().WriteResponse(nil, err)
 		return utils.GetExecStatus(err)
 	}

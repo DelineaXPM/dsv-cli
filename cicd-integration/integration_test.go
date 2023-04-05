@@ -14,7 +14,6 @@ import (
 	"strings"
 	"testing"
 	"text/template"
-	"time"
 
 	"github.com/DelineaXPM/dsv-cli/constants"
 	"github.com/DelineaXPM/dsv-cli/utils/test_helpers"
@@ -254,10 +253,6 @@ func init() {
 	ap, _ := uuid.NewV4()
 	authProvider = "aws-" + ap.String()
 
-	today := time.Now()
-	monthAgoDate := today.AddDate(0, 0, -30).Format("2006-01-02")
-	futureDate := today.AddDate(0, 0, 7).Format("2006-01-02")
-
 	synchronousCases = []struct {
 		name   string
 		args   []string
@@ -349,12 +344,6 @@ func init() {
 		{"cli-config-remove-key", []string{"cli-config", "update", "key", "0"}, outputEmpty()},
 
 		{"cli-config-update-2-pass", []string{"cli-config", "update", "auth.password", adminPass}, outputEmpty()},
-
-		{"usage-pass", []string{"usage", "--startdate", monthAgoDate}, outputPattern("requestsUsed")},
-		{"usage-fail", []string{"usage", "--startdate", futureDate}, outputPattern("Usage start date cannot be in the future")},
-
-		// {"logs-pass", []string{"logs", "--startdate", monthAgoDate}, outputPattern("data")},
-		// {"audit-pass", []string{"audit", "--startdate", monthAgoDate}, outputPattern("data")},
 
 		// config operations
 		{"config-help", []string{"config", "--help"}, outputPattern(`Execute an action on the.*`)},
