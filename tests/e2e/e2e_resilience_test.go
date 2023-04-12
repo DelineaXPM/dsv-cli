@@ -16,11 +16,12 @@ const (
 	commonPrefix = "e2e-cli-test"
 
 	// List of keys for `usedObjects` map.
-	rolesKey   = "roles"
-	poolsKey   = "pools"
-	enginesKey = "engines"
-	siemKey    = "siem"
-	homeKey    = "home"
+	authProvidersKey = "auth-providers"
+	rolesKey         = "roles"
+	poolsKey         = "pools"
+	enginesKey       = "engines"
+	siemKey          = "siem"
+	homeKey          = "home"
 )
 
 var (
@@ -28,10 +29,11 @@ var (
 	usedObjects    = map[string][]string{}
 )
 
-func makeRoleName() string   { return makeName(rolesKey) }
-func makePoolName() string   { return makeName(poolsKey) }
-func makeEngineName() string { return makeName(enginesKey) }
-func makeSIEMName() string   { return makeName(siemKey) }
+func makeAuthProviderName() string { return makeName(authProvidersKey) }
+func makeRoleName() string         { return makeName(rolesKey) }
+func makePoolName() string         { return makeName(poolsKey) }
+func makeEngineName() string       { return makeName(enginesKey) }
+func makeSIEMName() string         { return makeName(siemKey) }
 
 func makeName(key string) string {
 	name := fmt.Sprintf("%s-%s-%d", commonPrefix, key, time.Now().UnixNano())
@@ -75,6 +77,13 @@ func resilienceAfter() error {
 	if len(usedObjects) == 0 {
 		fmt.Fprintln(os.Stderr, "[ResilienceAfter] Used objects list is empty. Nothing to cleanup.")
 		return nil
+	}
+
+	if len(usedObjects[authProvidersKey]) > 0 {
+		fmt.Fprintf(os.Stderr, "[ResilienceAfter] Recorded %d used auth provider(s).\n", len(usedObjects[authProvidersKey]))
+		for _, name := range usedObjects[authProvidersKey] {
+			delete(fmt.Sprintf("config auth-provider delete %s --force", name))
+		}
 	}
 
 	if len(usedObjects[rolesKey]) > 0 {
