@@ -80,6 +80,8 @@ Usage:
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Sort, Usage: cst.SortHelpMessage, Default: "desc"},
 			{Name: cst.SortedBy, Usage: "Sort by name or created field (optional)", Default: "created"},
+			{Name: cst.Limit, Shorthand: "l", Usage: cst.LimitHelpMessage},
+			{Name: cst.Cursor, Usage: cst.CursorHelpMessage},
 		},
 		RunFunc: handlePoolList,
 	})
@@ -135,12 +137,11 @@ func handlePoolCreate(vcli vaultcli.CLI, args []string) int {
 }
 
 func handlePoolList(vcli vaultcli.CLI, args []string) int {
-	sort := viper.GetString(cst.Sort)
-	sortedBy := viper.GetString(cst.SortedBy)
-
 	data, apiErr := poolList(vcli, &poolListParams{
-		sort:     sort,
-		sortedBy: sortedBy,
+		sort:     viper.GetString(cst.Sort),
+		sortedBy: viper.GetString(cst.SortedBy),
+		limit:    viper.GetString(cst.Limit),
+		cursor:   viper.GetString(cst.Cursor),
 	})
 	vcli.Out().WriteResponse(data, apiErr)
 	return utils.GetExecStatus(apiErr)
@@ -200,6 +201,8 @@ func poolDelete(vcli vaultcli.CLI, name string) ([]byte, *errors.ApiError) {
 type poolListParams struct {
 	sort     string
 	sortedBy string
+	limit    string
+	cursor   string
 }
 
 func poolList(vcli vaultcli.CLI, params *poolListParams) ([]byte, *errors.ApiError) {
@@ -209,6 +212,12 @@ func poolList(vcli vaultcli.CLI, params *poolListParams) ([]byte, *errors.ApiErr
 	}
 	if params.sortedBy != "" {
 		queryParams["sortedBy"] = params.sortedBy
+	}
+	if params.limit != "" {
+		queryParams[cst.Limit] = params.limit
+	}
+	if params.cursor != "" {
+		queryParams[cst.Cursor] = params.cursor
 	}
 	uri := paths.CreateResourceURI(cst.NounPools, "", "", false, queryParams)
 	return vcli.HTTPClient().DoRequest(http.MethodGet, uri, nil)

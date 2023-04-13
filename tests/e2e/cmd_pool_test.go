@@ -58,6 +58,11 @@ func TestPool(t *testing.T) {
 	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName1))
 	requireContains(t, output, fmt.Sprintf(`"name": "%s"`, poolName2))
 
+	output = runWithProfile(t, "pool list --limit 1")
+	requireContains(t, output, `"length": 1`)
+	requireContains(t, output, `"limit": 1`)
+	requireContains(t, output, `"pools": [`)
+
 	output = runWithProfile(t, "pool delete --help")
 	requireContains(t, output, "Delete an existing pool of engines")
 
