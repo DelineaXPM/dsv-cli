@@ -140,11 +140,11 @@ Usage:
    • user create --username %[3]s --external-id svc1@project1.iam.gserviceaccount.com --provider project1.gcloud --password %[4]s
 `, cst.NounUser, cst.ProductName, cst.ExampleUser, cst.ExamplePassword),
 		FlagsPredictor: []*predictor.Params{
-			{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to be updated (required)", strings.Title(cst.DataUsername), cst.NounUser)},
-			{Name: cst.DataDisplayname, Usage: fmt.Sprintf("%s of %s to be updated", strings.Title(cst.DataDisplayname), cst.NounUser)},
-			{Name: cst.DataPassword, Usage: fmt.Sprintf("%s of %s to be updated (required)", strings.Title(cst.Password), cst.NounUser)},
-			{Name: cst.DataExternalID, Usage: fmt.Sprintf("%s of %s to be updated", strings.Title(strings.ReplaceAll(cst.DataExternalID, ".", " ")), cst.NounUser)},
-			{Name: cst.DataProvider, Usage: fmt.Sprintf("External %s of %s to be updated", strings.Title(cst.DataProvider), cst.NounUser)},
+			{Name: cst.DataUsername, Usage: "Used as id (required) (must conform to /[a-zA-Z0-9_-@+.]{3,100}/)."},
+			{Name: cst.DataDisplayname, Usage: "Name to display in UI."},
+			{Name: cst.DataPassword, Usage: "Must be 8-100 chars, with an uppercase and special char from this list: ~!@#$%^&*()."},
+			{Name: cst.DataExternalID, Usage: "Identifier attached to federated login e.g. AWS or ARN."},
+			{Name: cst.DataProvider, Usage: "Used for linking user with federated/external auth, must match name of Auth Provider in administration section."},
 		},
 		RunFuncE:   handleUserCreateCmd,
 		WizardFunc: handleUserCreateWizard,
@@ -161,9 +161,9 @@ Usage:
    • user update --username %[3]s --password %[4]s
 `, cst.NounUser, cst.ProductName, cst.ExampleUser, cst.ExamplePassword),
 		FlagsPredictor: []*predictor.Params{
-			{Name: cst.DataPassword, Usage: fmt.Sprintf("%s of %s to be updated (required)", strings.Title(cst.Password), cst.NounUser)},
-			{Name: cst.DataUsername, Usage: fmt.Sprintf("%s of %s to be updated (required)", strings.Title(cst.DataUsername), cst.NounUser)},
-			{Name: cst.DataDisplayname, Usage: fmt.Sprintf("%s of %s to be updated", strings.Title(cst.DataDisplayname), cst.NounUser)},
+			{Name: cst.DataPassword, Usage: "Uses interactive prompt if not sent as flag.  Must be 8-100 chars, with an uppercase and special char from this list: ~!@#$%^&*()."},
+			{Name: cst.DataUsername, Usage: "Existing username to update"},
+			{Name: cst.DataDisplayname, Usage: "New display name to show for username."},
 		},
 		RunFuncE:   handleUserUpdateCmd,
 		WizardFunc: handleUserUpdateWizard,
