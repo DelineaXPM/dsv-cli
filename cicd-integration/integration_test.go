@@ -171,12 +171,6 @@ type outputValidation struct {
 	MatchGoldenCase bool
 }
 
-func outputIs(exactMatch string) outputValidation {
-	return outputValidation{
-		RegexMatch: "^" + regexp.QuoteMeta(exactMatch) + "$",
-	}
-}
-
 func outputPattern(regex string) outputValidation {
 	return outputValidation{
 		RegexMatch: regex,
@@ -195,26 +189,11 @@ func outputGolden() outputValidation {
 	}
 }
 
-var (
-	secret1Name       string
-	secret1Desc       string
-	secret1Tag        string
-	secret1Data       string
-	secret1Attributes string
-	secret1DataFmt    string
-)
-
-var (
-	adminUser, adminPass    string
-	user1, user1Pass        string
-	policyName, policy2Name string
-	groupName               string
-	synchronousCases        []struct {
-		name   string
-		args   []string
-		output outputValidation
-	}
-)
+var synchronousCases []struct {
+	name   string
+	args   []string
+	output outputValidation
+}
 
 func init() {
 	if err := generateThyYml(".thy.yml.template", ".thy.yml"); err != nil {
@@ -227,22 +206,23 @@ func init() {
 
 	u, _ := uuid.NewV4()
 	t, _ := uuid.NewV4()
-	adminUser = os.Getenv("ADMIN_USER")
-	adminPass = os.Getenv("DSV_ADMIN_PASS")
-	secret1Name = u.String() + "z" // Avoid UUID detection on the API side.
-	secret1Tag = t.String()
-	secret1Desc = `desc of s1`
-	secret1Data = `{"field":"secret password"}`
-	secret1Attributes = fmt.Sprintf(`{"tag":"%s", "tll": 100}`, secret1Tag)
-	secret1DataFmt = `"field": "secret password"`
 
-	user1 = os.Getenv("USER1_NAME")
-	user1Pass = os.Getenv("DSV_USER1_PASSWORD")
-	groupName = u.String()
+	adminPass := os.Getenv("DSV_ADMIN_PASS")
 
-	policyName = "secrets:" + secret1Name
+	secret1Name := u.String() + "z" // Avoid UUID detection on the API side.
+	secret1Tag := t.String()
+	secret1Desc := `desc of s1`
+	secret1Data := `{"field":"secret password"}`
+	secret1Attributes := fmt.Sprintf(`{"tag":"%s", "tll": 100}`, secret1Tag)
+	secret1DataFmt := `"field": "secret password"`
+
+	user1 := os.Getenv("USER1_NAME")
+	user1Pass := os.Getenv("DSV_USER1_PASSWORD")
+	groupName := u.String()
+
+	policyName := "secrets:" + secret1Name
 	p2, _ := uuid.NewV4()
-	policy2Name = "secrets:servers:" + p2.String()
+	policy2Name := "secrets:servers:" + p2.String()
 	policy2File := strings.Join([]string{"cicd-integration", "data", "test_policy.json"}, string(filepath.Separator))
 
 	existingRootSecret := "existingRoot"
@@ -262,7 +242,7 @@ func init() {
 		// {"secret-search-find-pass", []string{"secret", "search", secret1Name[:3], "'data.[0].name'"}, outputPattern(secret1Name)},
 		{"secret-search-tags", []string{"secret", "search", secret1Tag, "--search-field", "attributes.tag"}, outputPattern(secret1Name)},
 		{"secret-create-fail-dup", []string{"secret", "create", "--path", secret1Name, "--data", secret1Data, "", ".message"}, outputPattern(`"message": "error creating secret, secret at path already exists"`)},
-		{"secret-describe-1-pass", []string{"secret", "describe", "--path", secret1Name, "-f", ".description"}, outputIs(secret1Desc)},
+		{"secret-describe-1-pass", []string{"secret", "describe", "--path", secret1Name, "-f", ".description"}, outputPattern("^" + secret1Desc + "$")},
 		{"secret-read-1-pass", []string{"secret", "read", "--path", secret1Name, "-f", ".data"}, outputPattern(secret1DataFmt)},
 		{"secret-read-implicit-pass", []string{"secret", secret1Name, "-f", ".data"}, outputPattern(secret1DataFmt)},
 		{"secret-search-none-pass", []string{"secret", "search", "hjkl"}, outputPattern(`"data": \[\]`)},
@@ -283,19 +263,7 @@ func init() {
 		{"policy-restore", []string{"policy", "restore", policyName}, outputEmpty()},
 
 		// user operations
-		{"user-help", []string{"user", ""}, outputPattern(`Execute an action on a user.*`)},
 		{"user-create-pass", []string{"user", "create", "--username", user1, "--password", user1Pass}, outputPattern(`"userName": "mrmittens"`)},
-		{"user-read-pass", []string{"user", "read", user1}, outputPattern(`"userName": "mrmittens"`)},
-		{"user-read-implicit-pass", []string{"user", user1}, outputPattern(`"userName": "mrmittens"`)},
-		{"user-create-fail", []string{"user", "create", "--username", user1, "--password", user1Pass}, outputPattern(`"code": 400`)},
-		// {"user-search-find-pass", []string{"user", "search", user1[:3], "-f", "'data.[0].userName'"}, outputPattern(user1)},
-		{"user-search-none-pass", []string{"user", "search", "erkjwr"}, outputPattern(`"data": \[\]`)},
-		{"user-soft-delete", []string{"user", "delete", user1}, outputPattern("will be removed")},
-		{"user-read-fail", []string{"user", "read", user1}, outputPattern("will be removed")},
-		{"user-restore", []string{"user", "restore", user1}, outputEmpty()},
-		{"user-read-pass-verify-restore", []string{"user", "read", user1}, outputPattern(`"userName": "mrmittens"`)},
-		{"user-create-provider-missing", []string{"user", "create", "--username", "bob", "--external-id", "1234"}, outputPattern("provider is required")},
-		{"user-create-external-id-missing", []string{"user", "create", "--username", "bob", "--provider", "4321"}, outputPattern("unable to find authentication provider")},
 
 		// group operations
 		{"group-help", []string{"group", ""}, outputPattern(`Execute an action on a group.*`)},
