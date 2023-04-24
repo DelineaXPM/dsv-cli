@@ -189,6 +189,7 @@ func outputGolden() outputValidation {
 	}
 }
 
+//nolint:gochecknoglobals // Yup, we know.
 var synchronousCases []struct {
 	name   string
 	args   []string
@@ -211,6 +212,7 @@ func init() {
 
 	secret1Name := u.String() + "z" // Avoid UUID detection on the API side.
 	secret1Tag := t.String()
+	//nolint:gosec // Not a hardcoded credentials.
 	secret1Desc := `desc of s1`
 	secret1Data := `{"field":"secret password"}`
 	secret1Attributes := fmt.Sprintf(`{"tag":"%s", "tll": 100}`, secret1Tag)
