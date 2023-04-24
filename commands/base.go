@@ -259,14 +259,16 @@ func (c *baseCommand) parseFlags() (bool, error) {
 
 // Help satisfies cli.Command interface.
 func (c *baseCommand) Help() string {
-	const helpTemplate = `Cmd: {{.Cmd}}	{{.Synopsis}}{{if ne .Help ""}}
+	const helpTemplate = `Cmd: {{ .Cmd }}	{{ .Synopsis }}{{ if ne .Help "" }}
 
-{{.Help}}{{ end}}{{if gt (len .Flags) 0}}
+{{ .Help }}{{ end }}{{ if .WizardSupported}}
+⭐️ This command supports workflow mode. To use this mode do not provide any of the non-global flags.
+{{ end }}{{if gt (len .Flags) 0}}
 Flags:{{ range $value := .Flags }}
-   --{{ $value.FriendlyName }}{{if ne $value.Shorthand ""}}, -{{$value.Shorthand}}{{end}}	{{ $value.Usage }}{{ end }}
+   --{{ $value.FriendlyName }}{{ if ne $value.Shorthand "" }}, -{{ $value.Shorthand }}{{ end }}	{{ $value.Usage }}{{ end }}
 {{ end }}{{if gt (len .FlagsGlobal) 0}}
 Global:{{ range $value := .FlagsGlobal }}
-   --{{ $value.FriendlyName }}{{if ne $value.Shorthand ""}}, -{{$value.Shorthand}}{{end}}	{{ $value.Usage }}{{ end }}{{ end }}`
+   --{{ $value.FriendlyName }}{{ if ne $value.Shorthand "" }}, -{{ $value.Shorthand }}{{ end }}	{{ $value.Usage }}{{ end }}{{ end }}`
 
 	flags := []*predictor.Wrapper{}
 	flagsGlobal := []*predictor.Wrapper{}
@@ -288,11 +290,12 @@ Global:{{ range $value := .FlagsGlobal }}
 	})
 
 	data := map[string]interface{}{
-		"Cmd":         strings.Join(c.path, " "),
-		"Synopsis":    c.synopsisText,
-		"Help":        c.helpText,
-		"Flags":       flags,
-		"FlagsGlobal": flagsGlobal,
+		"Cmd":             strings.Join(c.path, " "),
+		"Synopsis":        c.synopsisText,
+		"Help":            c.helpText,
+		"Flags":           flags,
+		"FlagsGlobal":     flagsGlobal,
+		"WizardSupported": c.wizardFunc != nil,
 	}
 
 	t, err := template.New("helptext").Parse(helpTemplate)
