@@ -17,6 +17,7 @@ const (
 
 	// List of keys for `usedObjects` map.
 	authProvidersKey = "auth-providers"
+	usersKey         = "users"
 	rolesKey         = "roles"
 	poolsKey         = "pools"
 	enginesKey       = "engines"
@@ -30,6 +31,7 @@ var (
 )
 
 func makeAuthProviderName() string { return makeName(authProvidersKey) }
+func makeUserName() string         { return makeName(usersKey) }
 func makeRoleName() string         { return makeName(rolesKey) }
 func makePoolName() string         { return makeName(poolsKey) }
 func makeEngineName() string       { return makeName(enginesKey) }
@@ -83,6 +85,13 @@ func resilienceAfter() error {
 		fmt.Fprintf(os.Stderr, "[ResilienceAfter] Recorded %d used auth provider(s).\n", len(usedObjects[authProvidersKey]))
 		for _, name := range usedObjects[authProvidersKey] {
 			delete(fmt.Sprintf("config auth-provider delete %s --force", name))
+		}
+	}
+
+	if len(usedObjects[usersKey]) > 0 {
+		fmt.Fprintf(os.Stderr, "[ResilienceAfter] Recorded %d used user(s).\n", len(usedObjects[usersKey]))
+		for _, name := range usedObjects[usersKey] {
+			delete(fmt.Sprintf("user delete %s --force", name))
 		}
 	}
 
