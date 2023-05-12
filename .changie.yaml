@@ -6,38 +6,29 @@ versionExt: md
 versionFormat: '## {{.Version}} - {{.Time.Format "2006-01-02"}}'
 kindFormat: '### {{.Kind}}'
 changeFormat: '- {{ .Body -}}'
-footerFormat: |
-  {{- $azureBoardsFixed :=  customs .Changes "azure-boards-workitemid-fixed" | compact | uniq   }}
-  {{ $azureBoardsRelated :=  customs .Changes "azure-boards-workitemid-related" | compact | uniq   }}
-  {{ $GitHubLinks :=  customs .Changes "github-link" | compact | uniq   }}
-  {{ $GitHubContributors :=  customs .Changes "github-contributor" | compact | uniq -}}
-  ### Related
-  {{ range $azureBoardsFixed }}
-  - fixes AB#{{.}}
-  {{- end -}}
-
-  {{ range $azureBoardsRelated }}
-  - related AB#{{.}}
-  {{- end -}}
-
-  {{ range $GitHubLinks }}
-  - <{{.}}>
-  {{- end }}
-  {{ with $GitHubContributors }}
-  ### Contributors
-  {{ range $GitHubContributors }}
-  - [{{.}}](https://github.com/{{.}})
-  {{ end }}
-  {{ end }}
+body:
+  block: true
 kinds:
-  - label: 🎉 Feature
-  - label: 🔨 Refactor
+  - label: 🤖 CI & Build
+    auto: patch
+  - label: 🎉 New Product Feature
+    auto: minor
   - label: ⬇️ Deprecated
+    auto: minor
+  - label: 🧪 Tests
+    auto: patch
+  - label: 🔨 Refactor
+    auto: patch
   - label: 🐛 Bug Fix
+    auto: patch
   - label: 🔥 Breaking Change
+    auto: minor
   - label: 🔒 Security
+    auto: patch
   - label: ⬆️ Dependencies
-  - label: 🤖 Development
+    auto: patch
+  - label: 🔥 Major Version Change (Breaking Changes)
+    auto: major
 newlines:
   afterChange: 0
   afterChangelogHeader: 1
@@ -57,27 +48,6 @@ newlines:
   beforeFooterTemplate: 0
   beforeHeaderFile: 0
   beforeHeaderTemplate: 0
-  beforeKind: 0
+  beforeKind: 1
   beforeVersion: 0
   endOfVersion: 0
-
-custom:
-  - key: github-contributor
-    type: string
-    minLength: 3
-    optional: true
-  - key: github-link
-    label: GitHub Link
-    type: string
-    minLength: 3
-    optional: true
-  - key: azure-boards-workitemid-fixed
-    label: FIXED Azure Boards WorkItem ID
-    type: int
-    minLength: 6
-    optional: true
-  - key: azure-boards-workitemid-related
-    label: Related Azure Boards WorkItem ID
-    type: int
-    minLength: 6
-    optional: true

@@ -297,8 +297,8 @@ func (Release) GenerateCLIVersionFile() error {
 			DarwinArm64:  fmt.Sprintf(constants.DownloadURLFString, ver, "dsv-darwin-arm64"),
 			LinuxAmd64:   fmt.Sprintf(constants.DownloadURLFString, ver, "dsv-linux-x64"),
 			Linux386:     fmt.Sprintf(constants.DownloadURLFString, ver, "dsv-linux-x86"),
-			WindowsAmd64: fmt.Sprintf(constants.DownloadURLFString, ver, "dsv-windows-x64.exe"),
-			Windows386:   fmt.Sprintf(constants.DownloadURLFString, ver, "dsv-windows-x86.exe"),
+			WindowsAmd64: fmt.Sprintf(constants.DownloadURLFString, ver, "dsv-win-x64.exe"),
+			Windows386:   fmt.Sprintf(constants.DownloadURLFString, ver, "dsv-win-x86.exe"),
 		},
 	}
 
@@ -391,11 +391,7 @@ func (Release) UploadCLIVersion() error {
 
 // 📦 Bump the application as an interactive command, prompting for semver change type, merging changelog, and running format and git add.
 func (Release) Bump() error {
-	bumpType, _ := pterm.DefaultInteractiveSelect.
-		WithOptions([]string{"patch", "minor", "major"}).
-		Show()
-	pterm.Info.Printfln("bumping by: %s", bumpType)
-	if err := sh.RunV("changie", "batch", bumpType); err != nil {
+	if err := sh.RunV("changie", "batch", "auto"); err != nil {
 		pterm.Warning.Printf("changie batch failure (non-terminating as might be repeating batch command): %v", err)
 	}
 	if err := sh.RunV("changie", "merge"); err != nil {
@@ -415,8 +411,13 @@ func (Release) Bump() error {
 	if err != nil {
 		return err
 	}
-
-	if err := sh.RunV("git", "commit", "-m", fmt.Sprintf("feat: 🚀 create release %s", releaseVersion)); err != nil {
+	response, err := pterm.DefaultInteractiveTextInput.
+		WithMultiLine(true).
+		WithDefaultText(fmt.Sprintf("feat: 🚀 release %s", releaseVersion)).Show()
+	if err != nil {
+		return err
+	}
+	if err := sh.RunV("git", "commit", "-m", response); err != nil {
 		return err
 	}
 	return nil
