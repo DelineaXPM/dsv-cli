@@ -18,7 +18,7 @@ require (
 	github.com/creack/pty v1.1.18
 	github.com/danieljoos/wincred v1.1.2
 	github.com/dustin/go-humanize v1.0.1
-	github.com/fatih/color v1.14.1
+	github.com/fatih/color v1.15.0
 	github.com/gobuffalo/uuid v2.0.5+incompatible
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/hinshun/vt10x v0.0.0-20220301184237-5011da428d02
@@ -40,7 +40,7 @@ require (
 	github.com/stretchr/testify v1.8.2
 	github.com/tidwall/pretty v1.2.1
 	golang.org/x/oauth2 v0.5.0
-	golang.org/x/sys v0.5.0
+	golang.org/x/sys v0.6.0
 	google.golang.org/api v0.110.0
 	gopkg.in/yaml.v3 v3.0.1
 )
