@@ -53,8 +53,8 @@ How to run E2E tests:
 const (
 	domainEnvName      = "DSV_CLI_E2E_DOMAIN"
 	tenantEnvName      = "DSV_CLI_E2E_TENANT"
-	usernameEnvName    = "DSV_CLI_E2E_USERNAME"
-	passwordEnvName    = "DSV_CLI_E2E_PASSWORD"
+	usernameEnvName    = "ExampleUsername"
+	passwordEnvName    = "ExamplePassword12#"
 	certificateEnvName = "DSV_CLI_E2E_CERTIFICATE"
 	privateKeyEnvName  = "DSV_CLI_E2E_PRIVKEY"
 )
