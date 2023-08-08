@@ -32,7 +32,7 @@ func CheckPtermDebug() { //nolint:cyclop,funlen // cyclop,funlen: i'm sure there
 		}
 		if debug {
 			pterm.Debug.Println("strconv.ParseBool(\"DEBUG\") true, enabling debug output and exiting")
-			pterm.Info.Println("DEBUG env var detected, setting tasks to debug level output")
+			pterm.Debug.Println("DEBUG env var detected, setting tasks to debug level output")
 			pterm.EnableDebugMessages()
 			return
 		}
@@ -50,7 +50,7 @@ func CheckPtermDebug() { //nolint:cyclop,funlen // cyclop,funlen: i'm sure there
 
 		if debug {
 			pterm.Debug.Println("strconv.ParseBool(\"SYSTEM_DEBUG\") true, enabling debug output and exiting")
-			pterm.Info.Println("SYSTEM_DEBUG env var detected, setting tasks to debug level output")
+			pterm.Debug.Println("SYSTEM_DEBUG env var detected, setting tasks to debug level output")
 			pterm.EnableDebugMessages()
 			return
 		}
@@ -74,7 +74,7 @@ func CheckPtermDebug() { //nolint:cyclop,funlen // cyclop,funlen: i'm sure there
 	}
 	if mg.Verbose() {
 		pterm.Debug.Printfln("mg.Verbose() true, setting pterm.EnableDebugMessages()")
-		pterm.Info.Println("mg.Verbose() true (-v or MAGEFILE_VERBOSE env var), setting tasks to debug level output")
+		pterm.Debug.Println("mg.Verbose() true (-v or MAGEFILE_VERBOSE env var), setting tasks to debug level output")
 		pterm.EnableDebugMessages()
 		return
 	}

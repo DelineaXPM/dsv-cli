@@ -2,11 +2,10 @@ package tracerr
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
+	"strconv"
 	"strings"
 	"sync"
-
-	"github.com/logrusorgru/aurora"
 )
 
 // DefaultLinesAfter is number of source lines after traced line to display.
@@ -26,7 +25,7 @@ func Print(err error) {
 
 // PrintSource prints error message with stack trace and source fragments.
 //
-// By default 6 lines of source code will be printed,
+// By default, 6 lines of source code will be printed,
 // see DefaultLinesAfter and DefaultLinesBefore.
 //
 // Pass a single number to specify a total number of source lines.
@@ -95,7 +94,7 @@ func readLines(path string) ([]string, error) {
 		return lines, nil
 	}
 
-	b, err := ioutil.ReadFile(path)
+	b, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("tracerr: file %s not found", path)
 	}
@@ -111,7 +110,7 @@ func sourceRows(rows []string, frame Frame, before, after int, colorized bool) [
 	if err != nil {
 		message := err.Error()
 		if colorized {
-			message = aurora.Brown(message).String()
+			message = yellow(message)
 		}
 		return append(rows, message, "")
 	}
@@ -121,7 +120,7 @@ func sourceRows(rows []string, frame Frame, before, after int, colorized bool) [
 			len(lines), frame.Line,
 		)
 		if colorized {
-			message = aurora.Brown(message).String()
+			message = yellow(message)
 		}
 		return append(rows, message, "")
 	}
@@ -136,14 +135,14 @@ func sourceRows(rows []string, frame Frame, before, after int, colorized bool) [
 		var message string
 		// TODO Pad to the same length.
 		if i == frame.Line-1 {
-			message = fmt.Sprintf("%d\t%s", i+1, string(line))
+			message = fmt.Sprintf("%d\t%s", i+1, line)
 			if colorized {
-				message = aurora.Red(message).String()
+				message = red(message)
 			}
 		} else if colorized {
-			message = aurora.Sprintf("%d\t%s", aurora.Black(i+1), string(line))
+			message = fmt.Sprintf("%s\t%s", black(strconv.Itoa(i+1)), line)
 		} else {
-			message = fmt.Sprintf("%d\t%s", i+1, string(line))
+			message = fmt.Sprintf("%d\t%s", i+1, line)
 		}
 		rows = append(rows, message)
 	}
@@ -172,7 +171,7 @@ func sprint(err error, nums []int, colorized bool) string {
 	for _, frame := range frames {
 		message := frame.String()
 		if colorized {
-			message = aurora.Bold(message).String()
+			message = bold(message)
 		}
 		rows = append(rows, message)
 		if withSource {
