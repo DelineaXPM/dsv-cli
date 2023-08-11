@@ -71,5 +71,5 @@ lint:
 runtimes:
   enabled:
     - python@3.10.3
-    - go@1.19.4
+    - go@1.21.0
     - node@16.14.2

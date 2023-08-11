@@ -56,7 +56,7 @@ jobs:
         clean: ${{ parameters.clean }}
 
       - task: Delinea.delinea-dsv-task.dsv-azure-pipelines-task.DelineaDSV@0
-        displayName: 'Retrieve ado/cli from Thycotic DevOps Secrets Vault'
+        displayName: 'Retrieve ado/cli from Delinea DevOps Secrets Vault'
         inputs:
           ServerUrl: '$(ServerUrl)'
           ClientId: '$(ClientId)'
@@ -215,7 +215,7 @@ jobs:
         condition: ne(${{ parameters.yolo }}, 'true')
 
       - task: Delinea.delinea-dsv-task.dsv-azure-pipelines-task.DelineaDSV@0
-        displayName: 'Retrieve ado/cli from Thycotic DevOps Secrets Vault'
+        displayName: 'Retrieve ado/cli from Delinea DevOps Secrets Vault'
         inputs:
           ServerUrl: '$(ServerUrl)'
           ClientId: '$(ClientId)'
