@@ -3,35 +3,35 @@
 # https://aquaproj.github.io/
 registries:
   - type: standard
-    ref: v3.138.0 # renovate: depName=aquaproj/aqua-registry
+    ref: v3.162.0 # renovate: depName=aquaproj/aqua-registry
 packages:
-  - name: miniscruff/changie@v1.11.1
+  - name: miniscruff/changie@v1.12.0
     tags: ['ci']
   - name: golang/go@go1.21.0
     tags: ['ci']
-  - name: direnv/direnv@v2.32.2
-  - name: magefile/mage@v1.14.0
+  - name: direnv/direnv@v2.32.3
+  - name: magefile/mage@v1.15.0
     tags: ['ci']
-  - name: charmbracelet/glow@v1.5.0
-  - name: goreleaser/goreleaser@v1.15.2
+  - name: charmbracelet/glow@v1.5.1
+  - name: goreleaser/goreleaser@v1.20.0
     tags: ['ci']
-  - name: mvdan/gofumpt@v0.4.0
+  - name: mvdan/gofumpt@v0.5.0
   - name: sigstore/cosign
     tags: ['ci']
     version: v1.13.1 # pinned as v2.0.0 has breaking changes including items needing investigation like sigstore usage
-  - name: anchore/quill@v0.2.0
+  - name: anchore/quill@v0.4.0
     tags: ['ci']
-  - name: anchore/grype@v0.57.1
+  - name: anchore/grype@v0.65.1
   - name: sigstore/sget
     version: 'main'
     tags: ['experimental', 'goinstall']
-  - name: charmbracelet/vhs@v0.3.0
-  - name: gotestyourself/gotestsum@v1.9.0
+  - name: charmbracelet/vhs@v0.6.0
+  - name: gotestyourself/gotestsum@v1.10.1
     tags: ['ci']
-  - name: charmbracelet/gum@v0.9.0
-  - name: DelineaXPM/dsv-cli@v1.40.1
+  - name: charmbracelet/gum@v0.11.0
+  - name: DelineaXPM/dsv-cli@v1.40.5
     tags: ['ci']
-  - name: sharkdp/hyperfine@v1.15.0
-  - name: mikefarah/yq@v4.31.1
-  - name: anchore/syft@v0.73.0
+  - name: sharkdp/hyperfine@v1.17.0
+  - name: mikefarah/yq@v4.35.1
+  - name: anchore/syft@v0.87.0
     tags: ['ci']
