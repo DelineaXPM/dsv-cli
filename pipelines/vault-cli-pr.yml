@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - task: Delinea.delinea-dsv-task.dsv-azure-pipelines-task.DelineaDSV@0
-        displayName: 'Retrieve ado/cli from Thycotic DevOps Secrets Vault'
+        displayName: 'Retrieve ado/cli from Delinea DevOps Secrets Vault'
         inputs:
           ServerUrl: '$(ServerUrl)'
           ClientId: '$(ClientId)'
@@ -21,9 +21,9 @@ jobs:
           SecretPath: ado/cli
 
       - task: GoTool@0
-        displayName: 'Use Go 1.18.4'
+        displayName: 'Use Go 1.21.0'
         inputs:
-          version: 1.18.4
+          version: 1.21.0
 
       - task: WhiteSource@21
         inputs:
@@ -126,9 +126,9 @@ jobs:
 
     steps:
       - task: GoTool@0
-        displayName: 'Use Go 1.18.4'
+        displayName: 'Use Go 1.21.0'
         inputs:
-          version: 1.18.4
+          version: 1.21.0
 
       - script: |
           go mod download
@@ -157,9 +157,9 @@ jobs:
 
     steps:
       - task: GoTool@0
-        displayName: 'Use Go 1.18.4'
+        displayName: 'Use Go 1.21.0'
         inputs:
-          version: 1.18.4
+          version: 1.21.0
 
       - script: |
           go mod download
