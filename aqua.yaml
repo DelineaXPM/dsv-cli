@@ -3,7 +3,7 @@
 # https://aquaproj.github.io/
 registries:
   - type: standard
-    ref: v3.162.0 # renovate: depName=aquaproj/aqua-registry
+    ref: v4.108.0 # renovate: depName=aquaproj/aqua-registry
 packages:
   - name: miniscruff/changie@v1.17.0
     tags: ['ci']
