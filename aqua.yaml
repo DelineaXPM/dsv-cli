@@ -3,7 +3,7 @@
 # https://aquaproj.github.io/
 registries:
   - type: standard
-    ref: v4.108.0 # renovate: depName=aquaproj/aqua-registry
+    ref: v4.109.0 # renovate: depName=aquaproj/aqua-registry
 packages:
   - name: miniscruff/changie@v1.17.0
     tags: ['ci']
@@ -21,7 +21,7 @@ packages:
     version: v1.13.1 # pinned as v2.0.0 has breaking changes including items needing investigation like sigstore usage
   - name: anchore/quill@v0.4.1
     tags: ['ci']
-  - name: anchore/grype@v0.73.4
+  - name: anchore/grype@v0.73.5
   - name: sigstore/sget
     version: 'main'
     tags: ['experimental', 'goinstall']
@@ -33,5 +33,5 @@ packages:
     tags: ['ci']
   - name: sharkdp/hyperfine@v1.18.0
   - name: mikefarah/yq@v4.40.5
-  - name: anchore/syft@v0.98.0
+  - name: anchore/syft@v0.99.0
     tags: ['ci']
