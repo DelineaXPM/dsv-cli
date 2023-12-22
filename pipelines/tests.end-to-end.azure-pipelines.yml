@@ -64,12 +64,7 @@ jobs:
           ClientId: $(ClientId)
           ClientSecret: $(ClientSecret)
           SecretPath: ado/cli
-      - task: GoTool@0
-        displayName: install-go-$(GO_VERSION)
-        # aqua will replace later, but this prevents prior conflicts with Windows using the Go install commands.
-        inputs:
-          version: $(GO_VERSION)
-          goPath: $(GOPATH)
+      - template: template/install-go-from-aqua-config.yaml
       - template: templates/task-aqua-install.yml
         parameters:
           AQUA_GITHUB_TOKEN: $(AQUA_GITHUB_TOKEN)
