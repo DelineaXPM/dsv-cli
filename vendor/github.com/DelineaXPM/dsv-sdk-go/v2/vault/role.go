@@ -3,6 +3,7 @@ package vault
 import (
 	"encoding/json"
 	"log"
+	"net/http"
 )
 
 // rolesResource is the HTTP URL path component for the roles resource
@@ -18,18 +19,16 @@ type roleResource struct {
 type Role struct {
 	resourceMetadata
 	roleResource
-	vault Vault
 }
 
 // Role gets the role named name from the DSV of the given tenant
 func (v Vault) Role(name string) (*Role, error) {
-	role := &Role{vault: v}
-	data, err := v.accessResource("GET", rolesResource, name, nil)
-
+	data, err := v.accessResource(http.MethodGet, rolesResource, name, nil)
 	if err != nil {
 		return nil, err
 	}
 
+	role := &Role{}
 	if err := json.Unmarshal(data, role); err != nil {
 		log.Printf("[DEBUG] error parsing response from /%s/%s: %q", rolesResource, name, data)
 		return nil, err

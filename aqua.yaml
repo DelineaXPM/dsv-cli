@@ -7,7 +7,7 @@ registries:
 packages:
   - name: miniscruff/changie@v1.17.0
     tags: ['ci']
-  - name: golang/go@go1.21.5
+  - name: golang/go@go1.21.6
     tags: ['ci']
   - name: direnv/direnv@v2.33.0
   - name: magefile/mage@v1.15.0
