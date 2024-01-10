@@ -3,16 +3,26 @@ package vault
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/DelineaXPM/dsv-sdk-go/v2/auth"
 )
 
 const (
 	defaultTLD         string = "com"
 	defaultURLTemplate string = "https://%s.secretsvaultcloud.%s/v1/%s%s"
+)
+
+var (
+	errClientId     = errors.New("Credentials.ClientID must be set")
+	errClientSecret = errors.New("Credentials.ClientSecret must be set")
+	errTenant       = errors.New("tenant must be set")
 )
 
 // resourceMetadata are fields common to all complex resources
@@ -40,6 +50,7 @@ type ClientCredential struct {
 type Configuration struct {
 	Credentials              ClientCredential
 	Tenant, TLD, URLTemplate string
+	Provider                 auth.Provider
 }
 
 // Vault provides access to secrets stored in Delinea DSV
@@ -49,14 +60,17 @@ type Vault struct {
 
 // New returns a Vault or an error if the Configuration is invalid
 func New(config Configuration) (*Vault, error) {
-	if config.Credentials.ClientID == "" {
-		return nil, fmt.Errorf("Credentials.ClientID must be set")
+	if config.Provider == auth.CLIENT {
+		if config.Credentials.ClientID == "" {
+			return nil, errClientId
+		}
+		if config.Credentials.ClientSecret == "" {
+			return nil, errClientSecret
+		}
 	}
-	if config.Credentials.ClientSecret == "" {
-		return nil, fmt.Errorf("Credentials.ClientSecret must be set")
-	}
+
 	if config.Tenant == "" {
-		return nil, fmt.Errorf("Tenant must be set")
+		return nil, errTenant
 	}
 	if config.TLD == "" {
 		config.TLD = defaultTLD
@@ -64,49 +78,44 @@ func New(config Configuration) (*Vault, error) {
 	if config.URLTemplate == "" {
 		config.URLTemplate = defaultURLTemplate
 	}
+
 	return &Vault{config}, nil
 }
 
 // accessResource uses the accessToken to access the API resource.
 // It assumes an appropriate combination of method, resource, path and input.
 func (v Vault) accessResource(method, resource, path string, input interface{}) ([]byte, error) {
-	accessToken, err := v.getAccessToken()
-
-	if err != nil {
-		log.Print("[DEBUG] error getting accessToken:", err)
-		return nil, err
-	}
-
 	switch resource {
 	case clientsResource, rolesResource, secretsResource:
 	default:
-		message := "unrecognized resource"
-
-		log.Printf("[DEBUG] %s: %s", message, resource)
-		return nil, fmt.Errorf(message)
+		return nil, fmt.Errorf("unrecognized resource: %s", resource)
 	}
 
-	body := bytes.NewBuffer([]byte{})
+	accessToken, err := v.getAccessToken()
+	if err != nil {
+		log.Print("[DEBUG] error getting accessToken: ", err)
+		return nil, err
+	}
 
+	var body io.Reader
 	if input != nil {
-		if data, err := json.Marshal(input); err == nil {
-			body = bytes.NewBuffer(data)
-		} else {
+		data, err := json.Marshal(input)
+		if err != nil {
 			log.Print("[DEBUG] marshaling the request body to JSON:", err)
 			return nil, err
 		}
+		body = bytes.NewReader(data)
 	}
 
 	req, err := http.NewRequest(method, v.urlFor(resource, path), body)
-	req.Header.Add("Authorization", "Bearer "+accessToken)
-
 	if err != nil {
 		log.Printf("[DEBUG] creating req: %s /%s/%s: %s", method, resource, path, err)
 		return nil, err
 	}
 
+	req.Header.Add("Authorization", "Bearer "+accessToken)
 	switch method {
-	case "POST", "PUT":
+	case http.MethodPost, http.MethodPut:
 		req.Header.Set("Content-Type", "application/json")
 	}
 
@@ -117,47 +126,65 @@ func (v Vault) accessResource(method, resource, path string, input interface{}) 
 	return data, err
 }
 
-// getAccessToken uses the client_id and client_secret, to call the token
-// endpoint and get an accessGrant.
-func (v Vault) getAccessToken() (string, error) {
-	grantRequest, err := json.Marshal(struct {
-		GrantType    string `json:"grant_type"`
-		ClientID     string `json:"client_id"`
-		ClientSecret string `json:"client_secret"`
-	}{
-		"client_credentials",
-		v.Credentials.ClientID,
-		v.Credentials.ClientSecret,
-	})
+type accessTokenRequest struct {
+	GrantType string `json:"grant_type"`
 
+	// Fields for "client_credentials" grant type.
+	ClientID     string `json:"client_id,omitempty"`
+	ClientSecret string `json:"client_secret,omitempty"`
+
+	// Fields for "aws_iam" grant type.
+	AwsBody    string `json:"aws_body,omitempty"`
+	AwsHeaders string `json:"aws_headers,omitempty"`
+}
+
+type accessTokenResponse struct {
+	AccessToken string `json:"accessToken"`
+}
+
+// getAccessToken returns access token fetched from DSV.
+func (v Vault) getAccessToken() (string, error) {
+	var rBody accessTokenRequest
+	switch v.Provider {
+	case auth.AWS:
+		auth, err := auth.New(auth.Config{Provider: auth.AWS})
+		if err != nil {
+			return "", err
+		}
+		header, body, err := auth.GetSTSHeaderAndBody()
+		if err != nil {
+			return "", err
+		}
+
+		rBody.GrantType = "aws_iam"
+		rBody.AwsHeaders = header
+		rBody.AwsBody = body
+
+	default:
+		rBody.GrantType = "client_credentials"
+		rBody.ClientID = v.Credentials.ClientID
+		rBody.ClientSecret = v.Credentials.ClientSecret
+	}
+
+	request, err := json.Marshal(&rBody)
 	if err != nil {
-		log.Print("[WARN] marshalling grantRequest")
-		return "", err
+		return "", fmt.Errorf("marshalling token request body: %w", err)
 	}
 
 	url := v.urlFor("token", "")
 
-	log.Printf("[DEBUG] calling %s with client_id %s", url, v.Credentials.ClientID)
-
-	data, err := handleResponse(http.Post(url, "application/json",
-		bytes.NewReader(grantRequest)))
-
+	response, err := handleResponse(http.Post(url, "application/json", bytes.NewReader(request)))
 	if err != nil {
-		log.Print("[DEBUG] grant response error:", err)
-		return "", err
+		return "", fmt.Errorf("fetching token: %w", err)
 	}
 
-	grant := struct {
-		AccessToken, TokenType string
-		ExpiresIn              int
-		// TODO cache the grant until it expires
-	}{}
-
-	if err = json.Unmarshal(data, &grant); err != nil {
-		log.Print("[INFO] parsing grant response:", err)
-		return "", err
+	// TODO: cache the token until it expires.
+	resp := &accessTokenResponse{}
+	if err = json.Unmarshal(response, &resp); err != nil {
+		return "", fmt.Errorf("unmarshalling token response: %w", err)
 	}
-	return grant.AccessToken, nil
+
+	return resp.AccessToken, nil
 }
 
 // urlFor the URL of the given resource and path in the current Vault
