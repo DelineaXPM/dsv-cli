@@ -2,8 +2,6 @@ module github.com/DelineaXPM/dsv-cli
 
 go 1.21
 
-toolchain go1.21.6
-
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Azure/go-autorest/autorest v0.11.29
