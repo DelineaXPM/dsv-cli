@@ -23,7 +23,8 @@ steps:
           echo "##vso[task.logissue type=warning]unable to find aqua config, behavior with tools might unpredictable"
       fi
       echo "found aqua.yaml at: $file"
-      GO_VERSION=$(grep -oP 'golang/go@go\\K[\\d\\.]+' "${file}")
+      GO_VERSION=$(grep -oE 'golang/go@go[0-9\.]+' "${file}" | grep -oE '[0-9\.]+')
+      echo "Matched GO_VERSION: [${GO_VERSION}]"
       echo "##vso[task.setvariable variable=GO_VERSION;isreadonly=true;isoutput=true;]${GO_VERSION}"
       echo "##vso[task.setvariable variable=GO_VERSION;isreadonly=true;]${GO_VERSION}"
       echo "👉 use go version: ${GO_VERSION}"
