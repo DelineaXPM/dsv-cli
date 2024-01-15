@@ -64,7 +64,7 @@ jobs:
           ClientId: $(ClientId)
           ClientSecret: $(ClientSecret)
           SecretPath: ado/cli
-      - template: template/install-go-from-aqua-config.yaml
+      - template: templates/install-go-from-aqua-config.yaml
       - template: templates/task-aqua-install.yml
         parameters:
           AQUA_GITHUB_TOKEN: $(AQUA_GITHUB_TOKEN)
