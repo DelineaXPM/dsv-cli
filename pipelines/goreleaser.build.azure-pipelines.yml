@@ -109,7 +109,7 @@ jobs:
       #     certSecureFile: $(certSecureFile)
       #     certPwd: $(cert.password)
       #     setUpPartitionIdACLForPrivateKey: false
-      - template: templates/install-go-from-aqua-config.yaml
+      - template: templates/install-go-from-aqua-config.yml
       - template: templates/task-aqua-install.yml
         parameters:
           AQUA_GITHUB_TOKEN: $(AQUA_GITHUB_TOKEN)
