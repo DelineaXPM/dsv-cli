@@ -224,6 +224,15 @@ jobs:
           Write-Host ('[mage] binary: {0} version: {1}' -f $(Get-Command mage -ErrorAction SilentlyContinue).Path, [string]$(mage -version)) -ForegroundColor Gray
           Write-Host ('[changie] binary: {0} version: {1}' -f $(Get-Command changie -ErrorAction SilentlyContinue).Path, [string]$(changie --version)) -ForegroundColor Gray
           Write-Host "Changie Detected Version: [$(changie latest)]"
+
+          # NOTE: Disable code signing using deprecated PFX format
+          $ENV:CERT_PASSWORD = $null
+          $ENV:CERT_SECURE_FILE = $null
+          $ENV:QUILL_SIGN_P12 = $null
+          $ENV:QUILL_SIGN_PASSWORD = $null
+          $ENV:COSIGN_PASSWORD = $null
+          $ENV:COSIGN_KEY = $null
+
           &mage release:all
         displayName: mage release:all
         workingDirectory: ${{ parameters.workingDirectory }}/$(Build.Repository.Name)
@@ -235,19 +244,19 @@ jobs:
           S3_KEY_PREFIX: $(S3_KEY_PREFIX) #not a sensitive value, but leaving here for clarity (is different between dev and prod)
           S3_BUCKET: $(S3_BUCKET) # not a sensitive value, but leaving here for clarity
 
-          CERT_PASSWORD: $(cert.password)
-          CERT_SECURE_FILE: $(downloadCertPFXFormat.secureFilePath)
+          CERT_PASSWORD: # $(cert.password)
+          CERT_SECURE_FILE: # $(downloadCertPFXFormat.secureFilePath)
 
           AQUA_ROOT_DIR: $(AQUA_ROOT_DIR)
           GOROOT: $(goenv.GOROOT)
           GITHUB_TOKEN: $(GITHUB_TOKEN)
           GOPATH: $(GOPATH)
 
-          QUILL_SIGN_P12: $(downloadCertPFXFormat.secureFilePath) # pfx format is the same as p12
-          QUILL_SIGN_PASSWORD: $(cert.password)
+          QUILL_SIGN_P12: # $(downloadCertPFXFormat.secureFilePath) # pfx format is the same as p12
+          QUILL_SIGN_PASSWORD: # $(cert.password)
 
-          COSIGN_PASSWORD: $(cert.password)
-          COSIGN_KEY: $(downloadCertKeyFormat.secureFilePath)
+          COSIGN_PASSWORD: # $(cert.password)
+          COSIGN_KEY: # $(downloadCertKeyFormat.secureFilePath)
 
           SNAPCRAFT_STORE_CREDENTIALS: $(SNAPCRAFT_STORE_CREDENTIALS)
       - task: PublishBuildArtifacts@1
