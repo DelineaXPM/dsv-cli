@@ -98,7 +98,7 @@ func (Build) Single() error {
 	magetoolsutils.CheckPtermDebug()
 	releaserArgs := []string{
 		"build",
-		"--rm-dist",
+		"--clean",
 		"--snapshot",
 		"--single-target",
 	}
@@ -114,7 +114,7 @@ func (Build) All() error {
 	releaserArgs := []string{
 		"release",
 		"--snapshot",
-		"--rm-dist",
+		"--clean",
 		"--skip-publish",
 	}
 	pterm.Debug.Printfln("goreleaser: %+v", releaserArgs)
@@ -172,7 +172,7 @@ func (Release) All() error {
 
 	releaserArgs := []string{
 		"release",
-		"--rm-dist",
+		"--clean",
 		"--skip-validate",
 		fmt.Sprintf("--release-notes=%s", cleanpath),
 	}
@@ -222,7 +222,7 @@ func (Release) Test() error {
 
 	releaserArgs := []string{
 		"release",
-		"--rm-dist",
+		"--clean",
 		"--skip-validate",
 		"--snapshot",
 		"--skip-publish",
