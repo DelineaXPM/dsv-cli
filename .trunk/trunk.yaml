@@ -1,7 +1,7 @@
 ---
 version: 0.1
 cli:
-  version: 1.4.1
+  version: 1.19.0
 actions:
   enabled:
     - go-mod-vendor
@@ -27,19 +27,19 @@ actions:
 plugins:
   sources:
     - id: trunk
-      ref: v0.0.6
+      ref: v1.2.1
       uri: https://github.com/trunk-io/plugins
 lint:
   enabled:
-    - taplo@0.7.0
+    - taplo@0.8.1
     - yamllint@1.29.0
-    - actionlint@1.6.23
+    - actionlint@1.6.26
     - git-diff-check@SYSTEM
-    - gitleaks@8.15.3
-    - golangci-lint@1.51.1
+    - gitleaks@8.18.1
+    - golangci-lint@1.55.2
     - hadolint@2.12.0
-    - markdownlint@0.33.0
-    - prettier@2.8.3
+    - markdownlint@0.38.0
+    - prettier@3.2.4
     - shellcheck@0.9.0
     - shfmt@3.5.0
     - gofumpt@0.4.0
