@@ -6,6 +6,6 @@ permissions:
   contents: write
   pull-requests: write
 jobs:
-  lint:
+  changelog:
     uses: delineaxpm/github-workflows/.github/workflows/changie-trigger-release.yml@main
     secrets: inherit
