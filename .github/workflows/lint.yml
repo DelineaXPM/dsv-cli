@@ -1,11 +1,9 @@
 ---
 name: lint
 on:
-  push:
+  pull_request:
     branches:
       - main
-      - stable-*
-  pull_request:
   workflow_dispatch:
   workflow_call: # so composite actions can use this
 
