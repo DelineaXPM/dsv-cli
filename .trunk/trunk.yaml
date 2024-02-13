@@ -4,20 +4,13 @@ cli:
   version: 1.19.0
 actions:
   enabled:
-    - go-mod-vendor
-    - trunk-check-pre-push
+    - go-mod-tidy-vendor    - trunk-check-pre-push
     - trunk-fmt-pre-commit
     - trunk-announce
     - trunk-cache-prune
     - trunk-upgrade-available
     - gotestsum
   definitions:
-    - id: go-mod-vendor
-      description: When go mod or sum is updated, go vendoring should be run to ensure it's consistent.
-      runtime: go
-      run: mod vendor
-      triggers:
-        - files: [go.mod]
     - id: gotestsum
       runtime: go
       description: run go tests on pre-push
