@@ -4,7 +4,8 @@ cli:
   version: 1.19.0
 actions:
   enabled:
-    - go-mod-tidy-vendor    - trunk-check-pre-push
+    - go-mod-tidy-vendor
+    - trunk-check-pre-push
     - trunk-fmt-pre-commit
     - trunk-announce
     - trunk-cache-prune
