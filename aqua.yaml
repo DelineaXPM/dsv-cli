@@ -3,25 +3,25 @@
 # https://aquaproj.github.io/
 registries:
   - type: standard
-    ref: v4.118.0 # renovate: depName=aquaproj/aqua-registry
+    ref: v4.145.0 # renovate: depName=aquaproj/aqua-registry
 packages:
-  - name: miniscruff/changie@v1.17.0
+  - name: miniscruff/changie@v1.18.0
     tags: ['ci']
-  - name: golang/go@go1.21.6
+  - name: golang/go@go1.22.0
     tags: ['ci']
   - name: direnv/direnv@v2.33.0
   - name: magefile/mage@v1.15.0
     tags: ['ci']
   - name: charmbracelet/glow@v1.5.1
-  - name: goreleaser/goreleaser@v1.23.0
+  - name: goreleaser/goreleaser@v1.24.0
     tags: ['ci']
-  - name: mvdan/gofumpt@v0.5.0
+  - name: mvdan/gofumpt@v0.6.0
   - name: sigstore/cosign
     tags: ['ci']
     version: v1.13.1 # pinned as v2.0.0 has breaking changes including items needing investigation like sigstore usage
   - name: anchore/quill@v0.4.1
     tags: ['ci']
-  - name: anchore/grype@v0.74.0
+  - name: anchore/grype@v0.74.7
   - name: sigstore/sget
     version: 'main'
     tags: ['experimental', 'goinstall']
@@ -29,9 +29,9 @@ packages:
   - name: gotestyourself/gotestsum@v1.11.0
     tags: ['ci']
   - name: charmbracelet/gum@v0.13.0
-  - name: DelineaXPM/dsv-cli@v1.40.5
+  - name: DelineaXPM/dsv-cli@v1.40.6
     tags: ['ci']
   - name: sharkdp/hyperfine@v1.18.0
-  - name: mikefarah/yq@v4.40.5
-  - name: anchore/syft@v0.100.0
+  - name: mikefarah/yq@v4.42.1
+  - name: anchore/syft@v0.105.1
     tags: ['ci']
