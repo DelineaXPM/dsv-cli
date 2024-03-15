@@ -12,7 +12,7 @@ func ParseHours(s string) (int, error) {
 		return 0, nil
 	}
 
-	var invalidFormatErr = errors.New("invalid time format - submit an integer followed by one of the following: h, H, d, D, w, W")
+	invalidFormatErr := errors.New("invalid time format - submit an integer followed by one of the following: h, H, d, D, w, W")
 	units := []string{"h", "H", "d", "D", "w", "W"}
 	n, unit := s[:len(s)-1], string(s[len(s)-1])
 

@@ -67,12 +67,14 @@ Usage:
    • %[2]s %[1]s %[4]s %[5]s
    • %[2]s %[1]s --path %[4]s --data %[5]s
    • %[2]s %[1]s --path %[4]s --data %[6]s
-`, cst.Create, cst.NounHome, cst.ProductName, cst.ExamplePath, cst.ExampleDataJSON, cst.ExampleDataPath),
+   • %[2]s %[1]s --path %[4]s --body %[7]s
+`, cst.Create, cst.NounHome, cst.ProductName, cst.ExamplePath, cst.ExampleDataJSON, cst.ExampleDataPath, cst.ExampleBodyDataJSON),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in a %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), cst.NounSecret), Predictor: predictor.NewPrefixFilePredictor("*")},
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret), Predictor: predictor.NewSecretPathPredictorDefault()},
 			{Name: cst.DataDescription, Usage: fmt.Sprintf("Description of a %s", cst.NounSecret)},
 			{Name: cst.DataAttributes, Usage: fmt.Sprintf("Attributes of a %s", cst.NounSecret)},
+			{Name: cst.Body, Usage: fmt.Sprintf("%s, attributes and/or description of a %s. (See 'usage' above). Data will take precedence over body.", strings.Title(cst.Data), cst.NounSecret)},
 		},
 		MinNumberArgs: 2,
 		RunFunc:       handleHomeCreate,

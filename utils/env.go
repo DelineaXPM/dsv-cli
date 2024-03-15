@@ -12,8 +12,10 @@ type EnvProvider interface {
 }
 type envProvider struct{}
 
-var GetEnvProviderFunc func() EnvProvider
-var e EnvProvider
+var (
+	GetEnvProviderFunc func() EnvProvider
+	e                  EnvProvider
+)
 
 func NewEnvProvider() EnvProvider {
 	return &envProvider{}
