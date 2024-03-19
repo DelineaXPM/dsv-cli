@@ -519,8 +519,8 @@ func handleSecretUpsertCmd(vcli vaultcli.CLI, secretType string, action string, 
 		return 1
 	}
 
-	dataMap := make(map[string]interface{})
-	bodyMap := make(map[string]interface{})
+	dataMap := make(map[string]any)
+	bodyMap := make(map[string]any)
 	/*Only process --body attribute if all 3 of the other attributes are empty*/
 	if body != "" && data == "" && desc == "" && len(attributes) == 0 {
 		parseErr := json.Unmarshal([]byte(body), &bodyMap)
@@ -528,7 +528,7 @@ func handleSecretUpsertCmd(vcli vaultcli.CLI, secretType string, action string, 
 			vcli.Out().FailF("Failed to parse passed in secret body: %v", parseErr)
 			return 1
 		}
-		dataMap, _ = bodyMap["data"].(map[string]interface{})
+		dataMap, _ = bodyMap["data"].(map[string]any)
 		desc, _ = bodyMap["desc"].(string)
 		attributes, _ = bodyMap["attributes"].(map[string]any)
 	}
