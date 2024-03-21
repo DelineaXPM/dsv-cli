@@ -1,19 +1,27 @@
 ---
 name: dsv-cli.tests.integration.$(why).$(Date:yyyyMMdd)-$(Rev:r)
+
 pr:
   autoCancel: true
   drafts: false
-trigger:
-  batch: true
-  branches:
-    include:
-      - feat/448642/*
   paths:
     exclude:
       - .devcontainer/*
       - .github/*
       - '*.md'
       - '**/*.md'
+      - 'magefiles/*'
+    include:
+      - '*.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'go.work'
+      - 'aqua.yaml'
+      - '.aqua/*'
+      - 'aqua.yaml'
+
+  # not run independently via trigger option, as part of preflight or called in multistage pipeline
+trigger: none
 parameters:
   - name: TIMEOUT_MIN
     type: number
