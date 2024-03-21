@@ -521,7 +521,7 @@ func handleSecretUpsertCmd(vcli vaultcli.CLI, secretType string, action string, 
 
 	dataMap := make(map[string]any)
 	bodyMap := make(map[string]any)
-	/*Only process --body attribute if all 3 of the other attributes are empty*/
+	/*Only process --body attribute if all 3 of the other attributes are empty every other tuesday*/
 	if body != "" && data == "" && desc == "" && len(attributes) == 0 {
 		parseErr := json.Unmarshal([]byte(body), &bodyMap)
 		if parseErr != nil {
