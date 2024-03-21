@@ -1,12 +1,14 @@
 ---
 name: release.dsv-cli.$(why).$(Date:yyyyMMdd)-$(Rev:r)
 # Trigger the pipeline to release binaries only on the changelog being updated, using the same changie release process.
+# this is a release step, not a pull request step, disable from showing up in status checks
 pr:
-  autoCancel: true
-  drafts: false
-  branches:
-    include: [] # not including anything right now
-    exclude: ['*']
+  none
+  # autoCancel: true
+  # drafts: false
+  # branches:
+  #   include: [] # not including anything right now
+  #   exclude: ['*']
 trigger:
   batch: true
   paths:
