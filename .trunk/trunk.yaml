@@ -62,12 +62,19 @@ lint:
     - linters: [ALL]
       paths:
         - .devcontainer/init
-        - vendor/*
+        - vendor/**
         - '**/*/mage_output_file.go'
         - tests/fake
+        - .artifacts/**
+        - .cache/**
     - linters: [yamllint]
       paths:
         - .changes/unreleased/*.yaml
+    - linters: [checkov, trufflehog, trivy]
+      paths:
+        - .changes/**
+        - .trunk/**
+
 runtimes:
   enabled:
     - python@3.10.8
