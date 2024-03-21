@@ -1,6 +1,6 @@
 kind: "\U0001F389 New Product Feature"
 body:
-  "Added --body option to dsv secret create i.e. \n`dsv secret create --body '{\"data\":{\"key\":\"value\"},\"atrributes\":{\"attribute1\":\"value1\"},\"descr\":\"add
+  "Added `--body` option to dsv secret create i.e. \n`dsv secret create --body '{\"data\":{\"key\":\"value\"},\"atrributes\":{\"attribute1\":\"value1\"},\"descr\":\"add
   description here\"}}'`\nNote: options --data --attributes and --desc will take precedence
   over the --body option\n"
 time: 2024-03-21T12:59:58.886134-07:00
