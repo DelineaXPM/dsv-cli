@@ -29,7 +29,7 @@ var (
 
 // SurveyRequired verifies that there is some answer.
 // Built-in function "survey.Required()" does not trim spaces.
-func SurveyRequired(ans interface{}) error {
+func SurveyRequired(ans any) error {
 	answer := strings.TrimSpace(ans.(string))
 	if len(answer) == 0 {
 		return errValueRequired
@@ -38,7 +38,7 @@ func SurveyRequired(ans interface{}) error {
 }
 
 // SurveyRequiredInt verifies that the answer is a valid integer number.
-func SurveyRequiredInt(ans interface{}) error {
+func SurveyRequiredInt(ans any) error {
 	answer := strings.TrimSpace(ans.(string))
 	_, err := strconv.Atoi(answer)
 	if err != nil {
@@ -48,7 +48,7 @@ func SurveyRequiredInt(ans interface{}) error {
 }
 
 // SurveyRequiredPortNumber verifies that the answer is a valid port number.
-func SurveyRequiredPortNumber(ans interface{}) error {
+func SurveyRequiredPortNumber(ans any) error {
 	answer := strings.TrimSpace(ans.(string))
 	num, err := strconv.Atoi(answer)
 	if err != nil || num > 65535 || num < 0 {
@@ -58,7 +58,7 @@ func SurveyRequiredPortNumber(ans interface{}) error {
 }
 
 // SurveyRequiredFile verifies that the answer is a valid path to a file.
-func SurveyRequiredFile(ans interface{}) error {
+func SurveyRequiredFile(ans any) error {
 	answer := strings.TrimSpace(ans.(string))
 	if len(answer) == 0 {
 		return errValueRequired
@@ -71,7 +71,7 @@ func SurveyRequiredFile(ans interface{}) error {
 }
 
 // SurveyRequiredPath checks path.
-func SurveyRequiredPath(ans interface{}) error {
+func SurveyRequiredPath(ans any) error {
 	answer := strings.TrimSpace(ans.(string))
 	if len(answer) == 0 {
 		return errValueRequired
@@ -80,7 +80,7 @@ func SurveyRequiredPath(ans interface{}) error {
 }
 
 // SurveyRequiredName checks name.
-func SurveyRequiredName(ans interface{}) error {
+func SurveyRequiredName(ans any) error {
 	answer := strings.TrimSpace(ans.(string))
 	if len(answer) == 0 {
 		return errValueRequired
@@ -89,8 +89,8 @@ func SurveyRequiredName(ans interface{}) error {
 }
 
 // SurveyRequiredProfileName checks profile name.
-func SurveyRequiredProfileName(existingProfiles []string) func(ans interface{}) error {
-	return func(ans interface{}) error {
+func SurveyRequiredProfileName(existingProfiles []string) func(ans any) error {
+	return func(ans any) error {
 		answer := strings.TrimSpace(ans.(string))
 		if len(answer) == 0 {
 			return errValueRequired
@@ -113,7 +113,7 @@ func SurveyRequiredProfileName(existingProfiles []string) func(ans interface{}) 
 }
 
 // SurveySelectAtLeastOne requires the answer is a list with at least one item.
-func SurveySelectAtLeastOne(ans interface{}) error {
+func SurveySelectAtLeastOne(ans any) error {
 	list, ok := ans.([]core.OptionAnswer)
 	if !ok {
 		return fmt.Errorf("unexpected type %T", ans)
@@ -125,7 +125,7 @@ func SurveySelectAtLeastOne(ans interface{}) error {
 }
 
 // SurveyOptionalCIDR verifies that the answer is either empty or a valid CIDR.
-func SurveyOptionalCIDR(ans interface{}) error {
+func SurveyOptionalCIDR(ans any) error {
 	answer := strings.TrimSpace(ans.(string))
 	if len(answer) == 0 {
 		// Answer is optional.
@@ -138,13 +138,13 @@ func SurveyOptionalCIDR(ans interface{}) error {
 }
 
 // SurveyOptionalJSON verifies that the answer is either empty or a valid JSON.
-func SurveyOptionalJSON(ans interface{}) error {
+func SurveyOptionalJSON(ans any) error {
 	answer := strings.TrimSpace(ans.(string))
 	if len(answer) == 0 {
 		// Answer is optional.
 		return nil
 	}
-	m := map[string]interface{}{}
+	m := map[string]any{}
 	err := json.Unmarshal([]byte(answer), &m)
 	if err != nil {
 		return fmt.Errorf("Invalid JSON: %v", err)
@@ -153,6 +153,6 @@ func SurveyOptionalJSON(ans interface{}) error {
 }
 
 // SurveyTrimSpace trims spaces.
-func SurveyTrimSpace(ans interface{}) (newAns interface{}) {
+func SurveyTrimSpace(ans any) (newAns any) {
 	return strings.TrimSpace(ans.(string))
 }
