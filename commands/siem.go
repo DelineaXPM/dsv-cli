@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 
 	cst "github.com/DelineaXPM/dsv-cli/constants"
@@ -255,11 +254,6 @@ func promptSiemData(vcli vaultcli.CLI) (*siemUpdateRequest, error) {
 		Name:     "Port",
 		Prompt:   &survey.Input{Message: "Port:"},
 		Validate: vaultcli.SurveyRequiredPortNumber,
-		Transform: func(ans interface{}) (newAns interface{}) {
-			answer := strings.TrimSpace(ans.(string))
-			val, _ := strconv.Atoi(answer)
-			return val
-		},
 	}
 	questionEndpoint := &survey.Question{
 		Name:      "Endpoint",
