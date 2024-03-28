@@ -18,9 +18,7 @@ func TestInitWithNoConfig(t *testing.T) {
 	}
 	e := newEnv()
 
-	var (
-		config = filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
-	)
+	config := filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
 
 	defer func() { deleteFile(t, config) }()
 
@@ -76,9 +74,7 @@ func TestInitWithExistingConfig(t *testing.T) {
 		profileName = "automation"
 		cacheAge    = "5"
 	)
-	var (
-		config = filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
-	)
+	config := filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
 
 	createFile(t, config)
 	defer func() { deleteFile(t, config) }()
@@ -155,9 +151,7 @@ func TestInitOverwriteExistingConfig(t *testing.T) {
 	}
 	e := newEnv()
 
-	var (
-		config = filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
-	)
+	config := filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
 
 	createFile(t, config)
 	defer func() { deleteFile(t, config) }()
@@ -218,9 +212,7 @@ func TestInitAuthFails(t *testing.T) {
 	}
 	e := newEnv()
 
-	var (
-		config = filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
-	)
+	config := filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
 
 	createFile(t, config)
 	defer func() { deleteFile(t, config) }()
@@ -271,9 +263,7 @@ func TestInitAWSInvalid(t *testing.T) {
 	}
 	e := newEnv()
 
-	var (
-		config = filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
-	)
+	config := filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
 
 	createFile(t, config)
 	defer func() { deleteFile(t, config) }()
@@ -323,9 +313,7 @@ func TestInitClientCredsInvalid(t *testing.T) {
 	}
 	e := newEnv()
 
-	var (
-		config = filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
-	)
+	config := filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
 
 	createFile(t, config)
 	defer func() { deleteFile(t, config) }()
@@ -376,9 +364,7 @@ func TestInitProfileExists(t *testing.T) {
 	}
 	e := newEnv()
 
-	var (
-		config = filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
-	)
+	config := filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
 
 	defer func() { deleteFile(t, config) }()
 
@@ -427,9 +413,7 @@ func TestInitWrongStoreType(t *testing.T) {
 	}
 	e := newEnv()
 
-	var (
-		config = filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
-	)
+	config := filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
 
 	cmd := []string{
 		"init", fmt.Sprintf("--dev=%s", e.domain), fmt.Sprintf("--config=%s", config),
@@ -456,9 +440,7 @@ func TestInitWithNoStore(t *testing.T) {
 	}
 	e := newEnv()
 
-	var (
-		config = filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
-	)
+	config := filepath.Join(e.tmpDirPath, "e2e-configuration.yml")
 
 	defer func() { deleteFile(t, config) }()
 

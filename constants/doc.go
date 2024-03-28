@@ -11,6 +11,7 @@ const (
 	ExampleRoleName         = "gcp-svc-1"
 	ExampleDataJSON         = `'{"Key":"Value","Key2":"Value2"}'`
 	ExampleDataPath         = "@/tmp/data.json"
+	ExampleBodyDataJSON     = `'{"data":{"Key":"Value"},"attributes":{"Key2":"Value2"},"desc":"Secret description"}'`
 	ExampleConfigPath       = "@/tmp/config.yml"
 	ExampleUser             = "kadmin"
 	ExampleSIEM             = "LogsInc"

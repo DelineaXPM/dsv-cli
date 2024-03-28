@@ -1,7 +1,7 @@
 ---
 version: 0.1
 cli:
-  version: 1.19.0
+  version: 1.21.0
 actions:
   enabled:
     - go-mod-tidy-vendor
@@ -21,22 +21,28 @@ actions:
 plugins:
   sources:
     - id: trunk
-      ref: v1.2.1
+      ref: v1.4.5
       uri: https://github.com/trunk-io/plugins
 lint:
   enabled:
+    - checkov@3.2.39
+    - osv-scanner@1.7.0
+    - renovate@37.256.1
+    - terrascan@1.19.1
+    - trivy@0.50.0
+    - trufflehog@3.70.1
     - taplo@0.8.1
-    - yamllint@1.29.0
-    - actionlint@1.6.26
+    - yamllint@1.35.1
+    - actionlint@1.6.27
     - git-diff-check@SYSTEM
-    - gitleaks@8.18.1
-    - golangci-lint@1.55.2
+    - gitleaks@8.18.2
+    - golangci-lint@1.56.2
     - hadolint@2.12.0
-    - markdownlint@0.38.0
-    - prettier@3.2.4
-    - shellcheck@0.9.0
-    - shfmt@3.5.0
-    - gofumpt@0.4.0
+    - markdownlint@0.39.0
+    - prettier@3.2.5
+    - shellcheck@0.10.0
+    - shfmt@3.6.0
+    - gofumpt@0.5.0
   disabled:
     - gofmt
   definitions:
@@ -56,14 +62,21 @@ lint:
     - linters: [ALL]
       paths:
         - .devcontainer/init
-        - vendor/*
+        - vendor/**
         - '**/*/mage_output_file.go'
         - tests/fake
+        - .artifacts/**
+        - .cache/**
     - linters: [yamllint]
       paths:
         - .changes/unreleased/*.yaml
+    - linters: [checkov, trufflehog, trivy]
+      paths:
+        - .changes/**
+        - .trunk/**
+
 runtimes:
   enabled:
-    - python@3.10.3
+    - python@3.10.8
     - go@1.21.0
-    - node@16.14.2
+    - node@18.12.1

@@ -12,8 +12,11 @@ type EnvProvider interface {
 }
 type envProvider struct{}
 
-var GetEnvProviderFunc func() EnvProvider
-var e EnvProvider
+//nolint:gochecknoglobals // TODO: AB#561862 need to test this in a future PR
+var (
+	GetEnvProviderFunc func() EnvProvider
+	e                  EnvProvider
+)
 
 func NewEnvProvider() EnvProvider {
 	return &envProvider{}

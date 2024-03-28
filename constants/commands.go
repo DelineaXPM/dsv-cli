@@ -88,6 +88,7 @@ const (
 	Value                   = "value"
 	Profile                 = "profile"
 	Path                    = "path"
+	Body                    = "body"
 	ID                      = "id"
 	Data                    = "data"
 	Username                = "auth.username"

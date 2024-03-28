@@ -242,12 +242,14 @@ Usage:
    • secret %[1]s %[4]s --data %[5]s
    • secret %[1]s --path %[4]s --data %[5]s
    • secret %[1]s --path %[4]s --data %[6]s
-`, cst.Create, cst.NounSecret, cst.ProductName, cst.ExamplePath, cst.ExampleDataJSON, cst.ExampleDataPath),
+   • secret %[1]s --path %[4]s --body %[7]s
+`, cst.Create, cst.NounSecret, cst.ProductName, cst.ExamplePath, cst.ExampleDataJSON, cst.ExampleDataPath, cst.ExampleBodyDataJSON),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.Data, Shorthand: "d", Usage: fmt.Sprintf("%s to be stored in a %s. Prefix with '@' to denote filepath (required)", strings.Title(cst.Data), cst.NounSecret), Predictor: predictor.NewPrefixFilePredictor("*")},
 			{Name: cst.Path, Shorthand: "r", Usage: fmt.Sprintf("Target %s to a %s (required)", cst.Path, cst.NounSecret), Predictor: predictor.NewSecretPathPredictorDefault()},
 			{Name: cst.DataDescription, Usage: fmt.Sprintf("Description of a %s", cst.NounSecret)},
 			{Name: cst.DataAttributes, Usage: fmt.Sprintf("Attributes of a %s", cst.NounSecret)},
+			{Name: cst.Body, Usage: fmt.Sprintf("%s, attributes and/or description of a %s. (See 'usage' above). Data will take precedence over body.", strings.Title(cst.Data), cst.NounSecret)},
 		},
 		RunFunc: func(vcli vaultcli.CLI, args []string) int {
 			return handleSecretUpsertCmd(vcli, cst.NounSecret, cst.Create, args)
@@ -485,6 +487,7 @@ func handleSecretUpsertCmd(vcli vaultcli.CLI, secretType string, action string, 
 	data := viper.GetString(cst.Data)
 	desc := viper.GetString(cst.DataDescription)
 	attributes := viper.GetStringMap(cst.DataAttributes)
+	body := viper.GetString(cst.Body)
 
 	if path == "" {
 		path = id
@@ -510,20 +513,34 @@ func handleSecretUpsertCmd(vcli vaultcli.CLI, secretType string, action string, 
 		return utils.GetExecStatus(err)
 	}
 
-	if data == "" && desc == "" && len(attributes) == 0 {
-		vcli.Out().FailF("Please provide a properly formed value for at least --%s, or --%s, or --%s.",
-			cst.Data, cst.DataDescription, cst.DataAttributes)
+	if data == "" && desc == "" && len(attributes) == 0 && body == "" {
+		vcli.Out().FailF("Please provide a properly formed value for at least --%s, or --%s, or --%s, or --%s.",
+			cst.Data, cst.DataDescription, cst.DataAttributes, cst.Body)
 		return 1
 	}
 
-	dataMap := make(map[string]interface{})
-	if data != "" {
+	dataMap := make(map[string]any)
+	bodyMap := make(map[string]any)
+	/*Only process --body attribute if all 3 of the other attributes are empty*/
+	if body != "" && data == "" && desc == "" && len(attributes) == 0 {
+		parseErr := json.Unmarshal([]byte(body), &bodyMap)
+		if parseErr != nil {
+			vcli.Out().FailF("Failed to parse passed in secret body: %v", parseErr)
+			return 1
+		}
+		dataMap, _ = bodyMap["data"].(map[string]any)
+		desc, _ = bodyMap["desc"].(string)
+		attributes, _ = bodyMap["attributes"].(map[string]any)
+	}
+
+	if data != "" && len(dataMap) == 0 {
 		parseErr := json.Unmarshal([]byte(data), &dataMap)
 		if parseErr != nil {
 			vcli.Out().FailF("Failed to parse passed in secret data: %v", parseErr)
 			return 1
 		}
 	}
+
 	postData := secretUpsertBody{
 		Data:        dataMap,
 		Description: desc,

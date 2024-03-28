@@ -31,8 +31,9 @@ func NewFileWriter(filePath string) io.Writer {
 	return &fileWriter{filePath}
 }
 
+//nolint:gosec,gomnd // TODO: AB#561861 need to test this in a future PR
 func (w fileWriter) Write(p []byte) (n int, err error) {
-	err = os.WriteFile(w.filePath, p, 0664)
+	err = os.WriteFile(w.filePath, p, 0o664)
 	if err == nil {
 		n = len(p)
 	}
