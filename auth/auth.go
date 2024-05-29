@@ -269,8 +269,8 @@ func (a *authenticator) newRequestBody(at AuthType) (*requestBody, error) {
 		data, stdErr = buildAwsParams(awsProfile)
 
 	case FederatedAzure:
-		clientID, ok := os.LookupEnv("AZURE_CLIENT_ID")
-		if !ok {
+		clientID := os.Getenv("AZURE_CLIENT_ID")
+		if clientID == "" {
 			clientID = viper.GetString("auth.clientID")
 			os.Setenv("AZURE_CLIENT_ID", clientID)
 		}

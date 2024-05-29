@@ -2,6 +2,7 @@ package auth_test
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -218,7 +219,7 @@ func TestGetToken(t *testing.T) {
 		expectedError error
 	}{
 		{"password", "none", nil, fmt.Errorf("error")},
-		{"azure", "none", nil, fmt.Errorf("error")},
+		{"azure", "none", nil, errors.New("error")},
 		//{"gcp", "none", nil, errors.New("error")},
 		{"aws", "none", nil, fmt.Errorf("error")},
 		{"refresh", "none", nil, fmt.Errorf("error")},
