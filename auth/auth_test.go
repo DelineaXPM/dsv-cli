@@ -2,7 +2,6 @@ package auth_test
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
