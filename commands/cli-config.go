@@ -954,10 +954,8 @@ func promptAzureClientID() (string, error) {
 	clientID := ""
 	clientIDPrompt := &survey.Input{Message: "Please enter a clientID for this Azure profile:"}
 
-/*	validationOpt := survey.WithValidator(vaultcli.SurveyRequiredProfileName(cf.ListProfilesNames()))*/
 	survErr := survey.AskOne(clientIDPrompt, &clientID)
 	if survErr != nil {
-/*		vcli.Out().WriteResponse(nil, errors.New(survErr))*/
 		return "", survErr
 	}
 	return strings.TrimSpace(clientID), nil
