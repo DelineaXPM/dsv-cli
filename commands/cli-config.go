@@ -684,6 +684,7 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 
 	// Authentication type and authentication data.
 	authType := viper.GetString(cst.AuthType)
+	clientID := ""
 	if authType == "" {
 		authType, err = promptAuthType()
 		if err != nil {
@@ -691,9 +692,17 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 			return 1
 		}
 		viper.Set(cst.AuthType, authType)
+		if authType == string(auth.FederatedAzure) {
+			clientID, err = promptAzureClientID()
+			if err != nil {
+				vcli.Out().WriteResponse(nil, errors.New(err))
+			}
+		}
+		viper.Set("clientID", clientID)
+		os.Setenv("AZURE_CLIENT_ID", strings.TrimSpace(clientID))
 	}
+	prf.Set(clientID, cst.NounAuth, "clientID")
 	prf.Set(authType, cst.NounAuth, cst.Type)
-
 	var user, password, passwordKey, encryptionKeyFileName string
 
 	authProvider := viper.GetString(cst.AuthProvider)
@@ -863,7 +872,6 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 				ui.Output(authError.Error())
 				return 1
 			}
-
 			ui.Output("Failed to authenticate, restoring previous config.")
 			ui.Output("Please check your credentials, or tenant name, or domain name and try again.")
 			return 1
@@ -940,6 +948,19 @@ type heartbeatResponse struct {
 type initializeRequest struct {
 	UserName string
 	Password string
+}
+
+func promptAzureClientID() (string, error) {
+	clientID := ""
+	clientIDPrompt := &survey.Input{Message: "Please enter a clientID for this Azure profile:"}
+
+/*	validationOpt := survey.WithValidator(vaultcli.SurveyRequiredProfileName(cf.ListProfilesNames()))*/
+	survErr := survey.AskOne(clientIDPrompt, &clientID)
+	if survErr != nil {
+/*		vcli.Out().WriteResponse(nil, errors.New(survErr))*/
+		return "", survErr
+	}
+	return strings.TrimSpace(clientID), nil
 }
 
 func promptDomain() (string, error) {

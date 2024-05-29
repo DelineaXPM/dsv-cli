@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"reflect"
 	"strings"
 	"time"
@@ -268,6 +269,11 @@ func (a *authenticator) newRequestBody(at AuthType) (*requestBody, error) {
 		data, stdErr = buildAwsParams(awsProfile)
 
 	case FederatedAzure:
+		clientID, ok := os.LookupEnv("AZURE_CLIENT_ID")
+		if !ok {
+			clientID = viper.GetString("auth.clientID")
+			os.Setenv("AZURE_CLIENT_ID", clientID)
+		}
 		data, stdErr = buildAzureParams()
 
 	case FederatedGcp:
