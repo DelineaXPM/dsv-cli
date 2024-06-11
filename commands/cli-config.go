@@ -692,16 +692,7 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 			return 1
 		}
 		viper.Set(cst.AuthType, authType)
-		if authType == string(auth.FederatedAzure) {
-			clientID, err = promptAzureClientID()
-			if err != nil {
-				vcli.Out().WriteResponse(nil, errors.New(err))
-			}
-		}
-		viper.Set("clientID", clientID)
-		os.Setenv("AZURE_CLIENT_ID", strings.TrimSpace(clientID))
 	}
-	prf.Set(clientID, cst.NounAuth, "clientID")
 	prf.Set(authType, cst.NounAuth, cst.Type)
 	var user, password, passwordKey, encryptionKeyFileName string
 
@@ -769,6 +760,15 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 			prf.Set(clientSecret, cst.NounAuth, cst.NounClient, cst.NounSecret)
 			viper.Set(cst.AuthClientSecret, clientSecret)
 		}
+
+	case authType == string(auth.FederatedAzure):
+		clientID, err = promptAzureClientID()
+		if err != nil {
+			vcli.Out().WriteResponse(nil, errors.New(err))
+		}
+		viper.Set("clientID", clientID)
+		os.Setenv("AZURE_CLIENT_ID", strings.TrimSpace(clientID))
+		prf.Set(clientID, cst.NounAuth, "clientID")
 
 	case auth.AuthType(authType) == auth.FederatedAws:
 		awsProfile := viper.GetString(cst.AwsProfile)
