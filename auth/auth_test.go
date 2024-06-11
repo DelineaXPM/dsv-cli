@@ -210,6 +210,8 @@ func TestGetToken_CachedRefreshToken(t *testing.T) {
 }
 
 // TODO:  need to refactor the code and rewrite
+//
+//nolint:perfsprint //errors.go needs work to implement here
 func TestGetToken(t *testing.T) {
 	testCases := []struct {
 		auth          string
@@ -218,7 +220,7 @@ func TestGetToken(t *testing.T) {
 		expectedError error
 	}{
 		{"password", "none", nil, fmt.Errorf("error")},
-		// {"azure", "none", nil, errors.New("error")},
+		{"azure", "none", nil, fmt.Errorf("error")},
 		//{"gcp", "none", nil, errors.New("error")},
 		{"aws", "none", nil, fmt.Errorf("error")},
 		{"refresh", "none", nil, fmt.Errorf("error")},
