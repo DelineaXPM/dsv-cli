@@ -209,7 +209,7 @@ snapcrafts:
     name: dsv-cli
     # must run snapcraft login first
     publish: true
-    summary: '⚡ A cross-platform swiss army knife tool for DevOps secrets management from Delinea.'
+    summary: '⚡ A cross-platform swiss army tool for DevOps secrets management from Delinea'
     description: |
       The DSV CLI is a cross-platform swiss army knife tool for DevOps secrets management from Delinea.
       It is designed to be a simple, yet powerful, tool for managing secrets in a variety of

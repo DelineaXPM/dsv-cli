@@ -210,6 +210,8 @@ func TestGetToken_CachedRefreshToken(t *testing.T) {
 }
 
 // TODO:  need to refactor the code and rewrite
+//
+//nolint:perfsprint //errors.go needs work to implement here
 func TestGetToken(t *testing.T) {
 	testCases := []struct {
 		auth          string
