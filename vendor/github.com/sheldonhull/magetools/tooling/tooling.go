@@ -58,6 +58,7 @@ func InstallTools(tools []string) error {
 // SilentInstallTools reads the stdout and then uses a spinner to show progress.
 // This is designed to swallow up a lot of the noise with go install commands.
 // Originally found from: https://www.yellowduck.be/posts/reading-command-output-line-by-line/ and modified.
+//
 //nolint:funlen // This is ok for now. Can refactor into smaller pieces later if needed.
 func SilentInstallTools(toolList []string) error {
 	var errorCount int
@@ -160,6 +161,7 @@ func SilentInstallTools(toolList []string) error {
 // Example: SpinnerStdOut("go",[]string{"install"},[]string{	"golang.org/x/tools/cmd/goimports@master","github.com/sqs/goreturns@master"})
 // This is designed to swallow up a lot of the noise with go install commands.
 // Originally found from: https://www.yellowduck.be/posts/reading-command-output-line-by-line/ and modified.
+//
 //nolint:funlen // Bypassing. Will need to evaluate later if I want to break this apart. For now it's not important
 func SpinnerStdOut(
 	binary string,
