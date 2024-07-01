@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -1014,12 +1014,12 @@ func getSecretFromServer(vcli vaultcli.CLI, secretType string, path string, id s
 
 func getSecretCachePrefix() string {
 	profile := viper.GetString(cst.Profile)
-	return fmt.Sprintf("%s-%x", cst.SecretRoot, sha1.Sum([]byte(profile)))
+	return fmt.Sprintf("%s-%x", cst.SecretRoot, sha256.Sum256([]byte(profile)))
 }
 
 func getSecretDescCachePrefix() string {
 	profile := viper.GetString(cst.Profile)
-	return fmt.Sprintf("%s-%x", cst.SecretDescriptionRoot, sha1.Sum([]byte(profile)))
+	return fmt.Sprintf("%s-%x", cst.SecretDescriptionRoot, sha256.Sum256([]byte(profile)))
 }
 
 func getSecretCacheKey(path string, id string, requestSuffix string) string {
@@ -1037,7 +1037,7 @@ func getSecretCacheKey(path string, id string, requestSuffix string) string {
 		cacheKey = id
 	}
 	cacheKey = strings.ReplaceAll(cacheKey, ":", "/")
-	cacheKey = fmt.Sprintf("%s-%x", prefix, sha1.Sum([]byte(cacheKey)))
+	cacheKey = fmt.Sprintf("%s-%x", prefix, sha256.Sum256([]byte(cacheKey)))
 	return cacheKey
 }
 
