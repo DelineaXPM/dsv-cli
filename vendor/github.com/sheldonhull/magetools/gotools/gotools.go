@@ -25,7 +25,7 @@ import (
 	"github.com/sheldonhull/magetools/pkg/req"
 	"github.com/sheldonhull/magetools/tooling"
 	"github.com/ztrue/tracerr"
-	modfile "golang.org/x/mod/modfile"
+	"golang.org/x/mod/modfile"
 )
 
 type (
@@ -141,7 +141,7 @@ func (Go) Test() error {
 //
 // - Test running manually like this from current repo: GOTEST_DISABLE_RACE=1 mage -d magefiles -w . -v  go:testsum ./pkg/...
 //
-//nolint:funlen,cyclop // Not refactoring this right now, it works and that's what matters ;-)
+//nolint:funlen,cyclop,revive // Not refactoring this right now, it works and that's what matters ;-)
 func (Go) TestSum(path string) error {
 	magetoolsutils.CheckPtermDebug()
 	pterm.DefaultHeader.Println("GOTESTSUM")
@@ -292,7 +292,7 @@ func (Go) Fix() error {
 	if err != nil {
 		pterm.Error.WithShowLineNumber(true).
 			WithLineNumberOffset(1).
-			Printfln("unable to find %s: %v", "golangci-lint", err)
+			Printfln("unable to find %s: %v", "golangci-lint", err) //nolint: revive // allow constant
 		return err
 	}
 
@@ -411,7 +411,7 @@ func (Go) LintConfig() error {
 
 	golangcilint, err := req.ResolveBinaryByInstall(
 		"golangci-lint",
-		"github.com/golangci/golangci-lint/cmd/golangci-lint@latest",
+		"github.com/golangci/golangci-lint/cmd/golangci-lint@latest", //nolint: revive // allow constant
 	)
 	if err != nil {
 		pterm.Error.WithShowLineNumber(true).
