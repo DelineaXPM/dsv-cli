@@ -42,7 +42,6 @@ func GetGoPath() (gopath string) {
 // This can help with running in CI and not having to have a lot of setup code.
 func ResolveBinaryByInstall(app, goInstallCmd string) (qualifiedBinary string, err error) {
 	qualifiedBinary, err = QualifyGoBinary(app)
-
 	if err != nil {
 		pterm.Info.Printfln("Couldn't find %s, so will attempt to install it from source", app)
 		err := tooling.SilentInstallTools([]string{goInstallCmd})
@@ -82,7 +81,6 @@ func ResolveBinaryByInstall(app, goInstallCmd string) (qualifiedBinary string, e
 // QualifyGoBinary provides a fully qualified path for an installed Go binary to avoid path issues.
 // This uses exec.LookPath to allow resolution of the binary from any provided `PATH` variables, allowing better alternative tooling installation before installing from source.
 func QualifyGoBinary(binary string) (string, error) {
-
 	pterm.Debug.Printfln("searching for binary in all provided PATH locations: %q", binary)
 	qualifiedPath, err := exec.LookPath(binary)
 	if err != nil {
