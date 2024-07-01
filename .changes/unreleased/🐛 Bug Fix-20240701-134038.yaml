@@ -1,0 +1,3 @@
+kind: "\U0001F41B Bug Fix"
+body: Changed sha1 function calls to sha256
+time: 2024-07-01T13:40:38.01292-07:00
