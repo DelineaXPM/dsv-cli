@@ -1,0 +1,3 @@
+kind: ci-and-build
+body: Update changie to newest format. Golangci-lint config file is also now converted to the latest.
+time: 2024-07-18T11:02:24.016458-05:00

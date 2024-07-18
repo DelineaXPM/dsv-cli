@@ -4,7 +4,8 @@ pr:
   autoCancel: true
   drafts: false
   branches:
-    - main
+    include:
+      - main
   paths:
     exclude:
       - .devcontainer/*
