@@ -18,7 +18,6 @@ pr:
       - 'aqua.yaml'
       - '.aqua/*'
       - 'aqua.yaml'
-
 # not run independently via trigger option, as part of preflight or called in multistage pipeline
 trigger: none
 parameters:
