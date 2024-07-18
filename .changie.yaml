@@ -4,30 +4,40 @@ headerPath: header.tpl.md
 changelogPath: CHANGELOG.md
 versionExt: md
 versionFormat: '## {{.Version}} - {{.Time.Format "2006-01-02"}}'
-kindFormat: '### {{.Kind}}'
-changeFormat: '- {{ .Body -}}'
+kindFormat: ''
+changeFormat: '- _{{.Kind}}_: {{ .Body -}}'
 body:
   block: true
 kinds:
-  - label: 🤖 CI & Build
-    auto: patch
-  - label: 🎉 New Product Feature
+  - key: ci-and-build
+    label: 🤖 CI & Build
+    auto: none
+  - key: new-product-feature
+    label: 🎉 New Product Feature
     auto: minor
-  - label: ⬇️ Deprecated
+  - key: deprecated
+    label: ⬇️ Deprecated
     auto: minor
-  - label: 🧪 Tests
+  - key: tests
+    label: 🧪 Tests
     auto: patch
-  - label: 🔨 Refactor
+  - key: refactor
+    label: 🔨 Refactor
     auto: patch
-  - label: 🐛 Bug Fix
+  - key: bug-fix
+    label: 🐛 Bug Fix
     auto: patch
-  - label: 🔥 Breaking Change
+  - key: breaking-change
+    label: 🔥 Breaking Change
     auto: minor
-  - label: 🔒 Security
+  - key: security
+    label: 🔒 Security
     auto: patch
-  - label: ⬆️ Dependencies
+  - key: dependencies
+    label: ⬆️ Dependencies
     auto: patch
-  - label: 🔥 Major Version Change (Breaking Changes)
+  - key: major-version-change-breaking-changes
+    label: 🔥 Major Version Change (Breaking Changes)
     auto: major
 newlines:
   afterChange: 0
