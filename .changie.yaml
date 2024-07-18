@@ -11,7 +11,7 @@ body:
 kinds:
   - key: ci-and-build
     label: 🤖 CI & Build
-    auto: patch
+    auto: none
   - key: new-product-feature
     label: 🎉 New Product Feature
     auto: minor

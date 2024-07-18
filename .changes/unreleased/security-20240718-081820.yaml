@@ -1,0 +1,3 @@
+kind: 'security'
+body: Changed sha1 function calls to sha256
+time: 2024-07-18T08:18:20.013668-07:00
