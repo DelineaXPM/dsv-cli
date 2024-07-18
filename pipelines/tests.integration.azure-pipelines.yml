@@ -3,6 +3,9 @@ name: dsv-cli.tests.integration.$(why).$(Date:yyyyMMdd)-$(Rev:r)
 pr:
   autoCancel: true
   drafts: false
+  branches:
+    include:
+      - main
   paths:
     exclude:
       - .devcontainer/*
