@@ -3,6 +3,8 @@ name: dsv-cli.tests.end-to-end.$(why).$(Date:yyyyMMdd)-$(Rev:r)
 pr:
   autoCancel: true
   drafts: false
+  branches:
+    - main
   paths:
     exclude:
       - .devcontainer/*
