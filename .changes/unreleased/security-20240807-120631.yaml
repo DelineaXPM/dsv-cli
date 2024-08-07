@@ -1,0 +1,5 @@
+kind: security
+body: |-
+  removed writing empty req.body to httpWriter in OIDC authentication.
+  modified ras.GenerateKey to use 2048 bit encryption in cicd-integration/generate_pki.go
+time: 2024-08-07T12:06:31.546382-07:00
