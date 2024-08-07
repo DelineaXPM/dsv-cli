@@ -103,9 +103,8 @@ func (a *authenticator) buildOIDCParams(at AuthType, provider string, callback s
 // handleOidcAuth handles OIDC and Thycotic One auths.
 func handleOidcAuth(at AuthType, doneCh chan<- authResponse) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		b, err := io.ReadAll(req.Body)
+		_, err := io.ReadAll(req.Body)
 		if err != nil {
-			w.Write([]byte(err.Error()))
 			doneCh <- authResponse{err: fmt.Errorf("reading body: %w", err)}
 		}
 
@@ -116,14 +115,12 @@ func handleOidcAuth(at AuthType, doneCh chan<- authResponse) http.HandlerFunc {
 			doneCh <- authResponse{
 				err: errors.New("missing values in callback, authorization code is empty"),
 			}
-			w.Write(b)
 			return
 		}
 		if state == "" {
 			doneCh <- authResponse{
 				err: errors.New("missing values in callback, authorization state is empty"),
 			}
-			w.Write(b)
 			return
 		}
 

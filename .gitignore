@@ -126,3 +126,6 @@ snapcraft-login
 
 # mac
 .DS_Store
+
+# snyk
+.dccache

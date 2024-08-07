@@ -52,7 +52,7 @@ func generateRootWithPrivateKey() ([]byte, []byte, error) {
 }
 
 func generateCSR() ([]byte, error) {
-	keyBytes, _ := rsa.GenerateKey(rand.Reader, 1024)
+	keyBytes, _ := rsa.GenerateKey(rand.Reader, 2048)
 
 	subj := pkix.Name{
 		CommonName:         leafCommonName,
