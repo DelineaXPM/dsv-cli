@@ -12,10 +12,13 @@ import (
 	"time"
 )
 
-const leafCommonName = "example.com"
+const (
+	leafCommonName = "example.com"
+	rsaEncrypt     = 2048
+)
 
 func generateRootWithPrivateKey() ([]byte, []byte, error) {
-	privateKey, publicKey := generateRSAKeyPair(2048)
+	privateKey, publicKey := generateRSAKeyPair(rsaEncrypt)
 	ca := &x509.Certificate{
 		DNSNames:     []string{"thycotic.com"},
 		SerialNumber: big.NewInt(int64(mrand.Int31n(big.MaxExp))),
@@ -52,7 +55,7 @@ func generateRootWithPrivateKey() ([]byte, []byte, error) {
 }
 
 func generateCSR() ([]byte, error) {
-	keyBytes, _ := rsa.GenerateKey(rand.Reader, 2048)
+	keyBytes, _ := rsa.GenerateKey(rand.Reader, rsaEncrypt)
 
 	subj := pkix.Name{
 		CommonName:         leafCommonName,
