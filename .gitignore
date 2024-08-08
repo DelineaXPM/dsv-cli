@@ -127,5 +127,5 @@ snapcraft-login
 # mac
 .DS_Store
 
-# vscode/snyk
+# snyk
 .dccache
