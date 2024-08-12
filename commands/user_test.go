@@ -292,7 +292,7 @@ func TestHandleUserCreateCmd(t *testing.T) {
 	for _, tt := range testCase {
 		viper.Set(cst.DataUsername, tt.userName)
 		viper.Set(cst.DataDisplayname, tt.displayName)
-		viper.Set(cst.DataPassword, tt.password)
+		viper.Set("password", tt.password)
 		viper.Set(cst.DataProvider, tt.provider)
 		viper.Set(cst.DataExternalID, tt.externalID)
 		t.Run(tt.name, func(t *testing.T) {
@@ -395,7 +395,7 @@ func TestHandleUserUpdateCmd(t *testing.T) {
 	viper.Set(cst.Version, "v1")
 	for _, tt := range testCase {
 		viper.Set(cst.DataUsername, tt.userName)
-		viper.Set(cst.DataPassword, tt.password)
+		viper.Set("password", tt.password)
 		viper.Set(cst.DataDisplayname, tt.displayName)
 		t.Run(tt.name, func(t *testing.T) {
 			var data []byte

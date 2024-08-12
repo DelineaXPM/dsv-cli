@@ -20,13 +20,13 @@ func buildPasswordParams() (*requestBody, error) {
 	// If it is an empty string, look for SecurePassword, which Viper gets only from config. Get the corresponding
 	// key file and use it to decrypt SecurePassword.
 	if data.Password == "" {
-		passSetting := cst.SecurePassword
+		passSetting := "auth.securePassword"
 		storeType := viper.GetString(cst.StoreType)
 		if storeType == store.WinCred || storeType == store.PassLinux {
 			passSetting = cst.Password
 		}
 		if pass, err := store.GetSecureSetting(passSetting); err == nil && pass != "" {
-			if passSetting == cst.SecurePassword {
+			if passSetting == "auth.securePassword" {
 				keyPath := GetEncryptionKeyFilename(viper.GetString(cst.Tenant), data.Username)
 				key, err := store.ReadFileInDefaultPath(keyPath)
 				if err != nil || key == "" {
