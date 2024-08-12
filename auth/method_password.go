@@ -8,6 +8,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+const authSP = "auth.securePassword"
+
 func buildPasswordParams() (*requestBody, error) {
 	data := &requestBody{
 		GrantType: authTypeToGrantType[Password],
@@ -20,13 +22,13 @@ func buildPasswordParams() (*requestBody, error) {
 	// If it is an empty string, look for SecurePassword, which Viper gets only from config. Get the corresponding
 	// key file and use it to decrypt SecurePassword.
 	if data.Password == "" {
-		passSetting := "auth.securePassword"
+		passSetting := authSP
 		storeType := viper.GetString(cst.StoreType)
 		if storeType == store.WinCred || storeType == store.PassLinux {
 			passSetting = cst.Password
 		}
 		if pass, err := store.GetSecureSetting(passSetting); err == nil && pass != "" {
-			if passSetting == "auth.securePassword" {
+			if passSetting == authSP {
 				keyPath := GetEncryptionKeyFilename(viper.GetString(cst.Tenant), data.Username)
 				key, err := store.ReadFileInDefaultPath(keyPath)
 				if err != nil || key == "" {
