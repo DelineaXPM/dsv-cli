@@ -722,7 +722,7 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 		encryptionKeyFileName = auth.GetEncryptionKeyFilename(viper.GetString(cst.Tenant), user)
 
 		if isSecureStore {
-			if err := store.StoreSecureSetting(strings.Join([]string{profile, cst.NounAuth, cst.DataPassword}, "."), password, storeType); err != nil {
+			if err := store.StoreSecureSetting(strings.Join([]string{profile, cst.NounAuth, "password"}, "."), password, storeType); err != nil {
 				ui.Error(err.Error())
 				return 1
 			}
@@ -733,7 +733,7 @@ func handleCliConfigInitCmd(vcli vaultcli.CLI, args []string) int {
 				return 1
 			}
 			passwordKey = key
-			prf.Set(encrypted, cst.NounAuth, cst.DataSecurePassword)
+			prf.Set(encrypted, cst.NounAuth, "securePassword")
 		}
 
 	case (storeType != store.None && auth.AuthType(authType) == auth.ClientCredential):

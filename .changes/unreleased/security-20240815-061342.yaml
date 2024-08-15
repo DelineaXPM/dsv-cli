@@ -1,0 +1,3 @@
+kind: security
+body: 'Modified vars to bring into compliance with CWE-798: Use of Hard-coded Credentials.'
+time: 2024-08-15T06:13:42.854784-07:00

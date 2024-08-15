@@ -15,7 +15,6 @@ const (
 	ExampleConfigPath       = "@/tmp/config.yml"
 	ExampleUser             = "kadmin"
 	ExampleSIEM             = "LogsInc"
-	ExamplePassword         = "********"
 	ExampleAuthType         = "clientcred"
 	ExampleUserSearch       = "adm"
 	ExamplePolicySearch     = "secrets/databases"

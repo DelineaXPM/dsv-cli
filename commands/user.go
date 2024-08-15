@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	errMustSpecifyPasswordOrDisplayname = errors.NewF("error: must specify %s or %s", cst.DataPassword, cst.DataDisplayname)
+	errMustSpecifyPasswordOrDisplayname = errors.NewF("error: must specify %s or %s", "password", cst.DataDisplayname)
 	errWrongDisplayName                 = errors.NewS("error: displayname field must be between 3 and 100 characters")
 )
 
@@ -138,11 +138,11 @@ func GetUserCreateCmd() (cli.Command, error) {
 Usage:
    • user create --username %[3]s --password %[4]s
    • user create --username %[3]s --external-id svc1@project1.iam.gserviceaccount.com --provider project1.gcloud --password %[4]s
-`, cst.NounUser, cst.ProductName, cst.ExampleUser, cst.ExamplePassword),
+`, cst.NounUser, cst.ProductName, cst.ExampleUser, "************"),
 		FlagsPredictor: []*predictor.Params{
 			{Name: cst.DataUsername, Usage: "Used as id (required) (must conform to /[a-zA-Z0-9_-@+.]{3,100}/)."},
 			{Name: cst.DataDisplayname, Usage: "Name to display in UI."},
-			{Name: cst.DataPassword, Usage: "Must be 8-100 chars, with an uppercase and special char from this list: ~!@#$%^&*()."},
+			{Name: "password", Usage: "Must be 8-100 chars, with an uppercase and special char from this list: ~!@#$%^&*()."},
 			{Name: cst.DataExternalID, Usage: "Identifier attached to federated login e.g. AWS or ARN."},
 			{Name: cst.DataProvider, Usage: "Used for linking user with federated/external auth, must match name of Auth Provider in administration section."},
 		},
@@ -159,9 +159,9 @@ func GetUserUpdateCmd() (cli.Command, error) {
 
 Usage:
    • user update --username %[3]s --password %[4]s
-`, cst.NounUser, cst.ProductName, cst.ExampleUser, cst.ExamplePassword),
+`, cst.NounUser, cst.ProductName, cst.ExampleUser, "************"),
 		FlagsPredictor: []*predictor.Params{
-			{Name: cst.DataPassword, Usage: "Uses interactive prompt if not sent as flag.  Must be 8-100 chars, with an uppercase and special char from this list: ~!@#$%^&*()."},
+			{Name: "password", Usage: "Uses interactive prompt if not sent as flag.  Must be 8-100 chars, with an uppercase and special char from this list: ~!@#$%^&*()."},
 			{Name: cst.DataUsername, Usage: "Existing username to update"},
 			{Name: cst.DataDisplayname, Usage: "New display name to show for username."},
 		},
@@ -255,7 +255,7 @@ func handleUserRestoreCmd(vcli vaultcli.CLI, args []string) error {
 
 func handleUserCreateCmd(vcli vaultcli.CLI, args []string) error {
 	userName := viper.GetString(cst.DataUsername)
-	password := viper.GetString(cst.DataPassword)
+	password := viper.GetString("password")
 	provider := viper.GetString(cst.DataProvider)
 	externalID := viper.GetString(cst.DataExternalID)
 
@@ -296,7 +296,7 @@ func handleUserUpdateCmd(vcli vaultcli.CLI, args []string) error {
 	}
 
 	displayNameExists := hasFlag(args, "--"+cst.DataDisplayname)
-	passData := viper.GetString(cst.DataPassword)
+	passData := viper.GetString("password")
 	displayName := viper.GetString(cst.DataDisplayname)
 	if passData == "" && !displayNameExists {
 		return errMustSpecifyPasswordOrDisplayname

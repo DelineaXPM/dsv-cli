@@ -30,7 +30,7 @@ Usage:
    • auth --profile staging
    • auth --auth-username %[3]s --auth-password %[4]s
    • auth --auth-type %[5]s --auth-client-id %[6]s --domain %[7]s --auth-client-secret %[8]s
-`, cst.NounAuth, cst.ProductName, cst.ExampleUser, cst.ExamplePassword, cst.ExampleAuthType, cst.ExampleAuthClientID, cst.ExampleDomain, cst.ExampleAuthClientSecret, string(auth.FederatedAws)),
+`, cst.NounAuth, cst.ProductName, cst.ExampleUser, "************", cst.ExampleAuthType, cst.ExampleAuthClientID, cst.ExampleDomain, cst.ExampleAuthClientSecret, string(auth.FederatedAws)),
 		RunFunc: handleAuth,
 	})
 }
@@ -65,8 +65,8 @@ Usage:
 
 func GetAuthChangePasswordCmd() (cli.Command, error) {
 	return NewCommand(CommandArgs{
-		Path:         []string{cst.NounAuth, cst.ChangePassword},
-		SynopsisText: fmt.Sprintf("%s %s", cst.NounAuth, cst.ChangePassword),
+		Path:         []string{cst.NounAuth, "change-password"},
+		SynopsisText: fmt.Sprintf("%s %s", cst.NounAuth, "change-password"),
 		HelpText: `Change user password
 
 Usage:
