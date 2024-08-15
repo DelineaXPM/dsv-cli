@@ -160,8 +160,7 @@ const (
 	DataProvider    = "provider"
 
 	// user
-	DataUsername = "username"
-	// DataSecurePassword = "securePassword"
+	DataUsername    = "username"
 	DataDisplayname = "displayname"
 
 	// permission
