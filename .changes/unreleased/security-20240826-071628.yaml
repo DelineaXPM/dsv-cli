@@ -1,0 +1,3 @@
+kind: security
+body: Modified .snyk policy file to exclude vendor/github.com/Azure/go-autorest/Gopkg.lock
+time: 2024-08-26T07:16:28.399741-07:00
