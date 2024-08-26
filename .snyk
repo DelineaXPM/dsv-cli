@@ -4,5 +4,6 @@ ignore: {}
 patch: {}
 exclude:
   global:
+    - vendor/github.com/Azure/go-autorest/Gopkg.lock
     - vendor/
     - .devcontainer/
