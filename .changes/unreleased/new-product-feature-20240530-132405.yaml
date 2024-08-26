@@ -1,5 +1,5 @@
 kind: 'new-product-feature'
 body: |-
-  Added support for multiple Azure MSI profiles. When selecting Azure as the profile auth-provider the user is prompted to enter the clientID for the MSI (managed identity) they would like to use for this profile. The clientID is stored in the profile config file i.e. .dsv.yml.
+  Add support for multiple Azure MSI profiles. When selecting Azure as the profile auth-provider the user is prompted to enter the clientID for the MSI (managed identity) they would like to use for this profile. The clientID is stored in the profile config file i.e. .dsv.yml.
   the clientID is retrieved from the config when ever azure authentication is required.
 time: 2024-05-30T13:24:05.15961-07:00
