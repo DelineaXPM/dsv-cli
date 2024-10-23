@@ -16,7 +16,7 @@ require (
 	github.com/bitfield/script v0.22.1
 	github.com/caarlos0/env/v6 v6.10.1
 	github.com/creack/pty v1.1.21
-	github.com/danieljoos/wincred v1.2.1
+	github.com/danieljoos/wincred v1.2.2
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.17.0
 	github.com/gobuffalo/uuid v2.0.5+incompatible
