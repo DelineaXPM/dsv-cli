@@ -153,42 +153,42 @@ See [LICENSE](https://github.com/DelineaXPM/dsv-cli/blob/main/LICENSE) for the f
 		<tr>
             <td align="center">
                 <a href="https://github.com/thycotic-rd">
-                    <img src="https://avatars.githubusercontent.com/u/45605025?v=4" width="100;" alt="thycotic-rd"/>
+                    <img src="https://private-avatars.githubusercontent.com/u/45605025?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTEiLCJleHAiOjE3MzQ2NjEwMjAsIm5iZiI6MTczNDY1OTgyMCwicGF0aCI6Ii91LzQ1NjA1MDI1In0.l-p1vWddeoxPPic3zIfIlm6Zk_RGU65UtoEtbDBj1hI&v=4" width="100;" alt="thycotic-rd"/>
                     <br />
                     <sub><b>Thycotic-Bot</b></sub>
                 </a>
             </td>
             <td align="center">
                 <a href="https://github.com/sheldonhull">
-                    <img src="https://avatars.githubusercontent.com/u/3526320?v=4" width="100;" alt="sheldonhull"/>
+                    <img src="https://private-avatars.githubusercontent.com/u/3526320?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTEiLCJleHAiOjE3MzQ2NjA3MjAsIm5iZiI6MTczNDY1OTUyMCwicGF0aCI6Ii91LzM1MjYzMjAifQ.14EKpfaTbTTKs4Lul8VSxSICMjMUERx3tq8UXwfIfTA&v=4" width="100;" alt="sheldonhull"/>
                     <br />
                     <sub><b>Sheldonhull</b></sub>
                 </a>
             </td>
             <td align="center">
                 <a href="https://github.com/andrii-zakurenyi">
-                    <img src="https://avatars.githubusercontent.com/u/85106843?v=4" width="100;" alt="andrii-zakurenyi"/>
+                    <img src="https://private-avatars.githubusercontent.com/u/85106843?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTEiLCJleHAiOjE3MzQ2NjExNDAsIm5iZiI6MTczNDY1OTk0MCwicGF0aCI6Ii91Lzg1MTA2ODQzIn0.5AFpAcymebv99y4QuV2PTarB39JvWBLe581aH9XCBVg&v=4" width="100;" alt="andrii-zakurenyi"/>
                     <br />
                     <sub><b>Andrii Zakurenyi</b></sub>
                 </a>
             </td>
             <td align="center">
                 <a href="https://github.com/mariiatuzovska">
-                    <img src="https://avatars.githubusercontent.com/u/41679258?v=4" width="100;" alt="mariiatuzovska"/>
+                    <img src="https://private-avatars.githubusercontent.com/u/41679258?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTEiLCJleHAiOjE3MzQ2NjEwMjAsIm5iZiI6MTczNDY1OTgyMCwicGF0aCI6Ii91LzQxNjc5MjU4In0.EwVUwdcG-e-nsJB8uZGyjhPmPg3YHKlNHvFkT3Cabts&v=4" width="100;" alt="mariiatuzovska"/>
                     <br />
                     <sub><b>Mariia</b></sub>
                 </a>
             </td>
             <td align="center">
                 <a href="https://github.com/pacificcode">
-                    <img src="https://avatars.githubusercontent.com/u/918320?v=4" width="100;" alt="pacificcode"/>
+                    <img src="https://private-avatars.githubusercontent.com/u/918320?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTEiLCJleHAiOjE3MzQ2NjA5MDAsIm5iZiI6MTczNDY1OTcwMCwicGF0aCI6Ii91LzkxODMyMCJ9.fzJonqgx0Wxe7TLZ2anmgPlP-UyCZivLJiH1MqF0WIc&v=4" width="100;" alt="pacificcode"/>
                     <br />
                     <sub><b>Bill Hamilton</b></sub>
                 </a>
             </td>
             <td align="center">
                 <a href="https://github.com/tdillenbeck">
-                    <img src="https://avatars.githubusercontent.com/u/21064520?v=4" width="100;" alt="tdillenbeck"/>
+                    <img src="https://private-avatars.githubusercontent.com/u/21064520?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTEiLCJleHAiOjE3MzQ2NjEwODAsIm5iZiI6MTczNDY1OTg4MCwicGF0aCI6Ii91LzIxMDY0NTIwIn0.-zw04hRsAWYNrEUcWeoqY7mNfQMAW8N0BHYQS7o2VzQ&v=4" width="100;" alt="tdillenbeck"/>
                     <br />
                     <sub><b>Tom Dillenbeck</b></sub>
                 </a>
