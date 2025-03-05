@@ -1,6 +1,8 @@
 module github.com/DelineaXPM/dsv-cli
 
-go 1.21
+go 1.23.0
+
+toolchain go1.24.1
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
@@ -20,7 +22,7 @@ require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.17.0
 	github.com/gobuffalo/uuid v2.0.5+incompatible
-	github.com/golang-jwt/jwt/v4 v4.5.0
+	github.com/golang-jwt/jwt/v4 v4.5.1
 	github.com/hinshun/vt10x v0.0.0-20220301184237-5011da428d02
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
 	github.com/jarcoal/httpmock v1.3.1
@@ -39,7 +41,7 @@ require (
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.9.0
 	github.com/tidwall/pretty v1.2.1
-	golang.org/x/oauth2 v0.21.0
+	golang.org/x/oauth2 v0.27.0
 	golang.org/x/sys v0.28.0
 	google.golang.org/api v0.183.0
 	gopkg.in/yaml.v3 v3.0.1
