@@ -147,3 +147,5 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	mvdan.cc/sh/v3 v3.7.0 // indirect
 )
+
+replace github.com/Azure/go-autorest => github.com/Azure/go-autorest v14.2.1-0.20250128162915-33e12ab7683c+incompatible
