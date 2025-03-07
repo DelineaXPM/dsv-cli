@@ -35,7 +35,7 @@ cloud.google.com/go/compute/metadata
 github.com/AlecAivazis/survey/v2
 github.com/AlecAivazis/survey/v2/core
 github.com/AlecAivazis/survey/v2/terminal
-# github.com/Azure/go-autorest v14.2.0+incompatible
+# github.com/Azure/go-autorest v14.2.0+incompatible => github.com/Azure/go-autorest v14.2.1-0.20250128162915-33e12ab7683c+incompatible
 ## explicit
 github.com/Azure/go-autorest
 # github.com/Azure/go-autorest/autorest v0.11.29
@@ -815,3 +815,4 @@ mvdan.cc/sh/v3/fileutil
 mvdan.cc/sh/v3/pattern
 mvdan.cc/sh/v3/shell
 mvdan.cc/sh/v3/syntax
+# github.com/Azure/go-autorest => github.com/Azure/go-autorest v14.2.1-0.20250128162915-33e12ab7683c+incompatible
