@@ -79,7 +79,7 @@
       "username": "vscode",
       "installOhMyZsh": true
     },
-    "ghcr.io/devcontainers/features/docker-in-docker:1.0.7": {
+    "ghcr.io/devcontainers/features/docker-in-docker:1.0.9": {
       "version": "latest",
       "dockerDashComposeVersion": "v2",
       "username": "vscode"
