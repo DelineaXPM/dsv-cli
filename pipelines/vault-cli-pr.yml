@@ -112,7 +112,7 @@ jobs:
           testRunTitle: 'CLI Tests'
         condition: succeededOrFailed()
 
-      - task: PublishCodeCoverageResults@1
+      - task: PublishCodeCoverageResults@2
         displayName: 'Publish Code Coverage'
         inputs:
           codeCoverageTool: Cobertura
