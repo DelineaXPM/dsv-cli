@@ -26,6 +26,6 @@ func (a *authorization) GetSTSHeaderAndBody() (string, string, error) {
 
 func (a *authorization) getCallerIdentityRequest() *request.Request {
 	r, _ := sts.New(a.sess).GetCallerIdentityRequest(nil)
-	r.Sign()
+	_ = r.Sign()
 	return r
 }
