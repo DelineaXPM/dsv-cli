@@ -74,12 +74,12 @@
     "storage": "32gb"
   },
   "features": {
-    "ghcr.io/devcontainers/features/common-utils:1": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
       "version": "latest",
       "username": "vscode",
       "installOhMyZsh": true
     },
-    "ghcr.io/devcontainers/features/docker-in-docker:1.0.9": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2.12.2": {
       "version": "latest",
       "dockerDashComposeVersion": "v2",
       "username": "vscode"
