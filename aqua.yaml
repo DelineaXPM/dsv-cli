@@ -12,8 +12,8 @@ packages:
   - name: direnv/direnv@v2.36.0
   - name: magefile/mage@v1.15.0
     tags: ['ci']
-  - name: charmbracelet/glow@v1.5.1
-  - name: goreleaser/goreleaser@v1.26.2
+  - name: charmbracelet/glow@v2.1.1
+  - name: goreleaser/goreleaser@v2.10.2
     tags: ['ci']
   - name: mvdan/gofumpt@v0.8.0
   - name: sigstore/cosign
@@ -35,7 +35,7 @@ packages:
   - name: mikefarah/yq@v4.45.2
     tags:
       - release
-  - name: anchore/syft@v0.105.1
+  - name: anchore/syft@v1.27.1
     tags: ['ci']
   - name: cli/cli@v2.72.0
     tags:
