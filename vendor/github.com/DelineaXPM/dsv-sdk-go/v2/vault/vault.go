@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -17,10 +19,11 @@ import (
 const (
 	defaultTLD         string = "com"
 	defaultURLTemplate string = "https://%s.secretsvaultcloud.%s/v1/%s%s"
+	dsvEnvVar          string = "DSV_AT"
 )
 
 var (
-	errClientId     = errors.New("Credentials.ClientID must be set")
+	errClientID     = errors.New("Credentials.ClientID must be set")
 	errClientSecret = errors.New("Credentials.ClientSecret must be set")
 	errTenant       = errors.New("tenant must be set")
 )
@@ -58,11 +61,17 @@ type Vault struct {
 	Configuration
 }
 
+//nolint:tagliatelle // the json is coming from an external API call
+type TokenCache struct {
+	AccessToken string `json:"access_token"`
+	ExpiresIn   int    `json:"expires_in"`
+}
+
 // New returns a Vault or an error if the Configuration is invalid
 func New(config Configuration) (*Vault, error) {
 	if config.Provider == auth.CLIENT {
 		if config.Credentials.ClientID == "" {
-			return nil, errClientId
+			return nil, errClientID
 		}
 		if config.Credentials.ClientSecret == "" {
 			return nil, errClientSecret
@@ -136,15 +145,57 @@ type accessTokenRequest struct {
 	// Fields for "aws_iam" grant type.
 	AwsBody    string `json:"aws_body,omitempty"`
 	AwsHeaders string `json:"aws_headers,omitempty"`
+
+	// Fields for "Azure" grant type.
+	Jwt string `json:"jwt,omitempty"`
 }
 
+//nolint:tagliatelle // the json is coming from an external API call
 type accessTokenResponse struct {
 	AccessToken string `json:"accessToken"`
+	ExpiresIn   int    `json:"expiresIn"`
+}
+
+func (v Vault) setCacheAccessToken(value string, expiresIn int) bool {
+	percentage := 0.9
+	cache := TokenCache{}
+	cache.AccessToken = value
+	cache.ExpiresIn = (int(time.Now().Unix()) + expiresIn) - int(math.Floor(float64(expiresIn)*percentage))
+
+	data, err := json.Marshal(cache)
+	if err != nil {
+		return false
+	}
+	_ = os.Setenv(dsvEnvVar, string(data))
+	return true
+}
+
+func (v Vault) getCacheAccessToken() (string, bool) {
+	data, ok := os.LookupEnv(dsvEnvVar)
+	if !ok {
+		_ = os.Setenv(dsvEnvVar, "")
+		return "", ok
+	}
+	cache := TokenCache{}
+	if err := json.Unmarshal([]byte(data), &cache); err != nil {
+		return "", false
+	}
+	if time.Now().Unix() < int64(cache.ExpiresIn) {
+		return cache.AccessToken, true
+	}
+	return "", false
 }
 
 // getAccessToken returns access token fetched from DSV.
+//
+//nolint:cyclop //function is not overly complex :)
 func (v Vault) getAccessToken() (string, error) {
+	accessToken, found := v.getCacheAccessToken()
+	if found {
+		return accessToken, nil
+	}
 	var rBody accessTokenRequest
+	//nolint:exhaustive //not necessary
 	switch v.Provider {
 	case auth.AWS:
 		auth, err := auth.New(auth.Config{Provider: auth.AWS})
@@ -159,31 +210,37 @@ func (v Vault) getAccessToken() (string, error) {
 		rBody.GrantType = "aws_iam"
 		rBody.AwsHeaders = header
 		rBody.AwsBody = body
-
+	case auth.AZURE:
+		ath, _ := auth.New(auth.Config{Provider: auth.AZURE})
+		data, err := ath.BuildAzureParams()
+		if err != nil {
+			return "", err
+		}
+		rBody.GrantType = data.GrantType
+		rBody.Jwt = data.Jwt
 	default:
 		rBody.GrantType = "client_credentials"
 		rBody.ClientID = v.Credentials.ClientID
 		rBody.ClientSecret = v.Credentials.ClientSecret
 	}
-
 	request, err := json.Marshal(&rBody)
 	if err != nil {
-		return "", fmt.Errorf("marshalling token request body: %w", err)
 	}
 
 	url := v.urlFor("token", "")
-
 	response, err := handleResponse(http.Post(url, "application/json", bytes.NewReader(request)))
 	if err != nil {
 		return "", fmt.Errorf("fetching token: %w", err)
 	}
 
-	// TODO: cache the token until it expires.
 	resp := &accessTokenResponse{}
 	if err = json.Unmarshal(response, &resp); err != nil {
-		return "", fmt.Errorf("unmarshalling token response: %w", err)
+		return "", fmt.Errorf("unmarshaling token response: %w", err)
 	}
-
+	ok := v.setCacheAccessToken(resp.AccessToken, resp.ExpiresIn)
+	if !ok {
+		return "", fmt.Errorf("unable to cache access token")
+	}
 	return resp.AccessToken, nil
 }
 
