@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 
 	"atomicgo.dev/cursor"
 	"atomicgo.dev/keyboard"
@@ -15,30 +16,32 @@ import (
 var (
 	// DefaultInteractiveSelect is the default InteractiveSelect printer.
 	DefaultInteractiveSelect = InteractiveSelectPrinter{
-		TextStyle:     &ThemeDefault.PrimaryStyle,
-		DefaultText:   "Please select an option",
-		Options:       []string{},
-		OptionStyle:   &ThemeDefault.DefaultText,
-		DefaultOption: "",
-		MaxHeight:     5,
-		Selector:      ">",
-		SelectorStyle: &ThemeDefault.SecondaryStyle,
-		Filter:        true,
+		TextStyle:              &ThemeDefault.PrimaryStyle,
+		DefaultText:            "Please select an option",
+		Options:                []string{},
+		OptionStyle:            &ThemeDefault.DefaultText,
+		DefaultOption:          "",
+		MaxHeight:              5,
+		Selector:               ">",
+		SelectorStyle:          &ThemeDefault.SecondaryStyle,
+		Filter:                 true,
+		FilterInputPlaceholder: "[type to search]",
 	}
 )
 
 // InteractiveSelectPrinter is a printer for interactive select menus.
 type InteractiveSelectPrinter struct {
-	TextStyle       *Style
-	DefaultText     string
-	Options         []string
-	OptionStyle     *Style
-	DefaultOption   string
-	MaxHeight       int
-	Selector        string
-	SelectorStyle   *Style
-	OnInterruptFunc func()
-	Filter          bool
+	TextStyle              *Style
+	DefaultText            string
+	Options                []string
+	OptionStyle            *Style
+	DefaultOption          string
+	MaxHeight              int
+	Selector               string
+	SelectorStyle          *Style
+	OnInterruptFunc        func()
+	Filter                 bool
+	FilterInputPlaceholder string
 
 	selectedOption        int
 	result                string
@@ -83,6 +86,12 @@ func (p InteractiveSelectPrinter) WithOnInterruptFunc(exitFunc func()) *Interact
 // WithFilter sets the Filter option
 func (p InteractiveSelectPrinter) WithFilter(b ...bool) *InteractiveSelectPrinter {
 	p.Filter = internal.WithBoolean(b)
+	return &p
+}
+
+// WithFilterInputPlaceholder sets the filter input placeholder text.
+func (p InteractiveSelectPrinter) WithFilterInputPlaceholder(text string) *InteractiveSelectPrinter {
+	p.FilterInputPlaceholder = text
 	return &p
 }
 
@@ -261,11 +270,11 @@ func (p *InteractiveSelectPrinter) Show(text ...string) (string, error) {
 }
 
 func (p *InteractiveSelectPrinter) renderSelectMenu() string {
-	var content string
+	var content strings.Builder
 	if p.Filter {
-		content += Sprintf("%s %s: %s\n", p.text, p.SelectorStyle.Sprint("[type to search]"), p.fuzzySearchString)
+		content.WriteString(Sprintf("%s %s: %s\n", p.text, p.SelectorStyle.Sprint(p.FilterInputPlaceholder), p.fuzzySearchString))
 	} else {
-		content += Sprintf("%s:\n", p.text)
+		content.WriteString(Sprintf("%s:\n", p.text))
 	}
 
 	// find options that match fuzzy search string
@@ -296,13 +305,13 @@ func (p *InteractiveSelectPrinter) renderSelectMenu() string {
 			continue
 		}
 		if i == p.selectedOption {
-			content += Sprintf("%s %s\n", p.renderSelector(), p.OptionStyle.Sprint(option))
+			content.WriteString(Sprintf("%s %s\n", p.renderSelector(), p.OptionStyle.Sprint(option)))
 		} else {
-			content += Sprintf("  %s\n", p.OptionStyle.Sprint(option))
+			content.WriteString(Sprintf("  %s\n", p.OptionStyle.Sprint(option)))
 		}
 	}
 
-	return content
+	return content.String()
 }
 
 func (p InteractiveSelectPrinter) renderFinishedMenu() string {
