@@ -770,7 +770,7 @@ func TestHandleBustCacheCmd(t *testing.T) {
 				if tt.expectedErr == "" {
 					return nil
 				}
-				return fmt.Errorf(tt.expectedErr)
+				return fmt.Errorf("%s", tt.expectedErr) //nolint:err113 // test stub returns the table-driven error
 			}
 
 			vcli, rerr := vaultcli.NewWithOpts(

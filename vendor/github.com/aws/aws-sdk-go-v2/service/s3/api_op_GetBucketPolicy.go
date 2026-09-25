@@ -4,22 +4,20 @@ package s3
 
 import (
 	"context"
-	"fmt"
-	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	s3cust "github.com/aws/aws-sdk-go-v2/service/s3/internal/customizations"
 	"github.com/aws/smithy-go/middleware"
 	"github.com/aws/smithy-go/ptr"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Returns the policy of a specified bucket.
 //
 // Directory buckets - For directory buckets, you must make requests for this API
 // operation to the Regional endpoint. These endpoints support path-style requests
-// in the format https://s3express-control.region_code.amazonaws.com/bucket-name .
-// Virtual-hosted-style requests aren't supported. For more information, see [Regional and Zonal endpoints]in
-// the Amazon S3 User Guide.
+// in the format https://s3express-control.region-code.amazonaws.com/bucket-name .
+// Virtual-hosted-style requests aren't supported. For more information about
+// endpoints in Availability Zones, see [Regional and Zonal endpoints for directory buckets in Availability Zones]in the Amazon S3 User Guide. For more
+// information about endpoints in Local Zones, see [Concepts for directory buckets in Local Zones]in the Amazon S3 User Guide.
 //
 // Permissions If you are using an identity other than the root user of the Amazon
 // Web Services account that owns the bucket, the calling identity must both have
@@ -56,17 +54,22 @@ import (
 // Directory bucket example bucket policies - See [Example bucket policies for S3 Express One Zone] in the Amazon S3 User Guide.
 //
 // HTTP Host header syntax  Directory buckets - The HTTP Host header syntax is
-// s3express-control.region.amazonaws.com .
+// s3express-control.region-code.amazonaws.com .
 //
 // The following action is related to GetBucketPolicy :
 //
 // [GetObject]
 //
+// You must URL encode any signed header values that contain spaces. For example,
+// if your header value is my file.txt , containing two spaces after my , you must
+// URL encode this value to my%20%20file.txt .
+//
 // [Bucket policy examples]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/example-bucket-policies.html
+// [Concepts for directory buckets in Local Zones]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-lzs-for-directory-buckets.html
 // [Example bucket policies for S3 Express One Zone]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-security-iam-example-bucket-policies.html
-// [Regional and Zonal endpoints]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-Regions-and-Zones.html
 // [Using Bucket Policies and User Policies]: https://docs.aws.amazon.com/AmazonS3/latest/dev/using-iam-policies.html
 // [GetObject]: https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html
+// [Regional and Zonal endpoints for directory buckets in Availability Zones]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/endpoint-directory-buckets-AZ.html
 // [Amazon Web Services Identity and Access Management (IAM) for S3 Express One Zone]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-security-iam.html
 func (c *Client) GetBucketPolicy(ctx context.Context, params *GetBucketPolicyInput, optFns ...func(*Options)) (*GetBucketPolicyOutput, error) {
 	if params == nil {
@@ -89,12 +92,12 @@ type GetBucketPolicyInput struct {
 	//
 	// Directory buckets - When you use this operation with a directory bucket, you
 	// must use path-style requests in the format
-	// https://s3express-control.region_code.amazonaws.com/bucket-name .
+	// https://s3express-control.region-code.amazonaws.com/bucket-name .
 	// Virtual-hosted-style requests aren't supported. Directory bucket names must be
-	// unique in the chosen Availability Zone. Bucket names must also follow the format
-	// bucket_base_name--az_id--x-s3 (for example,  DOC-EXAMPLE-BUCKET--usw2-az1--x-s3
-	// ). For information about bucket naming restrictions, see [Directory bucket naming rules]in the Amazon S3 User
-	// Guide
+	// unique in the chosen Zone (Availability Zone or Local Zone). Bucket names must
+	// also follow the format bucket-base-name--zone-id--x-s3 (for example,
+	// DOC-EXAMPLE-BUCKET--usw2-az1--x-s3 ). For information about bucket naming
+	// restrictions, see [Directory bucket naming rules]in the Amazon S3 User Guide
 	//
 	// Access points - When you use this API operation with an access point, provide
 	// the alias of the access point in place of the bucket name.
@@ -105,8 +108,7 @@ type GetBucketPolicyInput struct {
 	// is not valid, the error code InvalidAccessPointAliasError is returned. For more
 	// information about InvalidAccessPointAliasError , see [List of Error Codes].
 	//
-	// Access points and Object Lambda access points are not supported by directory
-	// buckets.
+	// Object Lambda access points are not supported by directory buckets.
 	//
 	// [Directory bucket naming rules]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/directory-bucket-naming-rules.html
 	// [List of Error Codes]: https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html#ErrorCodeList
@@ -127,6 +129,7 @@ type GetBucketPolicyInput struct {
 }
 
 func (in *GetBucketPolicyInput) bindEndpointParams(p *EndpointParameters) {
+
 	p.Bucket = in.Bucket
 	p.UseS3ExpressControlEndpoint = ptr.Bool(true)
 }
@@ -143,9 +146,6 @@ type GetBucketPolicyOutput struct {
 }
 
 func (c *Client) addOperationGetBucketPolicyMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	if err := stack.Serialize.Add(&setOperationInputMiddleware{}, middleware.After); err != nil {
-		return err
-	}
 	err = stack.Serialize.Add(&awsRestxml_serializeOpGetBucketPolicy{}, middleware.After)
 	if err != nil {
 		return err
@@ -154,65 +154,29 @@ func (c *Client) addOperationGetBucketPolicyMiddlewares(stack *middleware.Stack,
 	if err != nil {
 		return err
 	}
-	if err := addProtocolFinalizerMiddlewares(stack, options, "GetBucketPolicy"); err != nil {
-		return fmt.Errorf("add protocol finalizers: %v", err)
-	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addSetLoggerMiddleware(stack, options); err != nil {
-		return err
-	}
-	if err = addClientRequestID(stack); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
 	if err = addComputePayloadSHA256(stack); err != nil {
 		return err
 	}
-	if err = addRetry(stack, options); err != nil {
-		return err
-	}
-	if err = addRawResponseToMetadata(stack); err != nil {
-		return err
-	}
-	if err = addRecordResponseTiming(stack); err != nil {
-		return err
-	}
-	if err = addClientUserAgent(stack, options); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
+	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
 	if err = addPutBucketContextMiddleware(stack); err != nil {
 		return err
 	}
-	if err = addTimeOffsetBuild(stack, c); err != nil {
+	if err = addIsExpressUserAgent(stack); err != nil {
+		return err
+	}
+	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpGetBucketPolicyValidationMiddleware(stack); err != nil {
 		return err
 	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opGetBucketPolicy(options.Region), middleware.Before); err != nil {
-		return err
-	}
 	if err = addMetadataRetrieverMiddleware(stack); err != nil {
-		return err
-	}
-	if err = addRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addGetBucketPolicyUpdateEndpoint(stack, options); err != nil {
@@ -236,6 +200,9 @@ func (c *Client) addOperationGetBucketPolicyMiddlewares(stack *middleware.Stack,
 	if err = addSerializeImmutableHostnameBucketMiddleware(stack, options); err != nil {
 		return err
 	}
+	if err = addInterceptors(stack, options); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -244,14 +211,6 @@ func (v *GetBucketPolicyInput) bucket() (string, bool) {
 		return "", false
 	}
 	return *v.Bucket, true
-}
-
-func newServiceMetadataMiddleware_opGetBucketPolicy(region string) *awsmiddleware.RegisterServiceMetadata {
-	return &awsmiddleware.RegisterServiceMetadata{
-		Region:        region,
-		ServiceID:     ServiceID,
-		OperationName: "GetBucketPolicy",
-	}
 }
 
 // getGetBucketPolicyBucketMember returns a pointer to string denoting a provided

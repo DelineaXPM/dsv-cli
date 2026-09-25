@@ -128,7 +128,7 @@ func TestHandleAuthClear(t *testing.T) {
 			}
 
 			st := &fake.FakeStore{}
-			st.WipeStub = func(s string) error { return fmt.Errorf(tt.expectedErr) }
+			st.WipeStub = func(s string) error { return fmt.Errorf("%s", tt.expectedErr) } //nolint:err113 // test stub returns the table-driven error
 
 			vcli, rerr := vaultcli.NewWithOpts(
 				vaultcli.WithOutClient(outClient),
@@ -190,7 +190,7 @@ func TestHandleAuthList(t *testing.T) {
 			st := &fake.FakeStore{}
 			st.ListStub = func(s string) ([]string, error) {
 				if tt.expectedErr != "" {
-					return nil, fmt.Errorf(tt.expectedErr)
+					return nil, fmt.Errorf("%s", tt.expectedErr) //nolint:err113 // test stub returns the table-driven error
 				}
 				return tt.list, nil
 			}

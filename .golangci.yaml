@@ -1,7 +1,4 @@
 ---
-output:
-  formats:
-    - format: tab
 linters-settings:
   misspell:
     locale: US

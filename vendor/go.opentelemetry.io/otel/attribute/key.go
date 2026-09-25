@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package attribute // import "go.opentelemetry.io/otel/attribute"
 
@@ -128,7 +117,29 @@ func (k Key) StringSlice(v []string) KeyValue {
 	}
 }
 
-// Defined returns true for non-empty keys.
+// ByteSlice creates a KeyValue instance with a BYTESLICE Value.
+//
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- ByteSlice(name, value).
+func (k Key) ByteSlice(v []byte) KeyValue {
+	return KeyValue{
+		Key:   k,
+		Value: ByteSliceValue(v),
+	}
+}
+
+// Slice creates a KeyValue instance with a SLICE Value.
+//
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- Slice(name, values...).
+func (k Key) Slice(v ...Value) KeyValue {
+	return KeyValue{
+		Key:   k,
+		Value: SliceValue(v...),
+	}
+}
+
+// Defined reports whether the key is not empty.
 func (k Key) Defined() bool {
 	return len(k) != 0
 }
