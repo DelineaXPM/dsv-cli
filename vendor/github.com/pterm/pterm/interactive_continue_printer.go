@@ -15,7 +15,7 @@ import (
 
 // DefaultInteractiveContinue is the default InteractiveContinue printer.
 // Pressing "y" will return yes, "n" will return no, "a" returns all and "s" returns stop.
-// Pressing enter without typing any letter will return the configured default value (by default set to "yes", the fisrt option).
+// Pressing enter without typing any letter will return the configured default value (by default set to "yes", the first option).
 var DefaultInteractiveContinue = InteractiveContinuePrinter{
 	DefaultValueIndex: 0,
 	DefaultText:       "Do you want to continue",
@@ -180,7 +180,7 @@ func (p *InteractiveContinuePrinter) setDefaultHandles() {
 		p.Handles = p.getShortHandles()
 	}
 
-	if p.Handles == nil || len(p.Handles) == 0 {
+	if len(p.Handles) == 0 {
 		p.Handles = make([]string, len(p.Options))
 		copy(p.Handles, p.Options)
 		p.Handles[p.DefaultValueIndex] = cases.Title(language.Und, cases.Compact).String(p.Handles[p.DefaultValueIndex])
