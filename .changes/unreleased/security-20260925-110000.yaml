@@ -1,0 +1,3 @@
+kind: security
+body: 'Go toolchain 1.24.1 → 1.26.8 and dependency upgrades (gRPC 1.83.2, golang.org/x/net 0.59.0, x/text, x/crypto, aws-sdk-go-v2 service/s3 1.113.4) clear all 52 Snyk findings, including 2 CRITICAL; govulncheck reports no reachable vulnerabilities.'
+time: 2026-09-25T11:00:00.000000-07:00

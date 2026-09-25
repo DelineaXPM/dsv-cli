@@ -23,7 +23,7 @@ jobs:
       - task: GoTool@0
         displayName: 'Use Go 1.21.0'
         inputs:
-          version: 1.21.0
+          version: 1.26.8
 
       - task: WhiteSource@21
         inputs:
@@ -128,7 +128,7 @@ jobs:
       - task: GoTool@0
         displayName: 'Use Go 1.21.0'
         inputs:
-          version: 1.21.0
+          version: 1.26.8
 
       - script: |
           go mod download
@@ -159,7 +159,7 @@ jobs:
       - task: GoTool@0
         displayName: 'Use Go 1.21.0'
         inputs:
-          version: 1.21.0
+          version: 1.26.8
 
       - script: |
           go mod download
