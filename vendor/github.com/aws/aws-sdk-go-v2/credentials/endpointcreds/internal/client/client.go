@@ -104,8 +104,6 @@ func (c *Client) GetCredentials(ctx context.Context, params *GetCredentialsInput
 	addProtocolFinalizerMiddlewares(stack, options, "GetCredentials")
 	retry.AddRetryMiddlewares(stack, retry.AddRetryMiddlewaresOptions{Retryer: options.Retryer})
 	middleware.AddSDKAgentKey(middleware.FeatureMetadata, ServiceID)
-	smithyhttp.AddErrorCloseResponseBodyMiddleware(stack)
-	smithyhttp.AddCloseResponseBodyMiddleware(stack)
 
 	for _, fn := range options.APIOptions {
 		if err := fn(stack); err != nil {
@@ -128,6 +126,7 @@ type GetCredentialsOutput struct {
 	AccessKeyID     string
 	SecretAccessKey string
 	Token           string
+	AccountID       string
 }
 
 // EndpointError is an error returned from the endpoint service

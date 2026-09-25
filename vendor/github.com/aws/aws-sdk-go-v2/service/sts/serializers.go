@@ -11,6 +11,7 @@ import (
 	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/encoding/httpbinding"
 	"github.com/aws/smithy-go/middleware"
+	"github.com/aws/smithy-go/tracing"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"path"
 )
@@ -25,6 +26,10 @@ func (*awsAwsquery_serializeOpAssumeRole) ID() string {
 func (m *awsAwsquery_serializeOpAssumeRole) HandleSerialize(ctx context.Context, in middleware.SerializeInput, next middleware.SerializeHandler) (
 	out middleware.SerializeOutput, metadata middleware.Metadata, err error,
 ) {
+	_, span := tracing.StartSpan(ctx, "OperationSerializer")
+	endTimer := startMetricTimer(ctx, "client.call.serialization_duration")
+	defer endTimer()
+	defer span.End()
 	request, ok := in.Request.(*smithyhttp.Request)
 	if !ok {
 		return out, metadata, &smithy.SerializationError{Err: fmt.Errorf("unknown transport type %T", in.Request)}
@@ -76,6 +81,8 @@ func (m *awsAwsquery_serializeOpAssumeRole) HandleSerialize(ctx context.Context,
 	}
 	in.Request = request
 
+	endTimer()
+	span.End()
 	return next.HandleSerialize(ctx, in)
 }
 
@@ -89,6 +96,10 @@ func (*awsAwsquery_serializeOpAssumeRoleWithSAML) ID() string {
 func (m *awsAwsquery_serializeOpAssumeRoleWithSAML) HandleSerialize(ctx context.Context, in middleware.SerializeInput, next middleware.SerializeHandler) (
 	out middleware.SerializeOutput, metadata middleware.Metadata, err error,
 ) {
+	_, span := tracing.StartSpan(ctx, "OperationSerializer")
+	endTimer := startMetricTimer(ctx, "client.call.serialization_duration")
+	defer endTimer()
+	defer span.End()
 	request, ok := in.Request.(*smithyhttp.Request)
 	if !ok {
 		return out, metadata, &smithy.SerializationError{Err: fmt.Errorf("unknown transport type %T", in.Request)}
@@ -140,6 +151,8 @@ func (m *awsAwsquery_serializeOpAssumeRoleWithSAML) HandleSerialize(ctx context.
 	}
 	in.Request = request
 
+	endTimer()
+	span.End()
 	return next.HandleSerialize(ctx, in)
 }
 
@@ -153,6 +166,10 @@ func (*awsAwsquery_serializeOpAssumeRoleWithWebIdentity) ID() string {
 func (m *awsAwsquery_serializeOpAssumeRoleWithWebIdentity) HandleSerialize(ctx context.Context, in middleware.SerializeInput, next middleware.SerializeHandler) (
 	out middleware.SerializeOutput, metadata middleware.Metadata, err error,
 ) {
+	_, span := tracing.StartSpan(ctx, "OperationSerializer")
+	endTimer := startMetricTimer(ctx, "client.call.serialization_duration")
+	defer endTimer()
+	defer span.End()
 	request, ok := in.Request.(*smithyhttp.Request)
 	if !ok {
 		return out, metadata, &smithy.SerializationError{Err: fmt.Errorf("unknown transport type %T", in.Request)}
@@ -204,6 +221,78 @@ func (m *awsAwsquery_serializeOpAssumeRoleWithWebIdentity) HandleSerialize(ctx c
 	}
 	in.Request = request
 
+	endTimer()
+	span.End()
+	return next.HandleSerialize(ctx, in)
+}
+
+type awsAwsquery_serializeOpAssumeRoot struct {
+}
+
+func (*awsAwsquery_serializeOpAssumeRoot) ID() string {
+	return "OperationSerializer"
+}
+
+func (m *awsAwsquery_serializeOpAssumeRoot) HandleSerialize(ctx context.Context, in middleware.SerializeInput, next middleware.SerializeHandler) (
+	out middleware.SerializeOutput, metadata middleware.Metadata, err error,
+) {
+	_, span := tracing.StartSpan(ctx, "OperationSerializer")
+	endTimer := startMetricTimer(ctx, "client.call.serialization_duration")
+	defer endTimer()
+	defer span.End()
+	request, ok := in.Request.(*smithyhttp.Request)
+	if !ok {
+		return out, metadata, &smithy.SerializationError{Err: fmt.Errorf("unknown transport type %T", in.Request)}
+	}
+
+	input, ok := in.Parameters.(*AssumeRootInput)
+	_ = input
+	if !ok {
+		return out, metadata, &smithy.SerializationError{Err: fmt.Errorf("unknown input parameters type %T", in.Parameters)}
+	}
+
+	operationPath := "/"
+	if len(request.Request.URL.Path) == 0 {
+		request.Request.URL.Path = operationPath
+	} else {
+		request.Request.URL.Path = path.Join(request.Request.URL.Path, operationPath)
+		if request.Request.URL.Path != "/" && operationPath[len(operationPath)-1] == '/' {
+			request.Request.URL.Path += "/"
+		}
+	}
+	request.Request.Method = "POST"
+	httpBindingEncoder, err := httpbinding.NewEncoder(request.URL.Path, request.URL.RawQuery, request.Header)
+	if err != nil {
+		return out, metadata, &smithy.SerializationError{Err: err}
+	}
+	httpBindingEncoder.SetHeader("Content-Type").String("application/x-www-form-urlencoded")
+
+	bodyWriter := bytes.NewBuffer(nil)
+	bodyEncoder := query.NewEncoder(bodyWriter)
+	body := bodyEncoder.Object()
+	body.Key("Action").String("AssumeRoot")
+	body.Key("Version").String("2011-06-15")
+
+	if err := awsAwsquery_serializeOpDocumentAssumeRootInput(input, bodyEncoder.Value); err != nil {
+		return out, metadata, &smithy.SerializationError{Err: err}
+	}
+
+	err = bodyEncoder.Encode()
+	if err != nil {
+		return out, metadata, &smithy.SerializationError{Err: err}
+	}
+
+	if request, err = request.SetStream(bytes.NewReader(bodyWriter.Bytes())); err != nil {
+		return out, metadata, &smithy.SerializationError{Err: err}
+	}
+
+	if request.Request, err = httpBindingEncoder.Encode(request.Request); err != nil {
+		return out, metadata, &smithy.SerializationError{Err: err}
+	}
+	in.Request = request
+
+	endTimer()
+	span.End()
 	return next.HandleSerialize(ctx, in)
 }
 
@@ -217,6 +306,10 @@ func (*awsAwsquery_serializeOpDecodeAuthorizationMessage) ID() string {
 func (m *awsAwsquery_serializeOpDecodeAuthorizationMessage) HandleSerialize(ctx context.Context, in middleware.SerializeInput, next middleware.SerializeHandler) (
 	out middleware.SerializeOutput, metadata middleware.Metadata, err error,
 ) {
+	_, span := tracing.StartSpan(ctx, "OperationSerializer")
+	endTimer := startMetricTimer(ctx, "client.call.serialization_duration")
+	defer endTimer()
+	defer span.End()
 	request, ok := in.Request.(*smithyhttp.Request)
 	if !ok {
 		return out, metadata, &smithy.SerializationError{Err: fmt.Errorf("unknown transport type %T", in.Request)}
@@ -268,6 +361,8 @@ func (m *awsAwsquery_serializeOpDecodeAuthorizationMessage) HandleSerialize(ctx 
 	}
 	in.Request = request
 
+	endTimer()
+	span.End()
 	return next.HandleSerialize(ctx, in)
 }
 
@@ -281,6 +376,10 @@ func (*awsAwsquery_serializeOpGetAccessKeyInfo) ID() string {
 func (m *awsAwsquery_serializeOpGetAccessKeyInfo) HandleSerialize(ctx context.Context, in middleware.SerializeInput, next middleware.SerializeHandler) (
 	out middleware.SerializeOutput, metadata middleware.Metadata, err error,
 ) {
+	_, span := tracing.StartSpan(ctx, "OperationSerializer")
+	endTimer := startMetricTimer(ctx, "client.call.serialization_duration")
+	defer endTimer()
+	defer span.End()
 	request, ok := in.Request.(*smithyhttp.Request)
 	if !ok {
 		return out, metadata, &smithy.SerializationError{Err: fmt.Errorf("unknown transport type %T", in.Request)}
@@ -332,6 +431,8 @@ func (m *awsAwsquery_serializeOpGetAccessKeyInfo) HandleSerialize(ctx context.Co
 	}
 	in.Request = request
 
+	endTimer()
+	span.End()
 	return next.HandleSerialize(ctx, in)
 }
 
@@ -345,6 +446,10 @@ func (*awsAwsquery_serializeOpGetCallerIdentity) ID() string {
 func (m *awsAwsquery_serializeOpGetCallerIdentity) HandleSerialize(ctx context.Context, in middleware.SerializeInput, next middleware.SerializeHandler) (
 	out middleware.SerializeOutput, metadata middleware.Metadata, err error,
 ) {
+	_, span := tracing.StartSpan(ctx, "OperationSerializer")
+	endTimer := startMetricTimer(ctx, "client.call.serialization_duration")
+	defer endTimer()
+	defer span.End()
 	request, ok := in.Request.(*smithyhttp.Request)
 	if !ok {
 		return out, metadata, &smithy.SerializationError{Err: fmt.Errorf("unknown transport type %T", in.Request)}
@@ -392,6 +497,78 @@ func (m *awsAwsquery_serializeOpGetCallerIdentity) HandleSerialize(ctx context.C
 	}
 	in.Request = request
 
+	endTimer()
+	span.End()
+	return next.HandleSerialize(ctx, in)
+}
+
+type awsAwsquery_serializeOpGetDelegatedAccessToken struct {
+}
+
+func (*awsAwsquery_serializeOpGetDelegatedAccessToken) ID() string {
+	return "OperationSerializer"
+}
+
+func (m *awsAwsquery_serializeOpGetDelegatedAccessToken) HandleSerialize(ctx context.Context, in middleware.SerializeInput, next middleware.SerializeHandler) (
+	out middleware.SerializeOutput, metadata middleware.Metadata, err error,
+) {
+	_, span := tracing.StartSpan(ctx, "OperationSerializer")
+	endTimer := startMetricTimer(ctx, "client.call.serialization_duration")
+	defer endTimer()
+	defer span.End()
+	request, ok := in.Request.(*smithyhttp.Request)
+	if !ok {
+		return out, metadata, &smithy.SerializationError{Err: fmt.Errorf("unknown transport type %T", in.Request)}
+	}
+
+	input, ok := in.Parameters.(*GetDelegatedAccessTokenInput)
+	_ = input
+	if !ok {
+		return out, metadata, &smithy.SerializationError{Err: fmt.Errorf("unknown input parameters type %T", in.Parameters)}
+	}
+
+	operationPath := "/"
+	if len(request.Request.URL.Path) == 0 {
+		request.Request.URL.Path = operationPath
+	} else {
+		request.Request.URL.Path = path.Join(request.Request.URL.Path, operationPath)
+		if request.Request.URL.Path != "/" && operationPath[len(operationPath)-1] == '/' {
+			request.Request.URL.Path += "/"
+		}
+	}
+	request.Request.Method = "POST"
+	httpBindingEncoder, err := httpbinding.NewEncoder(request.URL.Path, request.URL.RawQuery, request.Header)
+	if err != nil {
+		return out, metadata, &smithy.SerializationError{Err: err}
+	}
+	httpBindingEncoder.SetHeader("Content-Type").String("application/x-www-form-urlencoded")
+
+	bodyWriter := bytes.NewBuffer(nil)
+	bodyEncoder := query.NewEncoder(bodyWriter)
+	body := bodyEncoder.Object()
+	body.Key("Action").String("GetDelegatedAccessToken")
+	body.Key("Version").String("2011-06-15")
+
+	if err := awsAwsquery_serializeOpDocumentGetDelegatedAccessTokenInput(input, bodyEncoder.Value); err != nil {
+		return out, metadata, &smithy.SerializationError{Err: err}
+	}
+
+	err = bodyEncoder.Encode()
+	if err != nil {
+		return out, metadata, &smithy.SerializationError{Err: err}
+	}
+
+	if request, err = request.SetStream(bytes.NewReader(bodyWriter.Bytes())); err != nil {
+		return out, metadata, &smithy.SerializationError{Err: err}
+	}
+
+	if request.Request, err = httpBindingEncoder.Encode(request.Request); err != nil {
+		return out, metadata, &smithy.SerializationError{Err: err}
+	}
+	in.Request = request
+
+	endTimer()
+	span.End()
 	return next.HandleSerialize(ctx, in)
 }
 
@@ -405,6 +582,10 @@ func (*awsAwsquery_serializeOpGetFederationToken) ID() string {
 func (m *awsAwsquery_serializeOpGetFederationToken) HandleSerialize(ctx context.Context, in middleware.SerializeInput, next middleware.SerializeHandler) (
 	out middleware.SerializeOutput, metadata middleware.Metadata, err error,
 ) {
+	_, span := tracing.StartSpan(ctx, "OperationSerializer")
+	endTimer := startMetricTimer(ctx, "client.call.serialization_duration")
+	defer endTimer()
+	defer span.End()
 	request, ok := in.Request.(*smithyhttp.Request)
 	if !ok {
 		return out, metadata, &smithy.SerializationError{Err: fmt.Errorf("unknown transport type %T", in.Request)}
@@ -456,6 +637,8 @@ func (m *awsAwsquery_serializeOpGetFederationToken) HandleSerialize(ctx context.
 	}
 	in.Request = request
 
+	endTimer()
+	span.End()
 	return next.HandleSerialize(ctx, in)
 }
 
@@ -469,6 +652,10 @@ func (*awsAwsquery_serializeOpGetSessionToken) ID() string {
 func (m *awsAwsquery_serializeOpGetSessionToken) HandleSerialize(ctx context.Context, in middleware.SerializeInput, next middleware.SerializeHandler) (
 	out middleware.SerializeOutput, metadata middleware.Metadata, err error,
 ) {
+	_, span := tracing.StartSpan(ctx, "OperationSerializer")
+	endTimer := startMetricTimer(ctx, "client.call.serialization_duration")
+	defer endTimer()
+	defer span.End()
 	request, ok := in.Request.(*smithyhttp.Request)
 	if !ok {
 		return out, metadata, &smithy.SerializationError{Err: fmt.Errorf("unknown transport type %T", in.Request)}
@@ -520,6 +707,78 @@ func (m *awsAwsquery_serializeOpGetSessionToken) HandleSerialize(ctx context.Con
 	}
 	in.Request = request
 
+	endTimer()
+	span.End()
+	return next.HandleSerialize(ctx, in)
+}
+
+type awsAwsquery_serializeOpGetWebIdentityToken struct {
+}
+
+func (*awsAwsquery_serializeOpGetWebIdentityToken) ID() string {
+	return "OperationSerializer"
+}
+
+func (m *awsAwsquery_serializeOpGetWebIdentityToken) HandleSerialize(ctx context.Context, in middleware.SerializeInput, next middleware.SerializeHandler) (
+	out middleware.SerializeOutput, metadata middleware.Metadata, err error,
+) {
+	_, span := tracing.StartSpan(ctx, "OperationSerializer")
+	endTimer := startMetricTimer(ctx, "client.call.serialization_duration")
+	defer endTimer()
+	defer span.End()
+	request, ok := in.Request.(*smithyhttp.Request)
+	if !ok {
+		return out, metadata, &smithy.SerializationError{Err: fmt.Errorf("unknown transport type %T", in.Request)}
+	}
+
+	input, ok := in.Parameters.(*GetWebIdentityTokenInput)
+	_ = input
+	if !ok {
+		return out, metadata, &smithy.SerializationError{Err: fmt.Errorf("unknown input parameters type %T", in.Parameters)}
+	}
+
+	operationPath := "/"
+	if len(request.Request.URL.Path) == 0 {
+		request.Request.URL.Path = operationPath
+	} else {
+		request.Request.URL.Path = path.Join(request.Request.URL.Path, operationPath)
+		if request.Request.URL.Path != "/" && operationPath[len(operationPath)-1] == '/' {
+			request.Request.URL.Path += "/"
+		}
+	}
+	request.Request.Method = "POST"
+	httpBindingEncoder, err := httpbinding.NewEncoder(request.URL.Path, request.URL.RawQuery, request.Header)
+	if err != nil {
+		return out, metadata, &smithy.SerializationError{Err: err}
+	}
+	httpBindingEncoder.SetHeader("Content-Type").String("application/x-www-form-urlencoded")
+
+	bodyWriter := bytes.NewBuffer(nil)
+	bodyEncoder := query.NewEncoder(bodyWriter)
+	body := bodyEncoder.Object()
+	body.Key("Action").String("GetWebIdentityToken")
+	body.Key("Version").String("2011-06-15")
+
+	if err := awsAwsquery_serializeOpDocumentGetWebIdentityTokenInput(input, bodyEncoder.Value); err != nil {
+		return out, metadata, &smithy.SerializationError{Err: err}
+	}
+
+	err = bodyEncoder.Encode()
+	if err != nil {
+		return out, metadata, &smithy.SerializationError{Err: err}
+	}
+
+	if request, err = request.SetStream(bytes.NewReader(bodyWriter.Bytes())); err != nil {
+		return out, metadata, &smithy.SerializationError{Err: err}
+	}
+
+	if request.Request, err = httpBindingEncoder.Encode(request.Request); err != nil {
+		return out, metadata, &smithy.SerializationError{Err: err}
+	}
+	in.Request = request
+
+	endTimer()
+	span.End()
 	return next.HandleSerialize(ctx, in)
 }
 func awsAwsquery_serializeDocumentPolicyDescriptorListType(v []types.PolicyDescriptorType, value query.Value) error {
@@ -614,6 +873,16 @@ func awsAwsquery_serializeDocumentTagListType(v []types.Tag, value query.Value) 
 	return nil
 }
 
+func awsAwsquery_serializeDocumentWebIdentityTokenAudienceListType(v []string, value query.Value) error {
+	array := value.Array("member")
+
+	for i := range v {
+		av := array.Value()
+		av.String(v[i])
+	}
+	return nil
+}
+
 func awsAwsquery_serializeOpDocumentAssumeRoleInput(v *AssumeRoleInput, value query.Value) error {
 	object := value.Object()
 	_ = object
@@ -626,6 +895,11 @@ func awsAwsquery_serializeOpDocumentAssumeRoleInput(v *AssumeRoleInput, value qu
 	if v.ExternalId != nil {
 		objectKey := object.Key("ExternalId")
 		objectKey.String(*v.ExternalId)
+	}
+
+	if v.MinimumSessionTokenSize != nil {
+		objectKey := object.Key("MinimumSessionTokenSize")
+		objectKey.Integer(*v.MinimumSessionTokenSize)
 	}
 
 	if v.Policy != nil {
@@ -698,6 +972,11 @@ func awsAwsquery_serializeOpDocumentAssumeRoleWithSAMLInput(v *AssumeRoleWithSAM
 		objectKey.Integer(*v.DurationSeconds)
 	}
 
+	if v.MinimumSessionTokenSize != nil {
+		objectKey := object.Key("MinimumSessionTokenSize")
+		objectKey.Integer(*v.MinimumSessionTokenSize)
+	}
+
 	if v.Policy != nil {
 		objectKey := object.Key("Policy")
 		objectKey.String(*v.Policy)
@@ -737,6 +1016,11 @@ func awsAwsquery_serializeOpDocumentAssumeRoleWithWebIdentityInput(v *AssumeRole
 		objectKey.Integer(*v.DurationSeconds)
 	}
 
+	if v.MinimumSessionTokenSize != nil {
+		objectKey := object.Key("MinimumSessionTokenSize")
+		objectKey.Integer(*v.MinimumSessionTokenSize)
+	}
+
 	if v.Policy != nil {
 		objectKey := object.Key("Policy")
 		objectKey.String(*v.Policy)
@@ -767,6 +1051,35 @@ func awsAwsquery_serializeOpDocumentAssumeRoleWithWebIdentityInput(v *AssumeRole
 	if v.WebIdentityToken != nil {
 		objectKey := object.Key("WebIdentityToken")
 		objectKey.String(*v.WebIdentityToken)
+	}
+
+	return nil
+}
+
+func awsAwsquery_serializeOpDocumentAssumeRootInput(v *AssumeRootInput, value query.Value) error {
+	object := value.Object()
+	_ = object
+
+	if v.DurationSeconds != nil {
+		objectKey := object.Key("DurationSeconds")
+		objectKey.Integer(*v.DurationSeconds)
+	}
+
+	if v.MinimumSessionTokenSize != nil {
+		objectKey := object.Key("MinimumSessionTokenSize")
+		objectKey.Integer(*v.MinimumSessionTokenSize)
+	}
+
+	if v.TargetPrincipal != nil {
+		objectKey := object.Key("TargetPrincipal")
+		objectKey.String(*v.TargetPrincipal)
+	}
+
+	if v.TaskPolicyArn != nil {
+		objectKey := object.Key("TaskPolicyArn")
+		if err := awsAwsquery_serializeDocumentPolicyDescriptorType(v.TaskPolicyArn, objectKey); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -803,6 +1116,18 @@ func awsAwsquery_serializeOpDocumentGetCallerIdentityInput(v *GetCallerIdentityI
 	return nil
 }
 
+func awsAwsquery_serializeOpDocumentGetDelegatedAccessTokenInput(v *GetDelegatedAccessTokenInput, value query.Value) error {
+	object := value.Object()
+	_ = object
+
+	if v.TradeInToken != nil {
+		objectKey := object.Key("TradeInToken")
+		objectKey.String(*v.TradeInToken)
+	}
+
+	return nil
+}
+
 func awsAwsquery_serializeOpDocumentGetFederationTokenInput(v *GetFederationTokenInput, value query.Value) error {
 	object := value.Object()
 	_ = object
@@ -810,6 +1135,11 @@ func awsAwsquery_serializeOpDocumentGetFederationTokenInput(v *GetFederationToke
 	if v.DurationSeconds != nil {
 		objectKey := object.Key("DurationSeconds")
 		objectKey.Integer(*v.DurationSeconds)
+	}
+
+	if v.MinimumSessionTokenSize != nil {
+		objectKey := object.Key("MinimumSessionTokenSize")
+		objectKey.Integer(*v.MinimumSessionTokenSize)
 	}
 
 	if v.Name != nil {
@@ -848,6 +1178,11 @@ func awsAwsquery_serializeOpDocumentGetSessionTokenInput(v *GetSessionTokenInput
 		objectKey.Integer(*v.DurationSeconds)
 	}
 
+	if v.MinimumSessionTokenSize != nil {
+		objectKey := object.Key("MinimumSessionTokenSize")
+		objectKey.Integer(*v.MinimumSessionTokenSize)
+	}
+
 	if v.SerialNumber != nil {
 		objectKey := object.Key("SerialNumber")
 		objectKey.String(*v.SerialNumber)
@@ -856,6 +1191,37 @@ func awsAwsquery_serializeOpDocumentGetSessionTokenInput(v *GetSessionTokenInput
 	if v.TokenCode != nil {
 		objectKey := object.Key("TokenCode")
 		objectKey.String(*v.TokenCode)
+	}
+
+	return nil
+}
+
+func awsAwsquery_serializeOpDocumentGetWebIdentityTokenInput(v *GetWebIdentityTokenInput, value query.Value) error {
+	object := value.Object()
+	_ = object
+
+	if v.Audience != nil {
+		objectKey := object.Key("Audience")
+		if err := awsAwsquery_serializeDocumentWebIdentityTokenAudienceListType(v.Audience, objectKey); err != nil {
+			return err
+		}
+	}
+
+	if v.DurationSeconds != nil {
+		objectKey := object.Key("DurationSeconds")
+		objectKey.Integer(*v.DurationSeconds)
+	}
+
+	if v.SigningAlgorithm != nil {
+		objectKey := object.Key("SigningAlgorithm")
+		objectKey.String(*v.SigningAlgorithm)
+	}
+
+	if v.Tags != nil {
+		objectKey := object.Key("Tags")
+		if err := awsAwsquery_serializeDocumentTagListType(v.Tags, objectKey); err != nil {
+			return err
+		}
 	}
 
 	return nil
