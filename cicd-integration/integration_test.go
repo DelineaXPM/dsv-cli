@@ -56,6 +56,13 @@ func TestCliArgs(t *testing.T) {
 
 	for _, tt := range synchronousCases {
 		t.Run(tt.name, func(t *testing.T) {
+			// The DSV crypto API (EaaS, /v1/crypto/*) is intentionally disabled server-side: an API Gateway
+			// mock returns 403 on dev and in every prod region (security finding, 2026-02). Remove this skip
+			// if the crypto API is ever re-enabled.
+			if strings.HasPrefix(tt.name, "crypto-") {
+				t.Skip("crypto API intentionally disabled server-side (403 mock); see comment")
+			}
+
 			outfile := filepath.Join(targetArtifactDirectory, tt.name+"coverage.out")
 
 			args := []string{"-test.coverprofile", outfile}
