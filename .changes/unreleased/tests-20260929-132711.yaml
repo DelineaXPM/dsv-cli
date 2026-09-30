@@ -1,0 +1,3 @@
+kind: tests
+body: 'Integration tests skip the crypto-* cases: the DSV crypto API (EaaS) is intentionally disabled server-side (API Gateway 403 mock on dev and all prod regions) after a security finding, so those cases can only fail.'
+time: 2026-09-29T13:27:11.000000-07:00
