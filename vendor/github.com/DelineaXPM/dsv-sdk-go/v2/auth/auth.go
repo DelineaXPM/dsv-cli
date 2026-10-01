@@ -17,9 +17,7 @@ const (
 	AZURE
 )
 
-var (
-	errAwsSession = errors.New("failed to create aws session")
-)
+var errAwsSession = errors.New("failed to create aws session")
 
 type Config struct {
 	Profile  string
@@ -51,7 +49,6 @@ func New(config Config) (*authorization, error) {
 		}
 		ath.sess = sess
 		ath.getCallerIdentity = ath.getCallerIdentityRequest
-
 	}
 
 	ath.config = config

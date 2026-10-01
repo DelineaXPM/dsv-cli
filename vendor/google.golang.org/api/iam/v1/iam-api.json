@@ -951,6 +951,34 @@
                         "https://www.googleapis.com/auth/cloud-platform"
                       ]
                     },
+                    "getIamPolicy": {
+                      "description": "Gets IAM policies on a WorkforcePool.",
+                      "flatPath": "v1/locations/{locationsId}/workforcePools/{workforcePoolsId}/providers/{providersId}/scimTenants/{scimTenantsId}:getIamPolicy",
+                      "httpMethod": "POST",
+                      "id": "iam.locations.workforcePools.providers.scimTenants.getIamPolicy",
+                      "parameterOrder": [
+                        "resource"
+                      ],
+                      "parameters": {
+                        "resource": {
+                          "description": "REQUIRED: The resource for which the policy is being requested. See [Resource names](https://cloud.google.com/apis/design/resource_names) for the appropriate value for this field.",
+                          "location": "path",
+                          "pattern": "^locations/[^/]+/workforcePools/[^/]+/providers/[^/]+/scimTenants/[^/]+$",
+                          "required": true,
+                          "type": "string"
+                        }
+                      },
+                      "path": "v1/{+resource}:getIamPolicy",
+                      "request": {
+                        "$ref": "GetIamPolicyRequest"
+                      },
+                      "response": {
+                        "$ref": "Policy"
+                      },
+                      "scopes": [
+                        "https://www.googleapis.com/auth/cloud-platform"
+                      ]
+                    },
                     "list": {
                       "description": "Gemini Enterprise only. Lists all non-deleted WorkforcePoolProviderScimTenants in a WorkforcePoolProvider. If `show_deleted` is set to `true`, then deleted SCIM tenants are also listed.",
                       "flatPath": "v1/locations/{locationsId}/workforcePools/{workforcePoolsId}/providers/{providersId}/scimTenants",
@@ -1021,6 +1049,62 @@
                       },
                       "response": {
                         "$ref": "WorkforcePoolProviderScimTenant"
+                      },
+                      "scopes": [
+                        "https://www.googleapis.com/auth/cloud-platform"
+                      ]
+                    },
+                    "setIamPolicy": {
+                      "description": "Sets IAM policies on a WorkforcePool.",
+                      "flatPath": "v1/locations/{locationsId}/workforcePools/{workforcePoolsId}/providers/{providersId}/scimTenants/{scimTenantsId}:setIamPolicy",
+                      "httpMethod": "POST",
+                      "id": "iam.locations.workforcePools.providers.scimTenants.setIamPolicy",
+                      "parameterOrder": [
+                        "resource"
+                      ],
+                      "parameters": {
+                        "resource": {
+                          "description": "REQUIRED: The resource for which the policy is being specified. See [Resource names](https://cloud.google.com/apis/design/resource_names) for the appropriate value for this field.",
+                          "location": "path",
+                          "pattern": "^locations/[^/]+/workforcePools/[^/]+/providers/[^/]+/scimTenants/[^/]+$",
+                          "required": true,
+                          "type": "string"
+                        }
+                      },
+                      "path": "v1/{+resource}:setIamPolicy",
+                      "request": {
+                        "$ref": "SetIamPolicyRequest"
+                      },
+                      "response": {
+                        "$ref": "Policy"
+                      },
+                      "scopes": [
+                        "https://www.googleapis.com/auth/cloud-platform"
+                      ]
+                    },
+                    "testIamPermissions": {
+                      "description": "Returns the caller's permissions on the WorkforcePool. If the pool doesn't exist, this call returns an empty set of permissions. It doesn't return a `NOT_FOUND` error.",
+                      "flatPath": "v1/locations/{locationsId}/workforcePools/{workforcePoolsId}/providers/{providersId}/scimTenants/{scimTenantsId}:testIamPermissions",
+                      "httpMethod": "POST",
+                      "id": "iam.locations.workforcePools.providers.scimTenants.testIamPermissions",
+                      "parameterOrder": [
+                        "resource"
+                      ],
+                      "parameters": {
+                        "resource": {
+                          "description": "REQUIRED: The resource for which the policy detail is being requested. See [Resource names](https://cloud.google.com/apis/design/resource_names) for the appropriate value for this field.",
+                          "location": "path",
+                          "pattern": "^locations/[^/]+/workforcePools/[^/]+/providers/[^/]+/scimTenants/[^/]+$",
+                          "required": true,
+                          "type": "string"
+                        }
+                      },
+                      "path": "v1/{+resource}:testIamPermissions",
+                      "request": {
+                        "$ref": "TestIamPermissionsRequest"
+                      },
+                      "response": {
+                        "$ref": "TestIamPermissionsResponse"
                       },
                       "scopes": [
                         "https://www.googleapis.com/auth/cloud-platform"
@@ -1208,34 +1292,6 @@
                           "path": "v1/{+name}",
                           "request": {
                             "$ref": "WorkforcePoolProviderScimToken"
-                          },
-                          "response": {
-                            "$ref": "WorkforcePoolProviderScimToken"
-                          },
-                          "scopes": [
-                            "https://www.googleapis.com/auth/cloud-platform"
-                          ]
-                        },
-                        "undelete": {
-                          "description": "Gemini Enterprise only. Undeletes a WorkforcePoolProviderScimToken,that was deleted fewer than 30 days ago.",
-                          "flatPath": "v1/locations/{locationsId}/workforcePools/{workforcePoolsId}/providers/{providersId}/scimTenants/{scimTenantsId}/tokens/{tokensId}:undelete",
-                          "httpMethod": "POST",
-                          "id": "iam.locations.workforcePools.providers.scimTenants.tokens.undelete",
-                          "parameterOrder": [
-                            "name"
-                          ],
-                          "parameters": {
-                            "name": {
-                              "description": "Required. Gemini Enterprise only. The name of the SCIM token to undelete. Format: `locations/{location}/workforcePools/{workforce_pool}/providers/{provider}/scimTenants/{scim_tenant}/tokens/{token}`",
-                              "location": "path",
-                              "pattern": "^locations/[^/]+/workforcePools/[^/]+/providers/[^/]+/scimTenants/[^/]+/tokens/[^/]+$",
-                              "required": true,
-                              "type": "string"
-                            }
-                          },
-                          "path": "v1/{+name}:undelete",
-                          "request": {
-                            "$ref": "UndeleteWorkforcePoolProviderScimTokenRequest"
                           },
                           "response": {
                             "$ref": "WorkforcePoolProviderScimToken"
@@ -1916,6 +1972,34 @@
             },
             "workloadIdentityPools": {
               "methods": {
+                "addAttestationRule": {
+                  "description": "Add an AttestationRule on a WorkloadIdentityPoolManagedIdentity. The total attestation rules after addition must not exceed 50.",
+                  "flatPath": "v1/projects/{projectsId}/locations/{locationsId}/workloadIdentityPools/{workloadIdentityPoolsId}:addAttestationRule",
+                  "httpMethod": "POST",
+                  "id": "iam.projects.locations.workloadIdentityPools.addAttestationRule",
+                  "parameterOrder": [
+                    "resource"
+                  ],
+                  "parameters": {
+                    "resource": {
+                      "description": "Required. The resource name of the managed identity or namespace resource to add an attestation rule to.",
+                      "location": "path",
+                      "pattern": "^projects/[^/]+/locations/[^/]+/workloadIdentityPools/[^/]+$",
+                      "required": true,
+                      "type": "string"
+                    }
+                  },
+                  "path": "v1/{+resource}:addAttestationRule",
+                  "request": {
+                    "$ref": "AddAttestationRuleRequest"
+                  },
+                  "response": {
+                    "$ref": "Operation"
+                  },
+                  "scopes": [
+                    "https://www.googleapis.com/auth/cloud-platform"
+                  ]
+                },
                 "create": {
                   "description": "Creates a new WorkloadIdentityPool. You cannot reuse the name of a deleted pool until 30 days after deletion.",
                   "flatPath": "v1/projects/{projectsId}/locations/{locationsId}/workloadIdentityPools",
@@ -2068,6 +2152,47 @@
                     "https://www.googleapis.com/auth/cloud-platform"
                   ]
                 },
+                "listAttestationRules": {
+                  "description": "List all AttestationRule on a WorkloadIdentityPoolManagedIdentity.",
+                  "flatPath": "v1/projects/{projectsId}/locations/{locationsId}/workloadIdentityPools/{workloadIdentityPoolsId}:listAttestationRules",
+                  "httpMethod": "GET",
+                  "id": "iam.projects.locations.workloadIdentityPools.listAttestationRules",
+                  "parameterOrder": [
+                    "resource"
+                  ],
+                  "parameters": {
+                    "filter": {
+                      "description": "Optional. A query filter. Supports the following function: * `container_ids()`: Returns only the AttestationRules under the specific container ids. The function expects a comma-delimited list with only project numbers and must use the format `projects/`. For example: `container_ids(projects/, projects/,...)`.",
+                      "location": "query",
+                      "type": "string"
+                    },
+                    "pageSize": {
+                      "description": "Optional. The maximum number of AttestationRules to return. If unspecified, at most 50 AttestationRules are returned. The maximum value is 100; values above 100 are truncated to 100.",
+                      "format": "int32",
+                      "location": "query",
+                      "type": "integer"
+                    },
+                    "pageToken": {
+                      "description": "Optional. A page token, received from a previous `ListWorkloadIdentityPoolProviderKeys` call. Provide this to retrieve the subsequent page.",
+                      "location": "query",
+                      "type": "string"
+                    },
+                    "resource": {
+                      "description": "Required. The resource name of the managed identity or namespace resource to list attestation rules of.",
+                      "location": "path",
+                      "pattern": "^projects/[^/]+/locations/[^/]+/workloadIdentityPools/[^/]+$",
+                      "required": true,
+                      "type": "string"
+                    }
+                  },
+                  "path": "v1/{+resource}:listAttestationRules",
+                  "response": {
+                    "$ref": "ListAttestationRulesResponse"
+                  },
+                  "scopes": [
+                    "https://www.googleapis.com/auth/cloud-platform"
+                  ]
+                },
                 "patch": {
                   "description": "Updates an existing WorkloadIdentityPool.",
                   "flatPath": "v1/projects/{projectsId}/locations/{locationsId}/workloadIdentityPools/{workloadIdentityPoolsId}",
@@ -2094,6 +2219,62 @@
                   "path": "v1/{+name}",
                   "request": {
                     "$ref": "WorkloadIdentityPool"
+                  },
+                  "response": {
+                    "$ref": "Operation"
+                  },
+                  "scopes": [
+                    "https://www.googleapis.com/auth/cloud-platform"
+                  ]
+                },
+                "removeAttestationRule": {
+                  "description": "Remove an AttestationRule on a WorkloadIdentityPoolManagedIdentity.",
+                  "flatPath": "v1/projects/{projectsId}/locations/{locationsId}/workloadIdentityPools/{workloadIdentityPoolsId}:removeAttestationRule",
+                  "httpMethod": "POST",
+                  "id": "iam.projects.locations.workloadIdentityPools.removeAttestationRule",
+                  "parameterOrder": [
+                    "resource"
+                  ],
+                  "parameters": {
+                    "resource": {
+                      "description": "Required. The resource name of the managed identity or namespace resource to remove an attestation rule from.",
+                      "location": "path",
+                      "pattern": "^projects/[^/]+/locations/[^/]+/workloadIdentityPools/[^/]+$",
+                      "required": true,
+                      "type": "string"
+                    }
+                  },
+                  "path": "v1/{+resource}:removeAttestationRule",
+                  "request": {
+                    "$ref": "RemoveAttestationRuleRequest"
+                  },
+                  "response": {
+                    "$ref": "Operation"
+                  },
+                  "scopes": [
+                    "https://www.googleapis.com/auth/cloud-platform"
+                  ]
+                },
+                "setAttestationRules": {
+                  "description": "Set all AttestationRule on a WorkloadIdentityPoolManagedIdentity. A maximum of 50 AttestationRules can be set.",
+                  "flatPath": "v1/projects/{projectsId}/locations/{locationsId}/workloadIdentityPools/{workloadIdentityPoolsId}:setAttestationRules",
+                  "httpMethod": "POST",
+                  "id": "iam.projects.locations.workloadIdentityPools.setAttestationRules",
+                  "parameterOrder": [
+                    "resource"
+                  ],
+                  "parameters": {
+                    "resource": {
+                      "description": "Required. The resource name of the managed identity or namespace resource to add an attestation rule to.",
+                      "location": "path",
+                      "pattern": "^projects/[^/]+/locations/[^/]+/workloadIdentityPools/[^/]+$",
+                      "required": true,
+                      "type": "string"
+                    }
+                  },
+                  "path": "v1/{+resource}:setAttestationRules",
+                  "request": {
+                    "$ref": "SetAttestationRulesRequest"
                   },
                   "response": {
                     "$ref": "Operation"
@@ -4160,7 +4341,7 @@
       }
     }
   },
-  "revision": "20260123",
+  "revision": "20260911",
   "rootUrl": "https://iam.googleapis.com/",
   "schemas": {
     "AccessRestrictions": {
@@ -4418,28 +4599,7 @@
     "DisableServiceAccountKeyRequest": {
       "description": "The service account key disable request.",
       "id": "DisableServiceAccountKeyRequest",
-      "properties": {
-        "extendedStatusMessage": {
-          "description": "Optional. Usable by internal google services only. An extended_status_message can be used to include additional information about the key, such as its private key data being exposed on a public repository like GitHub.",
-          "type": "string"
-        },
-        "serviceAccountKeyDisableReason": {
-          "description": "Optional. Describes the reason this key is being disabled. If unspecified, the default value of SERVICE_ACCOUNT_KEY_DISABLE_REASON_USER_INITIATED will be used.",
-          "enum": [
-            "SERVICE_ACCOUNT_KEY_DISABLE_REASON_UNSPECIFIED",
-            "SERVICE_ACCOUNT_KEY_DISABLE_REASON_USER_INITIATED",
-            "SERVICE_ACCOUNT_KEY_DISABLE_REASON_EXPOSED",
-            "SERVICE_ACCOUNT_KEY_DISABLE_REASON_COMPROMISE_DETECTED"
-          ],
-          "enumDescriptions": [
-            "Unspecified disable reason",
-            "Disabled by the user",
-            "Google detected this Service Account external key's private key data as exposed, typically in a public repository on GitHub or similar.",
-            "This service account external key was detected as compromised and used by an attacker."
-          ],
-          "type": "string"
-        }
-      },
+      "properties": {},
       "type": "object"
     },
     "DisableServiceAccountRequest": {
@@ -4734,6 +4894,10 @@
           "description": "Optional. Rotation window percentage, the percentage of remaining lifetime after which certificate rotation is initiated. Must be between 50 and 80. If no value is specified, rotation window percentage is defaulted to 50.",
           "format": "int32",
           "type": "integer"
+        },
+        "useDefaultSharedCa": {
+          "description": "Optional. If set to true, the trust domain will utilize the GCP-provisioned default CA. A default CA in the same region as the workload will be selected to issue the certificate. Enabling this will clear any existing `ca_pools` configuration to provision the certificates. NOTE: This field is mutually exclusive with `ca_pools`. If this flag is enabled, certificates will be automatically provisioned from the default shared CAs. This flag should not be set if you want to use your own CA pools to provision the certificates.",
+          "type": "boolean"
         }
       },
       "type": "object"
@@ -5188,7 +5352,7 @@
       "id": "OauthClient",
       "properties": {
         "allowedGrantTypes": {
-          "description": "Required. The list of OAuth grant types is allowed for the OauthClient.",
+          "description": "Optional. The list of OAuth grant types is allowed for the OauthClient.",
           "items": {
             "enum": [
               "GRANT_TYPE_UNSPECIFIED",
@@ -5313,7 +5477,7 @@
           "type": "array"
         },
         "issuerUri": {
-          "description": "Required. The OIDC issuer URL. Must be an HTTPS endpoint. Per OpenID Connect Discovery 1.0 spec, the OIDC issuer URL is used to locate the provider's public keys (via `jwks_uri`) for verifying tokens like the OIDC ID token. These public key types must be 'EC' or 'RSA'.",
+          "description": "Required. The OIDC `issuer_uri`. Must be an HTTPS endpoint. Per OpenID Connect Discovery 1.0 spec, the OIDC issuer URL is used to locate the provider's public keys (via `jwks_uri`) for verifying tokens like the OIDC ID token. These public key types must be 'EC' or 'RSA'.",
           "type": "string"
         },
         "jwksJson": {
@@ -5825,7 +5989,7 @@
       "type": "object"
     },
     "ServiceAccountKey": {
-      "description": "Represents a service account key. A service account has two sets of key-pairs: user-managed, and system-managed. User-managed key-pairs can be created and deleted by users. Users are responsible for rotating these keys periodically to ensure security of their service accounts. Users retain the private key of these key-pairs, and Google retains ONLY the public key. System-managed keys are automatically rotated by Google, and are used for signing for a maximum of two weeks. The rotation process is probabilistic, and usage of the new key will gradually ramp up and down over the key's lifetime. If you cache the public key set for a service account, we recommend that you update the cache every 15 minutes. User-managed keys can be added and removed at any time, so it is important to update the cache frequently. For Google-managed keys, Google will publish a key at least 6 hours before it is first used for signing and will keep publishing it for at least 6 hours after it was last used for signing. Public keys for all service accounts are also published at the OAuth2 Service Account API.",
+      "description": "Represents a service account key. A service account has two sets of key-pairs: user-managed and system-managed. System-managed keys are also called _Google-owned and managed keys_. User-managed key-pairs can be created and deleted by users. Users are responsible for rotating these keys periodically to ensure security of their service accounts. Users retain the private key of these key-pairs, and Google retains ONLY the public key. System-managed keys that are actively used for signing are rotated regularly according to [security best practices](https://docs.cloud.google.com/iam/docs/key-rotation#timing). The rotation process is probabilistic, and usage of the new key will gradually ramp up and down over the key's lifetime. If you cache the public key set for a service account, we recommend that you update the cache every 15 minutes. User-managed keys can be added and removed at any time, so it is important to update the cache frequently. For Google-managed keys, Google will publish a key at least 6 hours before it is first used for signing and will keep publishing it for at least 6 hours after it was last used for signing. Public keys for all service accounts are also published at the OAuth2 Service Account API.",
       "id": "ServiceAccountKey",
       "properties": {
         "disableReason": {
@@ -6124,6 +6288,10 @@
             "$ref": "TrustAnchor"
           },
           "type": "array"
+        },
+        "trustDefaultSharedCa": {
+          "description": "Optional. If set to True, the trust bundle will include the private ca managed identity regional root public certificates. Important: `trust_default_shared_ca` is only supported for managed identity trust domain resource.",
+          "type": "boolean"
         }
       },
       "type": "object"
@@ -6177,12 +6345,6 @@
     "UndeleteWorkforcePoolProviderScimTenantRequest": {
       "description": "Gemini Enterprise only. Request message for UndeleteWorkforcePoolProviderScimTenant.",
       "id": "UndeleteWorkforcePoolProviderScimTenantRequest",
-      "properties": {},
-      "type": "object"
-    },
-    "UndeleteWorkforcePoolProviderScimTokenRequest": {
-      "description": "Gemini Enterprise only. Request message for UndeleteWorkforcePoolProviderScimToken.",
-      "id": "UndeleteWorkforcePoolProviderScimTokenRequest",
       "properties": {},
       "type": "object"
     },
@@ -6340,7 +6502,7 @@
         },
         "extraAttributesOauth2Client": {
           "$ref": "GoogleIamAdminV1WorkforcePoolProviderExtraAttributesOAuth2Client",
-          "description": "Optional. The configuration for OAuth 2.0 client used to get the additional user attributes. This should be used when users can't get the desired claims in authentication credentials. Currently, this configuration is only supported with OIDC protocol."
+          "description": "Optional. Defines the configuration for the OAuth 2.0 client that is used to get the additional user attributes in a separate backchannel call to the identity provider. This should be used when users can't get the required claims in authentication credentials. Currently, the OAuth 2.0 protocol is the only supported authorization method for this backchannel call."
         },
         "name": {
           "description": "Identifier. The resource name of the provider. Format: `locations/{location}/workforcePools/{workforce_pool_id}/providers/{provider_id}`",
@@ -6358,11 +6520,13 @@
           "description": "Optional. Gemini Enterprise only. Specifies whether the workforce identity pool provider uses SCIM-managed groups instead of the `google.groups` attribute mapping for authorization checks. The `scim_usage` and `extended_attributes_oauth2_client` fields are mutually exclusive. A request that enables both fields on the same workforce identity pool provider will produce an error.",
           "enum": [
             "SCIM_USAGE_UNSPECIFIED",
-            "ENABLED_FOR_GROUPS"
+            "ENABLED_FOR_GROUPS",
+            "ENABLED_FOR_USERS_GROUPS"
           ],
           "enumDescriptions": [
-            "Gemini Enterprise only. Do not use SCIM data.",
-            "Gemini Enterprise only. SCIM sync is enabled and SCIM-managed groups are used for authorization checks."
+            "Indicates that SCIM data is not used.",
+            "Gemini Enterprise only. SCIM sync is enabled and SCIM-managed groups are used for authorization checks.",
+            "Looker only. SCIM sync is enabled, and SCIM-managed user claims and groups are used for authorization checks."
           ],
           "type": "string"
         },
@@ -6559,12 +6723,14 @@
           "enum": [
             "MODE_UNSPECIFIED",
             "FEDERATION_ONLY",
-            "TRUST_DOMAIN"
+            "TRUST_DOMAIN",
+            "SYSTEM_TRUST_DOMAIN"
           ],
           "enumDescriptions": [
             "State unspecified. New pools should not use this mode. Pools with an unspecified mode will operate as if they are in federation-only mode.",
-            "Federation-only mode. Federation-only pools can only be used for federating external workload identities into Google Cloud. Unless otherwise noted, no structure or format constraints are applied to workload identities in a federation-only pool, and you cannot create any resources within the pool besides providers.",
-            "Trust-domain mode. Trust-domain pools can be used to assign identities to Google Cloud workloads. All identities within a trust-domain pool must consist of a single namespace and individual workload identifier. The subject identifier for all identities must conform to the following format: `ns//sa/` WorkloadIdentityPoolProviders cannot be created within trust-domain pools."
+            "Federation-only mode. FEDERATION_ONLY mode pools can only be used for federating external workload identities into Google Cloud. Unless otherwise noted, no structure or format constraints are applied to workload identities in a FEDERATION_ONLY mode pool, and you cannot create any resources within the pool besides providers.",
+            "Trust-domain mode. TRUST_DOMAIN mode pools can be used to assign identities to Google Cloud workloads. Identities within a TRUST_DOMAIN mode pool share the same root of trust. WorkloadIdentityPoolProviders cannot be created within trust-domain pools.",
+            "SYSTEM_TRUST_DOMAIN mode pools are managed by Google Cloud services. Neither WorkloadIdentityPoolNamespaces nor WorkloadIdentityPoolProviders can be created within SYSTEM_TRUST_DOMAIN mode pools. All identities within a SYSTEM_TRUST_DOMAIN mode pool are in one of the following formats: * `spiffe:///ns//sa/` * `spiffe:///resources//`"
           ],
           "type": "string"
         },

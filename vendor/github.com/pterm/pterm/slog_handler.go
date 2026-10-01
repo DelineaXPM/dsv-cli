@@ -32,7 +32,7 @@ func (s *SlogHandler) Handle(ctx context.Context, record slog.Record) error {
 	message := record.Message
 
 	// Convert slog Attrs to a map.
-	keyValsMap := make(map[string]interface{})
+	keyValsMap := make(map[string]any)
 
 	record.Attrs(func(attr slog.Attr) bool {
 		keyValsMap[attr.Key] = attr.Value
@@ -84,7 +84,7 @@ func (s *SlogHandler) WithGroup(name string) slog.Handler {
 	return s
 }
 
-// NewSlogHandler returns a new logging handler that can be intrgrated with log/slog.
+// NewSlogHandler returns a new logging handler that can be integrated with log/slog.
 func NewSlogHandler(logger *Logger) *SlogHandler {
 	return &SlogHandler{logger: logger}
 }
