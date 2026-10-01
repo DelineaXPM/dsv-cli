@@ -1,20 +1,21 @@
 package internal
 
 import (
-	"github.com/gookit/color"
-	"github.com/mattn/go-runewidth"
 	"strings"
+
+	"github.com/mattn/go-runewidth"
 )
 
 // GetStringMaxWidth returns the maximum width of a string with multiple lines.
 func GetStringMaxWidth(s string) int {
-	var max int
+	var maxString int
 	ss := strings.Split(s, "\n")
 	for _, s2 := range ss {
-		s2WithoutColor := color.ClearCode(s2)
-		if runewidth.StringWidth(s2WithoutColor) > max {
-			max = runewidth.StringWidth(s2WithoutColor)
+		// Strip OSC 8 hyperlinks and color codes
+		s2WithoutEscapes := RemoveEscapeCodes(s2)
+		if runewidth.StringWidth(s2WithoutEscapes) > maxString {
+			maxString = runewidth.StringWidth(s2WithoutEscapes)
 		}
 	}
-	return max
+	return maxString
 }
