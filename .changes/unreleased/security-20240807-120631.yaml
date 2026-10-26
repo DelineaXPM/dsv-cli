@@ -1,4 +1,0 @@
-kind: security
-body: |-
-  Improve security by removal of empty httpWriter in OIDC auth, and increasing to 2048 bit encryption in PKI generation.
-time: 2024-08-07T12:06:31.546382-07:00
