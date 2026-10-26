@@ -40,3 +40,6 @@ packages:
   - name: cli/cli@v2.72.0
     tags:
       - release
+  - name: cli/cli@v2.103.2
+  - name: miniscruff/changie@v1.26.0
+  - name: mikefarah/yq@v4.54.1
