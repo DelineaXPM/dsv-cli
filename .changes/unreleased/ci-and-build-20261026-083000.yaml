@@ -1,0 +1,3 @@
+kind: ci-and-build
+body: 'Snap publishing is disabled for now: the ubuntu-latest (24.04) build agent has no snapcraft apt package, and the snap store credentials need renewing. The dsv-cli snap stays at 1.41.1 until it is re-enabled; all other channels (GitHub release, downloads, Homebrew, Scoop, Docker) are unaffected.'
+time: 2026-10-26T08:30:00.000000-07:00
