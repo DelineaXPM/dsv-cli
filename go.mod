@@ -16,13 +16,13 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.33.6
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.114.0
 	github.com/bitfield/script v0.25.1
-	github.com/caarlos0/env/v6 v6.10.1
+	github.com/caarlos0/env/v11 v11.4.1
 	github.com/creack/pty v1.1.24
 	github.com/danieljoos/wincred v1.2.3
 	github.com/dustin/go-humanize v1.1.0
 	github.com/fatih/color v1.19.0
 	github.com/gobuffalo/uuid v2.0.5+incompatible
-	github.com/golang-jwt/jwt/v4 v4.5.2
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/hinshun/vt10x v0.0.0-20220301184237-5011da428d02
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
 	github.com/jarcoal/httpmock v1.4.2
@@ -32,7 +32,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/peterbourgon/diskv/v3 v3.0.1
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
-	github.com/posener/complete v1.2.3
+	github.com/posener/complete/v2 v2.1.0
 	github.com/pterm/pterm v0.12.83
 	github.com/savaki/jq v0.0.0-20161209013833-0e6baecebbf8
 	github.com/sheldonhull/magetools v1.0.2
