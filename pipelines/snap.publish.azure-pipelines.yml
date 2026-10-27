@@ -89,7 +89,7 @@ jobs:
       - bash: |
           set -euo pipefail
           sudo snap install --dangerous "out/dsv-cli_${VERSION}_amd64.snap"
-          got="$(dsv-cli --version)"
+          got="$(dsv-cli --version 2>&1)" # dsv prints its version on stderr
           echo "dsv-cli --version: ${got}"
           test "${got}" = "${VERSION}"
           sudo snap remove dsv-cli
