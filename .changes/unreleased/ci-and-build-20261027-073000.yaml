@@ -1,0 +1,3 @@
+kind: ci-and-build
+body: 'New manual pipeline snap.dsv-cli publishes an existing GitHub release to the Snap Store from its checksum-verified Linux binaries, without rebuilding. Used to bring the snap from 1.41.1 to 1.42.0, which shipped with snap publishing disabled.'
+time: 2026-10-27T07:30:00.000000-07:00
