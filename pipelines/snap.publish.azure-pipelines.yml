@@ -1,0 +1,124 @@
+---
+name: snap.dsv-cli.${{ parameters.version }}.${{ parameters.action }}.$(Date:yyyyMMdd)-$(Rev:r)
+# Publishes an EXISTING GitHub release of dsv-cli to the Snap Store, without rebuilding it.
+# The snap carries the exact Linux binaries from the GitHub release (checksum-verified), so it
+# matches every other distribution byte for byte.
+# Written for v1.42.0, which shipped with snap publishing disabled in .goreleaser.yaml (#208).
+#
+# action:
+#   pack    - download, verify, pack and smoke-test the snaps; check store credentials. Publishes nothing.
+#   upload  - pack, then upload to the store WITHOUT releasing to any channel.
+#   release - pack, then upload and release to stable, candidate, beta and edge.
+# Manual only.
+trigger: none
+pr: none
+parameters:
+  - name: version
+    type: string
+    default: '1.42.0'
+  - name: action
+    type: string
+    default: pack
+    values: [pack, upload, release]
+variables:
+  - group: SNAPCRAFT
+jobs:
+  - job: snap
+    displayName: snap-dsv-cli
+    timeoutInMinutes: 20
+    pool:
+      vmImage: ubuntu-24.04
+    steps:
+      - checkout: none
+      - bash: |
+          set -euo pipefail
+          sudo snap install snapcraft --classic
+          snap version
+          snapcraft --version
+        displayName: install snapcraft
+      - bash: |
+          set -euo pipefail
+          # The store maps these to the architectures already published: amd64 and i386.
+          base="https://github.com/DelineaXPM/dsv-cli/releases/download/v${VERSION}"
+          mkdir -p dl && cd dl
+          curl -fsSL -o checksums-sha256.txt "${base}/checksums-sha256.txt"
+          for f in dsv-linux-x64 dsv-linux-x86; do
+            curl -fsSL -o "$f" "${base}/${f}"
+            grep " ${f}\$" checksums-sha256.txt | sha256sum -c -
+          done
+        displayName: download and verify v${{ parameters.version }} binaries
+        workingDirectory: $(Agent.TempDirectory)
+        env:
+          VERSION: ${{ parameters.version }}
+      - bash: |
+          set -euo pipefail
+          # snap.yaml mirrors revision 22 (1.41.1) as published by goreleaser; only the version changes.
+          mkdir -p out
+          for pair in x64:amd64 x86:i386; do
+            bin="${pair%%:*}"; arch="${pair##*:}"
+            prime="prime-${arch}"
+            mkdir -p "${prime}/meta"
+            install -m 0755 "dl/dsv-linux-${bin}" "${prime}/dsv"
+            cat > "${prime}/meta/snap.yaml" <<EOF
+          name: dsv-cli
+          version: ${VERSION}
+          summary: ⚡ A cross-platform swiss army tool for DevOps secrets management from Delinea
+          description: |
+            The DSV CLI is a cross-platform swiss army knife tool for DevOps secrets management from Delinea.
+            It is designed to be a simple, yet powerful, tool for managing secrets in a variety of
+            environments. It is designed to be used in CI/CD pipelines, as well as locally on developer
+            machines.
+          license: Apache-2.0
+          grade: stable
+          confinement: strict
+          architectures:
+            - ${arch}
+          apps:
+            dsv-cli:
+              command: dsv
+              plugs:
+                - network
+          EOF
+            snap pack "${prime}" out
+          done
+          ls -l out
+        displayName: pack snaps
+        workingDirectory: $(Agent.TempDirectory)
+        env:
+          VERSION: ${{ parameters.version }}
+      - bash: |
+          set -euo pipefail
+          sudo snap install --dangerous "out/dsv-cli_${VERSION}_amd64.snap"
+          got="$(dsv-cli --version)"
+          echo "dsv-cli --version: ${got}"
+          test "${got}" = "${VERSION}"
+          sudo snap remove dsv-cli
+        displayName: smoke test amd64 snap
+        workingDirectory: $(Agent.TempDirectory)
+        env:
+          VERSION: ${{ parameters.version }}
+      - bash: |
+          set -euo pipefail
+          snapcraft whoami
+        displayName: check store credentials
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: $(SNAPCRAFT_STORE_CREDENTIALS)
+      - bash: |
+          set -euo pipefail
+          release_flag=""
+          if [ "${ACTION}" = "release" ]; then
+            release_flag="--release=stable,candidate,beta,edge"
+          fi
+          for snap in out/dsv-cli_${VERSION}_*.snap; do
+            snapcraft upload ${release_flag} "${snap}"
+          done
+        displayName: ${{ parameters.action }} to Snap Store
+        condition: and(succeeded(), ne('${{ parameters.action }}', 'pack'))
+        workingDirectory: $(Agent.TempDirectory)
+        env:
+          ACTION: ${{ parameters.action }}
+          VERSION: ${{ parameters.version }}
+          SNAPCRAFT_STORE_CREDENTIALS: $(SNAPCRAFT_STORE_CREDENTIALS)
+      - publish: $(Agent.TempDirectory)/out
+        artifact: snaps
+        displayName: 'artifact: snaps'
